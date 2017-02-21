@@ -32,33 +32,34 @@ let (//) = Ext_filename.combine
     return None if we dont need regenerate
     otherwise return Some info
 *)
-let regenerate_ninja 
-    ~no_dev 
-    ~override_package_specs
-    ~generate_watch_metadata 
-    ~forced cwd bsc_dir
+let regenerate_ninja
+  ?external_deps_for_linking_and_clibs
+  ?root_project_entry
+  ~no_dev
+  ~override_package_specs
+  ~generate_watch_metadata
+  ~root_project_dir
+  cwd bsc_dir ocaml_dir ~forced 
   : _ option =
   let output_deps = cwd // Bsb_config.lib_bs // bsdeps in
-  let check_result  =
-    Bsb_bsdeps.check 
-      ~cwd  
-      ~forced ~file:output_deps in
+  let reason : Bsb_dep_infos.check_result =
+    Bsb_dep_infos.check ~cwd  forced output_deps in
   let () = 
     Format.fprintf Format.std_formatter  
-      "@{<info>BSB check@} build spec : %a @." Bsb_bsdeps.pp_check_result check_result in 
-  begin match check_result  with 
+      "@{<info>BSB check@} build spec : %a @." Bsb_dep_infos.pp_check_result reason in 
+  begin match reason  with 
     | Good ->
       None  (* Fast path, no need regenerate ninja *)
     | Bsb_forced 
     | Bsb_bsc_version_mismatch 
     | Bsb_file_not_exist 
     | Bsb_source_directory_changed  
-    | Other _ -> 
-      if check_result = Bsb_bsc_version_mismatch then begin 
+    | Other _ ->
+      if reason = Bsb_bsc_version_mismatch then begin 
         print_endline "Also clean current repo due to we have detected a different compiler";
-        Bsb_clean.clean_self cwd; 
+        clean_self (); 
       end ; 
-      Bsb_build_util.mkp (cwd // Bsb_config.lib_bs); 
+      Bsb_build_util.mkp (cwd // Bsb_config.lib_bs);
       let config = 
         Bsb_config_parse.interpret_json 
           ~override_package_specs
@@ -67,18 +68,61 @@ let regenerate_ninja
           ~no_dev
           cwd in 
       begin 
-        Bsb_merlin_gen.merlin_file_gen ~cwd
+        Bsb_config_parse.merlin_file_gen ~cwd
           (bsc_dir // bsppx_exe) config;
-        Bsb_ninja_gen.output_ninja ~cwd ~bsc_dir config ; 
+        let external_deps_for_linking_and_clibs = match external_deps_for_linking_and_clibs with 
+        | None -> 
+          (* Either there's a `root_project_entry` (meaning we're currently building 
+             an external dependency) or not, then we use the top level project's entry.
+             
+             If we're aiming at building JS, we do NOT walk the external dep graph.
+             
+             If we're aiming at building Native or Bytecode, we do walk the external 
+             dep graph and build a topologically sorted list of all of them. *)
+          let mainEntry = begin match root_project_entry with 
+          (* `entries` should always contain at least on element. *)
+          | None       -> List.hd config.Bsb_config_types.entries
+          | Some entry -> entry
+          end in
+          begin match mainEntry with
+          | Bsb_config_types.JsTarget _ -> ([], []) (* No work for the JS flow! *)
+          | Bsb_config_types.BytecodeTarget _
+          | Bsb_config_types.NativeTarget _ ->
+            if root_project_entry <> None then 
+              ([], [])
+            else begin
+              (* TODO(sansouci): Manually walk the external dep graph. Optimize this. *)
+              let list_of_all_external_deps = ref [] in
+              let all_clibs = ref [] in
+              Bsb_build_util.walk_all_deps cwd
+                (fun {top; cwd} ->
+                  if not top then begin
+                    list_of_all_external_deps := (cwd // Bsb_config.lib_ocaml) :: !list_of_all_external_deps;
+                    
+                    let config = 
+                      Bsb_config_parse.interpret_json 
+                        ~override_package_specs
+                        ~bsc_dir
+                        ~generate_watch_metadata:false
+                        ~no_dev:true
+                        cwd in
+                    all_clibs := (List.rev Bsb_config_types.(config.static_libraries)) @ !all_clibs
+                  end
+                );
+              (List.rev !list_of_all_external_deps, List.rev !all_clibs)
+            end
+          end
+        | Some (external_deps, clibs) -> (external_deps, clibs) in
+        Bsb_gen.output_ninja ~external_deps_for_linking_and_clibs ~cwd ~bsc_dir ~ocaml_dir ~root_project_dir ?root_project_entry config;
+        (* TODO(sansouci): output module alias file here *)
         Literals.bsconfig_json :: config.globbed_dirs
         |> List.map
           (fun x ->
-             { Bsb_bsdeps.dir_or_file = x ;
+             { Bsb_dep_infos.dir_or_file = x ;
                stamp = (Unix.stat (cwd // x)).st_mtime
              }
           )
-        |> (fun x -> 
-          Bsb_bsdeps.store ~cwd ~file:output_deps (Array.of_list x));
+        |> (fun x -> Bsb_dep_infos.store ~cwd output_deps (Array.of_list x));
         Some config 
       end 
   end

@@ -301,24 +301,26 @@ BSB_SRCS= bsb_config\
 	bsb_log\
 	bsb_pkg \
 	bsb_build_schemas\
+	bsb_unix \
 	bsb_ninja_global_vars\
 	bsb_build_util\
 	bsb_package_specs\
 	bsb_helper_linker\
 	bsb_helper_extract\
 	bsb_rule\
+	bsb_config_types\
 	bsb_ninja_util \
 	bsb_ninja_file_groups\
+	bsb_ninja \
 	bsb_parse_sources\
+	bsb_ninja_native \
+	bsb_build_ui \
 	bsb_default\
 	bsb_bsdeps\
 	bsb_watcher_gen\
 	bsb_merlin_gen\
 	bsb_ninja_gen\
 	bsb_file\
-	bsb_config_types\
-	bsb_config_parse\
-	bsb_unix\
 	bsb_regex\
 	bsb_clean\
 	bsb_ninja_regen\
@@ -326,7 +328,8 @@ BSB_SRCS= bsb_config\
 	bsb_world\
 	oCamlRes\
 	bsb_templates\
-	bsb_init
+	bsb_init\
+	bsb_config_parse
 SUPER_ERRORS_SRCS=super_warnings super_typecore super_typetexp super_location super_main
 
 BSB_CMXS=$(addprefix bsb/, $(addsuffix .cmx, $(BSB_SRCS)))

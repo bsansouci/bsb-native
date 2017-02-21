@@ -35,10 +35,13 @@ type entries_t = JsTarget of string | NativeTarget of string | BytecodeTarget of
 
 type reason_react_jsx = string option 
 
+type compilation_kind_t = Js | Bytecode | Native
+
 type t = 
   {
     package_name : string ; 
     external_includes : string list ; 
+    warnings : string ;
     bsc_flags : string list ;
     ppx_flags : string list ;
     bs_dependencies : dependencies;
@@ -60,4 +63,8 @@ type t =
     entries : entries_t list ;
     generators : string String_map.t ; 
     cut_generators : bool; (* note when used as a dev mode, we will always ignore it *)
+
+    static_libraries: string list;
+    build_script: string option;
+    allowed_build_kinds: compilation_kind_t list;
   }

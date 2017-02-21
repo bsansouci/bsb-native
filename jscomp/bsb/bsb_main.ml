@@ -42,6 +42,14 @@ let set_make_world () = make_world := true
 
 
 
+
+(** Regenerate ninja file if necessary   
+    return None if we dont need regenerate
+    otherwise return Some info
+*)
+
+
+
 let bsb_main_flags : (string * Arg.spec * string) list=
   [
     "-color", Arg.Set Bsb_log.color_enabled,
@@ -123,7 +131,6 @@ let usage = "Usage : bsb.exe <bsb-options> -- <ninja_options>\n\
 let handle_anonymous_arg arg =
   raise (Arg.Bad ("Unknown arg \"" ^ arg ^ "\""))
 
-
 let watch_exit () =
   print_endline "\nStart Watching now ";
   let bsb_watcher =
@@ -137,18 +144,23 @@ let watch_exit () =
       |]
 
 
-(* see discussion #929, if we catch the exception, we don't have stacktrace... *)
 let () =
-  
-  let vendor_ninja = bsc_dir // "ninja.exe" in  
+  let bsc_dir = Bsb_build_util.get_bsc_dir cwd in
+  let ocaml_dir = Bsb_build_util.get_ocaml_dir bsc_dir in
+  let vendor_ninja = bsc_dir // "ninja.exe" in
   match Sys.argv with 
   | [| _ |] ->  (* specialize this path [bsb.exe] which is used in watcher *)
     begin
+      (* print_endline __LOC__; *)
+      (* TODO(sansouci): Optimize this. Not passing external_deps_for_linking_and_clibs 
+         will cause regenerate_ninja to re-crawl the external dep graph (only 
+         for Native and Bytecode).  *)
       let _config_opt =  
         Bsb_ninja_regen.regenerate_ninja ~override_package_specs:None ~no_dev:false 
           ~generate_watch_metadata:true
-          ~forced:false 
-          cwd bsc_dir 
+          ~root_project_dir:cwd
+          ~forced:true
+          cwd bsc_dir ocaml_dir
       in 
       ninja_command_exit  vendor_ninja [||] 
     end
@@ -176,10 +188,20 @@ let () =
                   watch_exit ()
                 end 
               | make_world, force_regenerate ->
-                let config_opt = Bsb_ninja_regen.regenerate_ninja ~generate_watch_metadata:true ~override_package_specs:None ~no_dev:false ~forced:force_regenerate cwd bsc_dir  in
-                if make_world then begin
-                  Bsb_world.make_world_deps cwd config_opt
-                end;
+                (* If -make-world is passed we first do that because we'll collect
+                   the library files as we go. *)
+                let external_deps_for_linking_and_clibs = if make_world then
+                  Some (Bsb_world.make_world_deps ~root_project_dir:cwd None)
+                else None in
+                (* don't regenerate files when we only run [bsb -clean-world] *)
+                let _ = regenerate_ninja 
+                  ?external_deps_for_linking_and_clibs 
+                  ~generate_watch_metadata:true 
+                  ~override_package_specs:None 
+                  ~no_dev:false 
+                  ~root_project_dir:cwd
+                  ~forced:force_regenerate
+                  cwd bsc_dir ocaml_dir in
                 if !watch_mode then begin
                   watch_exit ()
                   (* ninja is not triggered in this case
@@ -196,10 +218,18 @@ let () =
         -> (* -make-world all dependencies fall into this category *)
         begin
           Arg.parse_argv bsb_args bsb_main_flags handle_anonymous_arg usage ;
-          let config_opt = Bsb_ninja_regen.regenerate_ninja ~generate_watch_metadata:true ~override_package_specs:None ~no_dev:false cwd bsc_dir ~forced:!force_regenerate in
           (* [-make-world] should never be combined with [-package-specs] *)
-          if !make_world then
-            Bsb_world.make_world_deps cwd config_opt ;
+          let external_deps_for_linking_and_clibs = if make_world.set then 
+            Some (Bsb_world.make_world_deps ~root_project_dir:cwd None)
+          else None in
+          let _ = regenerate_ninja 
+            ?external_deps_for_linking_and_clibs
+            ~generate_watch_metadata:true
+            ~override_package_specs:None
+            ~no_dev:false
+            ~root_project_dir:cwd
+            ~forced:!force_regenerate
+            cwd bsc_dir ocaml_dir in
           if !watch_mode then watch_exit ()
           else ninja_command_exit  vendor_ninja ninja_args 
         end
