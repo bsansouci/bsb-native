@@ -68,7 +68,7 @@ let regenerate_ninja
           ~no_dev
           cwd in 
       begin 
-        Bsb_config_parse.merlin_file_gen ~cwd
+        Bsb_merlin_gen.merlin_file_gen ~cwd
           (bsc_dir // bsppx_exe) config;
         let external_deps_for_linking_and_clibs = match external_deps_for_linking_and_clibs with 
         | None -> 

@@ -1,4 +1,12 @@
 bin/bspp.ml : bspp/parser.ml
+<<<<<<< HEAD
+=======
+bin/bspp.ml : ../ocaml/utils/clflags.ml
+bin/bspp.ml : ../ocaml/parsing/lexer.mli
+bin/bspp.ml : ../ocaml/utils/clflags.mli
+bin/bspp.ml : ../ocaml/utils/terminfo.ml
+bin/bspp.ml : ../ocaml/utils/warnings.ml
+>>>>>>> Update readme + fixes
 bin/bspp.ml : core/bspp_main.ml
 bin/bspp.ml : bin/configDummy.ml
 bin/bspp.ml : core/bspp_main.mli

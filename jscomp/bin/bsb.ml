@@ -10818,7 +10818,1025 @@ module Bsb_templates : sig
 #1 "bsb_templates.mli"
 
 
+<<<<<<< HEAD
 >>>>>>> Squashed commits!
+=======
+type info =
+  { all_config_deps : string list  ; (* Figure out [.d] files *)
+    (*all_installs :  string list*)
+    }
+
+let zero : info =
+  { all_config_deps = [] ;
+    (*all_installs = []*)
+  }
+
+let (++) (us : info) (vs : info) =
+  if us == zero then vs else
+  if vs == zero then us
+  else
+    {
+      all_config_deps  = us.all_config_deps @ vs.all_config_deps
+    ;
+      (*all_installs = us.all_installs @ vs.all_installs*)
+    }
+
+(** This set is stateful, we should make it functional in the future.
+    It only makes sense when building one project combined with [-regen]
+*)
+(* let files_to_install = String_hash_set.create 96 *)
+
+
+let install_file (file : string) files_to_install =
+  String_hash_set.add  files_to_install (Ext_filename.chop_extension_if_any file )
+
+let handle_file_group oc ~custom_rules 
+    ~package_specs ~js_post_build_cmd  
+    (files_to_install : String_hash_set.t) acc (group: Bsb_build_ui.file_group) : info =
+  let handle_module_info  oc  module_name
+      ( module_info : Binary_cache.module_info)
+      info  =
+    let installable =
+      match group.public with
+      | Export_all -> true
+      | Export_none -> false
+      | Export_set set ->  String_set.mem module_name set in
+    let emit_build (kind : [`Ml | `Re | `Mli | `Rei ])  file_input : info =
+      let filename_sans_extension = Filename.chop_extension file_input in
+      let input = Bsb_config.proj_rel file_input in
+      let output_file_sans_extension = filename_sans_extension in
+      (*let output_ml = output_file_sans_extension ^ Literals.suffix_ml in*)
+      let output_mlast = output_file_sans_extension  ^ Literals.suffix_mlast in
+      let output_mlastd = output_file_sans_extension ^ Literals.suffix_mlastd in
+      let output_mliast = output_file_sans_extension ^ Literals.suffix_mliast in
+      let output_mliastd = output_file_sans_extension ^ Literals.suffix_mliastd in
+      let output_cmi = output_file_sans_extension ^ Literals.suffix_cmi in
+      let output_cmj =  output_file_sans_extension ^ Literals.suffix_cmj in
+      let output_js =
+        String_set.fold (fun s acc ->
+          Bsb_config.package_output ~format:s (Ext_filename.output_js_basename output_file_sans_extension)
+          :: acc
+          ) package_specs []
+      in
+      (* let output_mldeps = output_file_sans_extension ^ Literals.suffix_mldeps in  *)
+      (* let output_mlideps = output_file_sans_extension ^ Literals.suffix_mlideps in  *)
+      let shadows =
+        ( "bs_package_flags",
+          Append
+            (String_set.fold (fun s acc ->
+                 Ext_string.inter2 acc (Bsb_config.package_flag ~format:s (Filename.dirname output_cmi))
+
+               ) package_specs Ext_string.empty)
+        ) ::
+        (if Bsb_dir_index.is_lib_dir group.dir_index  then [] else
+           [
+             "bs_package_includes", Append "$bs_package_dev_includes"
+             ;
+             ("bsc_extra_includes",
+              Overwrite
+                ("${" ^ Bsb_dir_index.string_of_bsb_dev_include group.dir_index  ^ "}")
+             )
+           ]
+        )
+      in
+      (*if kind = `Mll then
+        output_build oc
+          ~output:output_ml
+          ~input
+          ~rule: Rules.build_ml_from_mll ;*)
+      begin match kind with
+        (*| `Mll*)
+        | `Ml
+        | `Re ->
+          let input, rule  =
+            if kind = `Re then
+              input, Rules.build_ast_and_deps_from_reason_impl
+            (*else if kind = `Mll then
+              output_ml, Rules.build_ast_and_deps*)
+            else
+              input, Rules.build_ast_and_deps
+          in
+          begin
+            output_build oc
+              ~output:output_mlast
+              (* ~implicit_outputs:[output_mldeps] *)
+              ~input
+              ~rule;
+            output_build
+              oc
+              ~output:output_mlastd
+              ~input:output_mlast
+              ~rule:Rules.build_bin_deps
+              ?shadows:(if Bsb_dir_index.is_lib_dir group.dir_index then None
+                else Some [Bsb_build_schemas.bsb_dir_group,
+                   Overwrite (string_of_int (group.dir_index :> int)) ])
+            ;
+            let rule_name , cm_outputs, deps =
+              if module_info.mli = Mli_empty then
+                Rules.build_cmj_cmi_js, [output_cmi], []
+              else  Rules.build_cmj_js, []  , [output_cmi]
+
+            in
+            let shadows =
+              match js_post_build_cmd with
+              | None -> shadows
+              | Some cmd ->
+                ("postbuild",
+                 Overwrite ("&& " ^ cmd ^ Ext_string.single_space ^ String.concat Ext_string.single_space output_js)) :: shadows
+            in
+            output_build oc
+              ~output:output_cmj
+              ~shadows
+              ~outputs:  (output_js @ cm_outputs)
+              ~input:output_mlast
+              ~implicit_deps:deps
+              ~rule:rule_name ;
+            if installable then begin install_file file_input files_to_install end;
+            {all_config_deps = [output_mlastd]; 
+            (*all_installs = [output_cmi];  *)
+            }
+
+          end
+        | `Mli
+        | `Rei ->
+          let rule =
+            if kind = `Mli then Rules.build_ast_and_deps
+            else Rules.build_ast_and_deps_from_reason_intf  in
+          output_build oc
+            ~output:output_mliast
+            (* ~implicit_outputs:[output_mlideps] *)
+            ~input
+            ~rule;
+          output_build oc
+            ~output:output_mliastd
+            ~input:output_mliast
+            ~rule:Rules.build_bin_deps
+            ?shadows:(if Bsb_dir_index.is_lib_dir group.dir_index  then None
+                      else Some [Bsb_build_schemas.bsb_dir_group, 
+                        Overwrite (string_of_int (group.dir_index :> int ))])
+          ;
+          output_build oc
+            ~shadows
+            ~output:output_cmi
+            ~input:output_mliast
+            (* ~implicit_deps:[output_mliastd] *)
+            ~rule:Rules.build_cmi;
+          if installable then begin install_file file_input files_to_install end ;
+          {
+            all_config_deps = [output_mliastd];
+            (*all_installs = [output_cmi] ;*)
+
+          }
+
+      end
+    in
+    begin match module_info.ml with
+      | Ml input -> emit_build `Ml input
+      | Re input -> emit_build `Re input
+      | Ml_empty -> zero
+    end ++
+    begin match module_info.mli with
+      | Mli mli_file  ->
+        emit_build `Mli mli_file
+      | Rei rei_file ->
+        emit_build `Rei rei_file
+      | Mli_empty -> zero
+    end ++
+    info
+
+  in
+  let map_to_source_dir = 
+    (fun x -> Bsb_config.proj_rel (group.dir //x )) in
+  group.generators
+  |> List.iter (fun  ({output; input; command}  : Bsb_build_ui.build_generator)-> 
+      begin match String_map.find_opt command custom_rules with 
+      | None -> Ext_pervasives.failwithf ~loc:__LOC__ "custom rule %s used but  not defined" command
+      | Some rule -> 
+        begin match output, input with
+        | output::outputs, input::inputs -> 
+          output_build oc 
+            ~outputs:(List.map map_to_source_dir  outputs)
+            ~inputs:(List.map map_to_source_dir inputs) 
+            ~output:(map_to_source_dir output)
+            ~input:(map_to_source_dir input)
+            ~rule
+        | [], _ 
+        | _, []  -> Ext_pervasives.failwithf ~loc:__LOC__ "either output or input can not be empty in rule %s" command
+        end
+      end
+  );  (* we need create a rule for it --
+  {[
+    rule ocamllex 
+  ]}
+  *)
+  begin 
+  String_map.fold (fun  k v  acc ->
+      handle_module_info  oc k v acc
+    ) group.sources  acc ; 
+  end
+
+
+let handle_file_groups
+ oc ~package_specs ~js_post_build_cmd
+  ~files_to_install ~custom_rules
+  (file_groups  :  Bsb_build_ui.file_group list) st =
+  List.fold_left (handle_file_group oc ~package_specs ~custom_rules ~js_post_build_cmd files_to_install ) st  file_groups
+
+end
+module Bsb_ninja_native : sig 
+#1 "bsb_ninja_native.mli"
+(* Copyright (C) 2015-2016 Bloomberg Finance L.P.
+ * 
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * In addition to the permissions granted to you by the LGPL, you may combine
+ * or link a "work that uses the Library" with a publicly distributed version
+ * of this file to produce a combined library or application, then distribute
+ * that combined work under the terms of your choosing, with no requirement
+ * to comply with the obligations normally placed on you by section 4 of the
+ * LGPL version 3 (or the corresponding section of a later version of the LGPL
+ * should you choose to use a later version).
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ * 
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
+
+(* File following almost the same logic as bsb_ninja but slightly modified for 
+   native / bytecode compilation. *)
+type compile_target_t = Native | Bytecode
+  
+val handle_file_groups : out_channel ->
+  root_project_entry:Bsb_config_types.entries_t ->
+  compile_target:compile_target_t ->
+  is_top_level:bool ->
+  package_specs:Bsb_config.package_specs ->  
+  js_post_build_cmd:string option -> 
+  files_to_install:String_hash_set.t ->  
+  static_libraries:string list ->
+  Bsb_build_ui.file_group list ->
+  Bsb_ninja.info -> Bsb_ninja.info
+
+end = struct
+#1 "bsb_ninja_native.ml"
+(* Copyright (C) 2015-2016 Bloomberg Finance L.P.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * In addition to the permissions granted to you by the LGPL, you may combine
+ * or link a "work that uses the Library" with a publicly distributed version
+ * of this file to produce a combined library or application, then distribute
+ * that combined work under the terms of your choosing, with no requirement
+ * to comply with the obligations normally placed on you by section 4 of the
+ * LGPL version 3 (or the corresponding section of a later version of the LGPL
+ * should you choose to use a later version).
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
+
+
+module Rules = Bsb_rule 
+
+type compile_target_t = Native | Bytecode
+
+let output_build = Bsb_ninja.output_build
+
+let (//) = Ext_filename.combine
+
+let (++) (us : Bsb_ninja.info) (vs : Bsb_ninja.info) =
+  if us == Bsb_ninja.zero then vs else
+  if vs == Bsb_ninja.zero then us
+  else
+    {
+      all_config_deps  = us.all_config_deps @ vs.all_config_deps
+    ;
+      (* all_installs = us.all_installs @ vs.all_installs *)
+    }
+
+let install_file (file : string) files_to_install =
+  String_hash_set.add  files_to_install (Ext_filename.chop_extension_if_any file )
+
+let handle_file_group oc
+  ~compile_target
+  ~package_specs
+  ~js_post_build_cmd
+  (files_to_install : String_hash_set.t)
+  acc
+  (group: Bsb_build_ui.file_group) : Bsb_ninja.info =
+  let handle_module_info  oc  module_name
+      ( module_info : Binary_cache.module_info)
+      info  =
+    let installable =
+      match group.public with
+      | Export_all -> true
+      | Export_none -> false
+      | Export_set set ->  String_set.mem module_name set in
+    let emit_build (kind : [`Ml | `Mll | `Re | `Mli | `Rei ])  file_input : Bsb_ninja.info =
+      let filename_sans_extension = Filename.chop_extension file_input in
+      let input = Bsb_config.proj_rel file_input in
+      let output_file_sans_extension = filename_sans_extension in
+      let output_ml = output_file_sans_extension ^ Literals.suffix_ml in
+      let output_mlast = output_file_sans_extension  ^ Literals.suffix_mlast in
+      let output_mlastd = output_file_sans_extension ^ Literals.suffix_mlastd in
+      let output_mliast = output_file_sans_extension ^ Literals.suffix_mliast in
+      let output_mliastd = output_file_sans_extension ^ Literals.suffix_mliastd in
+      let output_cmi = output_file_sans_extension ^ Literals.suffix_cmi in
+      let output_cmj_or_cmo =
+        match compile_target with
+        | Bytecode -> output_file_sans_extension ^ Literals.suffix_cmo
+        | Native   -> output_file_sans_extension ^ Literals.suffix_cmx
+      in
+      let output_js =
+        String_set.fold (fun s acc ->
+          Bsb_config.package_output ~format:s (output_file_sans_extension ^ Literals.suffix_js)
+          :: acc
+          ) package_specs []
+      in
+      (* let output_mldeps = output_file_sans_extension ^ Literals.suffix_mldeps in  *)
+      (* let output_mlideps = output_file_sans_extension ^ Literals.suffix_mlideps in  *)
+      let shadows =
+        ( "bs_package_flags",
+          `Append
+            (String_set.fold (fun s acc ->
+                 Ext_string.inter2 acc (Bsb_config.package_flag ~format:s (Filename.dirname output_cmi))
+
+               ) package_specs Ext_string.empty)
+        ) ::
+        (if group.dir_index = 0 then [] else
+           [
+             "bs_package_includes", `Append "$bs_package_dev_includes"
+             ;
+             ("bsc_extra_includes",
+              `Overwrite
+                ("${" ^ Bsb_build_util.string_of_bsb_dev_include group.dir_index ^ "}")
+             )
+           ]
+        )
+      in
+      if kind = `Mll then
+        output_build oc
+          ~output:output_ml
+          ~input
+          ~rule: Rules.build_ml_from_mll ;
+      begin match kind with
+        | `Mll
+        | `Ml
+        | `Re ->
+          let input, rule = 
+            if kind = `Re then
+              input, Rules.build_ast_and_deps_from_reason_impl_simple
+            else if kind = `Mll then
+              output_ml, Rules.build_ast_and_deps_simple
+            else
+              input, Rules.build_ast_and_deps_simple
+          in
+          begin
+            output_build oc
+              ~output:output_mlast
+              (* ~implicit_outputs:[output_mldeps] *)
+              ~input
+              ~rule;
+            let bin_deps_rule = begin match compile_target with
+            | Bytecode -> Rules.build_bin_deps_bytecode
+            | Native   -> Rules.build_bin_deps_native
+            end in
+            output_build
+              oc
+              ~output:output_mlastd
+              ~input:output_mlast
+              ~rule:bin_deps_rule
+              ?shadows:(if group.dir_index = 0 then None
+                else Some [Bsb_build_schemas.bsb_dir_group, `Overwrite (string_of_int group.dir_index)])
+            ;
+            let rule_name = begin match compile_target with
+            | Bytecode -> Rules.build_cmo_cmi_bytecode
+            | Native   -> Rules.build_cmx_cmi_native
+            end in
+            let cm_outputs, deps =
+              if module_info.mli = Mli_empty then
+                [output_cmi], []
+              else    
+                [], [output_cmi]
+            in
+            let shadows =
+              match js_post_build_cmd with
+              | None -> shadows
+              | Some cmd ->
+                ("postbuild",
+                 `Overwrite ("&& " ^ cmd ^ Ext_string.single_space ^ String.concat Ext_string.single_space output_js)) :: shadows
+            in
+            output_build oc
+              ~output:output_cmj_or_cmo
+              ~shadows
+              ~implicit_outputs:cm_outputs
+              ~input:output_mlast
+              ~implicit_deps:deps
+              ~rule:rule_name ;
+            if installable then begin install_file file_input files_to_install end;
+            {all_config_deps = [output_mlastd]; 
+            (* all_installs = [output_cmi];   *)
+            }
+
+          end
+        | `Mli
+        | `Rei ->
+          let rule =
+            if kind = `Mli then Rules.build_ast_and_deps_simple
+            else Rules.build_ast_and_deps_from_reason_intf_simple
+          in
+          output_build oc
+            ~output:output_mliast
+            (* ~implicit_outputs:[output_mlideps] *)
+            ~input
+            ~rule;
+          output_build oc
+            ~output:output_mliastd
+            ~input:output_mliast
+            ~rule:Rules.build_bin_deps
+            ?shadows:(if group.dir_index = 0 then None
+                      else Some [Bsb_build_schemas.bsb_dir_group, `Overwrite (string_of_int group.dir_index)])
+          ;
+          let rule = begin match compile_target with
+            | Bytecode -> Rules.build_cmi_bytecode
+            | Native   -> Rules.build_cmi_native
+            end in
+          output_build oc
+            ~shadows
+            ~output:output_cmi
+            ~input:output_mliast
+            (* ~implicit_deps:[output_mliastd] *)
+            ~rule;
+          if installable then begin install_file file_input files_to_install end ;
+          {
+            all_config_deps = [output_mliastd];
+            (* all_installs = [output_cmi]; *)
+          }
+
+      end
+    in
+    begin match module_info.ml with
+      | Ml input -> emit_build `Ml input
+      | Re input -> emit_build `Re input
+      | Ml_empty -> Bsb_ninja.zero
+    end ++
+    begin match module_info.mli with
+      | Mli mli_file  ->
+        emit_build `Mli mli_file
+      | Rei rei_file ->
+        emit_build `Rei rei_file
+      | Mli_empty -> Bsb_ninja.zero
+    end ++
+    begin match module_info.mll with
+      | Some mll_file ->
+        begin match module_info.ml with
+          | Ml_empty -> emit_build `Mll mll_file
+          | Ml input | Re input ->
+            failwith ("both "^ mll_file ^ " and " ^ input ^ " are found in source listings" )
+        end
+      | None -> Bsb_ninja.zero
+    end ++ info
+
+  in
+  String_map.fold (fun  k v  acc ->
+      handle_module_info  oc k v acc
+    ) group.sources  acc
+
+let link oc ret ~root_project_entry ~file_groups ~static_libraries =
+  let output, rule_name, suffix_cmo_or_cmx, main_module_name =
+    begin match root_project_entry with
+    | Bsb_config_types.JsTarget main_module_name       -> assert false
+    | Bsb_config_types.BytecodeTarget main_module_name -> 
+      (String.lowercase main_module_name) ^ ".byte"  , Rules.linking_bytecode, Literals.suffix_cmo, main_module_name
+    | Bsb_config_types.NativeTarget main_module_name   -> 
+      (String.lowercase main_module_name) ^ ".native", Rules.linking_native  , Literals.suffix_cmx, main_module_name
+  end in
+  let (all_mlast_files, all_cmo_or_cmx_files, all_cmi_files) =
+    List.fold_left (fun acc group -> 
+      String_map.fold (fun _ (v : Binary_cache.module_info) (all_mlast_files, all_cmo_or_cmx_files, all_cmi_files) -> 
+        let mlname = match v.ml with
+          | Ml input | Re input -> Some (Ext_filename.chop_extension_if_any input)
+          | Ml_empty -> None
+        in
+        let mliname = match v.mli with
+          | Mli input | Rei input -> Some (Ext_filename.chop_extension_if_any input)
+          | Mli_empty -> None in
+        begin match (mlname, mliname) with
+        | None, None -> failwith "Got a source file without an ml or mli file. This should not happen."
+        | Some name, Some _ ->
+          ((name ^ Literals.suffix_mlast) :: all_mlast_files,
+           (name ^ suffix_cmo_or_cmx)     :: all_cmo_or_cmx_files,
+           (name ^ Literals.suffix_cmi)   :: all_cmi_files)
+        | Some name, None ->
+          ((name ^ Literals.suffix_mlast) :: all_mlast_files,
+           (name ^ suffix_cmo_or_cmx)     :: all_cmo_or_cmx_files,
+           (name ^ Literals.suffix_cmi)   :: all_cmi_files)
+        | None, Some name ->
+          (all_mlast_files,
+           all_cmo_or_cmx_files,
+           (name ^ Literals.suffix_cmi)   :: all_cmi_files)
+        end    
+      ) group.Bsb_build_ui.sources acc) 
+    ([], [], [])
+    file_groups in
+  let shadows = [(
+    "main_module",
+    `Overwrite main_module_name
+  ); ("static_libraries", `Overwrite (Bsb_build_util.flag_concat "-add-clib" static_libraries))] in
+  output_build oc
+    ~output
+    ~input:""
+    ~inputs:all_mlast_files
+    ~implicit_deps:(all_cmi_files @ all_cmo_or_cmx_files)
+    ~shadows
+    ~rule:rule_name;
+  ret
+    
+let pack oc ret  ~root_project_entry ~file_groups =
+  let output_cma_or_cmxa, rule_name, suffix_cmo_or_cmx =
+    begin match root_project_entry with
+    (* These cases could benefit from a better error message. *)
+    | Bsb_config_types.JsTarget _       -> assert false
+    | Bsb_config_types.BytecodeTarget _ -> Literals.library_file ^ Literals.suffix_cma , Rules.build_cma_library , Literals.suffix_cmo
+    | Bsb_config_types.NativeTarget _   -> Literals.library_file ^ Literals.suffix_cmxa, Rules.build_cmxa_library, Literals.suffix_cmx
+  end in
+  (* TODO(sansouci): we pack all source files of the dependency, but we could just pack the
+     files that are used by the main project. *)
+  let all_cmo_or_cmx_files, all_cmi_files =
+    List.fold_left (fun acc group -> 
+      String_map.fold (fun _ (v : Binary_cache.module_info) (all_cmo_or_cmx_files, all_cmi_files) -> 
+        let mlname = match v.ml with
+          | Ml input | Re input -> Some (Ext_filename.chop_extension_if_any input)
+          | Ml_empty -> None
+        in
+        let mliname = match v.mli with
+          | Mli input | Rei input -> Some (Ext_filename.chop_extension_if_any input)
+          | Mli_empty -> None in
+        match (mlname, mliname) with
+        | None, None -> failwith "Got a source file without an ml or mli file. This should not happen."
+        | Some name, Some _ ->
+          ((name ^ suffix_cmo_or_cmx  ) :: all_cmo_or_cmx_files,
+           (name ^ Literals.suffix_cmi) :: all_cmi_files)
+        | Some name , None ->
+          ((name ^ suffix_cmo_or_cmx  ) :: all_cmo_or_cmx_files,
+           (name ^ Literals.suffix_cmi) :: all_cmi_files)
+        | None, Some name ->
+          (all_cmo_or_cmx_files, (name ^ Literals.suffix_cmi) :: all_cmi_files)
+    ) group.Bsb_build_ui.sources acc) 
+    ([], [])
+    file_groups in
+  (* In the case that a library is just an interface file, we don't do anything *)
+  if List.length all_cmo_or_cmx_files > 0 then begin
+    output_build oc
+      ~output:output_cma_or_cmxa
+      ~input:""
+      ~inputs:all_cmo_or_cmx_files
+      ~implicit_deps:all_cmi_files
+      ~rule:rule_name ;
+    ret ++ ({all_config_deps = []; 
+    (* all_installs = [output_cma_or_cmxa];  *)
+  })
+  end else ret
+
+let handle_file_groups oc
+  ~root_project_entry
+  ~compile_target
+  ~is_top_level
+  ~package_specs
+  ~js_post_build_cmd
+  ~files_to_install
+  ~static_libraries
+  (file_groups  :  Bsb_build_ui.file_group list) st =
+  let ret = List.fold_left (
+    handle_file_group oc 
+      ~compile_target
+      ~package_specs
+      ~js_post_build_cmd 
+      files_to_install
+  ) st file_groups in
+  if is_top_level then
+    link oc ret ~root_project_entry ~file_groups ~static_libraries
+  else
+    pack oc ret ~root_project_entry ~file_groups
+
+end
+module Bsb_gen : sig 
+#1 "bsb_gen.mli"
+(* Copyright (C) 2015-2016 Bloomberg Finance L.P.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * In addition to the permissions granted to you by the LGPL, you may combine
+ * or link a "work that uses the Library" with a publicly distributed version
+ * of this file to produce a combined library or application, then distribute
+ * that combined work under the terms of your choosing, with no requirement
+ * to comply with the obligations normally placed on you by section 4 of the
+ * LGPL version 3 (or the corresponding section of a later version of the LGPL
+ * should you choose to use a later version).
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
+
+(** 
+  generate ninja file based on [cwd] and [bsc_dir]
+*)
+val output_ninja :
+  external_deps_for_linking_and_clibs: (string list) * (string list) ->
+  cwd:string ->
+  bsc_dir:string ->  
+  ocaml_dir:string ->
+  root_project_dir:string ->
+  ?root_project_entry: Bsb_config_types.entries_t ->
+  Bsb_config_types.t -> unit 
+
+end = struct
+#1 "bsb_gen.ml"
+(* Copyright (C) 2015-2016 Bloomberg Finance L.P.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * In addition to the permissions granted to you by the LGPL, you may combine
+ * or link a "work that uses the Library" with a publicly distributed version
+ * of this file to produce a combined library or application, then distribute
+ * that combined work under the terms of your choosing, with no requirement
+ * to comply with the obligations normally placed on you by section 4 of the
+ * LGPL version 3 (or the corresponding section of a later version of the LGPL
+ * should you choose to use a later version).
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
+
+let (//) = Ext_filename.combine
+
+(* we need copy package.json into [_build] since it does affect build output
+   it is a bad idea to copy package.json which requires to copy js files
+*)
+
+let merge_module_info_map acc sources =
+  String_map.merge (fun modname k1 k2 ->
+      match k1 , k2 with
+      | None , None ->
+        assert false
+      | Some a, Some b  ->
+        failwith ("Conflict files found: " ^ modname ^ " in "
+                  ^ Binary_cache.dir_of_module_info a ^ " and " ^ Binary_cache.dir_of_module_info b
+                  ^ ". File names need to be unique in a project.")
+      | Some v, None  -> Some v
+      | None, Some v ->  Some v
+    ) acc  sources
+
+let bsc_exe = "bsc.exe"
+let ocamlc_exe = "ocamlc.opt"
+let ocamlopt_exe = "ocamlopt.opt"
+let bsb_helper_exe = "bsb_helper.exe"
+let dash_i = "-I"
+let refmt_exe = "refmt.exe"
+let dash_ppx = "-ppx"
+
+let output_ninja
+    ~external_deps_for_linking_and_clibs:(external_deps_for_linking, clibs)
+    ~cwd 
+<<<<<<< HEAD
+    ~bsc_dir           
+    ({
+      package_name;
+      ocamllex;
+      external_includes;
+      bsc_flags ; 
+      ppx_flags;
+      bs_dependencies;
+      bs_dev_dependencies;
+      refmt;
+      refmt_flags;
+      js_post_build_cmd;
+      package_specs;
+      bs_file_groups;
+      files_to_install;
+      built_in_dependency;
+      reason_react_jsx;
+      generators ;
+    } : Bsb_config_types.t)
+  =
+  let custom_rules = Bsb_rule.reset generators in 
+=======
+    ~bsc_dir  
+    ~ocaml_dir         
+    ~root_project_dir
+    ?root_project_entry
+    {
+    Bsb_config_types.package_name;
+    ocamllex;
+    external_includes;
+    warnings;
+    bsc_flags ; 
+    ppx_flags;
+    bs_dependencies;
+    bs_dev_dependencies;
+    refmt;
+    refmt_flags;
+    js_post_build_cmd;
+    package_specs;
+    bs_file_groups;
+    files_to_install;
+    built_in_dependency;
+    reason_react_jsx;
+    entries;
+    static_libraries;
+    build_script;
+    allowed_build_kinds;
+    }
+  =
+  let () = Bsb_rule.reset () in 
+  let oc = open_out_bin (cwd // Bsb_config.lib_bs // Literals.build_ninja) in
+>>>>>>> Squashed commits!
+  let bsc = bsc_dir // bsc_exe in   (* The path to [bsc.exe] independent of config  *)
+  let bsb_helper = bsc_dir // bsb_helper_exe in (* The path to [bsb_heler.exe] *)
+  let ocamlc = ocaml_dir // ocamlc_exe in
+  let ocamlopt = ocaml_dir // ocamlopt_exe in
+  (* let builddir = Bsb_config.lib_bs in  *)
+  let ppx_flags = Bsb_build_util.flag_concat dash_ppx ppx_flags in
+  let bsc_flags =  String.concat Ext_string.single_space bsc_flags in
+  let refmt_flags = String.concat Ext_string.single_space refmt_flags in
+  begin
+    let () =
+      output_string oc "bs_package_flags = ";
+      output_string oc ("-bs-package-name "  ^ package_name);
+      output_string oc "\n";
+      let bsc_flags = 
+        Ext_string.inter2  Literals.dash_nostdlib @@
+        match built_in_dependency with 
+        | None -> bsc_flags   
+        | Some {package_install_path} -> 
+          Ext_string.inter3 dash_i (Filename.quote package_install_path) bsc_flags
+  
+      in 
+      let reason_react_jsx_flag = 
+        match reason_react_jsx with 
+        | None -> Ext_string.empty          
+        | Some  s -> 
+          "-ppx " ^ s         
+      in 
+      Bsb_ninja.output_kvs
+        [|
+          "src_root_dir", cwd (* TODO: need check its integrity -- allow relocate or not? *);
+          "bsc", bsc ;
+          "bsb_helper", bsb_helper;
+          "ocamllex", ocamllex;
+          "bsc_flags", bsc_flags;
+          "warnings", "-w " ^ warnings;
+          "ppx_flags", ppx_flags;
+          "bs_package_includes", (Bsb_build_util.flag_concat dash_i @@ List.map (fun x -> x.Bsb_config_types.package_install_path) bs_dependencies);
+          "bs_package_dev_includes", (Bsb_build_util.flag_concat dash_i @@ List.map (fun x -> x.Bsb_config_types.package_install_path) bs_dev_dependencies);  
+          "external_deps_for_linking", Bsb_build_util.flag_concat dash_i external_deps_for_linking;
+          "refmt", (match refmt with None -> bsc_dir // refmt_exe | Some x -> x) ;
+          "reason_react_jsx", reason_react_jsx_flag
+             ; (* make it configurable in the future *)
+          "refmt_flags", refmt_flags;
+          "ocamlc", ocamlc;
+          "ocamlopt", ocamlopt;
+          Bsb_build_schemas.bsb_dir_group, "0"  (*TODO: avoid name conflict in the future *)
+        |] oc ;
+    in
+    let all_includes acc  = 
+        match external_includes with 
+        | [] -> acc 
+        | _ ->  
+          (* for external includes, if it is absolute path, leave it as is 
+            for relative path './xx', we need '../.././x' since we are in 
+            [lib/bs], [build] is different from merlin though
+          *)
+          Ext_list.map_acc acc 
+          (fun x -> if Filename.is_relative x then Bsb_config.rev_lib_bs_prefix  x else x) 
+          external_includes
+    in 
+    let  static_resources =
+      let number_of_dev_groups = Bsb_dir_index.get_current_number_of_dev_groups () in
+      if number_of_dev_groups = 0 then
+        let bs_groups, source_dirs,static_resources  =
+          List.fold_left (fun (acc, dirs,acc_resources) ({Bsb_build_ui.sources ; dir; resources }) ->
+              merge_module_info_map  acc  sources ,  dir::dirs , (List.map (fun x -> dir // x ) resources) @ acc_resources
+            ) (String_map.empty,[],[]) bs_file_groups in
+        Binary_cache.write_build_cache (cwd // Bsb_config.lib_bs // Binary_cache.bsbuild_cache) [|bs_groups|] ;
+        Bsb_ninja.output_kv
+          Bsb_build_schemas.bsc_lib_includes (Bsb_build_util.flag_concat dash_i @@ 
+          (all_includes source_dirs  ))  oc ;
+        static_resources
+      else
+        let bs_groups = Array.init  (number_of_dev_groups + 1 ) (fun i -> String_map.empty) in
+        let source_dirs = Array.init (number_of_dev_groups + 1 ) (fun i -> []) in
+        
+        let static_resources =
+          List.fold_left (fun acc_resources  ({Bsb_build_ui.sources; dir; resources; dir_index})  ->
+              let dir_index = (dir_index :> int) in 
+              bs_groups.(dir_index) <- merge_module_info_map bs_groups.(dir_index) sources ;
+              source_dirs.(dir_index) <- dir :: source_dirs.(dir_index);
+              (List.map (fun x -> dir//x) resources) @ resources
+            ) [] bs_file_groups in
+        (* Make sure [sources] does not have files in [lib] we have to check later *)
+        let lib = bs_groups.((Bsb_dir_index.lib_dir_index :> int)) in
+        Bsb_ninja.output_kv
+          Bsb_build_schemas.bsc_lib_includes (Bsb_build_util.flag_concat dash_i @@
+           (all_includes source_dirs.(0))) oc ;
+        for i = 1 to number_of_dev_groups  do
+          let c = bs_groups.(i) in
+          String_map.iter (fun k _ -> if String_map.mem k lib then failwith ("conflict files found:" ^ k)) c ;
+          Bsb_ninja.output_kv (Bsb_dir_index.(string_of_bsb_dev_include (of_int i)))
+            (Bsb_build_util.flag_concat "-I" @@ source_dirs.(i)) oc
+        done  ;
+        Binary_cache.write_build_cache (cwd // Bsb_config.lib_bs // Binary_cache.bsbuild_cache) bs_groups ;
+        static_resources
+    in
+    let (root_project_entry, is_top_level) = match root_project_entry with
+    (* List.hd here will always work because entries defaults to having 1 element 
+       to build JS *)
+    | None -> List.hd entries, true
+    | Some root_project_entry -> root_project_entry, false in
+<<<<<<< HEAD
+    let all_info =
+<<<<<<< HEAD
+      Bsb_ninja.handle_file_groups oc       
+        ~custom_rules
+        ~js_post_build_cmd  ~package_specs ~files_to_install bs_file_groups Bsb_ninja.zero  in
+=======
+=======
+    let (all_info, should_build) =
+>>>>>>> Update readme + fixes
+    match root_project_entry with
+    | Bsb_config_types.JsTarget _ -> 
+    print_endline @@ "JS and is allow: " ^ (string_of_bool (List.mem Bsb_config_types.Js allowed_build_kinds));
+      if List.mem Bsb_config_types.Js allowed_build_kinds then
+        (Bsb_ninja.handle_file_groups oc
+          ~package_specs
+          ~js_post_build_cmd
+          ~files_to_install
+          bs_file_groups 
+          Bsb_ninja.zero, 
+        true)
+      else (Bsb_ninja.zero, false)
+    | Bsb_config_types.BytecodeTarget _ ->
+      if List.mem Bsb_config_types.Bytecode allowed_build_kinds then
+        (Bsb_ninja_native.handle_file_groups oc
+          ~root_project_entry
+          ~compile_target:Bsb_ninja_native.Bytecode
+          ~is_top_level
+          ~package_specs
+          ~js_post_build_cmd
+          ~files_to_install
+          ~static_libraries:(clibs @ static_libraries)
+          bs_file_groups
+          Bsb_ninja.zero,
+        true)
+      else (Bsb_ninja.zero, false)
+    | Bsb_config_types.NativeTarget _ ->
+      if List.mem Bsb_config_types.Native allowed_build_kinds then
+        (Bsb_ninja_native.handle_file_groups oc
+          ~root_project_entry
+          ~compile_target:Bsb_ninja_native.Native
+          ~is_top_level
+          ~package_specs
+          ~js_post_build_cmd
+          ~files_to_install
+          ~static_libraries:(clibs @ static_libraries)
+          bs_file_groups
+          Bsb_ninja.zero,
+        true)
+      else (Bsb_ninja.zero, false)
+      in
+>>>>>>> Squashed commits!
+    let () =
+      List.iter (fun x -> Bsb_ninja.output_build oc
+                    ~output:x
+                    ~input:(Bsb_config.proj_rel x)
+                    ~rule:Bsb_rule.copy_resources) static_resources in
+    (* If we have a build_script, we'll trust the user and use that to build the package instead. 
+     We generate one simple rule that'll just call that string as a command. *)
+  let _ = match build_script with
+  | Some build_script when should_build ->
+    let build_script = Ext_string.ninja_escaped build_script in
+    let ocaml_lib = Bsb_build_util.get_ocaml_lib_dir cwd in
+    (* TODO(sansouci): Fix this super ghetto environment variable setup... This is not cross platform! *)
+    let envvars = "export OCAML_LIB=" ^ ocaml_lib ^ " && " 
+                ^ "export OCAML_SYSTHREADS=" ^ (ocaml_dir // "otherlibs" // "systhreads") ^ " && " 
+                ^ "export PATH=$$PATH:" ^ (root_project_dir // "node_modules" // ".bin") ^ ":" ^ ocaml_dir ^ ":" ^ (root_project_dir // "node_modules" // "bs-platform" // "bin") ^ " && " in
+    (* We move out of lib/bs so that the command is ran from the root project. *)
+    let rule = Bsb_rule.define ~command:("cd ../.. && " ^ envvars ^ build_script) "build_script" in
+    Bsb_ninja.output_build oc
+      ~order_only_deps:(static_resources @ all_info.all_config_deps)
+      ~input:""
+      ~output:Literals.build_ninja
+      ~rule;
+  | _ ->
+    Bsb_ninja.phony oc ~order_only_deps:(static_resources @ all_info.all_config_deps)
+      ~inputs:[]
+      ~output:Literals.build_ninja ; in
+    close_out oc;
+  end
+
+end
+module Bsb_regex : sig 
+#1 "bsb_regex.mli"
+
+
+
+val global_substitute:
+ string ->
+  (string -> string list -> string)
+  -> string -> string
+end = struct
+#1 "bsb_regex.ml"
+let string_after s n = String.sub s n (String.length s - n)
+
+
+
+(* There seems to be a bug in {!Str.global_substitute} 
+{[
+Str.global_substitute (Str.regexp "\\${bsb:\\([-a-zA-Z0-9]+\\)}") (fun x -> (x^":found")) {|   ${bsb:hello-world}  ${bsb:x} ${x}|}  ;;
+- : bytes =
+"      ${bsb:hello-world}  ${bsb:x} ${x}:found     ${bsb:hello-world}  ${bsb:x} ${x}:found ${x}"
+]}
+*)
+
+let global_substitute expr repl_fun text =
+  let text_len = String.length text in 
+  let expr = Str.regexp expr in  
+  let rec replace accu start last_was_empty =
+    let startpos = if last_was_empty then start + 1 else start in
+    if startpos > text_len then
+      string_after text start :: accu
+    else
+      match Str.search_forward expr text startpos with
+      | exception Not_found -> 
+        string_after text start :: accu
+      |  pos ->
+        let end_pos = Str.match_end() in
+        let matched = (Str.matched_string text) in 
+        let  groups = 
+            let rec aux n  acc = 
+                match Str.matched_group n text with 
+                | exception (Not_found | Invalid_argument _ ) 
+                    -> acc 
+                | v -> aux (succ n) (v::acc) in 
+             aux 1 []  in 
+        let repl_text = repl_fun matched groups  in
+        replace (repl_text :: String.sub text start (pos-start) :: accu)
+          end_pos (end_pos = pos)
+  in
+  String.concat "" (List.rev (replace [] 0 false))
+
+end
+module OCamlRes
+= struct
+#1 "oCamlRes.ml"
+
+
+module Res = struct
+    type  node = 
+        | Dir of string *  node list 
+        | File of string *  string
+
+end    
+
+
+
+end
+module Bsb_templates : sig 
+#1 "bsb_templates.mli"
+
+
+>>>>>>> Update readme + fixes
 val root : OCamlRes.Res.node list 
 end = struct
 #1 "bsb_templates.ml"
@@ -17197,11 +18215,218 @@ let install_if_exists ~destdir input_name =
     else false
 
 end
+<<<<<<< HEAD
 module Bsb_world : sig 
 #1 "bsb_world.mli"
 (* Copyright (C) 2017- Authors of BuckleScript
  *
 =======
+=======
+module Bsb_merlin_gen : sig 
+#1 "bsb_merlin_gen.mli"
+(* Copyright (C) 2015-2016 Bloomberg Finance L.P.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * In addition to the permissions granted to you by the LGPL, you may combine
+ * or link a "work that uses the Library" with a publicly distributed version
+ * of this file to produce a combined library or application, then distribute
+ * that combined work under the terms of your choosing, with no requirement
+ * to comply with the obligations normally placed on you by section 4 of the
+ * LGPL version 3 (or the corresponding section of a later version of the LGPL
+ * should you choose to use a later version).
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
+
+
+
+
+val merlin_file_gen : 
+    cwd:string -> string  -> Bsb_config_types.t ->  unit 
+end = struct
+#1 "bsb_merlin_gen.ml"
+(* Copyright (C) 2015-2016 Bloomberg Finance L.P.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * In addition to the permissions granted to you by the LGPL, you may combine
+ * or link a "work that uses the Library" with a publicly distributed version
+ * of this file to produce a combined library or application, then distribute
+ * that combined work under the terms of your choosing, with no requirement
+ * to comply with the obligations normally placed on you by section 4 of the
+ * LGPL version 3 (or the corresponding section of a later version of the LGPL
+ * should you choose to use a later version).
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
+
+
+let merlin = ".merlin"
+let merlin_header = "####{BSB GENERATED: NO EDIT"
+let merlin_trailer = "####BSB GENERATED: NO EDIT}"
+let merlin_trailer_length = String.length merlin_trailer
+let (//) = Ext_filename.combine
+
+(** [new_content] should start end finish with newline *)
+let revise_merlin merlin new_content =
+  if Sys.file_exists merlin then
+    let merlin_chan = open_in_bin merlin in
+    let size = in_channel_length merlin_chan in
+    let s = really_input_string merlin_chan size in
+    let () =  close_in merlin_chan in
+
+    let header =  Ext_string.find s ~sub:merlin_header  in
+    let tail = Ext_string.find s ~sub:merlin_trailer in
+    if header < 0  && tail < 0 then (* locked region not added yet *)
+      let ochan = open_out_bin merlin in
+      output_string ochan s ;
+      output_string ochan "\n";
+      output_string ochan merlin_header;
+      Buffer.output_buffer ochan new_content;
+      output_string ochan merlin_trailer ;
+      output_string ochan "\n";
+      close_out ochan
+    else if header >=0 && tail >= 0  then
+      (* there is one, hit it everytime,
+         should be fixed point
+      *)
+      let ochan = open_out_bin merlin in
+      output_string ochan (String.sub s 0 header) ;
+      output_string ochan merlin_header;
+      Buffer.output_buffer ochan new_content;
+      output_string ochan merlin_trailer ;
+      output_string ochan (Ext_string.tail_from s (tail +  merlin_trailer_length));
+      close_out ochan
+    else failwith ("the .merlin is corrupted, locked region by bsb is not consistent ")
+  else
+    let ochan = open_out_bin merlin in
+    output_string ochan merlin_header ;
+    Buffer.output_buffer ochan new_content;
+    output_string ochan merlin_trailer ;
+    output_string ochan "\n";
+    close_out ochan
+
+(* ATTENTION: order matters here, need resolve global properties before
+   merlin generation
+*)
+let merlin_flg_ppx = "\nFLG -ppx " 
+let merlin_s = "\nS "
+let merlin_b = "\nB "
+
+
+let merlin_flg = "\nFLG "
+let bs_flg_prefix = "-bs-"
+
+
+let bsc_flg_to_merlin_ocamlc_flg bsc_flags  =
+  merlin_flg ^ 
+      String.concat Ext_string.single_space 
+        (List.filter (fun x -> not (Ext_string.starts_with x bs_flg_prefix )) @@ 
+        Literals.dash_nostdlib::bsc_flags) 
+
+
+let merlin_file_gen ~cwd
+    built_in_ppx
+    ({bs_file_groups = res_files ; 
+      generate_merlin;
+      ppx_flags;
+      bs_dependencies;
+      bs_dev_dependencies;
+      bsc_flags; 
+      built_in_dependency;
+      external_includes; 
+      reason_react_jsx ; 
+     } : Bsb_config_types.t)
+  =
+  if generate_merlin then begin     
+    let buffer = Buffer.create 1024 in
+    ppx_flags
+    |> List.iter (fun x ->
+        Buffer.add_string buffer (merlin_flg_ppx ^ x )
+      );
+    (match reason_react_jsx with
+    | Some s -> 
+      begin 
+        Buffer.add_string buffer (merlin_flg_ppx ^ s)
+      end
+    | None -> ());
+    Buffer.add_string buffer (merlin_flg_ppx  ^ built_in_ppx);
+    (*
+    (match external_includes with 
+    | [] -> ()
+    | _ -> 
+
+      Buffer.add_string buffer (merlin_flg ^ Bsb_build_util.flag_concat "-I" external_includes
+      ));
+    *)
+    external_includes 
+    |> List.iter (fun path -> 
+        Buffer.add_string buffer merlin_s ;
+        Buffer.add_string buffer path ;
+        Buffer.add_string buffer merlin_b;
+        Buffer.add_string buffer path ;
+      );      
+    (match built_in_dependency with
+     | None -> ()
+     | Some package -> 
+       let path = package.package_install_path in 
+       Buffer.add_string buffer (merlin_s ^ path );
+       Buffer.add_string buffer (merlin_b ^ path)                      
+    );
+
+    let bsc_string_flag = bsc_flg_to_merlin_ocamlc_flg bsc_flags in 
+    Buffer.add_string buffer bsc_string_flag ;
+
+    bs_dependencies 
+    |> List.iter (fun package ->
+        let path = package.Bsb_config_types.package_install_path in
+        Buffer.add_string buffer merlin_s ;
+        Buffer.add_string buffer path ;
+        Buffer.add_string buffer merlin_b;
+        Buffer.add_string buffer path ;
+      );
+    bs_dev_dependencies (**TODO: shall we generate .merlin for dev packages ?*)
+    |> List.iter (fun package ->
+        let path = package.Bsb_config_types.package_install_path in
+        Buffer.add_string buffer merlin_s ;
+        Buffer.add_string buffer path ;
+        Buffer.add_string buffer merlin_b;
+        Buffer.add_string buffer path ;
+      );
+
+    res_files |> List.iter (fun (x : Bsb_build_ui.file_group) -> 
+        Buffer.add_string buffer merlin_s;
+        Buffer.add_string buffer x.dir ;
+        Buffer.add_string buffer merlin_b;
+        Buffer.add_string buffer (Bsb_config.lib_bs//x.dir) ;
+      ) ;
+    Buffer.add_string buffer "\n";
+    revise_merlin (cwd // merlin) buffer 
+  end
+
+
+
+end
+>>>>>>> Update readme + fixes
 module Ext_color : sig 
 #1 "ext_color.mli"
 (* Copyright (C) 2015-2016 Bloomberg Finance L.P.
@@ -17542,7 +18767,7 @@ let regenerate_ninja
           ~no_dev
           cwd in 
       begin 
-        Bsb_config_parse.merlin_file_gen ~cwd
+        Bsb_merlin_gen.merlin_file_gen ~cwd
           (bsc_dir // bsppx_exe) config;
         let external_deps_for_linking_and_clibs = match external_deps_for_linking_and_clibs with 
         | None -> 
@@ -17940,7 +19165,7 @@ let () =
             | _ -> ()
           end;
           (* [-make-world] should never be combined with [-package-specs] *)
-          let external_deps_for_linking_and_clibs = if make_world.set then 
+          let external_deps_for_linking_and_clibs = if !make_world then 
             Some (make_world_deps ~root_project_dir:cwd None)
           else None in
           let _ = regenerate_ninja 

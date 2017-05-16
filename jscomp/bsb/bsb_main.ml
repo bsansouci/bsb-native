@@ -43,12 +43,6 @@ let set_make_world () = make_world := true
 
 
 
-(** Regenerate ninja file if necessary   
-    return None if we dont need regenerate
-    otherwise return Some info
-*)
-
-
 
 let bsb_main_flags : (string * Arg.spec * string) list=
   [
@@ -219,7 +213,7 @@ let () =
         begin
           Arg.parse_argv bsb_args bsb_main_flags handle_anonymous_arg usage ;
           (* [-make-world] should never be combined with [-package-specs] *)
-          let external_deps_for_linking_and_clibs = if make_world.set then 
+          let external_deps_for_linking_and_clibs = if make_world then 
             Some (Bsb_world.make_world_deps ~root_project_dir:cwd None)
           else None in
           let _ = regenerate_ninja 
