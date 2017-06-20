@@ -36,6 +36,7 @@ bin/whole_compiler.ml : ext/literals.ml
 <<<<<<< HEAD
 =======
 bin/whole_compiler.ml : ../ocaml/driver/pparse.ml
+bin/whole_compiler.ml : ../ocaml/parsing/lexer.ml
 bin/whole_compiler.ml : ../ocaml/parsing/parse.ml
 bin/whole_compiler.ml : ../ocaml/typing/annot.mli
 bin/whole_compiler.ml : ../ocaml/typing/btype.mli
@@ -74,6 +75,7 @@ bin/whole_compiler.ml : ../ocaml/driver/pparse.mli
 bin/whole_compiler.ml : ../ocaml/parsing/depend.ml
 bin/whole_compiler.ml : ../ocaml/parsing/lexer.mli
 bin/whole_compiler.ml : ../ocaml/parsing/parse.mli
+bin/whole_compiler.ml : ../ocaml/parsing/parser.ml
 bin/whole_compiler.ml : ../ocaml/typing/oprint.mli
 bin/whole_compiler.ml : ../ocaml/typing/predef.mli
 bin/whole_compiler.ml : ../ocaml/typing/stypes.mli
@@ -112,6 +114,7 @@ bin/whole_compiler.ml : ../ocaml/bytecomp/switch.ml
 bin/whole_compiler.ml : ../ocaml/driver/compenv.mli
 bin/whole_compiler.ml : ../ocaml/driver/compmisc.ml
 bin/whole_compiler.ml : ../ocaml/parsing/depend.mli
+bin/whole_compiler.ml : ../ocaml/parsing/parser.mli
 bin/whole_compiler.ml : ../ocaml/typing/datarepr.ml
 bin/whole_compiler.ml : ../ocaml/typing/parmatch.ml
 bin/whole_compiler.ml : ../ocaml/typing/printtyp.ml

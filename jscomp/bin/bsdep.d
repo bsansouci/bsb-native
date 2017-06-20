@@ -9,6 +9,7 @@ bin/bsdep.ml : ext/literals.ml
 <<<<<<< HEAD
 =======
 bin/bsdep.ml : ../ocaml/driver/pparse.ml
+bin/bsdep.ml : ../ocaml/parsing/lexer.ml
 bin/bsdep.ml : ../ocaml/parsing/parse.ml
 bin/bsdep.ml : ../ocaml/utils/clflags.ml
 >>>>>>> Update readme + fixes
@@ -27,6 +28,7 @@ bin/bsdep.ml : ../ocaml/driver/pparse.mli
 bin/bsdep.ml : ../ocaml/parsing/depend.ml
 bin/bsdep.ml : ../ocaml/parsing/lexer.mli
 bin/bsdep.ml : ../ocaml/parsing/parse.mli
+bin/bsdep.ml : ../ocaml/parsing/parser.ml
 bin/bsdep.ml : ../ocaml/tools/ocamldep.ml
 bin/bsdep.ml : ../ocaml/utils/clflags.mli
 bin/bsdep.ml : ../ocaml/utils/terminfo.ml
@@ -44,6 +46,7 @@ bin/bsdep.ml : syntax/ast_pat.ml
 =======
 bin/bsdep.ml : ../ocaml/driver/compenv.mli
 bin/bsdep.ml : ../ocaml/parsing/depend.mli
+bin/bsdep.ml : ../ocaml/parsing/parser.mli
 bin/bsdep.ml : ../ocaml/utils/terminfo.mli
 bin/bsdep.ml : ../ocaml/utils/warnings.mli
 >>>>>>> Update readme + fixes

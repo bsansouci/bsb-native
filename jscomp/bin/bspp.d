@@ -1,6 +1,10 @@
 bin/bspp.ml : bspp/parser.ml
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
+=======
+bin/bspp.ml : ../ocaml/parsing/lexer.ml
+>>>>>>> Fix @jaredly's bug.
 bin/bspp.ml : ../ocaml/utils/clflags.ml
 bin/bspp.ml : ../ocaml/parsing/lexer.mli
 bin/bspp.ml : ../ocaml/utils/clflags.mli

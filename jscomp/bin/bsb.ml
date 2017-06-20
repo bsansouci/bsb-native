@@ -18796,8 +18796,6 @@ let regenerate_ninja
               Bsb_build_util.walk_all_deps cwd
                 (fun {top; cwd} ->
                   if not top then begin
-                    list_of_all_external_deps := (cwd // Bsb_config.lib_ocaml) :: !list_of_all_external_deps;
-                    
                     let config = 
                       Bsb_config_parse.interpret_json 
                         ~override_package_specs
@@ -18805,7 +18803,18 @@ let regenerate_ninja
                         ~generate_watch_metadata:false
                         ~no_dev:true
                         cwd in
-                    all_clibs := (List.rev Bsb_config_types.(config.static_libraries)) @ !all_clibs
+                    begin match mainEntry with 
+                    | Bsb_config_types.JsTarget _ ->  assert false
+                    | Bsb_config_types.BytecodeTarget _ 
+                      when List.mem Bsb_config_types.Bytecode Bsb_config_types.(config.allowed_build_kinds)-> 
+                        list_of_all_external_deps := (cwd // Bsb_config.lib_ocaml) :: !list_of_all_external_deps;
+                        all_clibs := (List.rev Bsb_config_types.(config.static_libraries)) @ !all_clibs;
+                    | Bsb_config_types.NativeTarget _ 
+                      when List.mem Bsb_config_types.Native Bsb_config_types.(config.allowed_build_kinds) -> 
+                        list_of_all_external_deps := (cwd // Bsb_config.lib_ocaml) :: !list_of_all_external_deps;
+                        all_clibs := (List.rev Bsb_config_types.(config.static_libraries)) @ !all_clibs;
+                    | _ -> ()
+                    end;
                   end
                 );
               (List.rev !list_of_all_external_deps, List.rev !all_clibs)

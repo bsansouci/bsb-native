@@ -43,7 +43,6 @@ let set_make_world () = make_world := true
 
 
 
-
 let bsb_main_flags : (string * Arg.spec * string) list=
   [
     "-color", Arg.Set Bsb_log.color_enabled,
