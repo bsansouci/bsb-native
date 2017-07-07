@@ -194,47 +194,6 @@ let build_cmi =
     ~depfile:"${in}.d"
     "build_cmi" (* the compiler should always consult [.cmi], current the vanilla ocaml compiler only consult [.cmi] when [.mli] found*)
 
-(* a snapshot of rule_names environment*)
-let built_in_rule_names = !rule_names 
-let built_in_rule_id = !rule_id
-
-let reset (custom_rules : string String_map.t) = 
-  begin 
-    rule_id := built_in_rule_id;
-    rule_names := built_in_rule_names;
-
-    build_ast_and_deps.used <- false ;
-    build_ast_and_deps_from_reason_impl.used <- false ;  
-    build_ast_and_deps_from_reason_intf.used <- false ;
-
-    build_ast_and_deps_simple.used <- false ;
-    build_ast_and_deps_from_reason_impl_simple.used <- false ;  
-    build_ast_and_deps_from_reason_intf_simple.used <- false ;
-    
-    build_bin_deps.used <- false;
-    build_bin_deps_bytecode.used <- false;
-    build_bin_deps_native.used <- false;
-  
-    reload.used <- false; 
-    copy_resources.used <- false ;
-
-    build_cmj_js.used <- false;
-    build_cmj_cmi_js.used <- false ;
-    build_cmi.used <- false ;
-    
-    build_cmo_cmi_bytecode.used <- false;
-    build_cmi_bytecode.used <- false;
-    build_cmx_cmi_native.used <- false;
-    build_cmi_native.used <- false;
-    linking_bytecode.used <- false;
-    linking_native.used <- false;
-    build_cma_library.used <- false;
-    build_cmxa_library.used <- false;
-    
-    String_map.mapi (fun name command -> 
-        define ~command name
-      ) custom_rules
-  end
 
 let build_cmo_cmi_bytecode =
   define
@@ -287,3 +246,45 @@ let build_cmxa_library =
     ~command:"${bsb_helper} ${static_libraries} ${bs_package_includes} ${bsc_lib_includes} ${bsc_extra_includes} \
               ${in} -pack-native-library"
     "build_cmxa_library"
+
+(* a snapshot of rule_names environment*)
+let built_in_rule_names = !rule_names 
+let built_in_rule_id = !rule_id
+
+let reset (custom_rules : string String_map.t) = 
+  begin 
+    rule_id := built_in_rule_id;
+    rule_names := built_in_rule_names;
+
+    build_ast_and_deps.used <- false ;
+    build_ast_and_deps_from_reason_impl.used <- false ;  
+    build_ast_and_deps_from_reason_intf.used <- false ;
+
+    build_ast_and_deps_simple.used <- false ;
+    build_ast_and_deps_from_reason_impl_simple.used <- false ;  
+    build_ast_and_deps_from_reason_intf_simple.used <- false ;
+    
+    build_bin_deps.used <- false;
+    build_bin_deps_bytecode.used <- false;
+    build_bin_deps_native.used <- false;
+  
+    reload.used <- false; 
+    copy_resources.used <- false ;
+    build_ml_from_mll.used <- false ; 
+    build_cmj_js.used <- false;
+    build_cmj_cmi_js.used <- false ;
+    build_cmi.used <- false ;
+    
+    build_cmo_cmi_bytecode.used <- false;
+    build_cmi_bytecode.used <- false;
+    build_cmx_cmi_native.used <- false;
+    build_cmi_native.used <- false;
+    linking_bytecode.used <- false;
+    linking_native.used <- false;
+    build_cma_library.used <- false;
+    build_cmxa_library.used <- false;
+    
+    String_map.mapi (fun name command -> 
+        define ~command name
+      ) custom_rules
+  end

@@ -8100,6 +8100,7 @@ let mem (h :  _ Hash_set_gen.t) key =
   
 
 end
+<<<<<<< HEAD
 module Bsb_config_types
 = struct
 #1 "bsb_config_types.ml"
@@ -8222,6 +8223,10 @@ val allowed_build_kinds : Bsb_config_types.compilation_kind_t list
 
 end = struct
 #1 "bsb_default.ml"
+=======
+module Ext_file_pp : sig 
+#1 "ext_file_pp.mli"
+>>>>>>> Merging in new generators stuff!
 (* Copyright (C) 2015-2016 Bloomberg Finance L.P.
  *
  * This program is free software: you can redistribute it and/or modify
@@ -8246,6 +8251,10 @@ end = struct
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
 
+<<<<<<< HEAD
+=======
+
+>>>>>>> Merging in new generators stuff!
 
 (**
    6
@@ -8274,10 +8283,19 @@ let bsc_flags =
     "-color"; "always" ;
     "-w"; "-40+6+7+27+32..39+44+45"
 
+<<<<<<< HEAD
   ]
+=======
+type interval = {
+  loc_start : Lexing.position ; 
+  loc_end : Lexing.position ; 
+  action : out_channel -> int -> unit 
+}
+>>>>>>> Merging in new generators stuff!
 
 let ocamllex = "ocamllex.opt"  
 
+<<<<<<< HEAD
 let refmt_flags = ["--print"; "binary"]
 
 let package_specs = String_set.singleton Literals.commonjs
@@ -8288,6 +8306,26 @@ end
 module Ext_json_noloc : sig 
 #1 "ext_json_noloc.mli"
 (* Copyright (C) 2017- Authors of BuckleScript
+=======
+(** Assume that there is no overlapp *)
+val interval_compare : 
+  interval -> interval -> int
+
+val patch_action:
+  String_vec.t -> 
+  Lexing.position -> 
+  Lexing.position -> 
+  interval
+(*
+val cpp_process_file : 
+  string -> (Lexing.position * Lexing.position) list -> out_channel -> unit*)
+
+
+
+end = struct
+#1 "ext_file_pp.ml"
+(* Copyright (C) 2015-2016 Bloomberg Finance L.P.
+>>>>>>> Merging in new generators stuff!
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
@@ -8311,8 +8349,75 @@ module Ext_json_noloc : sig
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
 
+<<<<<<< HEAD
 
 type t 
+=======
+type action = 
+  (out_channel -> int -> unit)
+
+  
+
+
+type interval = {
+  loc_start : Lexing.position ; 
+  loc_end : Lexing.position ; 
+  action : action 
+}
+
+let interval_compare x y = 
+  Pervasives.compare (x.loc_start.pos_cnum : int) y.loc_start.pos_cnum
+
+(*
+  It tries to copy io stream from [ic] into [oc]
+  except it will skip those wholes, for each 
+  whole a callback can be attached
+  When come across a whole, 
+  it will print 
+  - line directive (based on previous info)
+  - all content before
+*)
+let process_wholes 
+    (whole_intervals : interval list ) 
+    file_size
+    ?line_directive ic oc 
+  = 
+  let buf = Buffer.create 4096 in 
+  let rec aux (cur, line, offset)  wholes = 
+    seek_in ic cur ;
+    begin match line_directive with 
+      | Some fname -> 
+        output_string oc "# ";
+        output_string oc  (string_of_int line);
+        output_string oc " \"";
+        output_string oc fname; (* TOOD escape ? *)
+        output_string oc "\"\n";
+      | None -> ()
+    end;
+    if offset <> 0 then 
+      begin 
+        output_string oc (String.make offset ' ')
+      end; 
+    let print next = 
+      Buffer.add_channel buf ic (next - cur) ;
+      Buffer.output_buffer oc buf ; 
+      Buffer.clear buf 
+    in 
+    match wholes with 
+    | [] -> print file_size
+    | {
+      loc_start = 
+        {Lexing.pos_cnum = start   };
+      loc_end  = {Lexing.pos_cnum = stop; pos_bol ; pos_lnum} ;
+      action 
+    } :: xs  -> 
+      let offset = stop - pos_bol in
+      print start ;
+      action oc offset ;
+      aux (stop, pos_lnum, offset) xs 
+  in 
+    aux (0, 1, 0) whole_intervals
+>>>>>>> Merging in new generators stuff!
 
 val true_  : t 
 val false_ : t 
@@ -8325,12 +8430,62 @@ val kvs : (string * t) list -> t
 val equal : t -> t -> bool 
 val to_string : t -> string 
 
+<<<<<<< HEAD
 
 val to_channel : out_channel -> t -> unit
 end = struct
 #1 "ext_json_noloc.ml"
 (* Copyright (C) 2017- Authors of BuckleScript
  *
+=======
+let print_arrays file_array oc offset  =
+  let indent = String.make offset ' ' in 
+  let p_str s = 
+    output_string oc indent ; 
+    output_string oc s ;
+    output_string oc "\n"
+  in
+  let len = String_vec.length file_array in 
+  match len with 
+  | 0
+    -> output_string oc "[ ]\n"
+  | 1 
+    -> output_string oc ("[ \"" ^ String_vec.get file_array 0  ^ "\" ]\n")
+  | _ (* first::(_::_ as rest) *)
+    -> 
+    output_string oc "[ \n";
+    String_vec.iter_range ~from:0 ~to_:(len - 2 ) 
+      (fun s -> p_str @@ "\"" ^ s ^ "\",") file_array;
+    p_str @@ "\"" ^ (String_vec.last file_array) ^ "\"";
+
+    p_str "]"
+
+let patch_action file_array 
+  loc_start loc_end  =
+  {loc_start ; loc_end ; 
+  action = print_arrays file_array 
+  }   
+
+
+(* TODO: in the future, support [bspp.exe]
+  with line directive as well
+ *)
+(*let cpp_process_file fname 
+  (whole_intervals : (Lexing.position * Lexing.position) list)
+  oc = 
+  let ic = open_in_bin fname in
+  let file_size = in_channel_length ic in 
+  process_wholes ~line_directive:fname 
+    (List.map (fun (x,y) -> {loc_start = x ; loc_end = y; action = Skip}) whole_intervals)
+    file_size   ic oc ;
+  close_in ic *)
+
+end
+module Bsb_parse_sources : sig 
+#1 "bsb_parse_sources.mli"
+(* Copyright (C) 2015-2016 Bloomberg Finance L.P.
+ * 
+>>>>>>> Merging in new generators stuff!
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
@@ -8477,6 +8632,7 @@ let to_string x  =
     encode_aux x buf ;
     Buffer.contents buf 
 
+<<<<<<< HEAD
 let to_channel (oc : out_channel) x  = 
     let buf = Buffer.create 1024 in 
     encode_aux x buf ;
@@ -8486,6 +8642,12 @@ module Bsb_watcher_gen : sig
 #1 "bsb_watcher_gen.mli"
 (* Copyright (C) 2017- Authors of BuckleScript
  *
+=======
+end = struct
+#1 "bsb_parse_sources.ml"
+(* Copyright (C) 2015-2016 Bloomberg Finance L.P.
+ * 
+>>>>>>> Merging in new generators stuff!
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
@@ -8635,8 +8797,35 @@ module Bsb_config_parse : sig
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
 
+<<<<<<< HEAD
 val package_specs_and_entries_from_bsconfig : 
     unit -> Bsb_config.package_specs * Bsb_config_types.entries_t list
+=======
+let  handle_list_files acc
+  ({ cwd = dir ; root} : cxt)  
+    loc_start loc_end : Ext_file_pp.interval list * _ =    
+  (** detect files to be populated later  *)
+  let files_array = readdir root dir  in 
+  let dyn_file_array = String_vec.make (Array.length files_array) in 
+  let files  =
+    Array.fold_left (fun acc name -> 
+        match Ext_string.is_valid_source_name name with 
+        | Good ->   begin 
+            let new_acc = Binary_cache.map_update ~dir acc name  in 
+            String_vec.push name dyn_file_array ;
+            new_acc 
+          end 
+        | Invalid_module_name ->
+          Format.fprintf Format.err_formatter
+            warning_unused_file name dir ;
+          acc 
+        | Suffix_mismatch -> acc 
+      ) acc files_array in 
+  [ Ext_file_pp.patch_action dyn_file_array 
+    loc_start loc_end
+    ],
+  files
+>>>>>>> Merging in new generators stuff!
 
 
 
@@ -9175,6 +9364,7 @@ end
 module Bsb_file : sig 
 #1 "bsb_file.mli"
 
+<<<<<<< HEAD
 
 
 (** return [true] if copied *)
@@ -9228,6 +9418,40 @@ let install_if_exists ~destdir input_name =
       | _ -> copy_with_permission input_name output_name; true 
       | exception _ -> copy_with_permission input_name output_name; true
     else false
+=======
+type t = 
+  {
+    package_name : string ; 
+    ocamllex : string ; 
+    external_includes : string list ; 
+    warnings : string ;
+    bsc_flags : string list ;
+    ppx_flags : string list ;
+    bs_dependencies : dependencies;
+    bs_dev_dependencies : dependencies;
+    built_in_dependency : dependency option; 
+    (*TODO: maybe we should always resolve bs-platform 
+      so that we can calculate correct relative path in 
+      [.merlin]
+    *)
+    refmt : string option;
+    refmt_flags : string list;
+    js_post_build_cmd : string option;
+    package_specs : Bsb_config.package_specs ; 
+    globbed_dirs : string list;
+    bs_file_groups : Bsb_parse_sources.file_group list ;
+    files_to_install : String_hash_set.t ;
+    generate_merlin : bool ; 
+    reason_react_jsx : reason_react_jsx ; (* whether apply PPX transform or not*)
+    entries : entries_t list ;
+    generators : string String_map.t ; 
+    cut_generators : bool; (* note when used as a dev mode, we will always ignore it *)
+
+    static_libraries: string list;
+    build_script: string option;
+    allowed_build_kinds: compilation_kind_t list;
+  }
+>>>>>>> Merging in new generators stuff!
 
 end
 module Bsb_rule : sig 
@@ -9327,6 +9551,7 @@ end = struct
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
 
 
+<<<<<<< HEAD
 
 let rule_id = ref 0
 let rule_names = ref String_set.empty
@@ -9361,6 +9586,76 @@ let print_rule oc ~description ?restat ?depfile ~command   name  =
     | Some () ->
       output_string oc "  restat = 1"; output_string oc  "\n"
   end;
+=======
+(**
+   6
+   Label omitted in function application.
+   7
+   Method overridden.
+   9
+   Missing fields in a record pattern. (*Not always desired, in some cases need [@@@warning "+9"] *)      
+        27
+        Innocuous unused variable: unused variable that is not bound with let nor as, and doesn’t start with an underscore (_) character.      
+        29
+        Unescaped end-of-line in a string constant (non-portable code).
+        32 .. 39 Unused  blabla
+        44
+        Open statement shadows an already defined identifier.
+        45
+        Open statement shadows an already defined label or constructor.
+        48
+        Implicit elimination of optional arguments.
+        https://caml.inria.fr/mantis/view.php?id=6352
+
+*)  
+let warnings = "-40+6+7+27+32..39+44+45"
+
+let bsc_flags = 
+  [
+    "-no-alias-deps";
+    "-color"; "always" ;
+  ]
+
+let ocamllex = "ocamllex.opt"  
+
+let refmt_flags = ["--print"; "binary"]
+
+let package_specs = String_set.singleton Literals.commonjs
+
+let main_entries = [Bsb_config_types.JsTarget "Index"]
+
+let allowed_build_kinds = [Bsb_config_types.Js; Bsb_config_types.Bytecode; Bsb_config_types.Native]
+
+end
+module Ext_json_noloc : sig 
+#1 "ext_json_noloc.mli"
+(* Copyright (C) 2017- Authors of BuckleScript
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * In addition to the permissions granted to you by the LGPL, you may combine
+ * or link a "work that uses the Library" with a publicly distributed version
+ * of this file to produce a combined library or application, then distribute
+ * that combined work under the terms of your choosing, with no requirement
+ * to comply with the obligations normally placed on you by section 4 of the
+ * LGPL version 3 (or the corresponding section of a later version of the LGPL
+ * should you choose to use a later version).
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
+
+
+type t 
+>>>>>>> Merging in new generators stuff!
 
   output_string oc "  description = " ; output_string oc description; output_string oc "\n"
 
@@ -9639,6 +9934,7 @@ type override =
    otherwise the build system can not figure out clearly
    however, for the command we don't need pass `-o`
 *)
+<<<<<<< HEAD
 val output_build :
   ?order_only_deps:string list ->
   ?implicit_deps:string list ->
@@ -9678,6 +9974,10 @@ val handle_file_groups : out_channel ->
 (** TODO: need clean up when running across projects process *)
 (* val files_to_install : String_hash_set.t  *)
 
+=======
+val generate_sourcedirs_meta : 
+  string -> Bsb_parse_sources.t -> unit 
+>>>>>>> Merging in new generators stuff!
 end = struct
 #1 "bsb_ninja.ml"
 (* Copyright (C) 2015-2016 Bloomberg Finance L.P.
@@ -9705,6 +10005,7 @@ end = struct
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
 
 
+<<<<<<< HEAD
 module Rules = Bsb_rule 
 
 type override = 
@@ -9782,6 +10083,9 @@ let output_build
       output_string oc "restat = 1 \n"
   end
 
+=======
+let (//) = Ext_filename.combine
+>>>>>>> Merging in new generators stuff!
 
 let phony ?(order_only_deps=[]) ~inputs ~output oc =
   output_string oc "build ";
@@ -9802,6 +10106,7 @@ let phony ?(order_only_deps=[]) ~inputs ~output oc =
   end;
   output_string oc "\n"
 
+<<<<<<< HEAD
 let output_kv key value oc  =
   output_string oc key ;
   output_string oc " = ";
@@ -9810,6 +10115,51 @@ let output_kv key value oc  =
 
 let output_kvs kvs oc =
   Array.iter (fun (k,v) -> output_kv k v oc) kvs
+=======
+let generate_sourcedirs_meta cwd (res : Bsb_parse_sources.t) = 
+  let ochan = open_out_bin (cwd // Bsb_config.lib_bs // sourcedirs_meta) in
+  let v = 
+    Ext_json_noloc.(
+      kvs [
+        "dirs" ,
+      arr (Ext_array.of_list_map ( fun (x : Bsb_parse_sources.file_group) -> 
+      str x.dir 
+      ) res.files ) ;
+      "generated" ,
+      arr @@ Array.of_list @@ List.fold_left (fun acc (x : Bsb_parse_sources.file_group) -> 
+      Ext_list.flat_map_acc (fun x -> List.map str x.Bsb_parse_sources.output) acc  x.generators 
+      )  [] res.files 
+      ]
+     ) in 
+  Ext_json_noloc.to_channel ochan v ;
+  close_out ochan
+end
+module Bsb_config_parse : sig 
+#1 "bsb_config_parse.mli"
+(* Copyright (C) 2015-2016 Bloomberg Finance L.P.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * In addition to the permissions granted to you by the LGPL, you may combine
+ * or link a "work that uses the Library" with a publicly distributed version
+ * of this file to produce a combined library or application, then distribute
+ * that combined work under the terms of your choosing, with no requirement
+ * to comply with the obligations normally placed on you by section 4 of the
+ * LGPL version 3 (or the corresponding section of a later version of the LGPL
+ * should you choose to use a later version).
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
+>>>>>>> Merging in new generators stuff!
 
 
 
@@ -10030,11 +10380,225 @@ let handle_file_group oc ~custom_rules
   end
 
 
+<<<<<<< HEAD
 let handle_file_groups
  oc ~package_specs ~js_post_build_cmd
   ~files_to_install ~custom_rules
   (file_groups  :  Bsb_build_ui.file_group list) st =
   List.fold_left (handle_file_group oc ~package_specs ~custom_rules ~js_post_build_cmd files_to_install ) st  file_groups
+=======
+
+
+
+(*TODO: it is a little mess that [cwd] and [project dir] are shared*)
+
+
+
+
+(** ATT: make sure such function is re-entrant. 
+    With a given [cwd] it works anywhere*)
+let interpret_json 
+    ~override_package_specs
+    ~bsc_dir 
+    ~generate_watch_metadata
+    ~no_dev 
+    cwd  
+
+  : Bsb_config_types.t =
+  
+  let reason_react_jsx = ref None in 
+  let config_json = (cwd // Literals.bsconfig_json) in
+  let ocamllex = ref Bsb_default.ocamllex in 
+  let refmt = ref None in
+  let refmt_flags = ref Bsb_default.refmt_flags in
+  let build_script = ref None in
+  let static_libraries = ref [] in
+  let package_name = ref None in 
+  let bs_external_includes = ref [] in 
+  let allowed_build_kinds = ref Bsb_default.allowed_build_kinds in
+  (** we should not resolve it too early,
+      since it is external configuration, no {!Bsb_build_util.convert_and_resolve_path}
+  *)
+  let bsc_flags = ref Bsb_default.bsc_flags in  
+  let warnings = ref Bsb_default.warnings in
+  let ppx_flags = ref []in 
+
+  let js_post_build_cmd = ref None in 
+  let built_in_package = ref None in
+  let generate_merlin = ref true in 
+  let generators = ref String_map.empty in 
+  let package_specs = ref (String_set.singleton Literals.commonjs) in 
+  (* When we plan to add more deps here,
+     Make sure check it is consistent that for nested deps, we have a 
+     quck check by just re-parsing deps 
+     Make sure it works with [-make-world] [-clean-world]
+  *)
+  let bs_dependencies = ref [] in 
+  let bs_dev_dependencies = ref [] in
+  (* Setting ninja is a bit complex
+     1. if [build.ninja] does use [ninja] we need set a variable
+     2. we need store it so that we can call ninja correctly
+  *)
+  let entries = ref Bsb_default.main_entries in
+  let cut_generators = ref false in 
+  let config_json_chan = open_in_bin config_json  in
+  let global_data = Ext_json_parse.parse_json_from_chan config_json_chan  in
+  match global_data with
+  | Obj { map} ->
+    (* The default situation is empty *)
+    (match String_map.find_opt Bsb_build_schemas.use_stdlib map with      
+     | Some (False _) -> 
+       ()
+     | None 
+     | Some _ ->
+       built_in_package := Some (resolve_package cwd Bs_version.package_name);
+    ) ;
+    map
+    |? (Bsb_build_schemas.reason, `Obj begin fun m -> 
+      match String_map.find_opt Bsb_build_schemas.react_jsx m with 
+      
+      | Some (False _)
+      | None -> ()
+      | Some (Flo{loc; flo}) -> 
+        begin match flo with 
+        | "1" -> 
+        reason_react_jsx := 
+            Some (Filename.quote (Filename.concat bsc_dir Literals.reactjs_jsx_ppx_exe) )
+        | "2" -> 
+          reason_react_jsx := 
+            Some (Filename.quote 
+              (Filename.concat bsc_dir Literals.reactjs_jsx_ppx_2_exe) )
+        | _ -> Bsb_exception.failf ~loc "Unsupported jsx version %s" flo
+        end
+      | Some (True _) -> 
+        reason_react_jsx := 
+            Some (Filename.quote (Filename.concat bsc_dir Literals.reactjs_jsx_ppx_exe) 
+            )
+      | Some x -> Bsb_exception.failf ~loc:(Ext_json.loc_of x) 
+      "Unexpected input for jsx"
+      end)
+    |? (Bsb_build_schemas.generate_merlin, `Bool (fun b ->
+        generate_merlin := b
+      ))
+    |? (Bsb_build_schemas.name, `Str (fun s -> package_name := Some s))
+    |? (Bsb_build_schemas.package_specs, 
+        `Arr (fun s -> package_specs := get_package_specs_from_array  s ))
+    |? (Bsb_build_schemas.js_post_build, `Obj begin fun m ->
+        m |? (Bsb_build_schemas.cmd , `Str (fun s -> 
+            js_post_build_cmd := Some (Bsb_build_util.resolve_bsb_magic_file ~cwd ~desc:Bsb_build_schemas.js_post_build s)
+
+          )
+          )
+        |> ignore
+      end)
+    |? (Bsb_build_schemas.ocamllex, `Str (fun s -> 
+        ocamllex := Bsb_build_util.resolve_bsb_magic_file ~cwd ~desc:Bsb_build_schemas.ocamllex s ))
+
+    |? (Bsb_build_schemas.bs_dependencies, `Arr (fun s -> bs_dependencies := Bsb_build_util.get_list_string s |> List.map (resolve_package cwd)))
+    |? (Bsb_build_schemas.bs_dev_dependencies,
+        `Arr (fun s ->
+            if not  no_dev then 
+              bs_dev_dependencies
+              := Bsb_build_util.get_list_string s
+                 |> List.map (resolve_package cwd))
+       )
+
+    (* More design *)
+    |? (Bsb_build_schemas.bs_external_includes, `Arr (fun s -> bs_external_includes := get_list_string s))
+    |? (Bsb_build_schemas.bsc_flags, `Arr (fun s -> bsc_flags := Bsb_build_util.get_list_string_acc s !bsc_flags))
+    |? (Bsb_build_schemas.warnings, `Str (fun s -> warnings := s))
+    |? (Bsb_build_schemas.ppx_flags, `Arr (fun s -> 
+        ppx_flags := s |> get_list_string |> List.map (fun p ->
+            if p = "" then failwith "invalid ppx, empty string found"
+            else Bsb_build_util.resolve_bsb_magic_file ~cwd ~desc:Bsb_build_schemas.ppx_flags p
+          )
+      ))
+    |? (Bsb_build_schemas.cut_generators, `Bool (fun b -> cut_generators := b))
+    |? (Bsb_build_schemas.generators, `Arr (fun s ->
+        generators :=
+          Array.fold_left (fun acc json -> 
+            match (json : Ext_json_types.t) with 
+            | Obj {map = m ; loc}  -> 
+              begin match String_map.find_opt  Bsb_build_schemas.name m,
+                          String_map.find_opt  Bsb_build_schemas.command m with 
+              | Some (Str {str = name}), Some ( Str {str = command}) -> 
+                String_map.add name command acc 
+              | _, _ -> 
+                Bsb_exception.failf ~loc {| generators exepect format like { "name" : "cppo",  "command"  : "cppo $in -o $out"} |}
+              end
+            | _ -> acc ) String_map.empty  s  ))
+    |? (Bsb_build_schemas.refmt, `Str (fun s -> 
+        refmt := Some (Bsb_build_util.resolve_bsb_magic_file ~cwd ~desc:Bsb_build_schemas.refmt s) ))
+    |? (Bsb_build_schemas.refmt_flags, `Arr (fun s -> refmt_flags := get_list_string s))
+    |? (Bsb_build_schemas.entries, `Arr (fun s -> entries := parse_entries s))
+    |? (Bsb_build_schemas.static_libraries, `Arr (fun s -> static_libraries := (List.map (fun v -> cwd // v) (get_list_string s))))
+    |? (Bsb_build_schemas.c_linker_flags, `Arr (fun s -> static_libraries := (List.fold_left (fun acc v -> "-ccopt" :: v :: acc) [] (List.rev (get_list_string s))) @ !static_libraries))
+    |? (Bsb_build_schemas.build_script, `Str (fun s -> build_script := Some s))
+    |? (Bsb_build_schemas.allowed_build_kinds, `Arr (fun s -> allowed_build_kinds := get_allowed_build_kinds s))
+    |> ignore ;
+    begin match String_map.find_opt Bsb_build_schemas.sources map with 
+      | Some x -> 
+        let res = Bsb_parse_sources.parse_sources 
+            {no_dev; 
+             dir_index =
+               Bsb_dir_index.lib_dir_index; cwd = Filename.current_dir_name; 
+             root = cwd; cut_generators = !cut_generators}  x in 
+        if generate_watch_metadata then
+          Bsb_watcher_gen.generate_sourcedirs_meta cwd res ;     
+        begin match List.sort Ext_file_pp.interval_compare  res.intervals with
+          | [] -> ()
+          | queue ->
+            let file_size = in_channel_length config_json_chan in
+            let output_file = (cwd //config_file_bak) in 
+            let oc = open_out_bin output_file in
+            let () =
+              Ext_file_pp.process_wholes
+                queue file_size config_json_chan oc in
+            close_out oc ;
+            close_in config_json_chan ;
+            Unix.unlink config_json;
+            Unix.rename output_file config_json
+        end;
+
+        {
+          Bsb_config_types.package_name =
+            (match !package_name with
+             | Some name -> name
+             | None ->
+               failwith "Error: Package name is required. Please specify a `name` in `bsconfig.json`"
+            );
+
+          ocamllex = !ocamllex ; 
+          external_includes = !bs_external_includes;
+          bsc_flags = !bsc_flags ;
+          warnings = !warnings;
+          ppx_flags = !ppx_flags ;
+          bs_dependencies = !bs_dependencies;
+          bs_dev_dependencies = !bs_dev_dependencies;
+          refmt = !refmt ;
+          refmt_flags = !refmt_flags ;
+          js_post_build_cmd =  !js_post_build_cmd ;
+          package_specs = 
+            (match override_package_specs with None ->  !package_specs
+                                             | Some x -> x );
+          globbed_dirs = res.globbed_dirs; 
+          bs_file_groups = res.files; 
+          files_to_install = String_hash_set.create 96;
+          built_in_dependency = !built_in_package;
+          generate_merlin = !generate_merlin ;
+          reason_react_jsx = !reason_react_jsx ;  
+          entries = !entries;
+          generators = !generators ; 
+          cut_generators = !cut_generators;
+
+          static_libraries = !static_libraries;
+          build_script = !build_script;
+          allowed_build_kinds = !allowed_build_kinds;
+        }
+      | None -> failwith "no sources specified, please checkout the schema for more details"
+    end
+  | _ -> failwith "bsconfig.json expect a json object {}"
+>>>>>>> Merging in new generators stuff!
 
 end
 module Bsb_ninja_native : sig 
@@ -10463,6 +11027,14 @@ val output_ninja :
   ?root_project_entry: Bsb_config_types.entries_t ->
   Bsb_config_types.t -> unit 
 
+val define :
+    command:string ->
+    ?depfile:string ->
+    ?restat:unit ->
+    ?description:string ->
+    string -> 
+    t
+
 end = struct
 #1 "bsb_gen.ml"
 (* Copyright (C) 2015-2016 Bloomberg Finance L.P.
@@ -10516,6 +11088,7 @@ let dash_i = "-I"
 let refmt_exe = "refmt.exe"
 let dash_ppx = "-ppx"
 
+<<<<<<< HEAD
 let output_ninja
     ~external_deps_for_linking_and_clibs:(external_deps_for_linking, clibs)
     ~cwd 
@@ -10746,6 +11319,37 @@ let output_ninja
       ~output:Literals.build_ninja ; in
     close_out oc;
   end
+=======
+
+let build_cmo_cmi_bytecode =
+  define
+    ~command:"${ocamlc} ${bs_package_includes} ${bsc_lib_includes} ${bsc_extra_includes} \
+              -o ${out} ${warnings} -c -intf-suffix .mliast_simple -impl ${in}_simple ${postbuild}"
+    ~depfile:"${in}.d"
+    "build_cmo_cmi_bytecode"
+    
+let build_cmi_bytecode =
+  define
+    ~command:"${ocamlc} ${bs_package_includes} ${bsc_lib_includes} ${bsc_extra_includes} \
+              -o ${out} ${warnings} -c -intf ${in}_simple ${postbuild}"
+    ~depfile:"${in}.d"
+    "build_cmi_bytecode"
+
+let build_cmx_cmi_native =
+  define
+    ~command:"${ocamlopt} ${bs_package_includes} ${bsc_lib_includes} ${bsc_extra_includes} \
+              -o ${out} ${warnings} -c -intf-suffix .mliast_simple -impl ${in}_simple ${postbuild}"
+    ~depfile:"${in}.d"
+    "build_cmx_cmi_native"
+
+let build_cmi_native =
+  define
+    ~command:"${ocamlopt} ${bs_package_includes} ${bsc_lib_includes} ${bsc_extra_includes} \
+              -o ${out} ${warnings} -c -intf ${in}_simple ${postbuild}"
+    ~depfile:"${in}.d"
+    "build_cmi_native"
+
+>>>>>>> Merging in new generators stuff!
 
 end
 module Bsb_regex : sig 
@@ -10761,6 +11365,56 @@ end = struct
 #1 "bsb_regex.ml"
 let string_after s n = String.sub s n (String.length s - n)
 
+<<<<<<< HEAD
+=======
+let build_cmxa_library =
+  define
+    ~command:"${bsb_helper} ${static_libraries} ${bs_package_includes} ${bsc_lib_includes} ${bsc_extra_includes} \
+              ${in} -pack-native-library"
+    "build_cmxa_library"
+
+(* a snapshot of rule_names environment*)
+let built_in_rule_names = !rule_names 
+let built_in_rule_id = !rule_id
+
+let reset (custom_rules : string String_map.t) = 
+  begin 
+    rule_id := built_in_rule_id;
+    rule_names := built_in_rule_names;
+
+    build_ast_and_deps.used <- false ;
+    build_ast_and_deps_from_reason_impl.used <- false ;  
+    build_ast_and_deps_from_reason_intf.used <- false ;
+
+    build_ast_and_deps_simple.used <- false ;
+    build_ast_and_deps_from_reason_impl_simple.used <- false ;  
+    build_ast_and_deps_from_reason_intf_simple.used <- false ;
+    
+    build_bin_deps.used <- false;
+    build_bin_deps_bytecode.used <- false;
+    build_bin_deps_native.used <- false;
+  
+    reload.used <- false; 
+    copy_resources.used <- false ;
+    build_ml_from_mll.used <- false ; 
+    build_cmj_js.used <- false;
+    build_cmj_cmi_js.used <- false ;
+    build_cmi.used <- false ;
+    
+    build_cmo_cmi_bytecode.used <- false;
+    build_cmi_bytecode.used <- false;
+    build_cmx_cmi_native.used <- false;
+    build_cmi_native.used <- false;
+    linking_bytecode.used <- false;
+    linking_native.used <- false;
+    build_cma_library.used <- false;
+    build_cmxa_library.used <- false;
+    
+    String_map.mapi (fun name command -> 
+        define ~command name
+      ) custom_rules
+  end
+>>>>>>> Merging in new generators stuff!
 
 
 (* There seems to be a bug in {!Str.global_substitute} 
@@ -10770,6 +11424,76 @@ Str.global_substitute (Str.regexp "\\${bsb:\\([-a-zA-Z0-9]+\\)}") (fun x -> (x^"
 "      ${bsb:hello-world}  ${bsb:x} ${x}:found     ${bsb:hello-world}  ${bsb:x} ${x}:found ${x}"
 ]}
 *)
+<<<<<<< HEAD
+=======
+val output_build :
+  ?order_only_deps:string list ->
+  ?implicit_deps:string list ->
+  ?outputs:string list ->
+  ?implicit_outputs: string list ->  
+  ?inputs:string list ->
+  ?shadows:(string * override) list ->
+  ?restat:unit ->
+  output:string ->
+  input:string ->
+  rule:Bsb_rule.t -> out_channel -> unit
+
+
+val phony  :
+  ?order_only_deps:string list ->
+  inputs:string list -> output:string -> out_channel -> unit
+
+val output_kv : string ->  string -> out_channel -> unit 
+val output_kvs : (string * string) array -> out_channel -> unit
+
+type info = {
+  all_config_deps : string list  ;
+  (*all_installs :  string list *)
+}
+
+val zero : info 
+
+
+val handle_file_groups : out_channel ->
+  package_specs:Bsb_config.package_specs ->  
+  js_post_build_cmd:string option -> 
+  files_to_install:String_hash_set.t ->  
+  custom_rules:Bsb_rule.t String_map.t -> 
+  Bsb_parse_sources.file_group list ->
+  info -> info
+
+(** TODO: need clean up when running across projects process *)
+(* val files_to_install : String_hash_set.t  *)
+
+end = struct
+#1 "bsb_ninja.ml"
+(* Copyright (C) 2015-2016 Bloomberg Finance L.P.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * In addition to the permissions granted to you by the LGPL, you may combine
+ * or link a "work that uses the Library" with a publicly distributed version
+ * of this file to produce a combined library or application, then distribute
+ * that combined work under the terms of your choosing, with no requirement
+ * to comply with the obligations normally placed on you by section 4 of the
+ * LGPL version 3 (or the corresponding section of a later version of the LGPL
+ * should you choose to use a later version).
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
+
+
+module Rules = Bsb_rule 
+>>>>>>> Merging in new generators stuff!
 
 let global_substitute expr repl_fun text =
   let text_len = String.length text in 
@@ -10852,7 +11576,7 @@ let install_file (file : string) files_to_install =
 
 let handle_file_group oc ~custom_rules 
     ~package_specs ~js_post_build_cmd  
-    (files_to_install : String_hash_set.t) acc (group: Bsb_build_ui.file_group) : info =
+    (files_to_install : String_hash_set.t) acc (group: Bsb_parse_sources.file_group) : info =
   let handle_module_info  oc  module_name
       ( module_info : Binary_cache.module_info)
       info  =
@@ -11008,7 +11732,7 @@ let handle_file_group oc ~custom_rules
   let map_to_source_dir = 
     (fun x -> Bsb_config.proj_rel (group.dir //x )) in
   group.generators
-  |> List.iter (fun  ({output; input; command}  : Bsb_build_ui.build_generator)-> 
+  |> List.iter (fun  ({output; input; command}  : Bsb_parse_sources.build_generator)-> 
       begin match String_map.find_opt command custom_rules with 
       | None -> Ext_pervasives.failwithf ~loc:__LOC__ "custom rule %s used but  not defined" command
       | Some rule -> 
@@ -11039,7 +11763,7 @@ let handle_file_group oc ~custom_rules
 let handle_file_groups
  oc ~package_specs ~js_post_build_cmd
   ~files_to_install ~custom_rules
-  (file_groups  :  Bsb_build_ui.file_group list) st =
+  (file_groups  :  Bsb_parse_sources.file_group list) st =
   List.fold_left (handle_file_group oc ~package_specs ~custom_rules ~js_post_build_cmd files_to_install ) st  file_groups
 
 end
@@ -11074,6 +11798,7 @@ module Bsb_ninja_native : sig
 type compile_target_t = Native | Bytecode
   
 val handle_file_groups : out_channel ->
+  custom_rules:Bsb_rule.t String_map.t -> 
   root_project_entry:Bsb_config_types.entries_t ->
   compile_target:compile_target_t ->
   is_top_level:bool ->
@@ -11081,7 +11806,7 @@ val handle_file_groups : out_channel ->
   js_post_build_cmd:string option -> 
   files_to_install:String_hash_set.t ->  
   static_libraries:string list ->
-  Bsb_build_ui.file_group list ->
+  Bsb_parse_sources.file_group list ->
   Bsb_ninja.info -> Bsb_ninja.info
 
 end = struct
@@ -11133,12 +11858,13 @@ let install_file (file : string) files_to_install =
   String_hash_set.add  files_to_install (Ext_filename.chop_extension_if_any file )
 
 let handle_file_group oc
+  ~custom_rules
   ~compile_target
   ~package_specs
   ~js_post_build_cmd
   (files_to_install : String_hash_set.t)
   acc
-  (group: Bsb_build_ui.file_group) : Bsb_ninja.info =
+  (group: Bsb_parse_sources.file_group) : Bsb_ninja.info =
   let handle_module_info  oc  module_name
       ( module_info : Binary_cache.module_info)
       info  =
@@ -11147,11 +11873,11 @@ let handle_file_group oc
       | Export_all -> true
       | Export_none -> false
       | Export_set set ->  String_set.mem module_name set in
-    let emit_build (kind : [`Ml | `Mll | `Re | `Mli | `Rei ])  file_input : Bsb_ninja.info =
+    let emit_build (kind : [`Ml (* | `Mll *) | `Re | `Mli | `Rei ])  file_input : Bsb_ninja.info =
       let filename_sans_extension = Filename.chop_extension file_input in
       let input = Bsb_config.proj_rel file_input in
       let output_file_sans_extension = filename_sans_extension in
-      let output_ml = output_file_sans_extension ^ Literals.suffix_ml in
+      (* let output_ml = output_file_sans_extension ^ Literals.suffix_ml in *)
       let output_mlast = output_file_sans_extension  ^ Literals.suffix_mlast in
       let output_mlastd = output_file_sans_extension ^ Literals.suffix_mlastd in
       let output_mliast = output_file_sans_extension ^ Literals.suffix_mliast in
@@ -11172,37 +11898,37 @@ let handle_file_group oc
       (* let output_mlideps = output_file_sans_extension ^ Literals.suffix_mlideps in  *)
       let shadows =
         ( "bs_package_flags",
-          `Append
+          Bsb_ninja.Append
             (String_set.fold (fun s acc ->
                  Ext_string.inter2 acc (Bsb_config.package_flag ~format:s (Filename.dirname output_cmi))
 
                ) package_specs Ext_string.empty)
         ) ::
-        (if group.dir_index = 0 then [] else
+        (if Bsb_dir_index.is_lib_dir group.dir_index then [] else
            [
-             "bs_package_includes", `Append "$bs_package_dev_includes"
+             "bs_package_includes", Bsb_ninja.Append "$bs_package_dev_includes"
              ;
              ("bsc_extra_includes",
-              `Overwrite
-                ("${" ^ Bsb_build_util.string_of_bsb_dev_include group.dir_index ^ "}")
+              Bsb_ninja.Overwrite
+                ("${" ^ Bsb_dir_index.string_of_bsb_dev_include group.dir_index ^ "}")
              )
            ]
         )
       in
-      if kind = `Mll then
+      (* if kind = `Mll then
         output_build oc
           ~output:output_ml
           ~input
-          ~rule: Rules.build_ml_from_mll ;
+          ~rule: Rules.build_ml_from_mll ; *)
       begin match kind with
-        | `Mll
+        (* | `Mll *)
         | `Ml
         | `Re ->
           let input, rule = 
             if kind = `Re then
               input, Rules.build_ast_and_deps_from_reason_impl_simple
-            else if kind = `Mll then
-              output_ml, Rules.build_ast_and_deps_simple
+            (* else if kind = `Mll then
+              output_ml, Rules.build_ast_and_deps_simple *)
             else
               input, Rules.build_ast_and_deps_simple
           in
@@ -11221,8 +11947,8 @@ let handle_file_group oc
               ~output:output_mlastd
               ~input:output_mlast
               ~rule:bin_deps_rule
-              ?shadows:(if group.dir_index = 0 then None
-                else Some [Bsb_build_schemas.bsb_dir_group, `Overwrite (string_of_int group.dir_index)])
+              ?shadows:(if Bsb_dir_index.is_lib_dir group.dir_index then None
+                else Some [Bsb_build_schemas.bsb_dir_group, Bsb_ninja.Overwrite (string_of_int (group.dir_index :> int))])
             ;
             let rule_name = begin match compile_target with
             | Bytecode -> Rules.build_cmo_cmi_bytecode
@@ -11239,7 +11965,7 @@ let handle_file_group oc
               | None -> shadows
               | Some cmd ->
                 ("postbuild",
-                 `Overwrite ("&& " ^ cmd ^ Ext_string.single_space ^ String.concat Ext_string.single_space output_js)) :: shadows
+                 Bsb_ninja.Overwrite ("&& " ^ cmd ^ Ext_string.single_space ^ String.concat Ext_string.single_space output_js)) :: shadows
             in
             output_build oc
               ~output:output_cmj_or_cmo
@@ -11269,8 +11995,8 @@ let handle_file_group oc
             ~output:output_mliastd
             ~input:output_mliast
             ~rule:Rules.build_bin_deps
-            ?shadows:(if group.dir_index = 0 then None
-                      else Some [Bsb_build_schemas.bsb_dir_group, `Overwrite (string_of_int group.dir_index)])
+            ?shadows:(if Bsb_dir_index.is_lib_dir group.dir_index then None
+                      else Some [Bsb_build_schemas.bsb_dir_group, Bsb_ninja.Overwrite (string_of_int (group.dir_index :> int))])
           ;
           let rule = begin match compile_target with
             | Bytecode -> Rules.build_cmi_bytecode
@@ -11302,7 +12028,7 @@ let handle_file_group oc
         emit_build `Rei rei_file
       | Mli_empty -> Bsb_ninja.zero
     end ++
-    begin match module_info.mll with
+    (* begin match module_info.mll with
       | Some mll_file ->
         begin match module_info.ml with
           | Ml_empty -> emit_build `Mll mll_file
@@ -11310,9 +12036,34 @@ let handle_file_group oc
             failwith ("both "^ mll_file ^ " and " ^ input ^ " are found in source listings" )
         end
       | None -> Bsb_ninja.zero
-    end ++ info
+    end ++  *)
+    info
 
   in
+  let map_to_source_dir = 
+    (fun x -> Bsb_config.proj_rel (group.dir //x )) in
+  group.generators
+  |> List.iter (fun  ({output; input; command}  : Bsb_parse_sources.build_generator)-> 
+      begin match String_map.find_opt command custom_rules with 
+      | None -> Ext_pervasives.failwithf ~loc:__LOC__ "custom rule %s used but  not defined" command
+      | Some rule -> 
+        begin match output, input with
+        | output::outputs, input::inputs -> 
+          output_build oc 
+            ~outputs:(List.map map_to_source_dir  outputs)
+            ~inputs:(List.map map_to_source_dir inputs) 
+            ~output:(map_to_source_dir output)
+            ~input:(map_to_source_dir input)
+            ~rule
+        | [], _ 
+        | _, []  -> Ext_pervasives.failwithf ~loc:__LOC__ "either output or input can not be empty in rule %s" command
+        end
+      end
+  );  (* we need create a rule for it --
+  {[
+    rule ocamllex 
+  ]}
+  *)
   String_map.fold (fun  k v  acc ->
       handle_module_info  oc k v acc
     ) group.sources  acc
@@ -11351,13 +12102,13 @@ let link oc ret ~root_project_entry ~file_groups ~static_libraries =
            all_cmo_or_cmx_files,
            (name ^ Literals.suffix_cmi)   :: all_cmi_files)
         end    
-      ) group.Bsb_build_ui.sources acc) 
+      ) group.Bsb_parse_sources.sources acc) 
     ([], [], [])
     file_groups in
   let shadows = [(
     "main_module",
-    `Overwrite main_module_name
-  ); ("static_libraries", `Overwrite (Bsb_build_util.flag_concat "-add-clib" static_libraries))] in
+    Bsb_ninja.Overwrite main_module_name
+  ); ("static_libraries", Bsb_ninja.Overwrite (Bsb_build_util.flag_concat "-add-clib" static_libraries))] in
   output_build oc
     ~output
     ~input:""
@@ -11397,7 +12148,7 @@ let pack oc ret  ~root_project_entry ~file_groups =
            (name ^ Literals.suffix_cmi) :: all_cmi_files)
         | None, Some name ->
           (all_cmo_or_cmx_files, (name ^ Literals.suffix_cmi) :: all_cmi_files)
-    ) group.Bsb_build_ui.sources acc) 
+    ) group.Bsb_parse_sources.sources acc) 
     ([], [])
     file_groups in
   (* In the case that a library is just an interface file, we don't do anything *)
@@ -11414,6 +12165,7 @@ let pack oc ret  ~root_project_entry ~file_groups =
   end else ret
 
 let handle_file_groups oc
+  ~custom_rules
   ~root_project_entry
   ~compile_target
   ~is_top_level
@@ -11421,9 +12173,10 @@ let handle_file_groups oc
   ~js_post_build_cmd
   ~files_to_install
   ~static_libraries
-  (file_groups  :  Bsb_build_ui.file_group list) st =
+  (file_groups  :  Bsb_parse_sources.file_group list) st =
   let ret = List.fold_left (
-    handle_file_group oc 
+    handle_file_group oc
+      ~custom_rules 
       ~compile_target
       ~package_specs
       ~js_post_build_cmd 
@@ -11528,13 +12281,16 @@ let dash_ppx = "-ppx"
 
 let output_ninja
     ~external_deps_for_linking_and_clibs:(external_deps_for_linking, clibs)
-    ~cwd 
-<<<<<<< HEAD
-    ~bsc_dir           
+    ~cwd
+    ~bsc_dir  
+    ~ocaml_dir         
+    ~root_project_dir
+    ?root_project_entry
     ({
       package_name;
       ocamllex;
       external_includes;
+      warnings;
       bsc_flags ; 
       ppx_flags;
       bs_dependencies;
@@ -11547,41 +12303,16 @@ let output_ninja
       files_to_install;
       built_in_dependency;
       reason_react_jsx;
-      generators ;
+      generators;
+      
+      entries;
+      static_libraries;
+      build_script;
+      allowed_build_kinds;
     } : Bsb_config_types.t)
   =
   let custom_rules = Bsb_rule.reset generators in 
-=======
-    ~bsc_dir  
-    ~ocaml_dir         
-    ~root_project_dir
-    ?root_project_entry
-    {
-    Bsb_config_types.package_name;
-    ocamllex;
-    external_includes;
-    warnings;
-    bsc_flags ; 
-    ppx_flags;
-    bs_dependencies;
-    bs_dev_dependencies;
-    refmt;
-    refmt_flags;
-    js_post_build_cmd;
-    package_specs;
-    bs_file_groups;
-    files_to_install;
-    built_in_dependency;
-    reason_react_jsx;
-    entries;
-    static_libraries;
-    build_script;
-    allowed_build_kinds;
-    }
-  =
-  let () = Bsb_rule.reset () in 
   let oc = open_out_bin (cwd // Bsb_config.lib_bs // Literals.build_ninja) in
->>>>>>> Squashed commits!
   let bsc = bsc_dir // bsc_exe in   (* The path to [bsc.exe] independent of config  *)
   let bsb_helper = bsc_dir // bsb_helper_exe in (* The path to [bsb_heler.exe] *)
   let ocamlc = ocaml_dir // ocamlc_exe in
@@ -11646,7 +12377,7 @@ let output_ninja
       let number_of_dev_groups = Bsb_dir_index.get_current_number_of_dev_groups () in
       if number_of_dev_groups = 0 then
         let bs_groups, source_dirs,static_resources  =
-          List.fold_left (fun (acc, dirs,acc_resources) ({Bsb_build_ui.sources ; dir; resources }) ->
+          List.fold_left (fun (acc, dirs,acc_resources) ({Bsb_parse_sources.sources ; dir; resources }) ->
               merge_module_info_map  acc  sources ,  dir::dirs , (List.map (fun x -> dir // x ) resources) @ acc_resources
             ) (String_map.empty,[],[]) bs_file_groups in
         Binary_cache.write_build_cache (cwd // Bsb_config.lib_bs // Binary_cache.bsbuild_cache) [|bs_groups|] ;
@@ -11659,7 +12390,7 @@ let output_ninja
         let source_dirs = Array.init (number_of_dev_groups + 1 ) (fun i -> []) in
         
         let static_resources =
-          List.fold_left (fun acc_resources  ({Bsb_build_ui.sources; dir; resources; dir_index})  ->
+          List.fold_left (fun acc_resources  ({Bsb_parse_sources.sources; dir; resources; dir_index})  ->
               let dir_index = (dir_index :> int) in 
               bs_groups.(dir_index) <- merge_module_info_map bs_groups.(dir_index) sources ;
               source_dirs.(dir_index) <- dir :: source_dirs.(dir_index);
@@ -11684,21 +12415,12 @@ let output_ninja
        to build JS *)
     | None -> List.hd entries, true
     | Some root_project_entry -> root_project_entry, false in
-<<<<<<< HEAD
-    let all_info =
-<<<<<<< HEAD
-      Bsb_ninja.handle_file_groups oc       
-        ~custom_rules
-        ~js_post_build_cmd  ~package_specs ~files_to_install bs_file_groups Bsb_ninja.zero  in
-=======
-=======
     let (all_info, should_build) =
->>>>>>> Update readme + fixes
     match root_project_entry with
     | Bsb_config_types.JsTarget _ -> 
-    print_endline @@ "JS and is allow: " ^ (string_of_bool (List.mem Bsb_config_types.Js allowed_build_kinds));
       if List.mem Bsb_config_types.Js allowed_build_kinds then
         (Bsb_ninja.handle_file_groups oc
+          ~custom_rules
           ~package_specs
           ~js_post_build_cmd
           ~files_to_install
@@ -11709,6 +12431,7 @@ let output_ninja
     | Bsb_config_types.BytecodeTarget _ ->
       if List.mem Bsb_config_types.Bytecode allowed_build_kinds then
         (Bsb_ninja_native.handle_file_groups oc
+          ~custom_rules
           ~root_project_entry
           ~compile_target:Bsb_ninja_native.Bytecode
           ~is_top_level
@@ -11723,6 +12446,7 @@ let output_ninja
     | Bsb_config_types.NativeTarget _ ->
       if List.mem Bsb_config_types.Native allowed_build_kinds then
         (Bsb_ninja_native.handle_file_groups oc
+          ~custom_rules
           ~root_project_entry
           ~compile_target:Bsb_ninja_native.Native
           ~is_top_level
@@ -11735,7 +12459,6 @@ let output_ninja
         true)
       else (Bsb_ninja.zero, false)
       in
->>>>>>> Squashed commits!
     let () =
       List.iter (fun x -> Bsb_ninja.output_build oc
                     ~output:x
@@ -18413,7 +19136,7 @@ let merlin_file_gen ~cwd
         Buffer.add_string buffer path ;
       );
 
-    res_files |> List.iter (fun (x : Bsb_build_ui.file_group) -> 
+    res_files |> List.iter (fun (x : Bsb_parse_sources.file_group) -> 
         Buffer.add_string buffer merlin_s;
         Buffer.add_string buffer x.dir ;
         Buffer.add_string buffer merlin_b;
@@ -18722,14 +19445,6 @@ let clean_self () = clean_bs_garbage cwd
     return None if we dont need regenerate
     otherwise return Some info
 *)
-<<<<<<< HEAD
-let regenerate_ninja 
-    ~no_dev 
-    ~override_package_specs
-    ~generate_watch_metadata 
-    ~forced cwd bsc_dir
-  : _ option =
-=======
 
 let regenerate_ninja
   ?external_deps_for_linking_and_clibs
@@ -18738,8 +19453,8 @@ let regenerate_ninja
   ~override_package_specs
   ~generate_watch_metadata
   ~root_project_dir
-  cwd bsc_dir ocaml_dir ~forced =
->>>>>>> Squashed commits!
+  cwd bsc_dir ocaml_dir ~forced 
+  : _ option =
   let output_deps = cwd // Bsb_config.lib_bs // bsdeps in
   let reason : Bsb_dep_infos.check_result =
     Bsb_dep_infos.check ~cwd  forced output_deps in
@@ -18881,12 +19596,8 @@ let print_string_args (args : string array) =
   done ;
   print_newline ()
 
-<<<<<<< HEAD
 
 (* Note that [keepdepfile] only makes sense when combined with [deps] for optimization
-=======
-(* Note that [keepdepfile] only makes sense when combined with [deps] for optimizatoin
->>>>>>> Squashed commits!
    It has to be the last command of [bsb]
 *)
 let exec_command_install_then_exit  command =
@@ -19064,8 +19775,11 @@ let () =
         begin
           Arg.parse bsb_main_flags handle_anonymous_arg usage;
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
 <<<<<<< HEAD
+=======
+>>>>>>> Merging in new generators stuff!
 
 >>>>>>> Squashed commits!
           (* first, check whether we're in boilerplate generation mode, aka -init foo -theme bar *)
@@ -19085,10 +19799,27 @@ let () =
                   watch_exit ()
                 end 
               | make_world, force_regenerate ->
+<<<<<<< HEAD
                 let config_opt = Bsb_ninja_regen.regenerate_ninja ~generate_watch_metadata:true ~override_package_specs:None ~no_dev:false ~forced:force_regenerate cwd bsc_dir  in
                 if make_world then begin
                   Bsb_world.make_world_deps cwd config_opt
                 end;
+=======
+                (* If -make-world is passed we first do that because we'll collect
+                   the library files as we go. *)
+                let external_deps_for_linking_and_clibs = if make_world then
+                  Some (make_world_deps ~root_project_dir:cwd None)
+                else None in
+                (* don't regenerate files when we only run [bsb -clean-world] *)
+                let _ = regenerate_ninja 
+                  ?external_deps_for_linking_and_clibs 
+                  ~generate_watch_metadata:true 
+                  ~override_package_specs:None 
+                  ~no_dev:false 
+                  ~root_project_dir:cwd
+                  ~forced:force_regenerate
+                  cwd bsc_dir ocaml_dir in
+>>>>>>> Merging in new generators stuff!
                 if !watch_mode then begin
                   watch_exit ()
                   (* ninja is not triggered in this case
@@ -19100,57 +19831,6 @@ let () =
                   ninja_command_exit  vendor_ninja [||] 
                 end
             end;
-=======
-          (* [-make-world] should never be combined with [-package-specs] *)
-          let make_world = !make_world in 
-          begin match make_world, !force_regenerate with
-            | false, false -> 
-              if !watch_mode then begin
-                watch_exit ()
-                (* ninja is not triggered in this case
-                   There are several cases we wish ninja will not be triggered.
-                   [bsb -clean-world]
-                   [bsb -regen ]
-                *)
-              end 
-            | make_world, force_regenerate ->
-            (* TODO(sansouci): remove this when supporting multiple targets.
-                               Each target will get its own output folder.  *)
-            let output_deps = cwd // Bsb_config.lib_bs // bsdeps in
-            (* Cleaning build artifacts when bsconfig changed. Useful for changes in `entries`. *)
-            begin match (Bsb_dep_infos.check ~cwd force_regenerate output_deps) with 
-              | Other file when file = "bsconfig.json" ->
-                print_endline "bsconfig.json changed, cleaning artifacts.";
-                clean_bs_deps ();
-                clean_self ();
-              | _ -> () 
-            end;
-            (* If -make-world is passed we first do that because we'll collect
-               the library files as we go. *)
-            let external_deps_for_linking_and_clibs = if make_world then
-              Some (make_world_deps ~root_project_dir:cwd None)
-            else None in
-            (* don't regenerate files when we only run [bsb -clean-world] *)
-            let _ = regenerate_ninja 
-              ?external_deps_for_linking_and_clibs 
-              ~generate_watch_metadata:true 
-              ~override_package_specs:None 
-              ~no_dev:false 
-              ~root_project_dir:cwd
-              ~forced:force_regenerate
-              cwd bsc_dir ocaml_dir in
-            if !watch_mode then begin
-              watch_exit ()
-              (* ninja is not triggered in this case
-                 There are several cases we wish ninja will not be triggered.
-                 [bsb -clean-world]
-                 [bsb -regen ]
-              *)
-            end else if make_world then begin
-              ninja_command_exit  (* cwd *) vendor_ninja [||] (* config_opt *)
-            end
-          end;
->>>>>>> Squashed commits!
         end
       | `Split (bsb_args,ninja_args)
         -> (* -make-world all dependencies fall into this category *)

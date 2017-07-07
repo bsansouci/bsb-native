@@ -21257,7 +21257,8 @@ let is_valid_source_name name : check_result =
   match check_any_suffix_case_then_chop name [
       ".ml"; 
       ".re";
-      ".mli"; ".mll"; ".rei"
+      ".mli"; 
+      ".rei"
     ] with 
   | None -> Suffix_mismatch
   | Some x -> 
@@ -21367,34 +21368,6 @@ let concat4 a b c d =
   Bytes.unsafe_to_string target
 
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-type check_result = 
-  | Good 
-  | Invalid_module_name 
-  | Suffix_mismatch
-(** 
-   TODO: move to another module 
-   Make {!Ext_filename} not stateful
-*)
-let is_valid_source_name name : check_result =
-  match check_any_suffix_case_then_chop name [
-      ".ml"; 
-      ".re";
-      ".mli"; 
-      ".rei"
-    ] with 
-  | None -> Suffix_mismatch
-  | Some x -> 
-    if is_valid_module_file  x then
-      Good
-    else Invalid_module_name  
-=======
-and add_signature bv = function
-    [] -> ()
-  | item :: rem -> add_signature (add_sig_item bv item) rem
->>>>>>> Update readme + fixes
-=======
 let concat5 a b c d e =
   let a_len = String.length a in 
   let b_len = String.length b in 
@@ -21410,7 +21383,6 @@ let concat5 a b c d e =
   String.unsafe_blit d 0 target (a_len + b_len + c_len) d_len;
   String.unsafe_blit e 0 target (a_len + b_len + c_len + d_len) e_len;
   Bytes.unsafe_to_string target
->>>>>>> Fix @jaredly's bug.
 
 
 

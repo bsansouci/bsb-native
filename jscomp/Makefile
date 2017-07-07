@@ -314,7 +314,6 @@ BSB_SRCS= bsb_config\
 	bsb_ninja \
 	bsb_parse_sources\
 	bsb_ninja_native \
-	bsb_build_ui \
 	bsb_default\
 	bsb_bsdeps\
 	bsb_watcher_gen\

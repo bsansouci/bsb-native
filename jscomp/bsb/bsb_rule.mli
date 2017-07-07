@@ -64,3 +64,11 @@ val build_cmxa_library : t
     we must make sure it is re-entrant
 *)
 val reset : string String_map.t -> t String_map.t
+
+val define :
+    command:string ->
+    ?depfile:string ->
+    ?restat:unit ->
+    ?description:string ->
+    string -> 
+    t

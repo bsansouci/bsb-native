@@ -27,6 +27,7 @@
 type compile_target_t = Native | Bytecode
   
 val handle_file_groups : out_channel ->
+  custom_rules:Bsb_rule.t String_map.t -> 
   root_project_entry:Bsb_config_types.entries_t ->
   compile_target:compile_target_t ->
   is_top_level:bool ->
@@ -34,5 +35,5 @@ val handle_file_groups : out_channel ->
   js_post_build_cmd:string option -> 
   files_to_install:String_hash_set.t ->  
   static_libraries:string list ->
-  Bsb_build_ui.file_group list ->
+  Bsb_parse_sources.file_group list ->
   Bsb_ninja.info -> Bsb_ninja.info

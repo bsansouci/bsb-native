@@ -296,7 +296,7 @@ let interpret_json
           reason_react_jsx = !reason_react_jsx ;  
           entries = !entries;
           generators = !generators ; 
-          cut_generators = !cut_generators
+          cut_generators = !cut_generators;
 
           static_libraries = !static_libraries;
           build_script = !build_script;
