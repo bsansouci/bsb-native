@@ -34,8 +34,40 @@ let node_lit = "node"
 let current_theme = ref "basic"
 let set_theme s = current_theme := s 
 let generate_theme_with_path = ref None
+
+let cmdline_build_kind = ref Bsb_config_types.Js
+
+let watch_exit () =
+  print_endline "\nStart Watching now ";
+  (* @TODO windows support here. We need to pass those args to the nodejs file. 
+     Didn't bother for now.
+          Ben - July 23rd 2017 
+   *)
+  let (build_kind, build_kind_file) = match !cmdline_build_kind with 
+    (* @hack we don't actually know the file path, we make it up because we know
+       that we don't actually care about the path. 
+       This will bite us back some day. *)
+    | Bsb_config_types.Js -> ("-backend", "js")
+    | Bsb_config_types.Bytecode -> ("-backend", "bytecode")
+    | Bsb_config_types.Native -> ("-backend", "native")
+  in
+  let bsb_watcher =
+    Bsb_build_util.get_bsc_dir cwd // "bsb_watcher.js" in
+  if Ext_sys.is_windows_or_cygwin then
+    exit (Sys.command (Ext_string.concat3 node_lit Ext_string.single_space (Filename.quote bsb_watcher)))
+  else
+    Unix.execvp node_lit
+      [| node_lit ;
+         bsb_watcher;
+         build_kind;
+         build_kind_file;
+      |]
+
+
 let regen = "-regen"
 let separator = "--"
+
+
 let watch_mode = ref false
 let make_world = ref false 
 let set_make_world () = make_world := true
@@ -72,6 +104,15 @@ let bsb_main_flags : (string * Arg.spec * string) list=
        Arg.Unit (fun _ -> 
         print_endline (Filename.dirname Sys.executable_name)),
     " Show where bsb.exe is located"
+    
+    "-backend", Arg.String (fun s -> 
+        match s with
+        | "js" -> cmdline_build_kind := Bsb_config_types.Js
+        | "bytecode" -> cmdline_build_kind := Bsb_config_types.Bytecode
+        | "native" -> cmdline_build_kind := Bsb_config_types.Native
+        | _ -> failwith "-backend should be one of: 'js', 'bytecode' or 'native'."
+      ),
+    " Builds the entries in the bsconfig which match the given backend.";
   ]
 
 
@@ -83,22 +124,22 @@ let exec_command_then_exit  command =
   exit (Sys.command command ) 
 
 (* Execute the underlying ninja build call, then exit (as opposed to keep watching) *)
-let ninja_command_exit  vendor_ninja ninja_args  =
+let ninja_command_exit  vendor_ninja ninja_args nested =
   let ninja_args_len = Array.length ninja_args in
   if Ext_sys.is_windows_or_cygwin then
     let path_ninja = Filename.quote vendor_ninja in 
     exec_command_then_exit @@ 
     (if ninja_args_len = 0 then      
        Ext_string.inter3
-         path_ninja "-C" Bsb_config.lib_bs
+         path_ninja "-C" Bsb_config.lib_bs // nested
      else   
        let args = 
          Array.append 
-           [| path_ninja ; "-C"; Bsb_config.lib_bs|]
+           [| path_ninja ; "-C"; Bsb_config.lib_bs // nested|]
            ninja_args in 
        Ext_string.concat_array Ext_string.single_space args)
   else
-    let ninja_common_args = [|"ninja.exe"; "-C"; Bsb_config.lib_bs |] in 
+    let ninja_common_args = [|"ninja.exe"; "-C"; Bsb_config.lib_bs // nested |] in 
     let args = 
       if ninja_args_len = 0 then ninja_common_args else 
         Array.append ninja_common_args ninja_args in 
@@ -124,38 +165,35 @@ let usage = "Usage : bsb.exe <bsb-options> -- <ninja_options>\n\
 let handle_anonymous_arg arg =
   raise (Arg.Bad ("Unknown arg \"" ^ arg ^ "\""))
 
-let watch_exit () =
-  print_endline "\nStart Watching now ";
-  let bsb_watcher =
-    Bsb_build_util.get_bsc_dir cwd // "bsb_watcher.js" in
-  if Ext_sys.is_windows_or_cygwin then
-    exit (Sys.command (Ext_string.concat3 node_lit Ext_string.single_space (Filename.quote bsb_watcher)))
-  else
-    Unix.execvp node_lit
-      [| node_lit ;
-         bsb_watcher
-      |]
-
 
 let () =
   let bsc_dir = Bsb_build_util.get_bsc_dir cwd in
   let ocaml_dir = Bsb_build_util.get_ocaml_dir bsc_dir in
   let vendor_ninja = bsc_dir // "ninja.exe" in
   match Sys.argv with 
-  | [| _ |] ->  (* specialize this path [bsb.exe] which is used in watcher *)
+  (* Both of those are equivalent and the watcher will always pass in the `-backend` flag. *)
+  | [| _; "-backend"; _ |] | [| _ |] ->  (* specialize this path [bsb.exe] which is used in watcher *)
     begin
+      (* Quickly parse the backend argument to make sure we're building to the right target. *)
+      Arg.parse bsb_main_flags handle_anonymous_arg usage;
+      
       (* print_endline __LOC__; *)
       (* TODO(sansouci): Optimize this. Not passing external_deps_for_linking_and_clibs 
          will cause regenerate_ninja to re-crawl the external dep graph (only 
          for Native and Bytecode).  *)
       let _config_opt =  
-        Bsb_ninja_regen.regenerate_ninja ~override_package_specs:None ~no_dev:false 
+        Bsb_ninja_regen.regenerate_ninja ~override_package_specs:None ~is_top_level:true ~no_dev:false 
           ~generate_watch_metadata:true
           ~root_project_dir:cwd
           ~forced:true
           cwd bsc_dir ocaml_dir
-      in 
-      ninja_command_exit  vendor_ninja [||] 
+      in
+      let nested = begin match !cmdline_build_kind with
+        | Bsb_config_types.Js -> "js"
+        | Bsb_config_types.Bytecode -> "bytecode"
+        | Bsb_config_types.Native -> "native"
+      end in
+      ninja_command_exit  vendor_ninja [||] nested
     end
   | argv -> 
     begin
@@ -184,13 +222,14 @@ let () =
                 (* If -make-world is passed we first do that because we'll collect
                    the library files as we go. *)
                 let external_deps_for_linking_and_clibs = if make_world then
-                  Some (Bsb_world.make_world_deps ~root_project_dir:cwd None)
+                  Some (Bsb_world.make_world_deps ~root_project_dir:cwd)
                 else None in
                 (* don't regenerate files when we only run [bsb -clean-world] *)
                 let _ = regenerate_ninja 
                   ?external_deps_for_linking_and_clibs 
                   ~generate_watch_metadata:true 
                   ~override_package_specs:None 
+                  ~is_top_level:true
                   ~no_dev:false 
                   ~root_project_dir:cwd
                   ~forced:force_regenerate
@@ -202,28 +241,41 @@ let () =
                      [bsb -clean-world]
                      [bsb -regen ]
                   *)
-                end else if make_world then begin
-                  ninja_command_exit  vendor_ninja [||] 
+                end else begin
+                  let nested = begin match !cmdline_build_kind with
+                    | Bsb_config_types.Js -> "js"
+                    | Bsb_config_types.Bytecode -> "bytecode"
+                    | Bsb_config_types.Native -> "native"
+                  end in
+                  ninja_command_exit vendor_ninja [||] nested
                 end
             end;
         end
       | `Split (bsb_args,ninja_args)
         -> (* -make-world all dependencies fall into this category *)
         begin
-          Arg.parse_argv bsb_args bsb_main_flags handle_anonymous_arg usage ;
+          Arg.parse_argv bsb_args bsb_main_flags handle_anonymous_arg usage ;          
           (* [-make-world] should never be combined with [-package-specs] *)
-          let external_deps_for_linking_and_clibs = if make_world then 
-            Some (Bsb_world.make_world_deps ~root_project_dir:cwd None)
+          let external_deps_for_linking_and_clibs = if !make_world then 
+            Some (Bsb_world.make_world_deps ~root_project_dir:cwd)
           else None in
           let _ = regenerate_ninja 
             ?external_deps_for_linking_and_clibs
             ~generate_watch_metadata:true
             ~override_package_specs:None
+            ~is_top_level:true
             ~no_dev:false
             ~root_project_dir:cwd
             ~forced:!force_regenerate
             cwd bsc_dir ocaml_dir in
           if !watch_mode then watch_exit ()
-          else ninja_command_exit  vendor_ninja ninja_args 
+          else begin 
+            let nested = begin match !cmdline_build_kind with
+              | Bsb_config_types.Js -> "js"
+              | Bsb_config_types.Bytecode -> "bytecode"
+              | Bsb_config_types.Native -> "native"
+            end in
+            ninja_command_exit vendor_ninja ninja_args nested
+          end
         end
     end

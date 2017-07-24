@@ -26,11 +26,16 @@ let config_file_bak = "bsconfig.json.bak"
 let get_list_string = Bsb_build_util.get_list_string
 let (//) = Ext_filename.combine
 
-let resolve_package cwd  package_name = 
+let resolve_package compilation_kind cwd  package_name = 
   let x =  Bsb_pkg.resolve_bs_package ~cwd package_name  in
+  let nested = match compilation_kind with
+    | Bsb_config_types.Js -> "js"
+    | Bsb_config_types.Bytecode -> "bytecode"
+    | Bsb_config_types.Native -> "native"
+  in
   {
     Bsb_config_types.package_name ;
-    package_install_path = x // Bsb_config.lib_ocaml
+    package_install_path = x // Bsb_config.lib_ocaml // nested
   }
 
 let get_allowed_build_kinds arr =  
@@ -113,6 +118,7 @@ let interpret_json
     ~bsc_dir 
     ~generate_watch_metadata
     ~no_dev 
+    ~compilation_kind
     cwd  
 
   : Bsb_config_types.t =
@@ -161,7 +167,11 @@ let interpret_json
        ()
      | None 
      | Some _ ->
-       built_in_package := Some (resolve_package cwd Bs_version.package_name);
+      let x = Bsb_pkg.resolve_bs_package ~cwd Bs_version.package_name  in
+      built_in_package := Some ({
+        Bsb_config_types.package_name = Bs_version.package_name;
+        package_install_path = x // Bsb_config.lib_ocaml;
+      });
     ) ;
     map
     |? (Bsb_build_schemas.reason, `Obj begin fun m -> 
@@ -203,13 +213,13 @@ let interpret_json
         |> ignore
       end)
 
-    |? (Bsb_build_schemas.bs_dependencies, `Arr (fun s -> bs_dependencies := Bsb_build_util.get_list_string s |> List.map (resolve_package cwd)))
+    |? (Bsb_build_schemas.bs_dependencies, `Arr (fun s -> bs_dependencies := Bsb_build_util.get_list_string s |> List.map (resolve_package compilation_kind cwd)))
     |? (Bsb_build_schemas.bs_dev_dependencies,
         `Arr (fun s ->
             if not  no_dev then 
               bs_dev_dependencies
               := Bsb_build_util.get_list_string s
-                 |> List.map (resolve_package cwd))
+                 |> List.map (resolve_package compilation_kind cwd))
        )
 
     (* More design *)

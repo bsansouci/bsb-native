@@ -34,7 +34,7 @@ let (//) = Ext_filename.combine
 *)
 let regenerate_ninja
   ?external_deps_for_linking_and_clibs
-  ?root_project_entry
+  ~is_top_level
   ~no_dev
   ~override_package_specs
   ~generate_watch_metadata
@@ -43,7 +43,7 @@ let regenerate_ninja
   : _ option =
   let output_deps = cwd // Bsb_config.lib_bs // bsdeps in
   let reason : Bsb_dep_infos.check_result =
-    Bsb_dep_infos.check ~cwd  forced output_deps in
+    Bsb_dep_infos.check ~cwd  forced output_deps !cmdline_build_kind in
   let () = 
     Format.fprintf Format.std_formatter  
       "@{<info>BSB check@} build spec : %a @." Bsb_dep_infos.pp_check_result reason in 
@@ -54,11 +54,13 @@ let regenerate_ninja
     | Bsb_bsc_version_mismatch 
     | Bsb_file_not_exist 
     | Bsb_source_directory_changed  
+    | Bsb_different_cmdline_arg
     | Other _ ->
       if reason = Bsb_bsc_version_mismatch then begin 
         print_endline "Also clean current repo due to we have detected a different compiler";
-        clean_self (); 
-      end ; 
+        clean_self ();
+      end ;
+      (* Generate the lib folder before calling interpret_json because that might generate metadata. *)
       Bsb_build_util.mkp (cwd // Bsb_config.lib_bs);
       let config = 
         Bsb_config_parse.interpret_json 
@@ -66,7 +68,15 @@ let regenerate_ninja
           ~bsc_dir
           ~generate_watch_metadata
           ~no_dev
+          ~compilation_kind:!cmdline_build_kind
           cwd in 
+      let nested = begin match !cmdline_build_kind with
+        | Bsb_config_types.Js -> "js"
+        | Bsb_config_types.Bytecode -> "bytecode"
+        | Bsb_config_types.Native -> "native"
+      end in
+      (* Generate the nested folder before anything else... *)
+      Bsb_build_util.mkp (cwd // Bsb_config.lib_bs // nested);
       begin 
         Bsb_merlin_gen.merlin_file_gen ~cwd
           (bsc_dir // bsppx_exe) config;
@@ -79,16 +89,11 @@ let regenerate_ninja
              
              If we're aiming at building Native or Bytecode, we do walk the external 
              dep graph and build a topologically sorted list of all of them. *)
-          let mainEntry = begin match root_project_entry with 
-          (* `entries` should always contain at least on element. *)
-          | None       -> List.hd config.Bsb_config_types.entries
-          | Some entry -> entry
-          end in
-          begin match mainEntry with
-          | Bsb_config_types.JsTarget _ -> ([], []) (* No work for the JS flow! *)
-          | Bsb_config_types.BytecodeTarget _
-          | Bsb_config_types.NativeTarget _ ->
-            if root_project_entry <> None then 
+          begin match !cmdline_build_kind with
+          | Bsb_config_types.Js -> ([], []) (* No work for the JS flow! *)
+          | Bsb_config_types.Bytecode
+          | Bsb_config_types.Native ->
+            if not is_top_level then 
               ([], [])
             else begin
               (* TODO(sansouci): Manually walk the external dep graph. Optimize this. *)
@@ -97,23 +102,26 @@ let regenerate_ninja
               Bsb_build_util.walk_all_deps cwd
                 (fun {top; cwd} ->
                   if not top then begin
-                    let config = 
+                    (* TODO(sansouci): We don't need to read the full config, just the right fields.
+                       Then again we also should cache this info so we don't have to crawl anything. *)
+                    let innerConfig = 
                       Bsb_config_parse.interpret_json 
                         ~override_package_specs
                         ~bsc_dir
                         ~generate_watch_metadata:false
                         ~no_dev:true
+                        ~compilation_kind:!cmdline_build_kind
                         cwd in
-                    begin match mainEntry with 
-                    | Bsb_config_types.JsTarget _ ->  assert false
-                    | Bsb_config_types.BytecodeTarget _ 
-                      when List.mem Bsb_config_types.Bytecode Bsb_config_types.(config.allowed_build_kinds)-> 
-                        list_of_all_external_deps := (cwd // Bsb_config.lib_ocaml) :: !list_of_all_external_deps;
-                        all_clibs := (List.rev Bsb_config_types.(config.static_libraries)) @ !all_clibs;
-                    | Bsb_config_types.NativeTarget _ 
-                      when List.mem Bsb_config_types.Native Bsb_config_types.(config.allowed_build_kinds) -> 
-                        list_of_all_external_deps := (cwd // Bsb_config.lib_ocaml) :: !list_of_all_external_deps;
-                        all_clibs := (List.rev Bsb_config_types.(config.static_libraries)) @ !all_clibs;
+                    begin match !cmdline_build_kind with 
+                    | Bsb_config_types.Js ->  assert false
+                    | Bsb_config_types.Bytecode 
+                      when List.mem Bsb_config_types.Bytecode Bsb_config_types.(innerConfig.allowed_build_kinds)-> 
+                        list_of_all_external_deps := (cwd // Bsb_config.lib_ocaml // "bytecode") :: !list_of_all_external_deps;
+                        all_clibs := (List.rev Bsb_config_types.(innerConfig.static_libraries)) @ !all_clibs;
+                    | Bsb_config_types.Native 
+                      when List.mem Bsb_config_types.Native Bsb_config_types.(innerConfig.allowed_build_kinds) -> 
+                        list_of_all_external_deps := (cwd // Bsb_config.lib_ocaml // "native") :: !list_of_all_external_deps;
+                        all_clibs := (List.rev Bsb_config_types.(innerConfig.static_libraries)) @ !all_clibs;
                     | _ -> ()
                     end;
                   end
@@ -122,8 +130,7 @@ let regenerate_ninja
             end
           end
         | Some (external_deps, clibs) -> (external_deps, clibs) in
-        Bsb_gen.output_ninja ~external_deps_for_linking_and_clibs ~cwd ~bsc_dir ~ocaml_dir ~root_project_dir ?root_project_entry config;
-        (* TODO(sansouci): output module alias file here *)
+        Bsb_gen.output_ninja ~external_deps_for_linking_and_clibs ~cwd ~bsc_dir ~ocaml_dir ~root_project_dir ~is_top_level ~cmdline_build_kind:!cmdline_build_kind config;
         Literals.bsconfig_json :: config.globbed_dirs
         |> List.map
           (fun x ->
@@ -131,7 +138,7 @@ let regenerate_ninja
                stamp = (Unix.stat (cwd // x)).st_mtime
              }
           )
-        |> (fun x -> Bsb_dep_infos.store ~cwd output_deps (Array.of_list x));
+        |> (fun x -> Bsb_dep_infos.store ~cwd output_deps (Array.of_list x) !cmdline_build_kind);
         Some config 
       end 
   end

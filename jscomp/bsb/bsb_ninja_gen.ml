@@ -55,7 +55,8 @@ let output_ninja
     ~bsc_dir  
     ~ocaml_dir         
     ~root_project_dir
-    ?root_project_entry
+    ~is_top_level
+    ~cmdline_build_kind
     ({
       package_name;
       external_includes;
@@ -81,7 +82,17 @@ let output_ninja
     } : Bsb_config_types.t)
   =
   let custom_rules = Bsb_rule.reset generators in 
-  let oc = open_out_bin (cwd // Bsb_config.lib_bs // Literals.build_ninja) in
+  let entries = List.filter (fun e -> match e with 
+            | Bsb_config_types.JsTarget _ -> cmdline_build_kind = Bsb_config_types.Js
+            | Bsb_config_types.BytecodeTarget _ -> cmdline_build_kind = Bsb_config_types.Bytecode
+            | Bsb_config_types.NativeTarget _ -> cmdline_build_kind = Bsb_config_types.Native
+          ) entries in
+  let nested = begin match cmdline_build_kind with
+    | Bsb_config_types.Js -> "js"
+    | Bsb_config_types.Bytecode -> "bytecode"
+    | Bsb_config_types.Native -> "native"
+  end in
+  let oc = open_out_bin (cwd // Bsb_config.lib_bs // nested // Literals.build_ninja) in
   let bsc = bsc_dir // bsc_exe in   (* The path to [bsc.exe] independent of config  *)
   let bsb_helper = bsc_dir // bsb_helper_exe in (* The path to [bsb_heler.exe] *)
   let ocamlc = ocaml_dir // ocamlc_exe in
@@ -122,6 +133,7 @@ let output_ninja
           Bsb_ninja_global_vars.reason_react_jsx, reason_react_jsx_flag
              ; (* make it configurable in the future *)
           Bsb_ninja_global_vars.refmt_flags, refmt_flags;
+          Bsb_ninja_global_vars.external_deps_for_linking, Bsb_build_util.flag_concat dash_i external_deps_for_linking;
           Bsb_ninja_global_vars.ocamlc, ocamlc;
           Bsb_ninja_global_vars.ocamlopt, ocamlopt;
           Bsb_build_schemas.bsb_dir_group, "0"  (*TODO: avoid name conflict in the future *)
@@ -146,8 +158,8 @@ let output_ninja
           List.fold_left (fun (acc, dirs,acc_resources) ({Bsb_parse_sources.sources ; dir; resources }) ->
               merge_module_info_map  acc  sources ,  dir::dirs , (List.map (fun x -> dir // x ) resources) @ acc_resources
             ) (String_map.empty,[],[]) bs_file_groups in
-        Binary_cache.write_build_cache (cwd // Bsb_config.lib_bs // Binary_cache.bsbuild_cache) [|bs_groups|] ;
-        Bsb_ninja_util.output_kv
+        Binary_cache.write_build_cache (cwd // Bsb_config.lib_bs // nested // Binary_cache.bsbuild_cache) [|bs_groups|] ;
+        Bsb_ninja.output_kv
           Bsb_build_schemas.bsc_lib_includes (Bsb_build_util.flag_concat dash_i @@ 
           (all_includes source_dirs  ))  oc ;
         static_resources
@@ -173,17 +185,12 @@ let output_ninja
           Bsb_ninja_util.output_kv (Bsb_dir_index.(string_of_bsb_dev_include (of_int i)))
             (Bsb_build_util.flag_concat "-I" @@ source_dirs.(i)) oc
         done  ;
-        Binary_cache.write_build_cache (cwd // Bsb_config.lib_bs // Binary_cache.bsbuild_cache) bs_groups ;
+        Binary_cache.write_build_cache (cwd // Bsb_config.lib_bs // nested // Binary_cache.bsbuild_cache) bs_groups ;
         static_resources
     in
-    let (root_project_entry, is_top_level) = match root_project_entry with
-    (* List.hd here will always work because entries defaults to having 1 element 
-       to build JS *)
-    | None -> List.hd entries, true
-    | Some root_project_entry -> root_project_entry, false in
     let (all_info, should_build) =
-    match root_project_entry with
-    | Bsb_config_types.JsTarget _ -> 
+    match cmdline_build_kind with
+    | Bsb_config_types.Js -> 
       if List.mem Bsb_config_types.Js allowed_build_kinds then
         (Bsb_ninja_file_groups.handle_file_groups oc
           ~custom_rules
@@ -194,13 +201,14 @@ let output_ninja
           Bsb_ninja_file_groups.zero, 
         true)
       else (Bsb_ninja_file_groups.zero, false)
-    | Bsb_config_types.BytecodeTarget _ ->
+    | Bsb_config_types.Bytecode ->
       if List.mem Bsb_config_types.Bytecode allowed_build_kinds then
         (Bsb_ninja_native.handle_file_groups oc
           ~custom_rules
-          ~root_project_entry
-          ~compile_target:Bsb_ninja_native.Bytecode
           ~is_top_level
+          ~entries
+          ~compile_target:Bsb_ninja_native.Bytecode
+          ~cmdline_build_kind
           ~package_specs
           ~js_post_build_cmd
           ~files_to_install
@@ -209,13 +217,14 @@ let output_ninja
           Bsb_ninja_file_groups.zero,
         true)
       else (Bsb_ninja_file_groups.zero, false)
-    | Bsb_config_types.NativeTarget _ ->
+    | Bsb_config_types.Native ->
       if List.mem Bsb_config_types.Native allowed_build_kinds then
         (Bsb_ninja_native.handle_file_groups oc
           ~custom_rules
-          ~root_project_entry
-          ~compile_target:Bsb_ninja_native.Native
           ~is_top_level
+          ~entries
+          ~compile_target:Bsb_ninja_native.Native
+          ~cmdline_build_kind
           ~package_specs
           ~js_post_build_cmd
           ~files_to_install
@@ -241,7 +250,7 @@ let output_ninja
                 ^ "export OCAML_SYSTHREADS=" ^ (ocaml_dir // "otherlibs" // "systhreads") ^ " && " 
                 ^ "export PATH=$$PATH:" ^ (root_project_dir // "node_modules" // ".bin") ^ ":" ^ ocaml_dir ^ ":" ^ (root_project_dir // "node_modules" // "bs-platform" // "bin") ^ " && " in
     (* We move out of lib/bs so that the command is ran from the root project. *)
-    let rule = Bsb_rule.define ~command:("cd ../.. && " ^ envvars ^ build_script) "build_script" in
+    let rule = Bsb_rule.define ~command:("cd ../../.. && " ^ envvars ^ build_script) "build_script" in
     Bsb_ninja.output_build oc
       ~order_only_deps:(static_resources @ all_info.all_config_deps)
       ~input:""

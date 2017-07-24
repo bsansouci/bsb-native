@@ -7051,7 +7051,7 @@ let link link_byte_or_native ~main_module ~batch_files ~clibs ~includes ~cwd =
       compiler
       (Array.of_list (list_of_args))
   end else
-    failwith @@ "No " ^ suffix_object_files ^ " to link. Hint: is the main module in the entries array right?"
+    failwith @@ "No " ^ suffix_object_files ^ " to link. Hint: is the entry point module '" ^ main_module ^ "' right?"
 
 end
 module Bsb_helper_packer : sig 

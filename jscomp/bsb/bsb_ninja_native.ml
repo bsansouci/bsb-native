@@ -255,63 +255,65 @@ let handle_file_group oc
       handle_module_info  oc k v acc
     ) group.sources  acc
 
-let link oc ret ~root_project_entry ~file_groups ~static_libraries =
-  let output, rule_name, suffix_cmo_or_cmx, main_module_name =
-    begin match root_project_entry with
-    | Bsb_config_types.JsTarget main_module_name       -> assert false
-    | Bsb_config_types.BytecodeTarget main_module_name -> 
-      (String.lowercase main_module_name) ^ ".byte"  , Rules.linking_bytecode, Literals.suffix_cmo, main_module_name
-    | Bsb_config_types.NativeTarget main_module_name   -> 
-      (String.lowercase main_module_name) ^ ".native", Rules.linking_native  , Literals.suffix_cmx, main_module_name
-  end in
-  let (all_mlast_files, all_cmo_or_cmx_files, all_cmi_files) =
-    List.fold_left (fun acc group -> 
-      String_map.fold (fun _ (v : Binary_cache.module_info) (all_mlast_files, all_cmo_or_cmx_files, all_cmi_files) -> 
-        let mlname = match v.ml with
-          | Ml input | Re input -> Some (Ext_filename.chop_extension_if_any input)
-          | Ml_empty -> None
-        in
-        let mliname = match v.mli with
-          | Mli input | Rei input -> Some (Ext_filename.chop_extension_if_any input)
-          | Mli_empty -> None in
-        begin match (mlname, mliname) with
-        | None, None -> failwith "Got a source file without an ml or mli file. This should not happen."
-        | Some name, Some _ ->
-          ((name ^ Literals.suffix_mlast) :: all_mlast_files,
-           (name ^ suffix_cmo_or_cmx)     :: all_cmo_or_cmx_files,
-           (name ^ Literals.suffix_cmi)   :: all_cmi_files)
-        | Some name, None ->
-          ((name ^ Literals.suffix_mlast) :: all_mlast_files,
-           (name ^ suffix_cmo_or_cmx)     :: all_cmo_or_cmx_files,
-           (name ^ Literals.suffix_cmi)   :: all_cmi_files)
-        | None, Some name ->
-          (all_mlast_files,
-           all_cmo_or_cmx_files,
-           (name ^ Literals.suffix_cmi)   :: all_cmi_files)
-        end    
-      ) group.Bsb_parse_sources.sources acc) 
-    ([], [], [])
-    file_groups in
-  let shadows = [(
-    "main_module",
-    Bsb_ninja.Overwrite main_module_name
-  ); ("static_libraries", Bsb_ninja.Overwrite (Bsb_build_util.flag_concat "-add-clib" static_libraries))] in
-  output_build oc
-    ~output
-    ~input:""
-    ~inputs:all_mlast_files
-    ~implicit_deps:(all_cmi_files @ all_cmo_or_cmx_files)
-    ~shadows
-    ~rule:rule_name;
-  ret
+let link oc ret ~entries ~file_groups ~static_libraries =
+  List.fold_left (fun acc project_entry ->
+    let output, rule_name, suffix_cmo_or_cmx, main_module_name =
+      begin match project_entry with
+      | Bsb_config_types.JsTarget main_module_name       -> assert false
+      | Bsb_config_types.BytecodeTarget main_module_name -> 
+        (String.lowercase main_module_name) ^ ".byte"  , Rules.linking_bytecode, Literals.suffix_cmo, main_module_name
+      | Bsb_config_types.NativeTarget main_module_name   -> 
+        (String.lowercase main_module_name) ^ ".native", Rules.linking_native  , Literals.suffix_cmx, main_module_name
+    end in
+    let (all_mlast_files, all_cmo_or_cmx_files, all_cmi_files) =
+      List.fold_left (fun acc group -> 
+        String_map.fold (fun _ (v : Binary_cache.module_info) (all_mlast_files, all_cmo_or_cmx_files, all_cmi_files) -> 
+          let mlname = match v.ml with
+            | Ml input | Re input -> Some (Ext_filename.chop_extension_if_any input)
+            | Ml_empty -> None
+          in
+          let mliname = match v.mli with
+            | Mli input | Rei input -> Some (Ext_filename.chop_extension_if_any input)
+            | Mli_empty -> None in
+          begin match (mlname, mliname) with
+          | None, None -> failwith "Got a source file without an ml or mli file. This should not happen."
+          | Some name, Some _ ->
+            ((name ^ Literals.suffix_mlast) :: all_mlast_files,
+             (name ^ suffix_cmo_or_cmx)     :: all_cmo_or_cmx_files,
+             (name ^ Literals.suffix_cmi)   :: all_cmi_files)
+          | Some name, None ->
+            ((name ^ Literals.suffix_mlast) :: all_mlast_files,
+             (name ^ suffix_cmo_or_cmx)     :: all_cmo_or_cmx_files,
+             (name ^ Literals.suffix_cmi)   :: all_cmi_files)
+          | None, Some name ->
+            (all_mlast_files,
+             all_cmo_or_cmx_files,
+             (name ^ Literals.suffix_cmi)   :: all_cmi_files)
+          end    
+        ) group.Bsb_parse_sources.sources acc) 
+      ([], [], [])
+      file_groups in
+    let shadows = [(
+      "main_module",
+      Bsb_ninja.Overwrite main_module_name
+    ); ("static_libraries", Bsb_ninja.Overwrite (Bsb_build_util.flag_concat "-add-clib" static_libraries))] in
+    output_build oc
+      ~output
+      ~input:""
+      ~inputs:all_mlast_files
+      ~implicit_deps:(all_cmi_files @ all_cmo_or_cmx_files)
+      ~shadows
+      ~rule:rule_name;
+    acc
+  ) ret entries
     
-let pack oc ret  ~root_project_entry ~file_groups =
+let pack oc ret ~cmdline_build_kind ~file_groups =
   let output_cma_or_cmxa, rule_name, suffix_cmo_or_cmx =
-    begin match root_project_entry with
+    begin match cmdline_build_kind with
     (* These cases could benefit from a better error message. *)
-    | Bsb_config_types.JsTarget _       -> assert false
-    | Bsb_config_types.BytecodeTarget _ -> Literals.library_file ^ Literals.suffix_cma , Rules.build_cma_library , Literals.suffix_cmo
-    | Bsb_config_types.NativeTarget _   -> Literals.library_file ^ Literals.suffix_cmxa, Rules.build_cmxa_library, Literals.suffix_cmx
+    | Bsb_config_types.Js       -> assert false
+    | Bsb_config_types.Bytecode -> Literals.library_file ^ Literals.suffix_cma , Rules.build_cma_library , Literals.suffix_cmo
+    | Bsb_config_types.Native   -> Literals.library_file ^ Literals.suffix_cmxa, Rules.build_cmxa_library, Literals.suffix_cmx
   end in
   (* TODO(sansouci): we pack all source files of the dependency, but we could just pack the
      files that are used by the main project. *)
@@ -353,9 +355,10 @@ let pack oc ret  ~root_project_entry ~file_groups =
 
 let handle_file_groups oc
   ~custom_rules
-  ~root_project_entry
-  ~compile_target
   ~is_top_level
+  ~entries
+  ~compile_target
+  ~cmdline_build_kind
   ~package_specs
   ~js_post_build_cmd
   ~files_to_install
@@ -370,6 +373,6 @@ let handle_file_groups oc
       files_to_install
   ) st file_groups in
   if is_top_level then
-    link oc ret ~root_project_entry ~file_groups ~static_libraries
+    link oc ret ~entries ~file_groups ~static_libraries
   else
-    pack oc ret ~root_project_entry ~file_groups
+    pack oc ret ~cmdline_build_kind ~file_groups

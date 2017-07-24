@@ -32,11 +32,12 @@ type t =
     source_directory :  string ;
     bsb_version : string;
     bsc_version : string;
+    cmdline_build_kind: Bsb_config_types.compilation_kind_t;
   }
 
 
-let magic_number = "BS_DEP_INFOS_20170209"
-let bsb_version = "20170209+dev"
+let magic_number = "BS_DEP_INFOS_20170723"
+let bsb_version = "20170723+dev"
 (* TODO: for such small data structure, maybe text format is better *)
 
 let write (fname : string)  (x : t) =
@@ -55,6 +56,7 @@ type check_result =
   | Bsb_source_directory_changed
   | Bsb_bsc_version_mismatch
   | Bsb_forced
+  | Bsb_different_cmdline_arg
   | Other of string
 
 let pp_check_result fmt (check_resoult : check_result) =
@@ -67,6 +69,8 @@ let pp_check_result fmt (check_resoult : check_result) =
     "Bsc or bsb version mismatch"
   | Bsb_forced ->
     "Bsb forced rebuild"
+  | Bsb_different_cmdline_arg ->
+    "Bsb called with a different build argument"
   | Other s -> s)
 
 let rec check_aux cwd xs i finish =
@@ -98,15 +102,16 @@ let read (fname : string) cont =
     Even forced, we still need walk through a little
     bit in case we found a different version of compiler
 *)
-let check ~cwd ~forced ~file =
+let check ~cwd ~forced ~file cmdline_build_kind =
   read file  begin  function  {
-    file_stamps = xs; source_directory; bsb_version = old_version;
+    file_stamps = xs; source_directory; bsb_version = old_version; cmdline_build_kind = old_cmdline_build_kind;
     bsc_version
   } ->
     if old_version <> bsb_version then Bsb_bsc_version_mismatch else
     if cwd <> source_directory then Bsb_source_directory_changed else
     if bsc_version <> Bs_version.version then Bsb_bsc_version_mismatch else
-    if forced then Bsb_forced (* No need walk through *)
+    if forced then Bsb_forced else (* No need walk through *)
+    if cmdline_build_kind <> old_cmdline_build_kind then Bsb_different_cmdline_arg
     else
       try
         check_aux cwd xs  0 (Array.length xs)
@@ -120,9 +125,10 @@ let check ~cwd ~forced ~file =
         end
   end
 
-let store ~cwd ~file:name file_stamps =
+let store ~cwd ~file:name file_stamps cmdline_build_kind =
   write name
     { file_stamps ;
       source_directory = cwd ;
       bsb_version ;
-      bsc_version = Bs_version.version }
+      bsc_version = Bs_version.version; 
+      cmdline_build_kind = cmdline_build_kind; }
