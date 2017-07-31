@@ -138,7 +138,7 @@ let interpret_json
   *)
   let bsc_flags = ref Bsb_default.bsc_flags in  
   let warnings = ref Bsb_default.warnings in
-  let ocamlfind_packages = ref [] in
+  let ocamlfind_dependencies = ref [] in
   let ppx_flags = ref []in 
 
   let js_post_build_cmd = ref None in 
@@ -263,7 +263,7 @@ let interpret_json
     |? (Bsb_build_schemas.c_linker_flags, `Arr (fun s -> static_libraries := (List.fold_left (fun acc v -> "-ccopt" :: v :: acc) [] (List.rev (get_list_string s))) @ !static_libraries))
     |? (Bsb_build_schemas.build_script, `Str (fun s -> build_script := Some s))
     |? (Bsb_build_schemas.allowed_build_kinds, `Arr (fun s -> allowed_build_kinds := get_allowed_build_kinds s))
-    |? (Bsb_build_schemas.ocamlfind_packages, `Arr (fun s -> ocamlfind_packages := get_list_string s))
+    |? (Bsb_build_schemas.ocamlfind_dependencies, `Arr (fun s -> ocamlfind_dependencies := get_list_string s))
     |> ignore ;
     begin match String_map.find_opt Bsb_build_schemas.sources map with 
       | Some x -> 
@@ -327,7 +327,7 @@ let interpret_json
           static_libraries = !static_libraries;
           build_script = !build_script;
           allowed_build_kinds = !allowed_build_kinds;
-          ocamlfind_packages = !ocamlfind_packages;
+          ocamlfind_dependencies = !ocamlfind_dependencies;
         }
       | None -> failwith "no sources specified, please checkout the schema for more details"
     end

@@ -99,15 +99,16 @@ let regenerate_ninja
              If we're aiming at building Native or Bytecode, we do walk the external 
              dep graph and build a topologically sorted list of all of them. *)
           begin match cmdline_build_kind with
-          | Bsb_config_types.Js -> ([], []) (* No work for the JS flow! *)
+          | Bsb_config_types.Js -> ([], [], []) (* No work for the JS flow! *)
           | Bsb_config_types.Bytecode
           | Bsb_config_types.Native ->
             if not is_top_level then 
-              ([], [])
+              ([], [], [])
             else begin
               (* TODO(sansouci): Manually walk the external dep graph. Optimize this. *)
-              let list_of_all_external_deps = ref [] in
+              let all_external_deps = ref [] in
               let all_clibs = ref [] in
+              let all_ocamlfind_dependencies = ref [] in
               Bsb_build_util.walk_all_deps cwd
                 (fun {top; cwd} ->
                   if not top then begin
@@ -125,20 +126,22 @@ let regenerate_ninja
                     | Bsb_config_types.Js ->  assert false
                     | Bsb_config_types.Bytecode 
                       when List.mem Bsb_config_types.Bytecode Bsb_config_types.(innerConfig.allowed_build_kinds)-> 
-                        list_of_all_external_deps := (cwd // Bsb_config.lib_ocaml // "bytecode") :: !list_of_all_external_deps;
+                        all_external_deps := (cwd // Bsb_config.lib_ocaml // "bytecode") :: !all_external_deps;
                         all_clibs := (List.rev Bsb_config_types.(innerConfig.static_libraries)) @ !all_clibs;
+                        all_ocamlfind_dependencies := Bsb_config_types.(config.ocamlfind_dependencies) @ !all_ocamlfind_dependencies;
                     | Bsb_config_types.Native 
                       when List.mem Bsb_config_types.Native Bsb_config_types.(innerConfig.allowed_build_kinds) -> 
-                        list_of_all_external_deps := (cwd // Bsb_config.lib_ocaml // "native") :: !list_of_all_external_deps;
+                        all_external_deps := (cwd // Bsb_config.lib_ocaml // "native") :: !all_external_deps;
                         all_clibs := (List.rev Bsb_config_types.(innerConfig.static_libraries)) @ !all_clibs;
+                        all_ocamlfind_dependencies := Bsb_config_types.(config.ocamlfind_dependencies) @ !all_ocamlfind_dependencies;
                     | _ -> ()
                     end;
                   end
                 );
-              (List.rev !list_of_all_external_deps, List.rev !all_clibs)
+              (List.rev !all_external_deps, List.rev !all_clibs, List.rev !all_ocamlfind_dependencies)
             end
           end
-        | Some (external_deps, clibs) -> (external_deps, clibs) in
+        | Some all_deps -> all_deps in
         Bsb_ninja_gen.output_ninja ~external_deps_for_linking_and_clibs ~cwd ~bsc_dir ~ocaml_dir ~root_project_dir ~is_top_level ~cmdline_build_kind:cmdline_build_kind config;
         Literals.bsconfig_json :: config.globbed_dirs
         |> List.map

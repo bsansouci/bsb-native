@@ -68,5 +68,5 @@ type t =
     static_libraries: string list;
     build_script: string option;
     allowed_build_kinds: compilation_kind_t list;
-    ocamlfind_packages: string list;
+    ocamlfind_dependencies: string list;
   }

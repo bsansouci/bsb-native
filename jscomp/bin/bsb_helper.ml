@@ -10011,18 +10011,30 @@ let link link_byte_or_native ~main_module ~batch_files ~clibs ~includes ~ocamlfi
         (Ext_filename.combine dir (Literals.library_file ^ suffix_library_files)) :: acc)
       [] includes in
     (* This list will be reversed so we append the otherlibs object files at the end, and they'll end at the beginning. *)
-    (* let otherlibs = Bsb_helper_dep_graph.get_otherlibs_dependencies dependency_graph suffix_library_files in *)
-    let otherlibs = [] in
+    let otherlibs = Bsb_helper_dep_graph.get_otherlibs_dependencies dependency_graph suffix_library_files in
     let clibs = if add_custom && clibs <> [] then
       "-custom" :: clibs
     else
       clibs
     in
     let all_object_files = otherlibs @ clibs @ library_files @ List.rev (list_of_object_files) in
-    let list_of_args = ("ocamlfind" :: compiler :: "-linkpkg" :: ocamlfind_packages) @ ("-o" :: output_file :: all_object_files) in
-    Unix.execvp
-      "ocamlfind"
-      (Array.of_list (list_of_args))
+    (* If there are no ocamlfind packages then let's not use ocamlfind, let's use the opt compiler instead.
+       This is for mainly because we'd like to offer a "sandboxed" experience for those who want it.
+       So if you don't care about opam dependencies you can solely rely on Bucklescript and npm, no need 
+       to install ocamlfind. 
+     *)
+    if ocamlfind_packages = [] then
+      let compiler = compiler ^ ".opt" in
+      let list_of_args = compiler :: "-g" :: "-o" :: output_file :: all_object_files in
+      Unix.execvp
+        compiler
+        (Array.of_list (list_of_args))
+    else begin
+      let list_of_args = ("ocamlfind" :: compiler :: "-linkpkg" :: ocamlfind_packages) @ ("-g" :: "-o" :: output_file :: all_object_files) in
+      Unix.execvp
+        "ocamlfind"
+        (Array.of_list (list_of_args))
+    end
   end else
     failwith @@ "No " ^ suffix_object_files ^ " to link. Hint: is the entry point module '" ^ main_module ^ "' right?"
 
@@ -10120,9 +10132,21 @@ let pack pack_byte_or_native ~batch_files ~includes ~ocamlfind_packages =
     sorted_tasks) in
   if all_object_files <> [] then
     let includes = List.fold_left (fun acc dir -> "-I" :: dir :: acc) [] includes in
-    Unix.execvp
-      "ocamlfind"
-        (Array.of_list (("ocamlfind" :: compiler :: "-a" :: ocamlfind_packages) @  ("-o" :: (Literals.library_file ^ suffix_library_files) :: includes @ all_object_files)))
+    (* If there are no ocamlfind packages then let's not use ocamlfind, let's use the opt compiler instead.
+       This is for mainly because we'd like to offer a "sandboxed" experience for those who want it.
+       So if you don't care about opam dependencies you can solely rely on Bucklescript and npm, no need 
+       to install ocamlfind. *)
+    if ocamlfind_packages = [] then
+      let compiler = compiler ^ ".opt" in
+      Unix.execvp
+        compiler
+          (Array.of_list (compiler :: "-a" :: "-g" :: "-o" :: (Literals.library_file ^ suffix_library_files) :: includes @ all_object_files))
+    else begin
+      let list_of_args = ("ocamlfind" :: compiler :: "-a" :: "-g" :: ocamlfind_packages) @  ("-o" :: (Literals.library_file ^ suffix_library_files) :: includes @ all_object_files) in
+      Unix.execvp
+        "ocamlfind"
+          (Array.of_list list_of_args)
+    end
   else
     failwith @@ "No " ^ suffix_object_files ^ " to pack into a lib."
 
