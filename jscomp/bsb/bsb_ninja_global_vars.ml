@@ -48,6 +48,6 @@ let refmt_flags = "refmt_flags"
 let ocamlc = "ocamlc"
 let ocamlopt = "ocamlopt"
 let ocamlfind = "ocamlfind"
-let ocamlfind_packages = "ocamlfind_packages"
+let ocamlfind_dependencies = "ocamlfind_dependencies"
 
 let external_deps_for_linking = "external_deps_for_linking"

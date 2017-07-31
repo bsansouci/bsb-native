@@ -83,7 +83,7 @@ let static_libraries = "static_libraries"
 let c_linker_flags = "c_linker_flags"
 let build_script = "build_script"
 let allowed_build_kinds = "allowed-build-kinds"
-let ocamlfind_packages = "ocamlfind-packages"
+let ocamlfind_dependencies = "ocamlfind-dependencies"
 
 end
 module Bs_version : sig 
@@ -8884,7 +8884,7 @@ type t =
     static_libraries: string list;
     build_script: string option;
     allowed_build_kinds: compilation_kind_t list;
-    ocamlfind_packages: string list;
+    ocamlfind_dependencies: string list;
   }
 
 end
@@ -10818,7 +10818,7 @@ let interpret_json
   *)
   let bsc_flags = ref Bsb_default.bsc_flags in  
   let warnings = ref Bsb_default.warnings in
-  let ocamlfind_packages = ref [] in
+  let ocamlfind_dependencies = ref [] in
   let ppx_flags = ref []in 
 
   let js_post_build_cmd = ref None in 
@@ -10936,7 +10936,7 @@ let interpret_json
     |? (Bsb_build_schemas.c_linker_flags, `Arr (fun s -> static_libraries := (List.fold_left (fun acc v -> "-ccopt" :: v :: acc) [] (List.rev (get_list_string s))) @ !static_libraries))
     |? (Bsb_build_schemas.build_script, `Str (fun s -> build_script := Some s))
     |? (Bsb_build_schemas.allowed_build_kinds, `Arr (fun s -> allowed_build_kinds := get_allowed_build_kinds s))
-    |? (Bsb_build_schemas.ocamlfind_packages, `Arr (fun s -> ocamlfind_packages := get_list_string s))
+    |? (Bsb_build_schemas.ocamlfind_dependencies, `Arr (fun s -> ocamlfind_dependencies := get_list_string s))
     |> ignore ;
     begin match String_map.find_opt Bsb_build_schemas.sources map with 
       | Some x -> 
@@ -10994,7 +10994,7 @@ let interpret_json
           static_libraries = !static_libraries;
           build_script = !build_script;
           allowed_build_kinds = !allowed_build_kinds;
-          ocamlfind_packages = !ocamlfind_packages;
+          ocamlfind_dependencies = !ocamlfind_dependencies;
         }
       | None -> failwith "no sources specified, please checkout the schema for more details"
     end
@@ -11258,7 +11258,7 @@ let refmt_flags = "refmt_flags"
 let ocamlc = "ocamlc"
 let ocamlopt = "ocamlopt"
 let ocamlfind = "ocamlfind"
-let ocamlfind_packages = "ocamlfind_packages"
+let ocamlfind_dependencies = "ocamlfind_dependencies"
 
 let external_deps_for_linking = "external_deps_for_linking"
 
@@ -11541,28 +11541,28 @@ let build_cmi =
 
 let build_cmo_cmi_bytecode =
   define
-    ~command:"${ocamlfind} ${ocamlc} ${bs_package_includes} ${bsc_lib_includes} ${ocamlfind_packages} ${bsc_extra_includes} \
+    ~command:"${ocamlfind} ${ocamlc} ${bs_package_includes} ${bsc_lib_includes} ${ocamlfind_dependencies} ${bsc_extra_includes} \
               -o ${out} ${warnings} -c -intf-suffix .mliast_simple -impl ${in}_simple ${postbuild}"
     ~depfile:"${in}.d"
     "build_cmo_cmi_bytecode"
     
 let build_cmi_bytecode =
   define
-    ~command:"${ocamlfind} ${ocamlc} ${bs_package_includes} ${bsc_lib_includes} ${ocamlfind_packages} ${bsc_extra_includes} \
+    ~command:"${ocamlfind} ${ocamlc} ${bs_package_includes} ${bsc_lib_includes} ${ocamlfind_dependencies} ${bsc_extra_includes} \
               -o ${out} ${warnings} -c -intf ${in}_simple ${postbuild}"
     ~depfile:"${in}.d"
     "build_cmi_bytecode"
 
 let build_cmx_cmi_native =
   define
-    ~command:"${ocamlfind} ${ocamlopt} ${bs_package_includes} ${bsc_lib_includes} ${ocamlfind_packages} ${bsc_extra_includes} \
+    ~command:"${ocamlfind} ${ocamlopt} ${bs_package_includes} ${bsc_lib_includes} ${ocamlfind_dependencies} ${bsc_extra_includes} \
               -o ${out} ${warnings} -c -intf-suffix .mliast_simple -impl ${in}_simple ${postbuild}"
     ~depfile:"${in}.d"
     "build_cmx_cmi_native"
 
 let build_cmi_native =
   define
-    ~command:"${ocamlfind} ${ocamlopt} ${bs_package_includes} ${bsc_lib_includes} ${ocamlfind_packages} ${bsc_extra_includes} \
+    ~command:"${ocamlfind} ${ocamlopt} ${bs_package_includes} ${bsc_lib_includes} ${ocamlfind_dependencies} ${bsc_extra_includes} \
               -o ${out} ${warnings} -c -intf ${in}_simple ${postbuild}"
     ~depfile:"${in}.d"
     "build_cmi_native"
@@ -11570,24 +11570,24 @@ let build_cmi_native =
 
 let linking_bytecode =
   define
-    ~command:"${bsb_helper} -bs-main ${main_module} ${static_libraries} ${ocamlfind_packages} ${external_deps_for_linking} ${in} -link-bytecode ${out}"
+    ~command:"${bsb_helper} -bs-main ${main_module} ${static_libraries} ${ocamlfind_dependencies} ${external_deps_for_linking} ${in} -link-bytecode ${out}"
     "linking_bytecode"
 
 let linking_native =
   define
-    ~command:"${bsb_helper} -bs-main ${main_module} ${static_libraries} ${ocamlfind_packages} ${external_deps_for_linking} ${in} -link-native ${out}"
+    ~command:"${bsb_helper} -bs-main ${main_module} ${static_libraries} ${ocamlfind_dependencies} ${external_deps_for_linking} ${in} -link-native ${out}"
     "linking_native"
 
 
 let build_cma_library =
   define
-    ~command:"${bsb_helper} ${static_libraries} ${ocamlfind_packages} ${bs_package_includes} ${bsc_lib_includes} ${bsc_extra_includes} \
+    ~command:"${bsb_helper} ${static_libraries} ${ocamlfind_dependencies} ${bs_package_includes} ${bsc_lib_includes} ${bsc_extra_includes} \
               ${in} -pack-bytecode-library"
     "build_cma_library"
 
 let build_cmxa_library =
   define
-    ~command:"${bsb_helper} ${static_libraries} ${ocamlfind_packages} ${bs_package_includes} ${bsc_lib_includes} ${bsc_extra_includes} \
+    ~command:"${bsb_helper} ${static_libraries} ${ocamlfind_dependencies} ${bs_package_includes} ${bsc_lib_includes} ${bsc_extra_includes} \
               ${in} -pack-native-library"
     "build_cmxa_library"
 
@@ -12593,7 +12593,7 @@ module Bsb_ninja_gen : sig
   generate ninja file based on [cwd] and [bsc_dir]
 *)
 val output_ninja :
-  external_deps_for_linking_and_clibs: (string list) * (string list) ->
+  external_deps_for_linking_and_clibs:string list * string list * string list ->
   cwd:string ->
   bsc_dir:string ->  
   ocaml_dir:string ->
@@ -12657,7 +12657,7 @@ let refmt_exe = "refmt.exe"
 let dash_ppx = "-ppx"
 
 let output_ninja
-    ~external_deps_for_linking_and_clibs:(external_deps_for_linking, clibs)
+    ~external_deps_for_linking_and_clibs:(external_deps_for_linking, external_static_libraries, external_ocamlfind_dependencies)
     ~cwd
     ~bsc_dir  
     ~ocaml_dir         
@@ -12686,7 +12686,7 @@ let output_ninja
       static_libraries;
       build_script;
       allowed_build_kinds;
-      ocamlfind_packages;
+      ocamlfind_dependencies;
     } : Bsb_config_types.t)
   =
   let custom_rules = Bsb_rule.reset generators in 
@@ -12747,7 +12747,7 @@ let output_ninja
           Bsb_ninja_global_vars.ocamlc, ocamlc;
           Bsb_ninja_global_vars.ocamlopt, ocamlopt;
           Bsb_ninja_global_vars.ocamlfind, ocamlfind;
-          Bsb_ninja_global_vars.ocamlfind_packages,  Bsb_build_util.flag_concat "-package" ocamlfind_packages;
+          Bsb_ninja_global_vars.ocamlfind_dependencies,  Bsb_build_util.flag_concat "-package" (external_ocamlfind_dependencies @ ocamlfind_dependencies);
           Bsb_build_schemas.bsb_dir_group, "0"  (*TODO: avoid name conflict in the future *)
         |] oc ;
     in
@@ -12824,7 +12824,7 @@ let output_ninja
           ~package_specs
           ~js_post_build_cmd
           ~files_to_install
-          ~static_libraries:(clibs @ static_libraries)
+          ~static_libraries:(external_static_libraries @ static_libraries)
           bs_file_groups
           Bsb_ninja_file_groups.zero,
         true)
@@ -12840,7 +12840,7 @@ let output_ninja
           ~package_specs
           ~js_post_build_cmd
           ~files_to_install
-          ~static_libraries:(clibs @ static_libraries)
+          ~static_libraries:(external_static_libraries @ static_libraries)
           bs_file_groups
           Bsb_ninja_file_groups.zero,
         true)
@@ -12912,7 +12912,7 @@ module Bsb_ninja_regen : sig
 
   
 val regenerate_ninja :
-  ?external_deps_for_linking_and_clibs:string list * string list ->
+  ?external_deps_for_linking_and_clibs:(string list) * (string list) * (string list) ->
   is_top_level:bool ->
   no_dev:bool ->
   override_package_specs:Bsb_package_specs.t option ->
@@ -13019,15 +13019,16 @@ let regenerate_ninja
              If we're aiming at building Native or Bytecode, we do walk the external 
              dep graph and build a topologically sorted list of all of them. *)
           begin match cmdline_build_kind with
-          | Bsb_config_types.Js -> ([], []) (* No work for the JS flow! *)
+          | Bsb_config_types.Js -> ([], [], []) (* No work for the JS flow! *)
           | Bsb_config_types.Bytecode
           | Bsb_config_types.Native ->
             if not is_top_level then 
-              ([], [])
+              ([], [], [])
             else begin
               (* TODO(sansouci): Manually walk the external dep graph. Optimize this. *)
-              let list_of_all_external_deps = ref [] in
+              let all_external_deps = ref [] in
               let all_clibs = ref [] in
+              let all_ocamlfind_dependencies = ref [] in
               Bsb_build_util.walk_all_deps cwd
                 (fun {top; cwd} ->
                   if not top then begin
@@ -13045,20 +13046,22 @@ let regenerate_ninja
                     | Bsb_config_types.Js ->  assert false
                     | Bsb_config_types.Bytecode 
                       when List.mem Bsb_config_types.Bytecode Bsb_config_types.(innerConfig.allowed_build_kinds)-> 
-                        list_of_all_external_deps := (cwd // Bsb_config.lib_ocaml // "bytecode") :: !list_of_all_external_deps;
+                        all_external_deps := (cwd // Bsb_config.lib_ocaml // "bytecode") :: !all_external_deps;
                         all_clibs := (List.rev Bsb_config_types.(innerConfig.static_libraries)) @ !all_clibs;
+                        all_ocamlfind_dependencies := Bsb_config_types.(config.ocamlfind_dependencies) @ !all_ocamlfind_dependencies;
                     | Bsb_config_types.Native 
                       when List.mem Bsb_config_types.Native Bsb_config_types.(innerConfig.allowed_build_kinds) -> 
-                        list_of_all_external_deps := (cwd // Bsb_config.lib_ocaml // "native") :: !list_of_all_external_deps;
+                        all_external_deps := (cwd // Bsb_config.lib_ocaml // "native") :: !all_external_deps;
                         all_clibs := (List.rev Bsb_config_types.(innerConfig.static_libraries)) @ !all_clibs;
+                        all_ocamlfind_dependencies := Bsb_config_types.(config.ocamlfind_dependencies) @ !all_ocamlfind_dependencies;
                     | _ -> ()
                     end;
                   end
                 );
-              (List.rev !list_of_all_external_deps, List.rev !all_clibs)
+              (List.rev !all_external_deps, List.rev !all_clibs, List.rev !all_ocamlfind_dependencies)
             end
           end
-        | Some (external_deps, clibs) -> (external_deps, clibs) in
+        | Some all_deps -> all_deps in
         Bsb_ninja_gen.output_ninja ~external_deps_for_linking_and_clibs ~cwd ~bsc_dir ~ocaml_dir ~root_project_dir ~is_top_level ~cmdline_build_kind:cmdline_build_kind config;
         Literals.bsconfig_json :: config.globbed_dirs
         |> List.map
@@ -13277,7 +13280,7 @@ val make_world_deps:
   string ->
   root_project_dir:string ->
   cmdline_build_kind:Bsb_config_types.compilation_kind_t ->
-  string list * string list 
+  (string list) * (string list) * (string list)
 
 end = struct
 #1 "bsb_world.ml"
@@ -13362,7 +13365,8 @@ let build_bs_deps cwd ~root_project_dir ~cmdline_build_kind deps entry =
   let bsc_dir = Bsb_build_util.get_bsc_dir cwd in
   let ocaml_dir = Bsb_build_util.get_ocaml_dir bsc_dir in
   let vendor_ninja = bsc_dir // "ninja.exe" in
-  let list_of_all_external_deps = ref [] in
+  let all_external_deps = ref [] in
+  let all_ocamlfind_dependencies = ref [] in
   let all_clibs = ref [] in
   Bsb_build_util.walk_all_deps  cwd
     (fun {top; cwd} ->
@@ -13394,13 +13398,14 @@ let build_bs_deps cwd ~root_project_dir ~cmdline_build_kind deps entry =
               a list to build a topologically sorted list of external deps.*)
             if List.mem cmdline_build_kind Bsb_config_types.(config.allowed_build_kinds) then begin
               all_clibs := (List.rev Bsb_config_types.(config.static_libraries)) @ !all_clibs;
+              all_ocamlfind_dependencies := Bsb_config_types.(config.ocamlfind_dependencies) @ !all_ocamlfind_dependencies;
               let nested = begin match cmdline_build_kind with 
               | Bsb_config_types.Js -> "js"
               | Bsb_config_types.Bytecode -> 
-                list_of_all_external_deps := (cwd // Bsb_config.lib_ocaml // "bytecode") :: !list_of_all_external_deps;
+                all_external_deps := (cwd // Bsb_config.lib_ocaml // "bytecode") :: !all_external_deps;
                 "bytecode"
               | Bsb_config_types.Native -> 
-                list_of_all_external_deps := (cwd // Bsb_config.lib_ocaml // "native") :: !list_of_all_external_deps;
+                all_external_deps := (cwd // Bsb_config.lib_ocaml // "native") :: !all_external_deps;
                 "native"
               end in
              Bsb_unix.run_command_execv
@@ -13418,7 +13423,7 @@ let build_bs_deps cwd ~root_project_dir ~cmdline_build_kind deps entry =
          end
     );
   (* Reverse order here so the leaf deps are at the beginning *)
-  (List.rev !list_of_all_external_deps, List.rev !all_clibs)
+  (List.rev !all_external_deps, List.rev !all_clibs, List.rev !all_ocamlfind_dependencies)
 
 
 let get_package_specs_and_entries cmdline_build_kind =

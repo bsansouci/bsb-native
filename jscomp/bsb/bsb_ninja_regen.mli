@@ -32,7 +32,7 @@
 
   
 val regenerate_ninja :
-  ?external_deps_for_linking_and_clibs:string list * string list ->
+  ?external_deps_for_linking_and_clibs:(string list) * (string list) * (string list) ->
   is_top_level:bool ->
   no_dev:bool ->
   override_package_specs:Bsb_package_specs.t option ->

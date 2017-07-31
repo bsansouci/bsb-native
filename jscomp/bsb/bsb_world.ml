@@ -79,7 +79,8 @@ let build_bs_deps cwd ~root_project_dir ~cmdline_build_kind deps entry =
   let bsc_dir = Bsb_build_util.get_bsc_dir cwd in
   let ocaml_dir = Bsb_build_util.get_ocaml_dir bsc_dir in
   let vendor_ninja = bsc_dir // "ninja.exe" in
-  let list_of_all_external_deps = ref [] in
+  let all_external_deps = ref [] in
+  let all_ocamlfind_dependencies = ref [] in
   let all_clibs = ref [] in
   Bsb_build_util.walk_all_deps  cwd
     (fun {top; cwd} ->
@@ -111,13 +112,14 @@ let build_bs_deps cwd ~root_project_dir ~cmdline_build_kind deps entry =
               a list to build a topologically sorted list of external deps.*)
             if List.mem cmdline_build_kind Bsb_config_types.(config.allowed_build_kinds) then begin
               all_clibs := (List.rev Bsb_config_types.(config.static_libraries)) @ !all_clibs;
+              all_ocamlfind_dependencies := Bsb_config_types.(config.ocamlfind_dependencies) @ !all_ocamlfind_dependencies;
               let nested = begin match cmdline_build_kind with 
               | Bsb_config_types.Js -> "js"
               | Bsb_config_types.Bytecode -> 
-                list_of_all_external_deps := (cwd // Bsb_config.lib_ocaml // "bytecode") :: !list_of_all_external_deps;
+                all_external_deps := (cwd // Bsb_config.lib_ocaml // "bytecode") :: !all_external_deps;
                 "bytecode"
               | Bsb_config_types.Native -> 
-                list_of_all_external_deps := (cwd // Bsb_config.lib_ocaml // "native") :: !list_of_all_external_deps;
+                all_external_deps := (cwd // Bsb_config.lib_ocaml // "native") :: !all_external_deps;
                 "native"
               end in
              Bsb_unix.run_command_execv
@@ -135,7 +137,7 @@ let build_bs_deps cwd ~root_project_dir ~cmdline_build_kind deps entry =
          end
     );
   (* Reverse order here so the leaf deps are at the beginning *)
-  (List.rev !list_of_all_external_deps, List.rev !all_clibs)
+  (List.rev !all_external_deps, List.rev !all_clibs, List.rev !all_ocamlfind_dependencies)
 
 
 let get_package_specs_and_entries cmdline_build_kind =

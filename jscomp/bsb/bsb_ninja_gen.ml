@@ -51,7 +51,7 @@ let refmt_exe = "refmt.exe"
 let dash_ppx = "-ppx"
 
 let output_ninja
-    ~external_deps_for_linking_and_clibs:(external_deps_for_linking, clibs)
+    ~external_deps_for_linking_and_clibs:(external_deps_for_linking, external_static_libraries, external_ocamlfind_dependencies)
     ~cwd
     ~bsc_dir  
     ~ocaml_dir         
@@ -80,7 +80,7 @@ let output_ninja
       static_libraries;
       build_script;
       allowed_build_kinds;
-      ocamlfind_packages;
+      ocamlfind_dependencies;
     } : Bsb_config_types.t)
   =
   let custom_rules = Bsb_rule.reset generators in 
@@ -141,7 +141,7 @@ let output_ninja
           Bsb_ninja_global_vars.ocamlc, ocamlc;
           Bsb_ninja_global_vars.ocamlopt, ocamlopt;
           Bsb_ninja_global_vars.ocamlfind, ocamlfind;
-          Bsb_ninja_global_vars.ocamlfind_packages,  Bsb_build_util.flag_concat "-package" ocamlfind_packages;
+          Bsb_ninja_global_vars.ocamlfind_dependencies,  Bsb_build_util.flag_concat "-package" (external_ocamlfind_dependencies @ ocamlfind_dependencies);
           Bsb_build_schemas.bsb_dir_group, "0"  (*TODO: avoid name conflict in the future *)
         |] oc ;
     in
@@ -218,7 +218,7 @@ let output_ninja
           ~package_specs
           ~js_post_build_cmd
           ~files_to_install
-          ~static_libraries:(clibs @ static_libraries)
+          ~static_libraries:(external_static_libraries @ static_libraries)
           bs_file_groups
           Bsb_ninja_file_groups.zero,
         true)
@@ -234,7 +234,7 @@ let output_ninja
           ~package_specs
           ~js_post_build_cmd
           ~files_to_install
-          ~static_libraries:(clibs @ static_libraries)
+          ~static_libraries:(external_static_libraries @ static_libraries)
           bs_file_groups
           Bsb_ninja_file_groups.zero,
         true)
