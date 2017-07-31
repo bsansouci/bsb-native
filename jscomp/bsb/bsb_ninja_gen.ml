@@ -124,7 +124,7 @@ let output_ninja
           Bsb_ninja_global_vars.bs_package_flags, bs_package_flags ; 
           Bsb_ninja_global_vars.src_root_dir, cwd (* TODO: need check its integrity -- allow relocate or not? *);
           Bsb_ninja_global_vars.bsc, bsc ;
-          Bsb_ninja_global_vars.bsdep, bsdep;
+          Bsb_ninja_global_vars.bsb_helper, bsb_helper;
           Bsb_ninja_global_vars.bsc_flags, bsc_flags ;
           Bsb_ninja_global_vars.ppx_flags, ppx_flags;
           Bsb_ninja_global_vars.bs_package_includes, (Bsb_build_util.flag_concat dash_i @@ List.map (fun x -> x.Bsb_config_types.package_install_path) bs_dependencies);
@@ -159,7 +159,7 @@ let output_ninja
               merge_module_info_map  acc  sources ,  dir::dirs , (List.map (fun x -> dir // x ) resources) @ acc_resources
             ) (String_map.empty,[],[]) bs_file_groups in
         Binary_cache.write_build_cache (cwd // Bsb_config.lib_bs // nested // Binary_cache.bsbuild_cache) [|bs_groups|] ;
-        Bsb_ninja.output_kv
+        Bsb_ninja_util.output_kv
           Bsb_build_schemas.bsc_lib_includes (Bsb_build_util.flag_concat dash_i @@ 
           (all_includes source_dirs  ))  oc ;
         static_resources
@@ -251,13 +251,13 @@ let output_ninja
                 ^ "export PATH=$$PATH:" ^ (root_project_dir // "node_modules" // ".bin") ^ ":" ^ ocaml_dir ^ ":" ^ (root_project_dir // "node_modules" // "bs-platform" // "bin") ^ " && " in
     (* We move out of lib/bs so that the command is ran from the root project. *)
     let rule = Bsb_rule.define ~command:("cd ../../.. && " ^ envvars ^ build_script) "build_script" in
-    Bsb_ninja.output_build oc
+    Bsb_ninja_util.output_build oc
       ~order_only_deps:(static_resources @ all_info.all_config_deps)
       ~input:""
       ~output:Literals.build_ninja
       ~rule;
   | _ ->
-    Bsb_ninja.phony oc ~order_only_deps:(static_resources @ all_info.all_config_deps)
+    Bsb_ninja_util.phony oc ~order_only_deps:(static_resources @ all_info.all_config_deps)
       ~inputs:[]
       ~output:Literals.build_ninja ; in
     close_out oc;

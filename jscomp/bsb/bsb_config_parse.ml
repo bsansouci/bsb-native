@@ -90,11 +90,11 @@ let package_specs_and_entries_from_bsconfig () =
   begin match json with
     | Obj {map} ->
       begin 
-      let package_specs = ref (Bsb_default.package_specs) in 
+      let package_specs = ref (Bsb_package_specs.default_package_specs) in 
       let entries = ref Bsb_default.main_entries in
       map
         |? (Bsb_build_schemas.package_specs, 
-            `Arr (fun s -> package_specs := get_package_specs_from_array  s ))
+            `Arr (fun s -> package_specs := Bsb_package_specs.get_package_specs_from_array  s ))
         |? (Bsb_build_schemas.entries, `Arr (fun s -> entries := parse_entries s))
         |> ignore ;
       !package_specs, !entries

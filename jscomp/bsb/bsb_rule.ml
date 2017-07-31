@@ -270,7 +270,6 @@ let reset (custom_rules : string String_map.t) =
   
     reload.used <- false; 
     copy_resources.used <- false ;
-    build_ml_from_mll.used <- false ; 
     build_cmj_js.used <- false;
     build_cmj_cmi_js.used <- false ;
     build_cmi.used <- false ;

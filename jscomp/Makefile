@@ -309,14 +309,14 @@ BSB_SRCS= bsb_config\
 	bsb_helper_extract\
 	bsb_rule\
 	bsb_config_types\
+	bsb_parse_sources\
+	bsb_default\
+	bsb_watcher_gen\
+	bsb_config_parse\
 	bsb_ninja_util \
 	bsb_ninja_file_groups\
-	bsb_ninja \
-	bsb_parse_sources\
 	bsb_ninja_native \
-	bsb_default\
 	bsb_bsdeps\
-	bsb_watcher_gen\
 	bsb_merlin_gen\
 	bsb_ninja_gen\
 	bsb_file\

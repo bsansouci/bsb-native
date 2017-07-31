@@ -20837,8 +20837,9 @@ val replace_backward_slash : string -> string
 
 val empty : string 
 
-external compare : string -> string -> int = "caml_string_length_based_compare" "noalloc";;
 
+external compare : string -> string -> int = "caml_string_length_based_compare" "noalloc";;
+  
 val single_space : string
 
 val concat3 : string -> string -> string -> string 
@@ -20970,33 +20971,11 @@ let ends_with_then_chop s beg =
   if i >= 0 then Some (String.sub s 0 i) 
   else None
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-
-external compare : string -> string -> int = "caml_string_length_based_compare" "noalloc";;
-  
-val single_space : string
-=======
-and with_constraint =
-  | Pwith_type of Longident.t loc * type_declaration
-        (* with type X.t = ...
-
-           Note: the last component of the longident must match
-           the name of the type_declaration. *)
-  | Pwith_module of Longident.t loc * Longident.t loc
-        (* with module X.Y = Z *)
-  | Pwith_typesubst of type_declaration
-        (* with type t := ... *)
-  | Pwith_modsubst of string loc * Longident.t loc
-        (* with module X := Z *)
->>>>>>> Update readme + fixes
-=======
 let check_suffix_case = ends_with 
 let check_suffix_case_then_chop = ends_with_then_chop
 
 let check_any_suffix_case s suffixes = 
   List.exists (fun x -> check_suffix_case s x) suffixes
->>>>>>> Fix @jaredly's bug.
 
 let check_any_suffix_case_then_chop s suffixes = 
   let rec aux suffixes = 
@@ -21308,114 +21287,6 @@ let replace_backward_slash (x : string)=
 
 let empty = ""
 
-external compare : string -> string -> int = "caml_string_length_based_compare" "noalloc";;
-
-let single_space = " "
-let single_colon = ":"
-
-let concat_array sep (s : string array) =   
-  let s_len = Array.length s in 
-  match s_len with 
-  | 0 -> empty 
-  | 1 -> Array.unsafe_get s 0
-  | _ ->     
-    let sep_len = String.length sep in 
-    let len = ref 0 in 
-    for i = 0 to  s_len - 1 do 
-      len := !len + String.length (Array.unsafe_get s i)
-    done;
-    let target = 
-      Bytes.create 
-        (!len + (s_len - 1) * sep_len ) in    
-    let hd = (Array.unsafe_get s 0) in     
-    let hd_len = String.length hd in 
-    String.unsafe_blit hd  0  target 0 hd_len;   
-    let current_offset = ref hd_len in     
-    for i = 1 to s_len - 1 do 
-      String.unsafe_blit sep 0 target  !current_offset sep_len;
-      let cur = Array.unsafe_get s i in 
-      let cur_len = String.length cur in     
-      let new_off_set = (!current_offset + sep_len ) in
-      String.unsafe_blit cur 0 target new_off_set cur_len; 
-      current_offset := 
-        new_off_set + cur_len ; 
-    done;
-    Bytes.unsafe_to_string target   
-
-let concat3 a b c = 
-  let a_len = String.length a in 
-  let b_len = String.length b in 
-  let c_len = String.length c in 
-  let len = a_len + b_len + c_len in 
-  let target = Bytes.create len in 
-  String.unsafe_blit a 0 target 0 a_len ; 
-  String.unsafe_blit b 0 target a_len b_len;
-  String.unsafe_blit c 0 target (a_len + b_len) c_len;
-  Bytes.unsafe_to_string target
-
-let concat4 a b c d =
-  let a_len = String.length a in 
-  let b_len = String.length b in 
-  let c_len = String.length c in 
-  let d_len = String.length d in 
-  let len = a_len + b_len + c_len + d_len in 
-  
-  let target = Bytes.create len in 
-  String.unsafe_blit a 0 target 0 a_len ; 
-  String.unsafe_blit b 0 target a_len b_len;
-  String.unsafe_blit c 0 target (a_len + b_len) c_len;
-  String.unsafe_blit d 0 target (a_len + b_len + c_len) d_len;
-  Bytes.unsafe_to_string target
-
-
-let concat5 a b c d e =
-  let a_len = String.length a in 
-  let b_len = String.length b in 
-  let c_len = String.length c in 
-  let d_len = String.length d in 
-  let e_len = String.length e in 
-  let len = a_len + b_len + c_len + d_len + e_len in 
-  
-  let target = Bytes.create len in 
-  String.unsafe_blit a 0 target 0 a_len ; 
-  String.unsafe_blit b 0 target a_len b_len;
-  String.unsafe_blit c 0 target (a_len + b_len) c_len;
-  String.unsafe_blit d 0 target (a_len + b_len + c_len) d_len;
-  String.unsafe_blit e 0 target (a_len + b_len + c_len + d_len) e_len;
-  Bytes.unsafe_to_string target
-
-
-
-let inter2 a b = 
-    concat3 a single_space b 
-
-
-<<<<<<< HEAD
-<<<<<<< HEAD
-let no_slash x = 
-  unsafe_no_char x '/' 0 (String.length x - 1)
-
-let no_slash_idx x = 
-  unsafe_no_char_idx x '/' 0 (String.length x - 1)
-
-let replace_slash_backward (x : string ) = 
-  let len = String.length x in 
-  if unsafe_no_char x '/' 0  (len - 1) then x 
-  else 
-    String.map (function 
-        | '/' -> '\\'
-        | x -> x ) x 
-
-let replace_backward_slash (x : string)=
-  let len = String.length x in
-  if unsafe_no_char x '\\' 0  (len -1) then x 
-  else  
-    String.map (function 
-        |'\\'-> '/'
-        | x -> x) x
-
-let empty = ""
-
     
 external compare : string -> string -> int = "caml_string_length_based_compare" "noalloc";;
 
@@ -21502,14 +21373,6 @@ let inter2 a b =
 
 let inter3 a b c = 
   concat5 a  single_space  b  single_space  c 
-=======
-and add_use_file bv top_phrs =
-  ignore (List.fold_left add_top_phrase bv top_phrs)
->>>>>>> Update readme + fixes
-=======
-let inter3 a b c = 
-  concat5 a  single_space  b  single_space  c 
->>>>>>> Fix @jaredly's bug.
 
 
 
@@ -22526,10 +22389,6 @@ module Js_config : sig
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
 
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
->>>>>>> Fix @jaredly's bug.
 type module_system = 
   | NodeJS 
   | AmdJS
@@ -22671,23 +22530,12 @@ val is_same_file : unit -> bool
 val tool_name : string
 
 
-<<<<<<< HEAD
-=======
-val better_errors : bool ref
->>>>>>> Fix @jaredly's bug.
 val sort_imports : bool ref 
 val dump_js : bool ref
 val syntax_only  : bool ref
 val binary_ast : bool ref
 val simple_binary_ast : bool ref
 
-<<<<<<< HEAD
-=======
- 
-val power_2_above : int -> int -> int
->>>>>>> Update readme + fixes
-=======
->>>>>>> Fix @jaredly's bug.
 
 
 end = struct
@@ -22923,7 +22771,6 @@ let no_any_assert = ref false
 let set_no_any_assert () = no_any_assert := true
 let get_no_any_assert () = !no_any_assert
 
-let better_errors = ref false
 let sort_imports = ref true
 let dump_js = ref false
 
@@ -22934,27 +22781,6 @@ let binary_ast = ref false
 let simple_binary_ast = ref false
 
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-let sort_imports = ref true
-let dump_js = ref false
-=======
-let rec small_bucket_opt eq key (lst : _ bucketlist) : _ option =
-  match lst with 
-  | Empty -> None 
-  | Cons(k1,d1,rest1) -> 
-    if eq  key k1 then Some d1 else 
-      match rest1 with
-      | Empty -> None 
-      | Cons(k2,d2,rest2) -> 
-        if eq key k2 then Some d2 else 
-          match rest2 with 
-          | Empty -> None 
-          | Cons(k3,d3,rest3) -> 
-            if eq key k3  then Some d3 else 
-              small_bucket_opt eq key rest3 
->>>>>>> Update readme + fixes
-=======
 end
 module Bs_exception : sig 
 #1 "bs_exception.mli"
@@ -22981,7 +22807,6 @@ module Bs_exception : sig
  * You should have received a copy of the GNU Lesser General Public License
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
->>>>>>> Fix @jaredly's bug.
 
 type error =
   | Cmj_not_found of string
@@ -23829,6 +23654,9 @@ val assoc_by_string :
 
 val assoc_by_int : 
   'a  option -> int -> (int * 'a) list -> 'a   
+
+
+val nth_opt : 'a list -> int -> 'a option  
 end = struct
 #1 "ext_list.ml"
 (* Copyright (C) 2015-2016 Bloomberg Finance L.P.
@@ -24251,39 +24079,19 @@ let rec assoc_by_int def (k : int) lst =
  *)
 
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-val assoc_by_int : 
-  'a  option -> int -> (int * 'a) list -> 'a   
-
-
-val nth_opt : 'a list -> int -> 'a option  
-end = struct
-#1 "ext_list.ml"
-=======
-let build_lazy_queue ppf queue (ast_table : _ t String_map.t)
-    after_parsing_impl
-    after_parsing_sig    
-  =
-  queue |> Queue.iter (fun modname -> 
-      match String_map.find_exn modname ast_table  with
-      | {ast_info = Ml(source_file,lazy ast, opref)}
-        -> 
-        after_parsing_impl ppf source_file opref ast 
-      | {ast_info = Mli (source_file,lazy ast,opref) ; }  
-        ->
-        after_parsing_sig ppf source_file opref ast 
-      | {ast_info = Ml_mli(source_file1,lazy impl,opref1,source_file2,lazy intf,opref2)}
-        -> 
-        after_parsing_sig ppf source_file1 opref1 intf ;
-        after_parsing_impl ppf source_file2 opref2 impl
-      | exception Not_found -> assert false 
-    )
-=======
+let nth_opt l n =
+  if n < 0 then None else
+  let rec nth_aux l n =
+    match l with
+    | [] -> None
+    | a::l -> if n = 0 then Some a else nth_aux l (n-1)
+  in nth_aux l n
 end
 module Bs_hash_stubs
 = struct
 #1 "bs_hash_stubs.ml"
+
+
 external hash_string :  string -> int = "caml_bs_hash_string" "noalloc";;
 
 external hash_string_int :  string -> int  -> int = "caml_bs_hash_string_and_int" "noalloc";;
@@ -24297,21 +24105,16 @@ external hash_small_int : int -> int = "caml_bs_hash_small_int" "noalloc";;
 external hash_int :  int  -> int = "caml_bs_hash_int" "noalloc";;
 
 external string_length_based_compare : string -> string -> int  = "caml_string_length_based_compare" "noalloc";;
->>>>>>> Fix @jaredly's bug.
 
 
 external    
     int_unsafe_blit : 
     int array -> int -> int array -> int -> int -> unit = "caml_int_array_blit" "noalloc";;
+    
+
 end
-<<<<<<< HEAD
-module Binary_ast : sig 
-#1 "binary_ast.mli"
->>>>>>> Update readme + fixes
-=======
 module Ext_util : sig 
 #1 "ext_util.mli"
->>>>>>> Fix @jaredly's bug.
 (* Copyright (C) 2015-2016 Bloomberg Finance L.P.
  * 
  * This program is free software: you can redistribute it and/or modify
@@ -24658,41 +24461,6 @@ let length = Hashtbl_gen.length
 let stats = Hashtbl_gen.stats
 
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-let nth_opt l n =
-  if n < 0 then None else
-  let rec nth_aux l n =
-    match l with
-    | [] -> None
-    | a::l -> if n = 0 then Some a else nth_aux l (n-1)
-  in nth_aux l n
-end
-module Bs_hash_stubs
-= struct
-#1 "bs_hash_stubs.ml"
-
-
-external hash_string :  string -> int = "caml_bs_hash_string" "noalloc";;
-=======
-let warn_bad_docstrings () =
-  if Warnings.is_active (Warnings.Bad_docstring true) then begin
-    List.iter
-      (fun ds ->
-         match ds.ds_attached with
-         | Info -> ()
-         | Unattached ->
-           prerr_warning ds.ds_loc (Warnings.Bad_docstring true)
-         | Docs ->
-             match ds.ds_associated with
-             | Zero | One -> ()
-             | Many ->
-               prerr_warning ds.ds_loc (Warnings.Bad_docstring false))
-      (List.rev !docstrings)
-end
->>>>>>> Update readme + fixes
-=======
->>>>>>> Fix @jaredly's bug.
 
 let add (h : _ t) key info =
   let i = key_index h key in
@@ -24756,47 +24524,8 @@ let find_exn (h : _ t) key =
           | Cons(k3, d3, rest3) ->
             if eq_key key k3  then d3 else find_rec key rest3
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-external    
-    int_unsafe_blit : 
-    int array -> int -> int array -> int -> int -> unit = "caml_int_array_blit" "noalloc";;
-    
-
-end
-module Ext_util : sig 
-#1 "ext_util.mli"
-(* Copyright (C) 2015-2016 Bloomberg Finance L.P.
- * 
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Lesser General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * In addition to the permissions granted to you by the LGPL, you may combine
- * or link a "work that uses the Library" with a publicly distributed version
- * of this file to produce a combined library or application, then distribute
- * that combined work under the terms of your choosing, with no requirement
- * to comply with the obligations normally placed on you by section 4 of the
- * LGPL version 3 (or the corresponding section of a later version of the LGPL
- * should you choose to use a later version).
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Lesser General Public License for more details.
- * 
- * You should have received a copy of the GNU Lesser General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
-
-=======
-let doc_loc = {txt = "ocaml.doc"; loc = Location.none}
->>>>>>> Update readme + fixes
-=======
 let find_opt (h : _ t) key =
   Hashtbl_gen.small_bucket_opt eq_key key (Array.unsafe_get h.data (key_index h key))
->>>>>>> Fix @jaredly's bug.
 
 let find_key_opt (h : _ t) key =
   Hashtbl_gen.small_bucket_key_opt eq_key key (Array.unsafe_get h.data (key_index h key))

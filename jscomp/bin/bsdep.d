@@ -6,13 +6,6 @@ bin/bsdep.ml : ext/ext_ref.mli
 bin/bsdep.ml : ext/ext_utf8.ml
 bin/bsdep.ml : ext/ext_util.ml
 bin/bsdep.ml : ext/literals.ml
-<<<<<<< HEAD
-=======
-bin/bsdep.ml : ../ocaml/driver/pparse.ml
-bin/bsdep.ml : ../ocaml/parsing/lexer.ml
-bin/bsdep.ml : ../ocaml/parsing/parse.ml
-bin/bsdep.ml : ../ocaml/utils/clflags.ml
->>>>>>> Update readme + fixes
 bin/bsdep.ml : common/bs_loc.ml
 bin/bsdep.ml : ext/ext_array.ml
 bin/bsdep.ml : ext/ext_bytes.ml
@@ -21,19 +14,6 @@ bin/bsdep.ml : ext/ext_list.mli
 bin/bsdep.ml : ext/ext_utf8.mli
 bin/bsdep.ml : ext/ext_util.mli
 bin/bsdep.ml : ext/literals.mli
-<<<<<<< HEAD
-=======
-bin/bsdep.ml : ../ocaml/driver/compenv.ml
-bin/bsdep.ml : ../ocaml/driver/pparse.mli
-bin/bsdep.ml : ../ocaml/parsing/depend.ml
-bin/bsdep.ml : ../ocaml/parsing/lexer.mli
-bin/bsdep.ml : ../ocaml/parsing/parse.mli
-bin/bsdep.ml : ../ocaml/parsing/parser.ml
-bin/bsdep.ml : ../ocaml/tools/ocamldep.ml
-bin/bsdep.ml : ../ocaml/utils/clflags.mli
-bin/bsdep.ml : ../ocaml/utils/terminfo.ml
-bin/bsdep.ml : ../ocaml/utils/warnings.ml
->>>>>>> Update readme + fixes
 bin/bsdep.ml : common/bs_loc.mli
 bin/bsdep.ml : ext/ext_array.mli
 bin/bsdep.ml : ext/ext_bytes.mli
@@ -42,14 +22,6 @@ bin/bsdep.ml : ext/string_map.ml
 bin/bsdep.ml : syntax/ast_arg.ml
 bin/bsdep.ml : syntax/ast_exp.ml
 bin/bsdep.ml : syntax/ast_pat.ml
-<<<<<<< HEAD
-=======
-bin/bsdep.ml : ../ocaml/driver/compenv.mli
-bin/bsdep.ml : ../ocaml/parsing/depend.mli
-bin/bsdep.ml : ../ocaml/parsing/parser.mli
-bin/bsdep.ml : ../ocaml/utils/terminfo.mli
-bin/bsdep.ml : ../ocaml/utils/warnings.mli
->>>>>>> Update readme + fixes
 bin/bsdep.ml : bin/configDummy.ml
 bin/bsdep.ml : ext/ext_string.mli
 bin/bsdep.ml : ext/string_map.mli

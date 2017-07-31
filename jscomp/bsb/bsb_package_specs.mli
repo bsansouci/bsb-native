@@ -24,6 +24,10 @@
 
 type t
 
+val package_flag: format:string -> string -> string
+
+val package_output: format:string -> string -> string
+
 val supported_format : string -> bool
 
 val default_package_specs : t

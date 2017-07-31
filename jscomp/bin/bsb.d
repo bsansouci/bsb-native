@@ -1,9 +1,5 @@
 bin/bsb.ml : ext/ext_io.ml
-<<<<<<< HEAD
 bin/bsb.ml : bsb/bsb_log.ml
-=======
-bin/bsb.ml : bsb/bsb_gen.ml
->>>>>>> Merging in new generators stuff!
 bin/bsb.ml : bsb/bsb_pkg.ml
 bin/bsb.ml : ext/ext_io.mli
 bin/bsb.ml : ext/ext_sys.ml
@@ -12,6 +8,7 @@ bin/bsb.ml : ext/set_gen.ml
 bin/bsb.ml : ext/vec_gen.ml
 bin/bsb.ml : bsb/bsb_file.ml
 bin/bsb.ml : bsb/bsb_init.ml
+bin/bsb.ml : bsb/bsb_log.mli
 bin/bsb.ml : bsb/bsb_main.ml
 bin/bsb.ml : bsb/bsb_pkg.mli
 bin/bsb.ml : bsb/bsb_rule.ml
@@ -66,10 +63,6 @@ bin/bsb.ml : ext/ext_filename.ml
 bin/bsb.ml : ext/ext_position.ml
 bin/bsb.ml : ext/hash_set_gen.ml
 bin/bsb.ml : ext/resize_array.ml
-<<<<<<< HEAD
-=======
-bin/bsb.ml : bsb/bsb_dep_infos.ml
->>>>>>> Merging in new generators stuff!
 bin/bsb.ml : bsb/bsb_dir_index.ml
 bin/bsb.ml : bsb/bsb_exception.ml
 bin/bsb.ml : bsb/bsb_ninja_gen.ml
@@ -81,16 +74,9 @@ bin/bsb.ml : ext/resize_array.mli
 bin/bsb.ml : bsb/bsb_build_util.ml
 bin/bsb.ml : bsb/bsb_dir_index.mli
 bin/bsb.ml : bsb/bsb_exception.mli
-<<<<<<< HEAD
-<<<<<<< HEAD
 bin/bsb.ml : bsb/bsb_merlin_gen.ml
 bin/bsb.ml : bsb/bsb_ninja_gen.mli
 bin/bsb.ml : bsb/bsb_ninja_util.ml
-=======
->>>>>>> Squashed commits!
-=======
-bin/bsb.ml : bsb/bsb_merlin_gen.ml
->>>>>>> Update readme + fixes
 bin/bsb.ml : bsb/bsb_templates.mli
 bin/bsb.ml : common/bs_version.mli
 bin/bsb.ml : ext/ext_json_noloc.ml
@@ -112,23 +98,14 @@ bin/bsb.ml : ext/string_hashtbl.mli
 bin/bsb.ml : stubs/bs_hash_stubs.ml
 bin/bsb.ml : bsb/bsb_config_parse.ml
 bin/bsb.ml : bsb/bsb_config_types.ml
-<<<<<<< HEAD
-<<<<<<< HEAD
-bin/bsb.ml : bsb/bsb_ninja_regen.mli
-=======
-<<<<<<< HEAD
->>>>>>> Squashed commits!
-bin/bsb.ml : bsb/bsb_watcher_gen.mli
-=======
-=======
->>>>>>> Merging in new generators stuff!
 bin/bsb.ml : bsb/bsb_ninja_native.ml
+bin/bsb.ml : bsb/bsb_ninja_regen.mli
 bin/bsb.ml : bsb/bsb_watcher_gen.mli
 bin/bsb.ml : common/binary_cache.mli
 bin/bsb.ml : ext/string_hash_set.mli
 bin/bsb.ml : bsb/bsb_build_schemas.ml
 bin/bsb.ml : bsb/bsb_config_parse.mli
-<<<<<<< HEAD
+bin/bsb.ml : bsb/bsb_ninja_native.mli
 bin/bsb.ml : bsb/bsb_package_specs.ml
 bin/bsb.ml : bsb/bsb_parse_sources.ml
 bin/bsb.ml : bsb/bsb_package_specs.mli
@@ -136,11 +113,3 @@ bin/bsb.ml : bsb/bsb_parse_sources.mli
 bin/bsb.ml : bsb/bsb_ninja_file_groups.ml
 bin/bsb.ml : bsb/bsb_ninja_global_vars.ml
 bin/bsb.ml : bsb/bsb_ninja_file_groups.mli
-=======
-bin/bsb.ml : bsb/bsb_ninja_native.mli
-<<<<<<< HEAD
->>>>>>> Squashed commits!
-=======
-bin/bsb.ml : bsb/bsb_parse_sources.ml
-bin/bsb.ml : bsb/bsb_parse_sources.mli
->>>>>>> Merging in new generators stuff!

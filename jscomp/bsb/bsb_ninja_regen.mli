@@ -29,9 +29,16 @@
     return None if we dont need regenerate
     otherwise return Some info
 *)
+
+  
 val regenerate_ninja :
+  ?external_deps_for_linking_and_clibs:string list * string list ->
+  is_top_level:bool ->
   no_dev:bool ->
   override_package_specs:Bsb_package_specs.t option ->
   generate_watch_metadata: bool -> 
-  forced: bool -> string -> string -> 
+  forced: bool -> 
+  root_project_dir:string ->
+  cmdline_build_kind: Bsb_config_types.compilation_kind_t ->
+  string ->  string ->  string -> 
   Bsb_config_types.t option 

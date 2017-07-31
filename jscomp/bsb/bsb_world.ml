@@ -25,7 +25,7 @@
 
 let (//) = Ext_filename.combine
 
-let install_targets cwd (config : Bsb_config_types.t option) =
+let install_targets ~cmdline_build_kind cwd (config : Bsb_config_types.t option) =
   (** TODO: create the animation effect *)
   let install ~destdir file = 
     if Bsb_file.install_if_exists ~destdir file  then 
@@ -42,7 +42,7 @@ let install_targets cwd (config : Bsb_config_types.t option) =
   match config with 
   | None -> ()
   | Some {files_to_install} -> 
-    let nested = begin match !cmdline_build_kind with
+    let nested = begin match cmdline_build_kind with
       | Bsb_config_types.Js -> "js"
       | Bsb_config_types.Bytecode -> "bytecode"
       | Bsb_config_types.Native -> "native"
@@ -75,7 +75,7 @@ let install_targets cwd (config : Bsb_config_types.t option) =
 
 
 
-let build_bs_deps ~root_project_dir deps entry =
+let build_bs_deps cwd ~root_project_dir ~cmdline_build_kind deps entry =
   let bsc_dir = Bsb_build_util.get_bsc_dir cwd in
   let ocaml_dir = Bsb_build_util.get_ocaml_dir bsc_dir in
   let vendor_ninja = bsc_dir // "ninja.exe" in
@@ -85,13 +85,14 @@ let build_bs_deps ~root_project_dir deps entry =
     (fun {top; cwd} ->
        if not top then
          begin 
-           let config_opt = regenerate_ninja 
+           let config_opt = Bsb_ninja_regen.regenerate_ninja 
              ~is_top_level:false
              ~no_dev:true
              ~generate_watch_metadata:false
              ~override_package_specs:(Some deps) 
              ~root_project_dir
              ~forced:true
+             ~cmdline_build_kind
              cwd bsc_dir ocaml_dir in (* set true to force regenrate ninja file so we have [config_opt]*)
            let config = begin match config_opt with 
             | None ->
@@ -101,16 +102,16 @@ let build_bs_deps ~root_project_dir deps entry =
                 ~bsc_dir
                 ~generate_watch_metadata:false
                 ~no_dev:true
-                ~compilation_kind:!cmdline_build_kind
+                ~compilation_kind:cmdline_build_kind
                 cwd
             | Some config -> config
            end in
            (* Append at the head for a correct topological sort. 
               walk_all_deps does a simple DFS, so all we need to do is to append at the head of 
               a list to build a topologically sorted list of external deps.*)
-            if List.mem !cmdline_build_kind Bsb_config_types.(config.allowed_build_kinds) then begin
+            if List.mem cmdline_build_kind Bsb_config_types.(config.allowed_build_kinds) then begin
               all_clibs := (List.rev Bsb_config_types.(config.static_libraries)) @ !all_clibs;
-              let nested = begin match !cmdline_build_kind with 
+              let nested = begin match cmdline_build_kind with 
               | Bsb_config_types.Js -> "js"
               | Bsb_config_types.Bytecode -> 
                 list_of_all_external_deps := (cwd // Bsb_config.lib_ocaml // "bytecode") :: !list_of_all_external_deps;
@@ -129,7 +130,7 @@ let build_bs_deps ~root_project_dir deps entry =
                 Note that we can check if ninja print "no work to do", 
                 then don't need reinstall more
              *)
-             install_targets cwd config_opt;
+             install_targets ~cmdline_build_kind cwd config_opt;
            end
          end
     );
@@ -137,32 +138,28 @@ let build_bs_deps ~root_project_dir deps entry =
   (List.rev !list_of_all_external_deps, List.rev !all_clibs)
 
 
-let get_package_specs_and_entries config_opt =
-  let (dep, entries) = match config_opt with 
-    | None -> 
-      begin match Bsb_config_parse.package_specs_and_entries_from_bsconfig () with
-      (* Entries cannot be empty, we always use a default under-the-hood. *)
-      | dep, [] -> assert false
-      | dep, entries -> (dep, entries)
-      end 
-    | Some {Bsb_config_types.entries; package_specs} -> (package_specs, entries)
-    in
-    let filtered_entries = List.filter (fun e -> match e with 
-      | Bsb_config_types.JsTarget _ -> !cmdline_build_kind = Bsb_config_types.Js
-      | Bsb_config_types.BytecodeTarget _ -> !cmdline_build_kind = Bsb_config_types.Bytecode
-      | Bsb_config_types.NativeTarget _ -> !cmdline_build_kind = Bsb_config_types.Native
-    ) entries in
-    let build_kind_string = begin match !cmdline_build_kind with
-    | Bsb_config_types.Js -> "js"
-    | Bsb_config_types.Bytecode -> "bytecode"
-    | Bsb_config_types.Native -> "native"
-    end in
-    if filtered_entries = [] then begin 
-      failwith @@ "Found no 'entries' to compile to '" ^ 
-      build_kind_string ^ "' in the bsconfig.json"
-    end else (dep, List.hd filtered_entries)
+let get_package_specs_and_entries cmdline_build_kind =
+  let (dep, entries) = begin match Bsb_config_parse.package_specs_and_entries_from_bsconfig () with
+    (* Entries cannot be empty, we always use a default under-the-hood. *)
+    | dep, [] -> assert false
+    | dep, entries -> (dep, entries)
+  end in
+  let filtered_entries = List.filter (fun e -> match e with 
+    | Bsb_config_types.JsTarget _ -> cmdline_build_kind = Bsb_config_types.Js
+    | Bsb_config_types.BytecodeTarget _ -> cmdline_build_kind = Bsb_config_types.Bytecode
+    | Bsb_config_types.NativeTarget _ -> cmdline_build_kind = Bsb_config_types.Native
+  ) entries in
+  let build_kind_string = begin match cmdline_build_kind with
+  | Bsb_config_types.Js -> "js"
+  | Bsb_config_types.Bytecode -> "bytecode"
+  | Bsb_config_types.Native -> "native"
+  end in
+  if filtered_entries = [] then begin 
+    failwith @@ "Found no 'entries' to compile to '" ^ 
+    build_kind_string ^ "' in the bsconfig.json"
+  end else (dep, List.hd filtered_entries)
 
-let make_world_deps ~root_project_dir (* (config : Bsb_config_types.t option) *) =
+let make_world_deps cwd ~root_project_dir ~cmdline_build_kind (* (config : Bsb_config_types.t option) *) =
   print_endline "\nMaking the dependency world!";
-  let (deps, entry) = get_package_specs_and_entries None in
-  build_bs_deps ~root_project_dir deps entry
+  let (deps, entry) = get_package_specs_and_entries cmdline_build_kind in
+  build_bs_deps cwd ~root_project_dir ~cmdline_build_kind deps entry

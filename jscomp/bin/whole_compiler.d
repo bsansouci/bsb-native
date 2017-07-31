@@ -33,23 +33,6 @@ bin/whole_compiler.ml : ext/hash_set.ml
 bin/whole_compiler.ml : ext/int_map.mli
 bin/whole_compiler.ml : ext/int_vec.mli
 bin/whole_compiler.ml : ext/literals.ml
-<<<<<<< HEAD
-=======
-bin/whole_compiler.ml : ../ocaml/driver/pparse.ml
-bin/whole_compiler.ml : ../ocaml/parsing/lexer.ml
-bin/whole_compiler.ml : ../ocaml/parsing/parse.ml
-bin/whole_compiler.ml : ../ocaml/typing/annot.mli
-bin/whole_compiler.ml : ../ocaml/typing/btype.mli
-bin/whole_compiler.ml : ../ocaml/typing/ctype.mli
-bin/whole_compiler.ml : ../ocaml/typing/ident.mli
-bin/whole_compiler.ml : ../ocaml/typing/mtype.mli
-bin/whole_compiler.ml : ../ocaml/typing/oprint.ml
-bin/whole_compiler.ml : ../ocaml/typing/predef.ml
-bin/whole_compiler.ml : ../ocaml/typing/stypes.ml
-bin/whole_compiler.ml : ../ocaml/typing/subst.mli
-bin/whole_compiler.ml : ../ocaml/typing/types.mli
-bin/whole_compiler.ml : ../ocaml/utils/clflags.ml
->>>>>>> Update readme + fixes
 bin/whole_compiler.ml : common/bs_loc.ml
 bin/whole_compiler.ml : core/js_dump.mli
 bin/whole_compiler.ml : core/js_long.mli
@@ -68,22 +51,6 @@ bin/whole_compiler.ml : ext/hash_set.mli
 bin/whole_compiler.ml : ext/ident_map.ml
 bin/whole_compiler.ml : ext/ident_set.ml
 bin/whole_compiler.ml : ext/literals.mli
-<<<<<<< HEAD
-=======
-bin/whole_compiler.ml : ../ocaml/driver/compenv.ml
-bin/whole_compiler.ml : ../ocaml/driver/pparse.mli
-bin/whole_compiler.ml : ../ocaml/parsing/depend.ml
-bin/whole_compiler.ml : ../ocaml/parsing/lexer.mli
-bin/whole_compiler.ml : ../ocaml/parsing/parse.mli
-bin/whole_compiler.ml : ../ocaml/parsing/parser.ml
-bin/whole_compiler.ml : ../ocaml/typing/oprint.mli
-bin/whole_compiler.ml : ../ocaml/typing/predef.mli
-bin/whole_compiler.ml : ../ocaml/typing/stypes.mli
-bin/whole_compiler.ml : ../ocaml/typing/typemod.ml
-bin/whole_compiler.ml : ../ocaml/utils/clflags.mli
-bin/whole_compiler.ml : ../ocaml/utils/terminfo.ml
-bin/whole_compiler.ml : ../ocaml/utils/warnings.ml
->>>>>>> Update readme + fixes
 bin/whole_compiler.ml : common/bs_loc.mli
 bin/whole_compiler.ml : common/ext_log.ml
 bin/whole_compiler.ml : core/js_number.ml
@@ -107,25 +74,6 @@ bin/whole_compiler.ml : ext/string_map.ml
 bin/whole_compiler.ml : syntax/ast_arg.ml
 bin/whole_compiler.ml : syntax/ast_exp.ml
 bin/whole_compiler.ml : syntax/ast_pat.ml
-<<<<<<< HEAD
-=======
-bin/whole_compiler.ml : ../ocaml/bytecomp/lambda.ml
-bin/whole_compiler.ml : ../ocaml/bytecomp/switch.ml
-bin/whole_compiler.ml : ../ocaml/driver/compenv.mli
-bin/whole_compiler.ml : ../ocaml/driver/compmisc.ml
-bin/whole_compiler.ml : ../ocaml/parsing/depend.mli
-bin/whole_compiler.ml : ../ocaml/parsing/parser.mli
-bin/whole_compiler.ml : ../ocaml/typing/datarepr.ml
-bin/whole_compiler.ml : ../ocaml/typing/parmatch.ml
-bin/whole_compiler.ml : ../ocaml/typing/printtyp.ml
-bin/whole_compiler.ml : ../ocaml/typing/typecore.ml
-bin/whole_compiler.ml : ../ocaml/typing/typedecl.ml
-bin/whole_compiler.ml : ../ocaml/typing/typemod.mli
-bin/whole_compiler.ml : ../ocaml/typing/typetexp.ml
-bin/whole_compiler.ml : ../ocaml/utils/consistbl.ml
-bin/whole_compiler.ml : ../ocaml/utils/terminfo.mli
-bin/whole_compiler.ml : ../ocaml/utils/warnings.mli
->>>>>>> Update readme + fixes
 bin/whole_compiler.ml : common/ext_log.mli
 bin/whole_compiler.ml : core/js_closure.ml
 bin/whole_compiler.ml : core/js_fun_env.ml

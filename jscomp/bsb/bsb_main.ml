@@ -96,14 +96,14 @@ let bsb_main_flags : (string * Arg.spec * string) list=
     " Init sample project to get started. Note (`bsb -init sample` will create a sample project while `bsb -init .` will resuse current directory)";
     "-theme", Arg.String set_theme,
     " The theme for project initialization, default is basic(https://github.com/bucklescript/bucklescript/tree/master/jscomp/bsb/templates)";
-    "-query", Arg.String (fun s -> Bsb_query.query ~cwd ~bsc_dir s ),
+    "-query", Arg.String (fun s -> Bsb_query.query ~cwd ~bsc_dir ~cmdline_build_kind:!cmdline_build_kind s ),
     " (internal)Query metadata about the build";
     "-themes", Arg.Unit Bsb_init.list_themes,
     " List all available themes";
     "-where",
        Arg.Unit (fun _ -> 
         print_endline (Filename.dirname Sys.executable_name)),
-    " Show where bsb.exe is located"
+    " Show where bsb.exe is located";
     
     "-backend", Arg.String (fun s -> 
         match s with
@@ -186,6 +186,7 @@ let () =
           ~generate_watch_metadata:true
           ~root_project_dir:cwd
           ~forced:true
+          ~cmdline_build_kind:!cmdline_build_kind
           cwd bsc_dir ocaml_dir
       in
       let nested = begin match !cmdline_build_kind with
@@ -222,10 +223,10 @@ let () =
                 (* If -make-world is passed we first do that because we'll collect
                    the library files as we go. *)
                 let external_deps_for_linking_and_clibs = if make_world then
-                  Some (Bsb_world.make_world_deps ~root_project_dir:cwd)
+                  Some (Bsb_world.make_world_deps cwd ~root_project_dir:cwd ~cmdline_build_kind:!cmdline_build_kind)
                 else None in
                 (* don't regenerate files when we only run [bsb -clean-world] *)
-                let _ = regenerate_ninja 
+                let _ = Bsb_ninja_regen.regenerate_ninja 
                   ?external_deps_for_linking_and_clibs 
                   ~generate_watch_metadata:true 
                   ~override_package_specs:None 
@@ -233,6 +234,7 @@ let () =
                   ~no_dev:false 
                   ~root_project_dir:cwd
                   ~forced:force_regenerate
+                  ~cmdline_build_kind:!cmdline_build_kind
                   cwd bsc_dir ocaml_dir in
                 if !watch_mode then begin
                   watch_exit ()
@@ -257,9 +259,9 @@ let () =
           Arg.parse_argv bsb_args bsb_main_flags handle_anonymous_arg usage ;          
           (* [-make-world] should never be combined with [-package-specs] *)
           let external_deps_for_linking_and_clibs = if !make_world then 
-            Some (Bsb_world.make_world_deps ~root_project_dir:cwd)
+            Some (Bsb_world.make_world_deps cwd ~root_project_dir:cwd ~cmdline_build_kind:!cmdline_build_kind)
           else None in
-          let _ = regenerate_ninja 
+          let _ = Bsb_ninja_regen.regenerate_ninja 
             ?external_deps_for_linking_and_clibs
             ~generate_watch_metadata:true
             ~override_package_specs:None
@@ -267,6 +269,7 @@ let () =
             ~no_dev:false
             ~root_project_dir:cwd
             ~forced:!force_regenerate
+            ~cmdline_build_kind:!cmdline_build_kind
             cwd bsc_dir ocaml_dir in
           if !watch_mode then watch_exit ()
           else begin 

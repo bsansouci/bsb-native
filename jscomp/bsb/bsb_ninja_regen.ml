@@ -38,15 +38,17 @@ let regenerate_ninja
   ~no_dev
   ~override_package_specs
   ~generate_watch_metadata
+  ~forced
   ~root_project_dir
-  cwd bsc_dir ocaml_dir ~forced 
+  ~cmdline_build_kind
+  cwd bsc_dir ocaml_dir 
   : _ option =
   let output_deps = cwd // Bsb_config.lib_bs // bsdeps in
-  let reason : Bsb_dep_infos.check_result =
-    Bsb_dep_infos.check ~cwd  forced output_deps !cmdline_build_kind in
+  let reason : Bsb_bsdeps.check_result =
+    Bsb_bsdeps.check ~cwd  ~forced ~file:output_deps cmdline_build_kind in
   let () = 
     Format.fprintf Format.std_formatter  
-      "@{<info>BSB check@} build spec : %a @." Bsb_dep_infos.pp_check_result reason in 
+      "@{<info>BSB check@} build spec : %a @." Bsb_bsdeps.pp_check_result reason in 
   begin match reason  with 
     | Good ->
       None  (* Fast path, no need regenerate ninja *)
@@ -58,7 +60,7 @@ let regenerate_ninja
     | Other _ ->
       if reason = Bsb_bsc_version_mismatch then begin 
         print_endline "Also clean current repo due to we have detected a different compiler";
-        clean_self ();
+        Bsb_clean.clean_self cwd;
       end ;
       (* Generate the lib folder before calling interpret_json because that might generate metadata. *)
       Bsb_build_util.mkp (cwd // Bsb_config.lib_bs);
@@ -68,9 +70,9 @@ let regenerate_ninja
           ~bsc_dir
           ~generate_watch_metadata
           ~no_dev
-          ~compilation_kind:!cmdline_build_kind
+          ~compilation_kind:cmdline_build_kind
           cwd in 
-      let nested = begin match !cmdline_build_kind with
+      let nested = begin match cmdline_build_kind with
         | Bsb_config_types.Js -> "js"
         | Bsb_config_types.Bytecode -> "bytecode"
         | Bsb_config_types.Native -> "native"
@@ -89,7 +91,7 @@ let regenerate_ninja
              
              If we're aiming at building Native or Bytecode, we do walk the external 
              dep graph and build a topologically sorted list of all of them. *)
-          begin match !cmdline_build_kind with
+          begin match cmdline_build_kind with
           | Bsb_config_types.Js -> ([], []) (* No work for the JS flow! *)
           | Bsb_config_types.Bytecode
           | Bsb_config_types.Native ->
@@ -110,9 +112,9 @@ let regenerate_ninja
                         ~bsc_dir
                         ~generate_watch_metadata:false
                         ~no_dev:true
-                        ~compilation_kind:!cmdline_build_kind
+                        ~compilation_kind:cmdline_build_kind
                         cwd in
-                    begin match !cmdline_build_kind with 
+                    begin match cmdline_build_kind with 
                     | Bsb_config_types.Js ->  assert false
                     | Bsb_config_types.Bytecode 
                       when List.mem Bsb_config_types.Bytecode Bsb_config_types.(innerConfig.allowed_build_kinds)-> 
@@ -130,15 +132,15 @@ let regenerate_ninja
             end
           end
         | Some (external_deps, clibs) -> (external_deps, clibs) in
-        Bsb_gen.output_ninja ~external_deps_for_linking_and_clibs ~cwd ~bsc_dir ~ocaml_dir ~root_project_dir ~is_top_level ~cmdline_build_kind:!cmdline_build_kind config;
+        Bsb_ninja_gen.output_ninja ~external_deps_for_linking_and_clibs ~cwd ~bsc_dir ~ocaml_dir ~root_project_dir ~is_top_level ~cmdline_build_kind:cmdline_build_kind config;
         Literals.bsconfig_json :: config.globbed_dirs
         |> List.map
           (fun x ->
-             { Bsb_dep_infos.dir_or_file = x ;
+             { Bsb_bsdeps.dir_or_file = x ;
                stamp = (Unix.stat (cwd // x)).st_mtime
              }
           )
-        |> (fun x -> Bsb_dep_infos.store ~cwd output_deps (Array.of_list x) !cmdline_build_kind);
+        |> (fun x -> Bsb_bsdeps.store ~cwd ~file:output_deps (Array.of_list x) cmdline_build_kind);
         Some config 
       end 
   end
