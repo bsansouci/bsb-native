@@ -307,10 +307,11 @@ BSB_SRCS= bsb_config\
 	bsb_exception\
 	bsb_dir_index\
 	bsb_log\
+	bsb_pkg \
+	bsb_build_schemas\
+	bsb_unix \
 	bsb_ninja_global_vars\
 	bsb_depfile_gen\
-	bsb_pkg\
-	bsb_build_schemas\
 	bsb_build_util\
 	bsb_package_specs\
 	bsb_pkg_create\
@@ -321,18 +322,18 @@ BSB_SRCS= bsb_config\
 	bsb_helper_packer\
 	bsb_helper_extract\
 	bsb_rule\
-	bsb_ninja_util \
-	bsb_ninja_file_groups\
+	bsb_config_types\
 	bsb_parse_sources\
 	bsb_default\
-	bsb_bsdeps\
 	bsb_watcher_gen\
+	bsb_config_parse\
+	bsb_ninja_util \
+	bsb_ninja_file_groups\
+	bsb_ninja_native \
+	bsb_bsdeps\
 	bsb_merlin_gen\
 	bsb_ninja_gen\
 	bsb_file\
-	bsb_config_types\
-	bsb_config_parse\
-	bsb_unix\
 	bsb_regex\
 	bsb_clean\
 	bsb_ninja_regen\

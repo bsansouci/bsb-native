@@ -24,4 +24,7 @@
 
 
 
-val query: cwd:string -> bsc_dir:string -> string -> unit  
+val query: cwd:string -> 
+           bsc_dir:string -> 
+           cmdline_build_kind:Bsb_config_types.compilation_kind_t -> 
+           string -> unit  

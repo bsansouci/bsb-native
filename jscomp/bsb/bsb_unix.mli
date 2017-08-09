@@ -36,3 +36,6 @@ val run_command_execv :   command -> unit
 
 
 val remove_dir_recursive : string -> unit 
+
+(*  *)
+val run_command_capture_stdout: string -> string

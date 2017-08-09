@@ -22,8 +22,8 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
 
-val package_specs_from_bsconfig : 
-    unit -> Bsb_package_specs.t
+val package_specs_and_entries_from_bsconfig : 
+    unit -> Bsb_package_specs.t * Bsb_config_types.entries_t list
 
 
 
@@ -33,10 +33,6 @@ val interpret_json :
     bsc_dir:string -> 
     generate_watch_metadata:bool -> 
     no_dev:bool -> 
+    compilation_kind:Bsb_config_types.compilation_kind_t ->
     string -> 
     Bsb_config_types.t
-
-
-
-
-

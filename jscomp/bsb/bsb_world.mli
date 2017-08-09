@@ -30,5 +30,6 @@
 
 val make_world_deps:
   string ->
-  Bsb_config_types.t option ->
-  unit  
+  root_project_dir:string ->
+  cmdline_build_kind:Bsb_config_types.compilation_kind_t ->
+  string list * string list 

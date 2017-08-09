@@ -26,13 +26,29 @@ let config_file_bak = "bsconfig.json.bak"
 let get_list_string = Bsb_build_util.get_list_string
 let (//) = Ext_filename.combine
 
-let resolve_package cwd  package_name = 
+let resolve_package compilation_kind cwd  package_name = 
   let x =  Bsb_pkg.resolve_bs_package ~cwd package_name  in
+  let nested = match compilation_kind with
+    | Bsb_config_types.Js -> "js"
+    | Bsb_config_types.Bytecode -> "bytecode"
+    | Bsb_config_types.Native -> "native"
+  in
   {
     Bsb_config_types.package_name ;
-    package_install_path = x // Bsb_config.lib_ocaml
+    package_install_path = x // Bsb_config.lib_ocaml // nested
   }
 
+let get_allowed_build_kinds arr =  
+  arr
+  |> get_list_string
+  |> List.fold_left (fun acc x ->
+    let el = match x with
+    | "js"       -> Bsb_config_types.Js
+    | "bytecode" -> Bsb_config_types.Bytecode
+    | "native"   -> Bsb_config_types.Native
+    | _ -> failwith "allowed_build_kinds can only be 'js', 'bytecode' or 'native'"
+    in el :: acc
+  ) []
 
 (* Key is the path *)
 let (|?)  m (key, cb) =
@@ -48,20 +64,20 @@ let parse_entries (field : Ext_json_types.t array) =
         |? (Bsb_build_schemas.kind, `Str (fun x -> kind := x))
         |? (Bsb_build_schemas.main, `Str (fun x -> main := Some x))
       in
-      let path = begin match !main with
+      let mainModule = begin match !main with
       (* This is technically optional when compiling to js *)
       | None when !kind = Literals.js ->
         "Index"
       | None -> 
         failwith "Missing field 'main'. That field is required its value needs to be the main module for the target"
-      | Some path -> path
+      | Some mainModule -> mainModule
       end in
       if !kind = Literals.native then
-        Some (Bsb_config_types.NativeTarget path)
+        Some (Bsb_config_types.NativeTarget mainModule)
       else if !kind = Literals.bytecode then
-        Some (Bsb_config_types.BytecodeTarget path)
+        Some (Bsb_config_types.BytecodeTarget mainModule)
       else if !kind = Literals.js then
-        Some (Bsb_config_types.JsTarget path)
+        Some (Bsb_config_types.JsTarget mainModule)
       else
         failwith "Missing field 'kind'. That field is required and its value be 'js', 'native' or 'bytecode'"
     | _ -> failwith "Unrecognized object inside array 'entries' field.") 
@@ -69,16 +85,19 @@ let parse_entries (field : Ext_json_types.t array) =
 
 
 
-let package_specs_from_bsconfig () = 
+let package_specs_and_entries_from_bsconfig () = 
   let json = Ext_json_parse.parse_json_from_file Literals.bsconfig_json in
   begin match json with
     | Obj {map} ->
       begin 
-        match String_map.find_opt Bsb_build_schemas.package_specs map with 
-        | Some x ->
-          Bsb_package_specs.from_json x
-        | None -> 
-          Bsb_package_specs.default_package_specs
+      let package_specs = ref (Bsb_package_specs.default_package_specs) in 
+      let entries = ref Bsb_default.main_entries in
+      map
+        |? (Bsb_build_schemas.package_specs, 
+            `Arr (fun s -> package_specs := Bsb_package_specs.get_package_specs_from_array  s ))
+        |? (Bsb_build_schemas.entries, `Arr (fun s -> entries := parse_entries s))
+        |> ignore ;
+      !package_specs, !entries
       end
     | _ -> assert false
   end
@@ -99,6 +118,7 @@ let interpret_json
     ~bsc_dir 
     ~generate_watch_metadata
     ~no_dev 
+    ~compilation_kind
     cwd  
 
   : Bsb_config_types.t =
@@ -107,13 +127,17 @@ let interpret_json
   let config_json = (cwd // Literals.bsconfig_json) in
   let refmt = ref None in
   let refmt_flags = ref Bsb_default.refmt_flags in
+  let build_script = ref None in
+  let static_libraries = ref [] in
   let package_name = ref None in 
   let namespace = ref false in 
   let bs_external_includes = ref [] in 
+  let allowed_build_kinds = ref Bsb_default.allowed_build_kinds in
   (** we should not resolve it too early,
       since it is external configuration, no {!Bsb_build_util.convert_and_resolve_path}
   *)
   let bsc_flags = ref Bsb_default.bsc_flags in  
+  let warnings = ref Bsb_default.warnings in
   let ppx_flags = ref []in 
 
   let js_post_build_cmd = ref None in 
@@ -144,7 +168,11 @@ let interpret_json
        ()
      | None 
      | Some _ ->
-       built_in_package := Some (resolve_package cwd Bs_version.package_name);
+      let x = Bsb_pkg.resolve_bs_package ~cwd Bs_version.package_name  in
+      built_in_package := Some ({
+        Bsb_config_types.package_name = Bs_version.package_name;
+        package_install_path = x // Bsb_config.lib_ocaml;
+      });
     ) ;
     let package_specs =     
       match String_map.find_opt Bsb_build_schemas.package_specs map with 
@@ -193,18 +221,19 @@ let interpret_json
         |> ignore
       end)
 
-    |? (Bsb_build_schemas.bs_dependencies, `Arr (fun s -> bs_dependencies := Bsb_build_util.get_list_string s |> List.map (resolve_package cwd)))
+    |? (Bsb_build_schemas.bs_dependencies, `Arr (fun s -> bs_dependencies := Bsb_build_util.get_list_string s |> List.map (resolve_package compilation_kind cwd)))
     |? (Bsb_build_schemas.bs_dev_dependencies,
         `Arr (fun s ->
             if not  no_dev then 
               bs_dev_dependencies
               := Bsb_build_util.get_list_string s
-                 |> List.map (resolve_package cwd))
+                 |> List.map (resolve_package compilation_kind cwd))
        )
 
     (* More design *)
     |? (Bsb_build_schemas.bs_external_includes, `Arr (fun s -> bs_external_includes := get_list_string s))
     |? (Bsb_build_schemas.bsc_flags, `Arr (fun s -> bsc_flags := Bsb_build_util.get_list_string_acc s !bsc_flags))
+    |? (Bsb_build_schemas.warnings, `Str (fun s -> warnings := s))
     |? (Bsb_build_schemas.ppx_flags, `Arr (fun s -> 
         ppx_flags := s |> get_list_string |> List.map (fun p ->
             if p = "" then failwith "invalid ppx, empty string found"
@@ -229,6 +258,10 @@ let interpret_json
         refmt := Some (Bsb_build_util.resolve_bsb_magic_file ~cwd ~desc:Bsb_build_schemas.refmt s) ))
     |? (Bsb_build_schemas.refmt_flags, `Arr (fun s -> refmt_flags := get_list_string s))
     |? (Bsb_build_schemas.entries, `Arr (fun s -> entries := parse_entries s))
+    |? (Bsb_build_schemas.static_libraries, `Arr (fun s -> static_libraries := (List.map (fun v -> cwd // v) (get_list_string s))))
+    |? (Bsb_build_schemas.c_linker_flags, `Arr (fun s -> static_libraries := (List.fold_left (fun acc v -> "-ccopt" :: v :: acc) [] (List.rev (get_list_string s))) @ !static_libraries))
+    |? (Bsb_build_schemas.build_script, `Str (fun s -> build_script := Some s))
+    |? (Bsb_build_schemas.allowed_build_kinds, `Arr (fun s -> allowed_build_kinds := get_allowed_build_kinds s))
     |> ignore ;
     begin match String_map.find_opt Bsb_build_schemas.sources map with 
       | Some x -> 
@@ -268,6 +301,7 @@ let interpret_json
           namespace;    
           external_includes = !bs_external_includes;
           bsc_flags = !bsc_flags ;
+          warnings = !warnings;
           ppx_flags = !ppx_flags ;
           bs_dependencies = !bs_dependencies;
           bs_dev_dependencies = !bs_dev_dependencies;
@@ -286,7 +320,11 @@ let interpret_json
           reason_react_jsx = !reason_react_jsx ;  
           entries = !entries;
           generators = !generators ; 
-          cut_generators = !cut_generators
+          cut_generators = !cut_generators;
+
+          static_libraries = !static_libraries;
+          build_script = !build_script;
+          allowed_build_kinds = !allowed_build_kinds;
         }
       | None -> failwith "no sources specified, please checkout the schema for more details"
     end

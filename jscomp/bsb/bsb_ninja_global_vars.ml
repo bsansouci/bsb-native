@@ -29,7 +29,7 @@ let bs_package_flags = "bs_package_flags"
 let bsc = "bsc" 
 
 let src_root_dir = "src_root_dir"
-let bsdep = "bsdep"
+let bsb_helper = "bsb_helper"
 
 let bsc_flags = "bsc_flags"
 
@@ -50,3 +50,8 @@ let postbuild = "postbuild"
 let namespace = "namespace" 
 
 let package_sep = "-"
+
+let ocamlc = "ocamlc"
+let ocamlopt = "ocamlopt"
+
+let external_deps_for_linking = "external_deps_for_linking"

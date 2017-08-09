@@ -54,6 +54,7 @@ type check_result =
   | Bsb_source_directory_changed
   | Bsb_bsc_version_mismatch  
   | Bsb_forced
+  | Bsb_different_cmdline_arg
   | Other of string
 
 val pp_check_result : Format.formatter -> check_result -> unit
@@ -61,10 +62,10 @@ val pp_check_result : Format.formatter -> check_result -> unit
 (** [store ~cwd name deps]
   serialize data (should be [.bsdeps])
  *)
-val store : cwd:string -> file:string -> dep_info array -> unit
+val store : cwd:string -> file:string -> dep_info array -> Bsb_config_types.compilation_kind_t -> unit
 
 
 (** check if [build.ninja] should be regenerated *)
 val check :
   cwd:string ->  
-  forced:bool -> file:string -> check_result
+  forced:bool -> file:string -> Bsb_config_types.compilation_kind_t -> check_result

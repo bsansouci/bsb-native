@@ -105,11 +105,11 @@ function build_finished_callback() {
 }
 function build() {
     if (acquireBuild()) {
-        console.log(">>>> Start compiling");
+        console.log(">>>> Start compiling", process.argv.slice(2));
         console.log("Rebuilding since", reasons_to_rebuild);
         reasons_to_rebuild = [];
         child_process
-          .spawn(bsb, [],{stdio: 'inherit'})
+          .spawn(bsb, process.argv.slice(2),{stdio: 'inherit'})
           .on('exit', build_finished_callback);
     }
 }

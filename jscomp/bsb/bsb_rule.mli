@@ -33,10 +33,21 @@ val build_ast_and_module_sets : t
 val build_ast_and_module_sets_from_re : t 
 val build_ast_and_module_sets_from_rei : t 
 val build_bin_deps : t 
+val build_bin_deps_bytecode : t 
+val build_bin_deps_native : t 
+val reload : t 
 val copy_resources : t
 val build_cmj_js : t
 val build_cmj_cmi_js : t 
 val build_cmi : t
+val build_cmo_cmi_bytecode : t
+val build_cmi_bytecode : t
+val build_cmx_cmi_native : t
+val build_cmi_native : t
+val linking_bytecode : t
+val linking_native : t
+val build_cma_library : t
+val build_cmxa_library : t
 
 
 (** rules are generally composed of built-in rules and customized rules, there are two design choices:
@@ -50,3 +61,11 @@ val build_cmi : t
     we must make sure it is re-entrant
 *)
 val reset : string String_map.t -> t String_map.t
+
+val define :
+    command:string ->
+    ?depfile:string ->
+    ?restat:unit ->
+    ?description:string ->
+    string -> 
+    t

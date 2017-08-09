@@ -62,4 +62,3 @@ let write_ast (type t) ~(fname : string) ~output (kind : t Ml_binary.kind) ( pt 
   output_string oc buf_contents; 
   Ml_binary.write_ast kind fname pt oc;
   close_out oc 
-

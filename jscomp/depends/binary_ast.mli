@@ -25,8 +25,6 @@
 
 val read_ast : 'a Ml_binary.kind -> string -> 'a 
 
-
-
 (**
    Check out {!Bsb_depfile_gen} for set decoding
    The [.ml] file can be recognized as an ast directly, the format
@@ -43,4 +41,3 @@ val read_ast : 'a Ml_binary.kind -> string -> 'a
    redirect the standard input to fan
  *)
 val write_ast : fname:string -> output:string -> 'a Ml_binary.kind -> 'a -> unit
-

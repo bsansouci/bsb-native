@@ -109,6 +109,7 @@ bin/bsb.ml : ../vendor/ocaml/utils/config.mli
 bin/bsb.ml : bsb/bsb_build_cache.mli
 bin/bsb.ml : bsb/bsb_config_parse.ml
 bin/bsb.ml : bsb/bsb_config_types.ml
+bin/bsb.ml : bsb/bsb_ninja_native.ml
 bin/bsb.ml : bsb/bsb_ninja_regen.mli
 bin/bsb.ml : bsb/bsb_pkg_map_gen.mli
 bin/bsb.ml : bsb/bsb_watcher_gen.mli
@@ -118,6 +119,7 @@ bin/bsb.ml : ../vendor/ocaml/utils/terminfo.ml
 bin/bsb.ml : ../vendor/ocaml/utils/warnings.ml
 bin/bsb.ml : bsb/bsb_build_schemas.ml
 bin/bsb.ml : bsb/bsb_config_parse.mli
+bin/bsb.ml : bsb/bsb_ninja_native.mli
 bin/bsb.ml : bsb/bsb_package_specs.ml
 bin/bsb.ml : bsb/bsb_parse_sources.ml
 bin/bsb.ml : ../vendor/ocaml/utils/terminfo.mli

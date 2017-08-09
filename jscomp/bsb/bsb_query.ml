@@ -41,12 +41,15 @@ let query_sources ({bs_file_groups} : Bsb_config_types.t) : Ext_json_noloc.t
   |> Ext_json_noloc.arr 
 
 
-let query_current_package_sources cwd bsc_dir = 
+let query_current_package_sources cwd cmdline_build_kind bsc_dir = 
+  let ocaml_dir = Bsb_build_util.get_ocaml_dir bsc_dir in
     let config_opt  = Bsb_ninja_regen.regenerate_ninja 
+      ~is_top_level:true
+      ~root_project_dir:cwd
       ~no_dev:false
       ~override_package_specs:None
       ~generate_watch_metadata:true
-      ~forced:true  cwd bsc_dir in 
+      ~forced:true ~cmdline_build_kind cwd bsc_dir ocaml_dir in 
     match config_opt with   
     | None -> None
      
@@ -54,10 +57,10 @@ let query_current_package_sources cwd bsc_dir =
       Some (query_sources config)
 
 
-let query ~cwd ~bsc_dir str = 
+let query ~cwd ~bsc_dir ~cmdline_build_kind str = 
   match str with 
   | "sources" -> 
-    begin match query_current_package_sources cwd bsc_dir with 
+    begin match query_current_package_sources cwd cmdline_build_kind bsc_dir with 
     | None -> raise (Arg.Bad "internal error in query")
     | Some config -> 
       output_string stdout 
