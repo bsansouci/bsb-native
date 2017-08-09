@@ -60,7 +60,12 @@ let regenerate_ninja
     | Other _ ->
       if reason = Bsb_bsc_version_mismatch then begin 
         print_endline "Also clean current repo due to we have detected a different compiler";
-        Bsb_clean.clean_self bsc_dir cwd; 
+        let nested = begin match cmdline_build_kind with
+          | Bsb_config_types.Js       -> "js"
+          | Bsb_config_types.Native   -> "native"
+          | Bsb_config_types.Bytecode -> "bytecode"
+        end in
+        Bsb_clean.clean_self ~nested bsc_dir cwd; 
       end ; 
       Bsb_build_util.mkp (cwd // Bsb_config.lib_bs); 
       let config = 

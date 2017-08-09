@@ -32,6 +32,11 @@ val get_name : t  -> out_channel -> string
 val build_ast_and_module_sets : t
 val build_ast_and_module_sets_from_re : t 
 val build_ast_and_module_sets_from_rei : t 
+
+val build_ast_and_module_sets_gen_simple : t
+val build_ast_and_module_sets_from_re_gen_simple : t 
+val build_ast_and_module_sets_from_rei_gen_simple : t 
+
 val build_bin_deps : t 
 val build_bin_deps_bytecode : t 
 val build_bin_deps_native : t 

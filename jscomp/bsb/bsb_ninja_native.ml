@@ -108,11 +108,11 @@ let handle_file_group oc
         | `Re ->
           let input, rule = 
             if kind = `Re then
-              input, Rules.build_ast_and_module_sets_from_re
+              input, Rules.build_ast_and_module_sets_from_re_gen_simple
             (* else if kind = `Mll then
               output_ml, Rules.build_ast_and_deps_simple *)
             else
-              input, Rules.build_ast_and_module_sets
+              input, Rules.build_ast_and_module_sets_gen_simple
           in
           begin
             output_build oc
@@ -166,8 +166,8 @@ let handle_file_group oc
         | `Mli
         | `Rei ->
           let rule =
-            if kind = `Mli then Rules.build_ast_and_module_sets
-            else Rules.build_ast_and_module_sets_from_rei
+            if kind = `Mli then Rules.build_ast_and_module_sets_gen_simple
+            else Rules.build_ast_and_module_sets_from_rei_gen_simple
           in
           output_build oc
             ~output:output_mliast

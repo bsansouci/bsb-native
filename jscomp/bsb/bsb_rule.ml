@@ -103,22 +103,31 @@ let build_ast_and_module_sets =
     
 let build_ast_and_module_sets_from_re =
   define
-    ~command:"${bsc} -pp \"${refmt} ${refmt_flags}\" ${reason_react_jsx}  ${ppx_flags} ${warnings} ${bsc_flags} -c -o ${out} -bs-syntax-only -bs-simple-binary-ast -bs-binary-ast -impl ${in}"
+    ~command:"${bsc} -pp \"${refmt} ${refmt_flags}\" ${reason_react_jsx}  ${ppx_flags} ${warnings} ${bsc_flags} -c -o ${out} -bs-syntax-only -bs-binary-ast -impl ${in}"
     "build_ast_and_module_sets_from_re"
     
 let build_ast_and_module_sets_from_rei =
   define
-    ~command:"${bsc} -pp \"${refmt} ${refmt_flags}\" ${reason_react_jsx} ${ppx_flags} ${warnings} ${bsc_flags} -c -o ${out} -bs-syntax-only -bs-simple-binary-ast -bs-binary-ast -intf ${in}"
+    ~command:"${bsc} -pp \"${refmt} ${refmt_flags}\" ${reason_react_jsx} ${ppx_flags} ${warnings} ${bsc_flags} -c -o ${out} -bs-syntax-only -bs-binary-ast -intf ${in}"
     "build_ast_and_module_sets_from_rei"
 
-(* let build_ast_and_deps_from_reason_intf_simple =
-  (* we have to do this way,
-     because it need to be ppxed by bucklescript
-  *)
+
+(* We need those because they'll generate the mlast_simple for us (and the previous three won't for performance reason). *)
+let build_ast_and_module_sets_gen_simple =
   define
-    ~command:"${bsc} -pp \"${refmt} ${refmt_flags}\" ${reason_react_jsx} ${ppx_flags} ${warnings} ${bsc_flags} -c -o ${out} -bs-syntax-only -bs-binary-ast -bs-simple-binary-ast -intf ${in}"
-    "build_ast_and_deps_from_reason_intf_simple"
- *)
+    ~command:"${bsc}  ${pp_flags} ${ppx_flags} ${warnings} ${bsc_flags} -c -o ${out} -bs-syntax-only -bs-simple-binary-ast -bs-binary-ast ${in}"
+    "build_ast_and_module_sets_gen_simple"
+    
+let build_ast_and_module_sets_from_re_gen_simple =
+  define
+    ~command:"${bsc} -pp \"${refmt} ${refmt_flags}\" ${reason_react_jsx}  ${ppx_flags} ${warnings} ${bsc_flags} -c -o ${out} -bs-syntax-only -bs-simple-binary-ast -bs-binary-ast -impl ${in}"
+    "build_ast_and_module_sets_from_re_gen_simple"
+    
+let build_ast_and_module_sets_from_rei_gen_simple =
+  define
+    ~command:"${bsc} -pp \"${refmt} ${refmt_flags}\" ${reason_react_jsx} ${ppx_flags} ${warnings} ${bsc_flags} -c -o ${out} -bs-syntax-only -bs-simple-binary-ast -bs-binary-ast -intf ${in}"
+    "build_ast_and_module_sets_from_rei_gen_simple"
+
 
 let build_bin_deps =
   define
@@ -249,6 +258,10 @@ let reset (custom_rules : string String_map.t) =
     build_ast_and_module_sets.used <- false ;
     build_ast_and_module_sets_from_re.used <- false ;  
     build_ast_and_module_sets_from_rei.used <- false ;
+    
+    build_ast_and_module_sets_gen_simple.used <- false ;
+    build_ast_and_module_sets_from_re_gen_simple.used <- false ;  
+    build_ast_and_module_sets_from_rei_gen_simple.used <- false ;
 
     build_bin_deps.used <- false;
     build_bin_deps_bytecode.used <- false;

@@ -6007,9 +6007,10 @@ module Bsb_clean : sig
 
 
 
-val clean_bs_deps : string -> string -> unit 
+val clean_bs_deps : nested:string -> string -> string -> unit 
 
-val clean_self : string -> string -> unit 
+val clean_self : nested:string -> string -> string -> unit 
+
 end = struct
 #1 "bsb_clean.ml"
 (* Copyright (C) 2017 Authors of BuckleScript
@@ -6040,36 +6041,37 @@ end = struct
 let (//) = Ext_filename.combine
 
 
-let ninja_clean bsc_dir proj_dir = 
+let ninja_clean ~nested bsc_dir proj_dir = 
   try 
     let cmd = bsc_dir // "ninja.exe" in 
-    let cwd =  proj_dir // Bsb_config.lib_bs in 
+    let cwd = proj_dir // nested // Bsb_config.lib_bs  in
     if Sys.file_exists cwd then 
       Bsb_unix.run_command_execv { cmd ; args = [|cmd; "-t"; "clean"|] ; cwd  };
   with  e -> 
     Format.fprintf Format.err_formatter "@{<info>ninja clean failed : %s @." (Printexc.to_string e)
 
-let clean_bs_garbage bsc_dir proj_dir =
+let clean_bs_garbage ~nested bsc_dir proj_dir =
   Format.fprintf Format.std_formatter "@{<info>Cleaning:@} in %s@." proj_dir ; 
   let aux x =
     let x = (proj_dir // x)  in
     if Sys.file_exists x then
       Bsb_unix.remove_dir_recursive x  in
   try  
-    ninja_clean bsc_dir proj_dir ; 
+    ninja_clean ~nested bsc_dir proj_dir ; 
     List.iter aux Bsb_config.all_lib_artifacts;    
   with
     e ->
     Format.fprintf Format.err_formatter "@{<warning>Failed@} to clean due to %s" (Printexc.to_string e)
 
 
-let clean_bs_deps bsc_dir proj_dir =
+let clean_bs_deps ~nested bsc_dir proj_dir =
   Bsb_build_util.walk_all_deps  proj_dir  (fun { cwd} ->
       (* whether top or not always do the cleaning *)
-      clean_bs_garbage bsc_dir cwd
+      clean_bs_garbage ~nested bsc_dir cwd
     )
 
-let clean_self bsc_dir proj_dir = clean_bs_garbage bsc_dir proj_dir
+let clean_self ~nested bsc_dir proj_dir = clean_bs_garbage ~nested bsc_dir proj_dir
+
 end
 module Bsb_package_specs : sig 
 #1 "bsb_package_specs.mli"
@@ -11590,6 +11592,11 @@ val get_name : t  -> out_channel -> string
 val build_ast_and_module_sets : t
 val build_ast_and_module_sets_from_re : t 
 val build_ast_and_module_sets_from_rei : t 
+
+val build_ast_and_module_sets_gen_simple : t
+val build_ast_and_module_sets_from_re_gen_simple : t 
+val build_ast_and_module_sets_from_rei_gen_simple : t 
+
 val build_bin_deps : t 
 val build_bin_deps_bytecode : t 
 val build_bin_deps_native : t 
@@ -11735,22 +11742,31 @@ let build_ast_and_module_sets =
     
 let build_ast_and_module_sets_from_re =
   define
-    ~command:"${bsc} -pp \"${refmt} ${refmt_flags}\" ${reason_react_jsx}  ${ppx_flags} ${warnings} ${bsc_flags} -c -o ${out} -bs-syntax-only -bs-simple-binary-ast -bs-binary-ast -impl ${in}"
+    ~command:"${bsc} -pp \"${refmt} ${refmt_flags}\" ${reason_react_jsx}  ${ppx_flags} ${warnings} ${bsc_flags} -c -o ${out} -bs-syntax-only -bs-binary-ast -impl ${in}"
     "build_ast_and_module_sets_from_re"
     
 let build_ast_and_module_sets_from_rei =
   define
-    ~command:"${bsc} -pp \"${refmt} ${refmt_flags}\" ${reason_react_jsx} ${ppx_flags} ${warnings} ${bsc_flags} -c -o ${out} -bs-syntax-only -bs-simple-binary-ast -bs-binary-ast -intf ${in}"
+    ~command:"${bsc} -pp \"${refmt} ${refmt_flags}\" ${reason_react_jsx} ${ppx_flags} ${warnings} ${bsc_flags} -c -o ${out} -bs-syntax-only -bs-binary-ast -intf ${in}"
     "build_ast_and_module_sets_from_rei"
 
-(* let build_ast_and_deps_from_reason_intf_simple =
-  (* we have to do this way,
-     because it need to be ppxed by bucklescript
-  *)
+
+(* We need those because they'll generate the mlast_simple for us (and the previous three won't for performance reason). *)
+let build_ast_and_module_sets_gen_simple =
   define
-    ~command:"${bsc} -pp \"${refmt} ${refmt_flags}\" ${reason_react_jsx} ${ppx_flags} ${warnings} ${bsc_flags} -c -o ${out} -bs-syntax-only -bs-binary-ast -bs-simple-binary-ast -intf ${in}"
-    "build_ast_and_deps_from_reason_intf_simple"
- *)
+    ~command:"${bsc}  ${pp_flags} ${ppx_flags} ${warnings} ${bsc_flags} -c -o ${out} -bs-syntax-only -bs-simple-binary-ast -bs-binary-ast ${in}"
+    "build_ast_and_module_sets_gen_simple"
+    
+let build_ast_and_module_sets_from_re_gen_simple =
+  define
+    ~command:"${bsc} -pp \"${refmt} ${refmt_flags}\" ${reason_react_jsx}  ${ppx_flags} ${warnings} ${bsc_flags} -c -o ${out} -bs-syntax-only -bs-simple-binary-ast -bs-binary-ast -impl ${in}"
+    "build_ast_and_module_sets_from_re_gen_simple"
+    
+let build_ast_and_module_sets_from_rei_gen_simple =
+  define
+    ~command:"${bsc} -pp \"${refmt} ${refmt_flags}\" ${reason_react_jsx} ${ppx_flags} ${warnings} ${bsc_flags} -c -o ${out} -bs-syntax-only -bs-simple-binary-ast -bs-binary-ast -intf ${in}"
+    "build_ast_and_module_sets_from_rei_gen_simple"
+
 
 let build_bin_deps =
   define
@@ -11881,6 +11897,10 @@ let reset (custom_rules : string String_map.t) =
     build_ast_and_module_sets.used <- false ;
     build_ast_and_module_sets_from_re.used <- false ;  
     build_ast_and_module_sets_from_rei.used <- false ;
+    
+    build_ast_and_module_sets_gen_simple.used <- false ;
+    build_ast_and_module_sets_from_re_gen_simple.used <- false ;  
+    build_ast_and_module_sets_from_rei_gen_simple.used <- false ;
 
     build_bin_deps.used <- false;
     build_bin_deps_bytecode.used <- false;
@@ -12606,11 +12626,11 @@ let handle_file_group oc
         | `Re ->
           let input, rule = 
             if kind = `Re then
-              input, Rules.build_ast_and_module_sets_from_re
+              input, Rules.build_ast_and_module_sets_from_re_gen_simple
             (* else if kind = `Mll then
               output_ml, Rules.build_ast_and_deps_simple *)
             else
-              input, Rules.build_ast_and_module_sets
+              input, Rules.build_ast_and_module_sets_gen_simple
           in
           begin
             output_build oc
@@ -12664,8 +12684,8 @@ let handle_file_group oc
         | `Mli
         | `Rei ->
           let rule =
-            if kind = `Mli then Rules.build_ast_and_module_sets
-            else Rules.build_ast_and_module_sets_from_rei
+            if kind = `Mli then Rules.build_ast_and_module_sets_gen_simple
+            else Rules.build_ast_and_module_sets_from_rei_gen_simple
           in
           output_build oc
             ~output:output_mliast
@@ -18377,7 +18397,12 @@ let regenerate_ninja
     | Other _ ->
       if reason = Bsb_bsc_version_mismatch then begin 
         print_endline "Also clean current repo due to we have detected a different compiler";
-        Bsb_clean.clean_self bsc_dir cwd; 
+        let nested = begin match cmdline_build_kind with
+          | Bsb_config_types.Js       -> "js"
+          | Bsb_config_types.Native   -> "native"
+          | Bsb_config_types.Bytecode -> "bytecode"
+        end in
+        Bsb_clean.clean_self ~nested bsc_dir cwd; 
       end ; 
       Bsb_build_util.mkp (cwd // Bsb_config.lib_bs); 
       let config = 
@@ -18894,6 +18919,17 @@ let set_theme s = current_theme := s
 let generate_theme_with_path = ref None
 
 let cmdline_build_kind = ref Bsb_config_types.Js
+(* Used only for "-clean" and "-clean-world" to track what artifacts should be 
+   cleaned. Those arguments are trigger happy (ie as soon as they're parsed they 
+   run the command associated with them) so them and -backend are order dependent.
+   To (kinda) counter-act that we track if -backend was set. If not we clean 
+   everything but if yes we clean what was specified. That's to avoid the 
+   problems that could be caused by someone expecting their bytecode artifacts
+   to be clean but they're putting the -backend arg after the -clean-world arg 
+   making it clean the JS artifacts.  Have fun with that lol
+            Ben - August 9th 2017 
+*)
+let is_cmdline_build_kind_set = ref false
 
 let watch_exit () =
   print_endline "\nStart Watching now ";
@@ -18930,8 +18966,21 @@ let watch_mode = ref false
 let make_world = ref false 
 let set_make_world () = make_world := true
 
-
-
+(* Takes a cleanFunc and calls it on the right folder. *)
+let clean cleanFunc =
+  if not !is_cmdline_build_kind_set then begin
+    Format.fprintf Format.std_formatter 
+      "@{<warning>Cleaning all artifacts because -backend wasn't set before '-clean' or '-clean-world'.@}@.";
+    cleanFunc ~nested:"js" bsc_dir cwd;
+    cleanFunc ~nested:"bytecode" bsc_dir cwd;
+    cleanFunc ~nested:"native" bsc_dir cwd;
+  end else
+    let nested = begin match !cmdline_build_kind with
+      | Bsb_config_types.Js       -> "js"
+      | Bsb_config_types.Native   -> "native"
+      | Bsb_config_types.Bytecode -> "bytecode"
+    end in
+    cleanFunc ~nested bsc_dir cwd
 
 let bsb_main_flags : (string * Arg.spec * string) list=
   [
@@ -18942,13 +18991,10 @@ let bsb_main_flags : (string * Arg.spec * string) list=
     "-w", Arg.Set watch_mode,
     " Watch mode" ;     
     regen, Arg.Set force_regenerate,
-    " (internal) Always regenerate build.ninja no matter bsconfig.json is changed or not (for debugging purpose)"
-    ;
-    "-clean-world", Arg.Unit (fun _ -> 
-      Bsb_clean.clean_bs_deps bsc_dir cwd),
+    " (internal) Always regenerate build.ninja no matter bsconfig.json is changed or not (for debugging purpose)";
+    "-clean-world", Arg.Unit (fun _ -> clean Bsb_clean.clean_bs_deps),
     " Clean all bs dependencies";
-    "-clean", Arg.Unit (fun _ -> 
-      Bsb_clean.clean_self bsc_dir cwd),
+    "-clean", Arg.Unit (fun _ ->  clean Bsb_clean.clean_self),
     " Clean only current project";
     "-make-world", Arg.Unit set_make_world,
     " Build all dependencies and itself ";
@@ -18966,6 +19012,7 @@ let bsb_main_flags : (string * Arg.spec * string) list=
     " Show where bsb.exe is located";
     
     "-backend", Arg.String (fun s -> 
+        is_cmdline_build_kind_set := true;
         match s with
         | "js" -> cmdline_build_kind := Bsb_config_types.Js
         | "bytecode" -> cmdline_build_kind := Bsb_config_types.Bytecode

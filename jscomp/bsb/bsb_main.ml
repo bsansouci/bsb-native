@@ -36,6 +36,17 @@ let set_theme s = current_theme := s
 let generate_theme_with_path = ref None
 
 let cmdline_build_kind = ref Bsb_config_types.Js
+(* Used only for "-clean" and "-clean-world" to track what artifacts should be 
+   cleaned. Those arguments are trigger happy (ie as soon as they're parsed they 
+   run the command associated with them) so them and -backend are order dependent.
+   To (kinda) counter-act that we track if -backend was set. If not we clean 
+   everything but if yes we clean what was specified. That's to avoid the 
+   problems that could be caused by someone expecting their bytecode artifacts
+   to be clean but they're putting the -backend arg after the -clean-world arg 
+   making it clean the JS artifacts.  Have fun with that lol
+            Ben - August 9th 2017 
+*)
+let is_cmdline_build_kind_set = ref false
 
 let watch_exit () =
   print_endline "\nStart Watching now ";
@@ -72,8 +83,21 @@ let watch_mode = ref false
 let make_world = ref false 
 let set_make_world () = make_world := true
 
-
-
+(* Takes a cleanFunc and calls it on the right folder. *)
+let clean cleanFunc =
+  if not !is_cmdline_build_kind_set then begin
+    Format.fprintf Format.std_formatter 
+      "@{<warning>Cleaning all artifacts because -backend wasn't set before '-clean' or '-clean-world'.@}@.";
+    cleanFunc ~nested:"js" bsc_dir cwd;
+    cleanFunc ~nested:"bytecode" bsc_dir cwd;
+    cleanFunc ~nested:"native" bsc_dir cwd;
+  end else
+    let nested = begin match !cmdline_build_kind with
+      | Bsb_config_types.Js       -> "js"
+      | Bsb_config_types.Native   -> "native"
+      | Bsb_config_types.Bytecode -> "bytecode"
+    end in
+    cleanFunc ~nested bsc_dir cwd
 
 let bsb_main_flags : (string * Arg.spec * string) list=
   [
@@ -84,13 +108,10 @@ let bsb_main_flags : (string * Arg.spec * string) list=
     "-w", Arg.Set watch_mode,
     " Watch mode" ;     
     regen, Arg.Set force_regenerate,
-    " (internal) Always regenerate build.ninja no matter bsconfig.json is changed or not (for debugging purpose)"
-    ;
-    "-clean-world", Arg.Unit (fun _ -> 
-      Bsb_clean.clean_bs_deps bsc_dir cwd),
+    " (internal) Always regenerate build.ninja no matter bsconfig.json is changed or not (for debugging purpose)";
+    "-clean-world", Arg.Unit (fun _ -> clean Bsb_clean.clean_bs_deps),
     " Clean all bs dependencies";
-    "-clean", Arg.Unit (fun _ -> 
-      Bsb_clean.clean_self bsc_dir cwd),
+    "-clean", Arg.Unit (fun _ ->  clean Bsb_clean.clean_self),
     " Clean only current project";
     "-make-world", Arg.Unit set_make_world,
     " Build all dependencies and itself ";
@@ -108,6 +129,7 @@ let bsb_main_flags : (string * Arg.spec * string) list=
     " Show where bsb.exe is located";
     
     "-backend", Arg.String (fun s -> 
+        is_cmdline_build_kind_set := true;
         match s with
         | "js" -> cmdline_build_kind := Bsb_config_types.Js
         | "bytecode" -> cmdline_build_kind := Bsb_config_types.Bytecode
