@@ -85,25 +85,19 @@ let parse_entries (field : Ext_json_types.t array) =
 
 
 
-let package_specs_and_entries_from_bsconfig () = 
+let package_specs_from_bsconfig () = 
   let json = Ext_json_parse.parse_json_from_file Literals.bsconfig_json in
   begin match json with
     | Obj {map} ->
       begin 
-      let entries = ref Bsb_default.main_entries in
-      let package_specs =     
         match String_map.find_opt Bsb_build_schemas.package_specs map with 
         | Some x ->
-          Bsb_package_specs.from_json x 
-        | None ->  Bsb_package_specs.default_package_specs 
-      in
-      map |? (Bsb_build_schemas.entries, `Arr (fun s -> entries := parse_entries s))
-          |> ignore ;
-      (package_specs, !entries)
+          Bsb_package_specs.from_json x
+        | None -> 
+          Bsb_package_specs.default_package_specs
       end
     | _ -> assert false
   end
-
 
 
 

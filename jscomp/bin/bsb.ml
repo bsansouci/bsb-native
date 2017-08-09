@@ -10933,8 +10933,8 @@ module Bsb_config_parse : sig
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
 
-val package_specs_and_entries_from_bsconfig : 
-    unit -> Bsb_package_specs.t * Bsb_config_types.entries_t list
+val package_specs_from_bsconfig : 
+    unit -> Bsb_package_specs.t
 
 
 
@@ -11037,25 +11037,19 @@ let parse_entries (field : Ext_json_types.t array) =
 
 
 
-let package_specs_and_entries_from_bsconfig () = 
+let package_specs_from_bsconfig () = 
   let json = Ext_json_parse.parse_json_from_file Literals.bsconfig_json in
   begin match json with
     | Obj {map} ->
       begin 
-      let entries = ref Bsb_default.main_entries in
-      let package_specs =     
         match String_map.find_opt Bsb_build_schemas.package_specs map with 
         | Some x ->
-          Bsb_package_specs.from_json x 
-        | None ->  Bsb_package_specs.default_package_specs 
-      in
-      map |? (Bsb_build_schemas.entries, `Arr (fun s -> entries := parse_entries s))
-          |> ignore ;
-      (package_specs, !entries)
+          Bsb_package_specs.from_json x
+        | None -> 
+          Bsb_package_specs.default_package_specs
       end
     | _ -> assert false
   end
-
 
 
 
@@ -12562,6 +12556,15 @@ let (++) (us : Bsb_ninja_file_groups.info) (vs : Bsb_ninja_file_groups.info) =
 let install_file module_info files_to_install =
   String_hash_set.add  files_to_install (Bsb_build_cache.filename_sans_suffix_of_module_info module_info)
 
+
+
+(* @REFACTOR to follow the new format in Bsb_ninja_file_groups *)
+(* @REFACTOR to follow the new format in Bsb_ninja_file_groups *)
+(* @REFACTOR to follow the new format in Bsb_ninja_file_groups *)
+(* @REFACTOR to follow the new format in Bsb_ninja_file_groups *)
+(* @REFACTOR to follow the new format in Bsb_ninja_file_groups *)
+(* @REFACTOR to follow the new format in Bsb_ninja_file_groups *)
+
 let handle_file_group oc
   ~custom_rules
   ~compile_target
@@ -13020,14 +13023,14 @@ let output_ninja
   =
   let custom_rules = Bsb_rule.reset generators in 
   let entries = List.filter (fun e -> match e with 
-            | Bsb_config_types.JsTarget _ -> cmdline_build_kind = Bsb_config_types.Js
-            | Bsb_config_types.BytecodeTarget _ -> cmdline_build_kind = Bsb_config_types.Bytecode
-            | Bsb_config_types.NativeTarget _ -> cmdline_build_kind = Bsb_config_types.Native
-          ) entries in
+    | Bsb_config_types.JsTarget _       -> cmdline_build_kind = Bsb_config_types.Js
+    | Bsb_config_types.NativeTarget _   -> cmdline_build_kind = Bsb_config_types.Native
+    | Bsb_config_types.BytecodeTarget _ -> cmdline_build_kind = Bsb_config_types.Bytecode
+  ) entries in
   let nested = begin match cmdline_build_kind with
-    | Bsb_config_types.Js -> "js"
+    | Bsb_config_types.Js       -> "js"
+    | Bsb_config_types.Native   -> "native"
     | Bsb_config_types.Bytecode -> "bytecode"
-    | Bsb_config_types.Native -> "native"
   end in
   let oc = open_out_bin (cwd // Bsb_config.lib_bs // nested // Literals.build_ninja) in
   let bsc = bsc_dir // bsc_exe in   (* The path to [bsc.exe] independent of config  *)
@@ -13193,25 +13196,26 @@ let output_ninja
                     ~rule:Bsb_rule.copy_resources) static_resources in
     (* If we have a build_script, we'll trust the user and use that to build the package instead. 
      We generate one simple rule that'll just call that string as a command. *)
-  let _ = match build_script with
-  | Some build_script when should_build ->
-    let build_script = Ext_string.ninja_escaped build_script in
-    let ocaml_lib = Bsb_build_util.get_ocaml_lib_dir cwd in
-    (* TODO(sansouci): Fix this super ghetto environment variable setup... This is not cross platform! *)
-    let envvars = "export OCAML_LIB=" ^ ocaml_lib ^ " && " 
-                ^ "export OCAML_SYSTHREADS=" ^ (ocaml_dir // "otherlibs" // "systhreads") ^ " && " 
-                ^ "export PATH=$$PATH:" ^ (root_project_dir // "node_modules" // ".bin") ^ ":" ^ ocaml_dir ^ ":" ^ (root_project_dir // "node_modules" // "bs-platform" // "bin") ^ " && " in
-    (* We move out of lib/bs so that the command is ran from the root project. *)
-    let rule = Bsb_rule.define ~command:("cd ../../.. && " ^ envvars ^ build_script) "build_script" in
-    Bsb_ninja_util.output_build oc
-      ~order_only_deps:(static_resources @ all_info.all_config_deps)
-      ~input:""
-      ~output:Literals.build_ninja
-      ~rule;
-  | _ ->
-    Bsb_ninja_util.phony oc ~order_only_deps:(static_resources @ all_info.all_config_deps)
-      ~inputs:[]
-      ~output:Literals.build_ninja ; in
+    let _ = match build_script with
+    | Some build_script when should_build ->
+      let build_script = Ext_string.ninja_escaped build_script in
+      let ocaml_lib = Bsb_build_util.get_ocaml_lib_dir cwd in
+      (* TODO(sansouci): Fix this super ghetto environment variable setup... This is not cross platform! *)
+      let envvars = "export OCAML_LIB=" ^ ocaml_lib ^ " && " 
+                  ^ "export OCAML_SYSTHREADS=" ^ (ocaml_dir // "otherlibs" // "systhreads") ^ " && " 
+                  ^ "export PATH=$$PATH:" ^ (root_project_dir // "node_modules" // ".bin") ^ ":" ^ ocaml_dir ^ ":" ^ (root_project_dir // "node_modules" // "bs-platform" // "bin") ^ " && " in
+      (* We move out of lib/bs so that the command is ran from the root project. *)
+      let rule = Bsb_rule.define ~command:("cd ../../.. && " ^ envvars ^ build_script) "build_script" in
+      Bsb_ninja_util.output_build oc
+        ~order_only_deps:(static_resources @ all_info.all_config_deps)
+        ~input:""
+        ~output:Literals.build_ninja
+        ~rule;
+    | _ ->
+      Bsb_ninja_util.phony oc ~order_only_deps:(static_resources @ all_info.all_config_deps)
+        ~inputs:[]
+        ~output:Literals.build_ninja ; 
+    in
     close_out oc;
   end
 
@@ -18395,16 +18399,17 @@ let regenerate_ninja
     | Bsb_source_directory_changed  
     | Bsb_different_cmdline_arg
     | Other _ ->
+      let nested = begin match cmdline_build_kind with
+        | Bsb_config_types.Js       -> "js"
+        | Bsb_config_types.Native   -> "native"
+        | Bsb_config_types.Bytecode -> "bytecode"
+      end in
       if reason = Bsb_bsc_version_mismatch then begin 
         print_endline "Also clean current repo due to we have detected a different compiler";
-        let nested = begin match cmdline_build_kind with
-          | Bsb_config_types.Js       -> "js"
-          | Bsb_config_types.Native   -> "native"
-          | Bsb_config_types.Bytecode -> "bytecode"
-        end in
         Bsb_clean.clean_self ~nested bsc_dir cwd; 
       end ; 
-      Bsb_build_util.mkp (cwd // Bsb_config.lib_bs); 
+      (* Generate the nested folder before anything else... *)
+      Bsb_build_util.mkp (cwd // Bsb_config.lib_bs // nested);
       let config = 
         Bsb_config_parse.interpret_json 
           ~override_package_specs
@@ -18413,13 +18418,6 @@ let regenerate_ninja
           ~no_dev
           ~compilation_kind:cmdline_build_kind
           cwd in 
-      let nested = begin match cmdline_build_kind with
-        | Bsb_config_types.Js -> "js"
-        | Bsb_config_types.Bytecode -> "bytecode"
-        | Bsb_config_types.Native -> "native"
-      end in
-      (* Generate the nested folder before anything else... *)
-      Bsb_build_util.mkp (cwd // Bsb_config.lib_bs // nested);
       begin 
         Bsb_merlin_gen.merlin_file_gen ~cwd
           (bsc_dir // bsppx_exe) config;
@@ -18447,14 +18445,31 @@ let regenerate_ninja
             if not is_top_level then 
               ([], [], [])
             else begin
-              (* TODO(sansouci): Manually walk the external dep graph. Optimize this. *)
-              let all_external_deps = ref [] in
+              (* @Speed Manually walk the external dep graph. Optimize this. 
+                
+                We can't really serialize that tree inside a file and avoid checking
+                each dep one by one because that cache could go stale if one modifies
+                something inside a dep directly. We could use such a cache for when
+                the compiler's not invoked with `-make-world` but it's unclear if it's 
+                worth doing.
+                
+                One way that might make this faster is to avoid parsing all of the bsconfig
+                and just grab what we need. 
+                
+                Another way, which might be generally beneficial, is to generate
+                a faster representation of bsconfig that's more liner. If we put the 
+                most used information at the top and mashalled, it would be the "fastest"
+                thing to do (that I can think of off the top of my head).
+                
+                   Ben - August 9th 2017
+              *)
+              let all_external_deps = ref [] in 
               let all_clibs = ref [] in
               let all_ocamlfind_dependencies = ref [] in
               Bsb_build_util.walk_all_deps cwd
                 (fun {top; cwd} ->
                   if not top then begin
-                    (* TODO(sansouci): We don't need to read the full config, just the right fields.
+                    (* @Speed We don't need to read the full config, just the right fields.
                        Then again we also should cache this info so we don't have to crawl anything. *)
                     let innerConfig = 
                       Bsb_config_parse.interpret_json 
@@ -18751,9 +18766,9 @@ let install_targets ~cmdline_build_kind cwd (config : Bsb_config_types.t option)
   | None -> ()
   | Some {files_to_install} -> 
     let nested = begin match cmdline_build_kind with
-      | Bsb_config_types.Js -> "js"
+      | Bsb_config_types.Js       -> "js"
+      | Bsb_config_types.Native   -> "native"
       | Bsb_config_types.Bytecode -> "bytecode"
-      | Bsb_config_types.Native -> "native"
     end in
     let destdir = cwd // Bsb_config.lib_ocaml // nested in (* lib is already there after building, so just mkdir [lib/ocaml] *)
     if not @@ Sys.file_exists destdir then begin Bsb_build_util.mkp destdir  end;
@@ -18783,13 +18798,16 @@ let install_targets ~cmdline_build_kind cwd (config : Bsb_config_types.t option)
 
 
 
-let build_bs_deps cwd ~root_project_dir ~cmdline_build_kind deps entry =
+let build_bs_deps cwd ~root_project_dir ~cmdline_build_kind deps =
   let bsc_dir = Bsb_build_util.get_bsc_dir cwd in
   let ocaml_dir = Bsb_build_util.get_ocaml_dir bsc_dir in
   let vendor_ninja = bsc_dir // "ninja.exe" in
   let all_external_deps = ref [] in
   let all_ocamlfind_dependencies = ref [] in
   let all_clibs = ref [] in
+  (* @Idea could this be parallelized? We're not taking advantage of ninja here 
+     and it seems like we're just going one dep at a time when we could parallelize 
+              Ben - August 9th 2017 *)
   Bsb_build_util.walk_all_deps  cwd
     (fun {top; cwd} ->
        if not top then
@@ -18805,7 +18823,7 @@ let build_bs_deps cwd ~root_project_dir ~cmdline_build_kind deps entry =
              cwd bsc_dir ocaml_dir in (* set true to force regenrate ninja file so we have [config_opt]*)
            let config = begin match config_opt with 
             | None ->
-            (* TODO(sansouci): optimize this to _just_ read the static_libraries field. *)
+            (* @Speed optimize this to _just_ read the static_libraries field. *)
               Bsb_config_parse.interpret_json 
                 ~override_package_specs:(Some deps)
                 ~bsc_dir
@@ -18848,31 +18866,10 @@ let build_bs_deps cwd ~root_project_dir ~cmdline_build_kind deps entry =
   (List.rev !all_external_deps, List.rev !all_clibs, List.rev !all_ocamlfind_dependencies)
 
 
-let get_package_specs_and_entries cmdline_build_kind =
-  let (dep, entries) = begin match Bsb_config_parse.package_specs_and_entries_from_bsconfig () with
-    (* Entries cannot be empty, we always use a default under-the-hood. *)
-    | dep, [] -> assert false
-    | dep, entries -> (dep, entries)
-  end in
-  let filtered_entries = List.filter (fun e -> match e with 
-    | Bsb_config_types.JsTarget _ -> cmdline_build_kind = Bsb_config_types.Js
-    | Bsb_config_types.BytecodeTarget _ -> cmdline_build_kind = Bsb_config_types.Bytecode
-    | Bsb_config_types.NativeTarget _ -> cmdline_build_kind = Bsb_config_types.Native
-  ) entries in
-  let build_kind_string = begin match cmdline_build_kind with
-  | Bsb_config_types.Js -> "js"
-  | Bsb_config_types.Bytecode -> "bytecode"
-  | Bsb_config_types.Native -> "native"
-  end in
-  if filtered_entries = [] then begin 
-    failwith @@ "Found no 'entries' to compile to '" ^ 
-    build_kind_string ^ "' in the bsconfig.json"
-  end else (dep, List.hd filtered_entries)
-
-let make_world_deps cwd ~root_project_dir ~cmdline_build_kind (* (config : Bsb_config_types.t option) *) =
+let make_world_deps cwd ~root_project_dir ~cmdline_build_kind =
   print_endline "\nMaking the dependency world!";
-  let (deps, entry) = get_package_specs_and_entries cmdline_build_kind in
-  build_bs_deps cwd ~root_project_dir ~cmdline_build_kind deps entry
+  let deps = Bsb_config_parse.package_specs_from_bsconfig () in
+  build_bs_deps cwd ~root_project_dir ~cmdline_build_kind deps
 
 end
 module Bsb_main : sig 
@@ -18937,7 +18934,7 @@ let watch_exit () =
      Didn't bother for now.
           Ben - July 23rd 2017 
    *)
-  let (build_kind, build_kind_file) = match !cmdline_build_kind with 
+  let (backend, backend_kind) = match !cmdline_build_kind with 
     (* @hack we don't actually know the file path, we make it up because we know
        that we don't actually care about the path. 
        This will bite us back some day. *)
@@ -18953,8 +18950,8 @@ let watch_exit () =
     Unix.execvp node_lit
       [| node_lit ;
          bsb_watcher;
-         build_kind;
-         build_kind_file;
+         backend;
+         backend_kind;
       |]
 
 
@@ -18966,6 +18963,12 @@ let watch_mode = ref false
 let make_world = ref false 
 let set_make_world () = make_world := true
 
+let get_build_dir () =
+  match !cmdline_build_kind with
+    | Bsb_config_types.Js       -> "js"
+    | Bsb_config_types.Native   -> "native"
+    | Bsb_config_types.Bytecode -> "bytecode"
+
 (* Takes a cleanFunc and calls it on the right folder. *)
 let clean cleanFunc =
   if not !is_cmdline_build_kind_set then begin
@@ -18975,11 +18978,7 @@ let clean cleanFunc =
     cleanFunc ~nested:"bytecode" bsc_dir cwd;
     cleanFunc ~nested:"native" bsc_dir cwd;
   end else
-    let nested = begin match !cmdline_build_kind with
-      | Bsb_config_types.Js       -> "js"
-      | Bsb_config_types.Native   -> "native"
-      | Bsb_config_types.Bytecode -> "bytecode"
-    end in
+    let nested = get_build_dir () in
     cleanFunc ~nested bsc_dir cwd
 
 let bsb_main_flags : (string * Arg.spec * string) list=
@@ -19096,11 +19095,7 @@ let () =
           ~cmdline_build_kind:!cmdline_build_kind
           cwd bsc_dir ocaml_dir
       in
-      let nested = begin match !cmdline_build_kind with
-        | Bsb_config_types.Js -> "js"
-        | Bsb_config_types.Bytecode -> "bytecode"
-        | Bsb_config_types.Native -> "native"
-      end in
+      let nested = get_build_dir () in
       ninja_command_exit  vendor_ninja [||] nested
     end
   | argv -> 
@@ -19151,11 +19146,7 @@ let () =
                      [bsb -regen ]
                   *)
                 end else begin
-                  let nested = begin match !cmdline_build_kind with
-                    | Bsb_config_types.Js -> "js"
-                    | Bsb_config_types.Bytecode -> "bytecode"
-                    | Bsb_config_types.Native -> "native"
-                  end in
+                  let nested = get_build_dir () in
                   ninja_command_exit vendor_ninja [||] nested
                 end
             end;
@@ -19180,11 +19171,7 @@ let () =
             cwd bsc_dir ocaml_dir in
           if !watch_mode then watch_exit ()
           else begin 
-            let nested = begin match !cmdline_build_kind with
-              | Bsb_config_types.Js -> "js"
-              | Bsb_config_types.Bytecode -> "bytecode"
-              | Bsb_config_types.Native -> "native"
-            end in
+            let nested = get_build_dir () in
             ninja_command_exit vendor_ninja ninja_args nested
           end
         end

@@ -86,14 +86,14 @@ let output_ninja
   =
   let custom_rules = Bsb_rule.reset generators in 
   let entries = List.filter (fun e -> match e with 
-            | Bsb_config_types.JsTarget _ -> cmdline_build_kind = Bsb_config_types.Js
-            | Bsb_config_types.BytecodeTarget _ -> cmdline_build_kind = Bsb_config_types.Bytecode
-            | Bsb_config_types.NativeTarget _ -> cmdline_build_kind = Bsb_config_types.Native
-          ) entries in
+    | Bsb_config_types.JsTarget _       -> cmdline_build_kind = Bsb_config_types.Js
+    | Bsb_config_types.NativeTarget _   -> cmdline_build_kind = Bsb_config_types.Native
+    | Bsb_config_types.BytecodeTarget _ -> cmdline_build_kind = Bsb_config_types.Bytecode
+  ) entries in
   let nested = begin match cmdline_build_kind with
-    | Bsb_config_types.Js -> "js"
+    | Bsb_config_types.Js       -> "js"
+    | Bsb_config_types.Native   -> "native"
     | Bsb_config_types.Bytecode -> "bytecode"
-    | Bsb_config_types.Native -> "native"
   end in
   let oc = open_out_bin (cwd // Bsb_config.lib_bs // nested // Literals.build_ninja) in
   let bsc = bsc_dir // bsc_exe in   (* The path to [bsc.exe] independent of config  *)
@@ -259,24 +259,25 @@ let output_ninja
                     ~rule:Bsb_rule.copy_resources) static_resources in
     (* If we have a build_script, we'll trust the user and use that to build the package instead. 
      We generate one simple rule that'll just call that string as a command. *)
-  let _ = match build_script with
-  | Some build_script when should_build ->
-    let build_script = Ext_string.ninja_escaped build_script in
-    let ocaml_lib = Bsb_build_util.get_ocaml_lib_dir cwd in
-    (* TODO(sansouci): Fix this super ghetto environment variable setup... This is not cross platform! *)
-    let envvars = "export OCAML_LIB=" ^ ocaml_lib ^ " && " 
-                ^ "export OCAML_SYSTHREADS=" ^ (ocaml_dir // "otherlibs" // "systhreads") ^ " && " 
-                ^ "export PATH=$$PATH:" ^ (root_project_dir // "node_modules" // ".bin") ^ ":" ^ ocaml_dir ^ ":" ^ (root_project_dir // "node_modules" // "bs-platform" // "bin") ^ " && " in
-    (* We move out of lib/bs so that the command is ran from the root project. *)
-    let rule = Bsb_rule.define ~command:("cd ../../.. && " ^ envvars ^ build_script) "build_script" in
-    Bsb_ninja_util.output_build oc
-      ~order_only_deps:(static_resources @ all_info.all_config_deps)
-      ~input:""
-      ~output:Literals.build_ninja
-      ~rule;
-  | _ ->
-    Bsb_ninja_util.phony oc ~order_only_deps:(static_resources @ all_info.all_config_deps)
-      ~inputs:[]
-      ~output:Literals.build_ninja ; in
+    let _ = match build_script with
+    | Some build_script when should_build ->
+      let build_script = Ext_string.ninja_escaped build_script in
+      let ocaml_lib = Bsb_build_util.get_ocaml_lib_dir cwd in
+      (* TODO(sansouci): Fix this super ghetto environment variable setup... This is not cross platform! *)
+      let envvars = "export OCAML_LIB=" ^ ocaml_lib ^ " && " 
+                  ^ "export OCAML_SYSTHREADS=" ^ (ocaml_dir // "otherlibs" // "systhreads") ^ " && " 
+                  ^ "export PATH=$$PATH:" ^ (root_project_dir // "node_modules" // ".bin") ^ ":" ^ ocaml_dir ^ ":" ^ (root_project_dir // "node_modules" // "bs-platform" // "bin") ^ " && " in
+      (* We move out of lib/bs so that the command is ran from the root project. *)
+      let rule = Bsb_rule.define ~command:("cd ../../.. && " ^ envvars ^ build_script) "build_script" in
+      Bsb_ninja_util.output_build oc
+        ~order_only_deps:(static_resources @ all_info.all_config_deps)
+        ~input:""
+        ~output:Literals.build_ninja
+        ~rule;
+    | _ ->
+      Bsb_ninja_util.phony oc ~order_only_deps:(static_resources @ all_info.all_config_deps)
+        ~inputs:[]
+        ~output:Literals.build_ninja ; 
+    in
     close_out oc;
   end

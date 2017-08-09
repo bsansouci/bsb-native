@@ -58,16 +58,17 @@ let regenerate_ninja
     | Bsb_source_directory_changed  
     | Bsb_different_cmdline_arg
     | Other _ ->
+      let nested = begin match cmdline_build_kind with
+        | Bsb_config_types.Js       -> "js"
+        | Bsb_config_types.Native   -> "native"
+        | Bsb_config_types.Bytecode -> "bytecode"
+      end in
       if reason = Bsb_bsc_version_mismatch then begin 
         print_endline "Also clean current repo due to we have detected a different compiler";
-        let nested = begin match cmdline_build_kind with
-          | Bsb_config_types.Js       -> "js"
-          | Bsb_config_types.Native   -> "native"
-          | Bsb_config_types.Bytecode -> "bytecode"
-        end in
         Bsb_clean.clean_self ~nested bsc_dir cwd; 
       end ; 
-      Bsb_build_util.mkp (cwd // Bsb_config.lib_bs); 
+      (* Generate the nested folder before anything else... *)
+      Bsb_build_util.mkp (cwd // Bsb_config.lib_bs // nested);
       let config = 
         Bsb_config_parse.interpret_json 
           ~override_package_specs
@@ -76,13 +77,6 @@ let regenerate_ninja
           ~no_dev
           ~compilation_kind:cmdline_build_kind
           cwd in 
-      let nested = begin match cmdline_build_kind with
-        | Bsb_config_types.Js -> "js"
-        | Bsb_config_types.Bytecode -> "bytecode"
-        | Bsb_config_types.Native -> "native"
-      end in
-      (* Generate the nested folder before anything else... *)
-      Bsb_build_util.mkp (cwd // Bsb_config.lib_bs // nested);
       begin 
         Bsb_merlin_gen.merlin_file_gen ~cwd
           (bsc_dir // bsppx_exe) config;
@@ -110,14 +104,31 @@ let regenerate_ninja
             if not is_top_level then 
               ([], [], [])
             else begin
-              (* TODO(sansouci): Manually walk the external dep graph. Optimize this. *)
-              let all_external_deps = ref [] in
+              (* @Speed Manually walk the external dep graph. Optimize this. 
+                
+                We can't really serialize that tree inside a file and avoid checking
+                each dep one by one because that cache could go stale if one modifies
+                something inside a dep directly. We could use such a cache for when
+                the compiler's not invoked with `-make-world` but it's unclear if it's 
+                worth doing.
+                
+                One way that might make this faster is to avoid parsing all of the bsconfig
+                and just grab what we need. 
+                
+                Another way, which might be generally beneficial, is to generate
+                a faster representation of bsconfig that's more liner. If we put the 
+                most used information at the top and mashalled, it would be the "fastest"
+                thing to do (that I can think of off the top of my head).
+                
+                   Ben - August 9th 2017
+              *)
+              let all_external_deps = ref [] in 
               let all_clibs = ref [] in
               let all_ocamlfind_dependencies = ref [] in
               Bsb_build_util.walk_all_deps cwd
                 (fun {top; cwd} ->
                   if not top then begin
-                    (* TODO(sansouci): We don't need to read the full config, just the right fields.
+                    (* @Speed We don't need to read the full config, just the right fields.
                        Then again we also should cache this info so we don't have to crawl anything. *)
                     let innerConfig = 
                       Bsb_config_parse.interpret_json 

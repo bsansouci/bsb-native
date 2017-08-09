@@ -44,6 +44,15 @@ let (++) (us : Bsb_ninja_file_groups.info) (vs : Bsb_ninja_file_groups.info) =
 let install_file module_info files_to_install =
   String_hash_set.add  files_to_install (Bsb_build_cache.filename_sans_suffix_of_module_info module_info)
 
+
+
+(* @REFACTOR to follow the new format in Bsb_ninja_file_groups *)
+(* @REFACTOR to follow the new format in Bsb_ninja_file_groups *)
+(* @REFACTOR to follow the new format in Bsb_ninja_file_groups *)
+(* @REFACTOR to follow the new format in Bsb_ninja_file_groups *)
+(* @REFACTOR to follow the new format in Bsb_ninja_file_groups *)
+(* @REFACTOR to follow the new format in Bsb_ninja_file_groups *)
+
 let handle_file_group oc
   ~custom_rules
   ~compile_target

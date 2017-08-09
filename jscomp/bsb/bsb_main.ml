@@ -54,7 +54,7 @@ let watch_exit () =
      Didn't bother for now.
           Ben - July 23rd 2017 
    *)
-  let (build_kind, build_kind_file) = match !cmdline_build_kind with 
+  let (backend, backend_kind) = match !cmdline_build_kind with 
     (* @hack we don't actually know the file path, we make it up because we know
        that we don't actually care about the path. 
        This will bite us back some day. *)
@@ -70,8 +70,8 @@ let watch_exit () =
     Unix.execvp node_lit
       [| node_lit ;
          bsb_watcher;
-         build_kind;
-         build_kind_file;
+         backend;
+         backend_kind;
       |]
 
 
@@ -83,6 +83,12 @@ let watch_mode = ref false
 let make_world = ref false 
 let set_make_world () = make_world := true
 
+let get_build_dir () =
+  match !cmdline_build_kind with
+    | Bsb_config_types.Js       -> "js"
+    | Bsb_config_types.Native   -> "native"
+    | Bsb_config_types.Bytecode -> "bytecode"
+
 (* Takes a cleanFunc and calls it on the right folder. *)
 let clean cleanFunc =
   if not !is_cmdline_build_kind_set then begin
@@ -92,11 +98,7 @@ let clean cleanFunc =
     cleanFunc ~nested:"bytecode" bsc_dir cwd;
     cleanFunc ~nested:"native" bsc_dir cwd;
   end else
-    let nested = begin match !cmdline_build_kind with
-      | Bsb_config_types.Js       -> "js"
-      | Bsb_config_types.Native   -> "native"
-      | Bsb_config_types.Bytecode -> "bytecode"
-    end in
+    let nested = get_build_dir () in
     cleanFunc ~nested bsc_dir cwd
 
 let bsb_main_flags : (string * Arg.spec * string) list=
@@ -213,11 +215,7 @@ let () =
           ~cmdline_build_kind:!cmdline_build_kind
           cwd bsc_dir ocaml_dir
       in
-      let nested = begin match !cmdline_build_kind with
-        | Bsb_config_types.Js -> "js"
-        | Bsb_config_types.Bytecode -> "bytecode"
-        | Bsb_config_types.Native -> "native"
-      end in
+      let nested = get_build_dir () in
       ninja_command_exit  vendor_ninja [||] nested
     end
   | argv -> 
@@ -268,11 +266,7 @@ let () =
                      [bsb -regen ]
                   *)
                 end else begin
-                  let nested = begin match !cmdline_build_kind with
-                    | Bsb_config_types.Js -> "js"
-                    | Bsb_config_types.Bytecode -> "bytecode"
-                    | Bsb_config_types.Native -> "native"
-                  end in
+                  let nested = get_build_dir () in
                   ninja_command_exit vendor_ninja [||] nested
                 end
             end;
@@ -297,11 +291,7 @@ let () =
             cwd bsc_dir ocaml_dir in
           if !watch_mode then watch_exit ()
           else begin 
-            let nested = begin match !cmdline_build_kind with
-              | Bsb_config_types.Js -> "js"
-              | Bsb_config_types.Bytecode -> "bytecode"
-              | Bsb_config_types.Native -> "native"
-            end in
+            let nested = get_build_dir () in
             ninja_command_exit vendor_ninja ninja_args nested
           end
         end

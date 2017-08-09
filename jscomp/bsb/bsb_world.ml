@@ -43,9 +43,9 @@ let install_targets ~cmdline_build_kind cwd (config : Bsb_config_types.t option)
   | None -> ()
   | Some {files_to_install} -> 
     let nested = begin match cmdline_build_kind with
-      | Bsb_config_types.Js -> "js"
+      | Bsb_config_types.Js       -> "js"
+      | Bsb_config_types.Native   -> "native"
       | Bsb_config_types.Bytecode -> "bytecode"
-      | Bsb_config_types.Native -> "native"
     end in
     let destdir = cwd // Bsb_config.lib_ocaml // nested in (* lib is already there after building, so just mkdir [lib/ocaml] *)
     if not @@ Sys.file_exists destdir then begin Bsb_build_util.mkp destdir  end;
@@ -75,13 +75,16 @@ let install_targets ~cmdline_build_kind cwd (config : Bsb_config_types.t option)
 
 
 
-let build_bs_deps cwd ~root_project_dir ~cmdline_build_kind deps entry =
+let build_bs_deps cwd ~root_project_dir ~cmdline_build_kind deps =
   let bsc_dir = Bsb_build_util.get_bsc_dir cwd in
   let ocaml_dir = Bsb_build_util.get_ocaml_dir bsc_dir in
   let vendor_ninja = bsc_dir // "ninja.exe" in
   let all_external_deps = ref [] in
   let all_ocamlfind_dependencies = ref [] in
   let all_clibs = ref [] in
+  (* @Idea could this be parallelized? We're not taking advantage of ninja here 
+     and it seems like we're just going one dep at a time when we could parallelize 
+              Ben - August 9th 2017 *)
   Bsb_build_util.walk_all_deps  cwd
     (fun {top; cwd} ->
        if not top then
@@ -97,7 +100,7 @@ let build_bs_deps cwd ~root_project_dir ~cmdline_build_kind deps entry =
              cwd bsc_dir ocaml_dir in (* set true to force regenrate ninja file so we have [config_opt]*)
            let config = begin match config_opt with 
             | None ->
-            (* TODO(sansouci): optimize this to _just_ read the static_libraries field. *)
+            (* @Speed optimize this to _just_ read the static_libraries field. *)
               Bsb_config_parse.interpret_json 
                 ~override_package_specs:(Some deps)
                 ~bsc_dir
@@ -140,28 +143,7 @@ let build_bs_deps cwd ~root_project_dir ~cmdline_build_kind deps entry =
   (List.rev !all_external_deps, List.rev !all_clibs, List.rev !all_ocamlfind_dependencies)
 
 
-let get_package_specs_and_entries cmdline_build_kind =
-  let (dep, entries) = begin match Bsb_config_parse.package_specs_and_entries_from_bsconfig () with
-    (* Entries cannot be empty, we always use a default under-the-hood. *)
-    | dep, [] -> assert false
-    | dep, entries -> (dep, entries)
-  end in
-  let filtered_entries = List.filter (fun e -> match e with 
-    | Bsb_config_types.JsTarget _ -> cmdline_build_kind = Bsb_config_types.Js
-    | Bsb_config_types.BytecodeTarget _ -> cmdline_build_kind = Bsb_config_types.Bytecode
-    | Bsb_config_types.NativeTarget _ -> cmdline_build_kind = Bsb_config_types.Native
-  ) entries in
-  let build_kind_string = begin match cmdline_build_kind with
-  | Bsb_config_types.Js -> "js"
-  | Bsb_config_types.Bytecode -> "bytecode"
-  | Bsb_config_types.Native -> "native"
-  end in
-  if filtered_entries = [] then begin 
-    failwith @@ "Found no 'entries' to compile to '" ^ 
-    build_kind_string ^ "' in the bsconfig.json"
-  end else (dep, List.hd filtered_entries)
-
-let make_world_deps cwd ~root_project_dir ~cmdline_build_kind (* (config : Bsb_config_types.t option) *) =
+let make_world_deps cwd ~root_project_dir ~cmdline_build_kind =
   print_endline "\nMaking the dependency world!";
-  let (deps, entry) = get_package_specs_and_entries cmdline_build_kind in
-  build_bs_deps cwd ~root_project_dir ~cmdline_build_kind deps entry
+  let deps = Bsb_config_parse.package_specs_from_bsconfig () in
+  build_bs_deps cwd ~root_project_dir ~cmdline_build_kind deps
