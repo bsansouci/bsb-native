@@ -165,7 +165,7 @@ let make
     let lhs_suffix, rhs_suffix =
       match compilation_kind with
       | Js       -> Literals.suffix_cmj, Literals.suffix_cmj
-      | Bytecode -> Literals.suffix_cmi, Literals.suffix_cmo
+      | Bytecode -> Literals.suffix_cmo, Literals.suffix_cmo
       | Native   -> Literals.suffix_cmx, Literals.suffix_cmx in    
     Ext_pervasives.with_file_as_chan (input_file ^ Literals.suffix_mlastd )
       (fun oc -> 
