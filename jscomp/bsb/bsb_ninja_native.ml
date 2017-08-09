@@ -41,8 +41,8 @@ let (++) (us : Bsb_ninja_file_groups.info) (vs : Bsb_ninja_file_groups.info) =
       (* all_installs = us.all_installs @ vs.all_installs *)
     }
 
-let install_file (file : string) files_to_install =
-  String_hash_set.add  files_to_install (Ext_filename.chop_extension_if_any file )
+let install_file module_info files_to_install =
+  String_hash_set.add  files_to_install (Bsb_build_cache.filename_sans_suffix_of_module_info module_info)
 
 let handle_file_group oc
   ~custom_rules
@@ -60,9 +60,13 @@ let handle_file_group oc
       | Export_all -> true
       | Export_none -> false
       | Export_set set ->  String_set.mem module_name set in
-    let emit_build (kind : [`Ml (* | `Mll *) | `Re | `Mli | `Rei ])  file_input : Bsb_ninja_file_groups.info =
-      let filename_sans_extension = Filename.chop_extension file_input in
-      let input = Bsb_config.proj_rel file_input in
+    let emit_build (kind : [`Ml (* | `Mll *) | `Re | `Mli | `Rei ])  filename_sans_extension : Bsb_ninja_file_groups.info =
+      let input = Bsb_config.proj_rel (match kind with
+      | `Ml  -> filename_sans_extension ^ Literals.suffix_ml
+      | `Mli -> filename_sans_extension ^ Literals.suffix_mli
+      | `Re  -> filename_sans_extension ^ Literals.suffix_re
+      | `Rei -> filename_sans_extension ^ Literals.suffix_rei
+      ) in
       let output_file_sans_extension = filename_sans_extension in
       (* let output_ml = output_file_sans_extension ^ Literals.suffix_ml in *)
       let output_mlast = output_file_sans_extension  ^ Literals.suffix_mlast in
@@ -153,7 +157,7 @@ let handle_file_group oc
               ~input:output_mlast
               ~implicit_deps:deps
               ~rule:rule_name ;
-            if installable then begin install_file file_input files_to_install end;
+            if installable then begin install_file module_info files_to_install end;
             {all_config_deps = [output_mlastd]; 
             (* all_installs = [output_cmi];   *)
             }
@@ -187,7 +191,7 @@ let handle_file_group oc
             ~input:output_mliast
             (* ~implicit_deps:[output_mliastd] *)
             ~rule;
-          if installable then begin install_file file_input files_to_install end ;
+          if installable then begin install_file module_info files_to_install end ;
           {
             all_config_deps = [output_mliastd];
             (* all_installs = [output_cmi]; *)
