@@ -29,10 +29,11 @@ let print_if ppf flag printer arg =
 
 
 let after_parsing_sig ppf sourcefile outputprefix ast  =
-  if !Js_config.simple_binary_ast then
+  if !Js_config.simple_binary_ast then begin
     let oc = open_out_bin (outputprefix ^ Literals.suffix_mliast_simple) in 
     Ml_binary.write_ast Mli sourcefile ast oc;
     close_out oc ;
+  end;
   if !Js_config.binary_ast then
     Binary_ast.write_ast
       Mli
@@ -81,10 +82,11 @@ let interface_mliast ppf sourcefile outputprefix  =
   |> after_parsing_sig ppf sourcefile outputprefix 
   
 let after_parsing_impl ppf sourcefile outputprefix ast =
-  if !Js_config.simple_binary_ast then
+  if !Js_config.simple_binary_ast then begin
     let oc = open_out_bin (outputprefix ^ Literals.suffix_mlast_simple) in 
     Ml_binary.write_ast Ml sourcefile ast oc;
     close_out oc ;
+  end;
   if !Js_config.binary_ast then 
       Binary_ast.write_ast ~fname:sourcefile 
         Ml ~output:(outputprefix ^ Literals.suffix_mlast)
