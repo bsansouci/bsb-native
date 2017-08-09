@@ -189,14 +189,3 @@ let get_list_of_output_js
         (Ext_filename.output_js_basename output_file_sans_extension)
       :: acc
     ) package_specs []
-
-let get_package_specs_from_array arr =  
-  arr
-  |> Bsb_build_util.get_list_string
-  |> List.fold_left (fun acc x ->
-      let v =
-        if supported_format x    then String_set.add x acc
-        else
-          failwith ("Unkonwn package spec" ^ x) in
-      v
-    ) String_set.empty 

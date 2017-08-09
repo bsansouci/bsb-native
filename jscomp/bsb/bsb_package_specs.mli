@@ -24,9 +24,9 @@
 
 type t
 
-val package_flag: format:string -> string -> string
+(* val package_flag: t -> string -> string *)
 
-val package_output: format:string -> string -> string
+(* val package_output: t -> string -> string *)
 
 val supported_format : string -> bool
 
@@ -44,5 +44,5 @@ val get_list_of_output_js :
 val package_flag_of_package_specs : 
   t -> string -> string
 
-val get_package_specs_from_array : 
-  Ext_json_types.t array -> t
+(* val get_package_specs_from_array : 
+  Ext_json_types.t array -> t *)

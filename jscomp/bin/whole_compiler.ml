@@ -25767,13 +25767,7 @@ val read_ast : 'a Ml_binary.kind -> string -> 'a
    Use case cat - | fan -printer -impl -
    redirect the standard input to fan
  *)
-<<<<<<< ours
 val write_ast : fname:string -> output:string -> 'a Ml_binary.kind -> 'a -> unit
-
-=======
-val write_ast : fname:string -> output:string -> 'a Ast_extract.kind -> 'a -> unit
-val write_ast_simple : fname:string -> output:string -> 'a Ast_extract.kind -> 'a -> unit
->>>>>>> theirs
 
 end = struct
 #1 "binary_ast.ml"
@@ -25808,16 +25802,8 @@ module String_set = Ast_extract.String_set
 
 
 
-<<<<<<< ours
 
 let read_ast (type t ) (kind : t  Ml_binary.kind) fn : t  =
-=======
-let read_ast (type t ) (kind : t  Ast_extract.kind) fn : t  =
-  let magic =
-    match kind with 
-    | Ast_extract.Ml -> Config.ast_impl_magic_number
-    | Ast_extract.Mli -> Config.ast_intf_magic_number in 
->>>>>>> theirs
   let ic = open_in_bin fn in
   try
     let dep_size = input_binary_int ic in 
@@ -25849,17 +25835,6 @@ let write_ast (type t) ~(fname : string) ~output (kind : t Ml_binary.kind) ( pt 
   output_string oc buf_contents; 
   Ml_binary.write_ast kind fname pt oc;
   close_out oc 
-
-let write_ast_simple (type t) ~(fname : string) ~output (kind : t Ast_extract.kind) ( pt : t) : unit =
-  let magic =
-    match kind with
-    | Ast_extract.Ml -> Config.ast_impl_magic_number
-    | Ast_extract.Mli -> Config.ast_intf_magic_number in
-  let oc = open_out_bin output in
-  output_string oc magic;
-  output_value oc fname;
-  output_value oc pt;
-  close_out oc;
 
 end
 module Ast_literal : sig 
@@ -111016,18 +110991,16 @@ let print_if ppf flag printer arg =
 
 let after_parsing_sig ppf sourcefile outputprefix ast  =
   if !Js_config.simple_binary_ast then
-      Binary_ast.write_ast_simple
-        Mli
-        ~fname:sourcefile
-        ~output:(outputprefix ^ Literals.suffix_mliast_simple)
-        ast ;
+    let oc = open_out_bin (outputprefix ^ Literals.suffix_mliast_simple) in 
+    Ml_binary.write_ast Mli sourcefile ast oc;
+    close_out oc ;
   if !Js_config.binary_ast then
-      Binary_ast.write_ast
-        Mli
-        ~fname:sourcefile
-        ~output:(outputprefix ^ Literals.suffix_mliast)
-        (* to support relocate to another directory *)
-        ast;
+    Binary_ast.write_ast
+      Mli
+      ~fname:sourcefile
+      ~output:(outputprefix ^ Literals.suffix_mliast)
+      (* to support relocate to another directory *)
+      ast;
   if !Js_config.syntax_only then () else 
     begin 
       if not @@ !Js_config.no_warn_unused_bs_attribute then 
@@ -111070,9 +111043,9 @@ let interface_mliast ppf sourcefile outputprefix  =
   
 let after_parsing_impl ppf sourcefile outputprefix ast =
   if !Js_config.simple_binary_ast then
-    Binary_ast.write_ast_simple ~fname:sourcefile 
-        Ml ~output:(outputprefix ^ Literals.suffix_mlast_simple) 
-        ast ;
+    let oc = open_out_bin (outputprefix ^ Literals.suffix_mlast_simple) in 
+    Ml_binary.write_ast Ml sourcefile ast oc;
+    close_out oc ;
   if !Js_config.binary_ast then 
       Binary_ast.write_ast ~fname:sourcefile 
         Ml ~output:(outputprefix ^ Literals.suffix_mlast)

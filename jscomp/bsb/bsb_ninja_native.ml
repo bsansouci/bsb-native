@@ -53,7 +53,7 @@ let handle_file_group oc
   acc
   (group: Bsb_parse_sources.file_group) : Bsb_ninja_file_groups.info =
   let handle_module_info  oc  module_name
-      ( module_info : Binary_cache.module_info)
+      ( module_info : Bsb_build_cache.module_info)
       info  =
     let installable =
       match group.public with
@@ -104,11 +104,11 @@ let handle_file_group oc
         | `Re ->
           let input, rule = 
             if kind = `Re then
-              input, Rules.build_ast_and_deps_from_reason_impl_simple
+              input, Rules.build_ast_and_module_sets_from_re
             (* else if kind = `Mll then
               output_ml, Rules.build_ast_and_deps_simple *)
             else
-              input, Rules.build_ast_and_deps_simple
+              input, Rules.build_ast_and_module_sets
           in
           begin
             output_build oc
@@ -162,8 +162,8 @@ let handle_file_group oc
         | `Mli
         | `Rei ->
           let rule =
-            if kind = `Mli then Rules.build_ast_and_deps_simple
-            else Rules.build_ast_and_deps_from_reason_intf_simple
+            if kind = `Mli then Rules.build_ast_and_module_sets
+            else Rules.build_ast_and_module_sets_from_rei
           in
           output_build oc
             ~output:output_mliast
@@ -196,14 +196,14 @@ let handle_file_group oc
       end
     in
     begin match module_info.ml with
-      | Ml input -> emit_build `Ml input
-      | Re input -> emit_build `Re input
+      | Ml_source (input, false) -> emit_build `Ml input
+      | Ml_source (input, true) -> emit_build `Re input
       | Ml_empty -> Bsb_ninja_file_groups.zero
     end ++
     begin match module_info.mli with
-      | Mli mli_file  ->
+      | Mli_source (mli_file, false)  ->
         emit_build `Mli mli_file
-      | Rei rei_file ->
+      | Mli_source (rei_file, true) ->
         emit_build `Rei rei_file
       | Mli_empty -> Bsb_ninja_file_groups.zero
     end ++
@@ -259,13 +259,13 @@ let link oc ret ~entries ~file_groups ~static_libraries =
     end in
     let (all_mlast_files, all_cmo_or_cmx_files, all_cmi_files) =
       List.fold_left (fun acc group -> 
-        String_map.fold (fun _ (v : Binary_cache.module_info) (all_mlast_files, all_cmo_or_cmx_files, all_cmi_files) -> 
+        String_map.fold (fun _ (v : Bsb_build_cache.module_info) (all_mlast_files, all_cmo_or_cmx_files, all_cmi_files) -> 
           let mlname = match v.ml with
-            | Ml input | Re input -> Some (Ext_filename.chop_extension_if_any input)
+            | Ml_source (input, _) -> Some (Ext_filename.chop_extension_if_any input)
             | Ml_empty -> None
           in
           let mliname = match v.mli with
-            | Mli input | Rei input -> Some (Ext_filename.chop_extension_if_any input)
+            | Mli_source (input, _) -> Some (Ext_filename.chop_extension_if_any input)
             | Mli_empty -> None in
           begin match (mlname, mliname) with
           | None, None -> failwith "Got a source file without an ml or mli file. This should not happen."
@@ -310,13 +310,13 @@ let pack oc ret ~cmdline_build_kind ~file_groups =
      files that are used by the main project. *)
   let all_cmo_or_cmx_files, all_cmi_files =
     List.fold_left (fun acc group -> 
-      String_map.fold (fun _ (v : Binary_cache.module_info) (all_cmo_or_cmx_files, all_cmi_files) -> 
+      String_map.fold (fun _ (v : Bsb_build_cache.module_info) (all_cmo_or_cmx_files, all_cmi_files) -> 
         let mlname = match v.ml with
-          | Ml input | Re input -> Some (Ext_filename.chop_extension_if_any input)
+          | Ml_source (input, _) -> Some (Ext_filename.chop_extension_if_any input)
           | Ml_empty -> None
         in
         let mliname = match v.mli with
-          | Mli input | Rei input -> Some (Ext_filename.chop_extension_if_any input)
+          | Mli_source (input, _) -> Some (Ext_filename.chop_extension_if_any input)
           | Mli_empty -> None in
         match (mlname, mliname) with
         | None, None -> failwith "Got a source file without an ml or mli file. This should not happen."
