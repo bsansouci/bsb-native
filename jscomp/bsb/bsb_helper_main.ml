@@ -43,6 +43,8 @@ let collect_file name =
   batch_files := name :: !batch_files
 
 (* let output_prefix = ref None *)
+let ocamlfind_packages = ref []
+
 let dev_group = ref 0
 let namespace = ref None
 let link link_byte_or_native = 
@@ -55,7 +57,7 @@ let link link_byte_or_native =
       ~includes:!includes
       ~batch_files:!batch_files
       ~clibs:(List.rev !clibs)
-      ~cwd:(Sys.getcwd ())
+      ~ocamlfind_packages:!ocamlfind_packages
   end
 
 let anonymous filename =
@@ -128,13 +130,16 @@ let () =
 
     "-link-native", (Arg.String (fun x -> link (Bsb_helper_linker.LinkNative x))),
     " link native files into an executable";
-
+    
+    "-package", (Arg.String (fun x -> ocamlfind_packages := "-package" :: x :: !ocamlfind_packages)),
+    " add an ocamlfind pacakge to be packed/linked";
+    
     "-pack-native-library", (Arg.Unit (fun () -> 
       Bsb_helper_packer.pack
         Bsb_helper_packer.PackNative
         ~includes:!includes
         ~batch_files:!batch_files
-        ~cwd:(Sys.getcwd ())
+        ~ocamlfind_packages:!ocamlfind_packages
     )),
     " pack native files (cmx) into a library file (cmxa)";
 
@@ -143,7 +148,7 @@ let () =
         Bsb_helper_packer.PackBytecode
         ~includes:!includes
         ~batch_files:!batch_files
-        ~cwd:(Sys.getcwd ())
+        ~ocamlfind_packages:!ocamlfind_packages
     )),
     " pack bytecode files (cmo) into a library file (cma)";
 

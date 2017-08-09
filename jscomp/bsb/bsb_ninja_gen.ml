@@ -44,6 +44,7 @@ let merge_module_info_map acc sources =
 let bsc_exe = "bsc.exe"
 let ocamlc_exe = "ocamlc.opt"
 let ocamlopt_exe = "ocamlopt.opt"
+let ocamlfind = "ocamlfind"
 let bsb_helper_exe = "bsb_helper.exe"
 let dash_i = "-I"
 let refmt_exe = "refmt.exe"
@@ -80,6 +81,7 @@ let output_ninja
       static_libraries;
       build_script;
       allowed_build_kinds;
+      ocamlfind_packages;
     } : Bsb_config_types.t)
   =
   let custom_rules = Bsb_rule.reset generators in 
@@ -96,8 +98,10 @@ let output_ninja
   let oc = open_out_bin (cwd // Bsb_config.lib_bs // nested // Literals.build_ninja) in
   let bsc = bsc_dir // bsc_exe in   (* The path to [bsc.exe] independent of config  *)
   let bsb_helper = bsc_dir // bsb_helper_exe in (* The path to [bsb_heler.exe] *)
-  let ocamlc = ocaml_dir // ocamlc_exe in
-  let ocamlopt = ocaml_dir // ocamlopt_exe in
+  let ocamlc = "ocamlc" in
+  let ocamlopt = "ocamlopt" in
+  (* let ocamlc = ocaml_dir // ocamlc_exe in
+  let ocamlopt = ocaml_dir // ocamlopt_exe in *)
   (* let builddir = Bsb_config.lib_bs in  *)
   let ppx_flags = Bsb_build_util.flag_concat dash_ppx ppx_flags in
   let bsc_flags =  String.concat Ext_string.single_space bsc_flags in
@@ -146,6 +150,8 @@ let output_ninja
           Bsb_ninja_global_vars.external_deps_for_linking, Bsb_build_util.flag_concat dash_i external_deps_for_linking;
           Bsb_ninja_global_vars.ocamlc, ocamlc;
           Bsb_ninja_global_vars.ocamlopt, ocamlopt;
+          Bsb_ninja_global_vars.ocamlfind, ocamlfind;
+          Bsb_ninja_global_vars.ocamlfind_packages,  Bsb_build_util.flag_concat "-package" ocamlfind_packages;
           Bsb_build_schemas.bsb_dir_group, "0"  (*TODO: avoid name conflict in the future *)
         |] oc ;
     in

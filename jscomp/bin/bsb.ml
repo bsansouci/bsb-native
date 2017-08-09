@@ -87,6 +87,7 @@ let static_libraries = "static_libraries"
 let c_linker_flags = "c_linker_flags"
 let build_script = "build_script"
 let allowed_build_kinds = "allowed-build-kinds"
+let ocamlfind_packages = "ocamlfind-packages"
 
 >>>>>>> theirs
 end
@@ -10377,6 +10378,7 @@ type t =
     static_libraries: string list;
     build_script: string option;
     allowed_build_kinds: compilation_kind_t list;
+    ocamlfind_packages: string list;
   }
 
 end
@@ -19025,6 +19027,7 @@ let interpret_json
   *)
   let bsc_flags = ref Bsb_default.bsc_flags in  
   let warnings = ref Bsb_default.warnings in
+  let ocamlfind_packages = ref [] in
   let ppx_flags = ref []in 
 
   let js_post_build_cmd = ref None in 
@@ -19178,6 +19181,7 @@ open Location
     |? (Bsb_build_schemas.c_linker_flags, `Arr (fun s -> static_libraries := (List.fold_left (fun acc v -> "-ccopt" :: v :: acc) [] (List.rev (get_list_string s))) @ !static_libraries))
     |? (Bsb_build_schemas.build_script, `Str (fun s -> build_script := Some s))
     |? (Bsb_build_schemas.allowed_build_kinds, `Arr (fun s -> allowed_build_kinds := get_allowed_build_kinds s))
+    |? (Bsb_build_schemas.ocamlfind_packages, `Arr (fun s -> ocamlfind_packages := get_list_string s))
     |> ignore ;
     begin match String_map.find_opt Bsb_build_schemas.sources map with 
       | Some x -> 
@@ -19235,6 +19239,7 @@ open Location
           static_libraries = !static_libraries;
           build_script = !build_script;
           allowed_build_kinds = !allowed_build_kinds;
+          ocamlfind_packages = !ocamlfind_packages;
         }
       | None -> failwith "no sources specified, please checkout the schema for more details"
     end
@@ -19583,6 +19588,8 @@ let refmt_flags = "refmt_flags"
 
 let ocamlc = "ocamlc"
 let ocamlopt = "ocamlopt"
+let ocamlfind = "ocamlfind"
+let ocamlfind_packages = "ocamlfind_packages"
 
 let external_deps_for_linking = "external_deps_for_linking"
 
@@ -20302,28 +20309,28 @@ end
 =======
 let build_cmo_cmi_bytecode =
   define
-    ~command:"${ocamlc} ${bs_package_includes} ${bsc_lib_includes} ${bsc_extra_includes} \
+    ~command:"${ocamlfind} ${ocamlc} ${bs_package_includes} ${bsc_lib_includes} ${ocamlfind_packages} ${bsc_extra_includes} \
               -o ${out} ${warnings} -c -intf-suffix .mliast_simple -impl ${in}_simple ${postbuild}"
     ~depfile:"${in}.d"
     "build_cmo_cmi_bytecode"
     
 let build_cmi_bytecode =
   define
-    ~command:"${ocamlc} ${bs_package_includes} ${bsc_lib_includes} ${bsc_extra_includes} \
+    ~command:"${ocamlfind} ${ocamlc} ${bs_package_includes} ${bsc_lib_includes} ${ocamlfind_packages} ${bsc_extra_includes} \
               -o ${out} ${warnings} -c -intf ${in}_simple ${postbuild}"
     ~depfile:"${in}.d"
     "build_cmi_bytecode"
 
 let build_cmx_cmi_native =
   define
-    ~command:"${ocamlopt} ${bs_package_includes} ${bsc_lib_includes} ${bsc_extra_includes} \
+    ~command:"${ocamlfind} ${ocamlopt} ${bs_package_includes} ${bsc_lib_includes} ${ocamlfind_packages} ${bsc_extra_includes} \
               -o ${out} ${warnings} -c -intf-suffix .mliast_simple -impl ${in}_simple ${postbuild}"
     ~depfile:"${in}.d"
     "build_cmx_cmi_native"
 
 let build_cmi_native =
   define
-    ~command:"${ocamlopt} ${bs_package_includes} ${bsc_lib_includes} ${bsc_extra_includes} \
+    ~command:"${ocamlfind} ${ocamlopt} ${bs_package_includes} ${bsc_lib_includes} ${ocamlfind_packages} ${bsc_extra_includes} \
               -o ${out} ${warnings} -c -intf ${in}_simple ${postbuild}"
     ~depfile:"${in}.d"
     "build_cmi_native"
@@ -20331,24 +20338,24 @@ let build_cmi_native =
 
 let linking_bytecode =
   define
-    ~command:"${bsb_helper} -bs-main ${main_module} ${static_libraries} ${external_deps_for_linking} ${in} -link-bytecode ${out}"
+    ~command:"${bsb_helper} -bs-main ${main_module} ${static_libraries} ${ocamlfind_packages} ${external_deps_for_linking} ${in} -link-bytecode ${out}"
     "linking_bytecode"
 
 let linking_native =
   define
-    ~command:"${bsb_helper} -bs-main ${main_module} ${static_libraries} ${external_deps_for_linking} ${in} -link-native ${out}"
+    ~command:"${bsb_helper} -bs-main ${main_module} ${static_libraries} ${ocamlfind_packages} ${external_deps_for_linking} ${in} -link-native ${out}"
     "linking_native"
 
 
 let build_cma_library =
   define
-    ~command:"${bsb_helper} ${static_libraries} ${bs_package_includes} ${bsc_lib_includes} ${bsc_extra_includes} \
+    ~command:"${bsb_helper} ${static_libraries} ${ocamlfind_packages} ${bs_package_includes} ${bsc_lib_includes} ${bsc_extra_includes} \
               ${in} -pack-bytecode-library"
     "build_cma_library"
 
 let build_cmxa_library =
   define
-    ~command:"${bsb_helper} ${static_libraries} ${bs_package_includes} ${bsc_lib_includes} ${bsc_extra_includes} \
+    ~command:"${bsb_helper} ${static_libraries} ${ocamlfind_packages} ${bs_package_includes} ${bsc_lib_includes} ${bsc_extra_includes} \
               ${in} -pack-native-library"
     "build_cmxa_library"
 
@@ -21402,6 +21409,7 @@ let merge_module_info_map acc sources =
 let bsc_exe = "bsc.exe"
 let ocamlc_exe = "ocamlc.opt"
 let ocamlopt_exe = "ocamlopt.opt"
+let ocamlfind = "ocamlfind"
 let bsb_helper_exe = "bsb_helper.exe"
 let dash_i = "-I"
 let refmt_exe = "refmt.exe"
@@ -21437,6 +21445,7 @@ let output_ninja
       static_libraries;
       build_script;
       allowed_build_kinds;
+      ocamlfind_packages;
     } : Bsb_config_types.t)
   =
   let custom_rules = Bsb_rule.reset generators in 
@@ -21453,8 +21462,10 @@ let output_ninja
   let oc = open_out_bin (cwd // Bsb_config.lib_bs // nested // Literals.build_ninja) in
   let bsc = bsc_dir // bsc_exe in   (* The path to [bsc.exe] independent of config  *)
   let bsb_helper = bsc_dir // bsb_helper_exe in (* The path to [bsb_heler.exe] *)
-  let ocamlc = ocaml_dir // ocamlc_exe in
-  let ocamlopt = ocaml_dir // ocamlopt_exe in
+  let ocamlc = "ocamlc" in
+  let ocamlopt = "ocamlopt" in
+  (* let ocamlc = ocaml_dir // ocamlc_exe in
+  let ocamlopt = ocaml_dir // ocamlopt_exe in *)
   (* let builddir = Bsb_config.lib_bs in  *)
   let ppx_flags = Bsb_build_util.flag_concat dash_ppx ppx_flags in
   let bsc_flags =  String.concat Ext_string.single_space bsc_flags in
@@ -21494,6 +21505,8 @@ let output_ninja
           Bsb_ninja_global_vars.external_deps_for_linking, Bsb_build_util.flag_concat dash_i external_deps_for_linking;
           Bsb_ninja_global_vars.ocamlc, ocamlc;
           Bsb_ninja_global_vars.ocamlopt, ocamlopt;
+          Bsb_ninja_global_vars.ocamlfind, ocamlfind;
+          Bsb_ninja_global_vars.ocamlfind_packages,  Bsb_build_util.flag_concat "-package" ocamlfind_packages;
           Bsb_build_schemas.bsb_dir_group, "0"  (*TODO: avoid name conflict in the future *)
         |] oc ;
     in
