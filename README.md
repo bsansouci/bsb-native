@@ -30,6 +30,8 @@ The `-w` enabled the watch mode which will rebuild on any source file change.
 
 The `-backend` flag tells `bsb-native` to build all entries marked as building to bytecode.
 
+The build artifacts are put into a folder called `lib`. The executable, in this example, would be at `lib/bs/bytecode/index.byte`
+
 ## Multi-target
 `bsb-native` actually supports building Reason/OCaml to JS as well as to native/bytecode. What that enables is code that is truly cross platform, that depends on a JS implementation of a library or a native implementation, and bsb-native will build the right implementation depending on what you target.
 
