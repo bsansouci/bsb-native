@@ -64,7 +64,10 @@ type t =
     entries : entries_t list ;
     generators : string String_map.t ; 
     cut_generators : bool; (* note when used as a dev mode, we will always ignore it *)
-
+    
+    
+    bs_super_errors : bool;
+    
     static_libraries: string list;
     build_script: string option;
     allowed_build_kinds: compilation_kind_t list;

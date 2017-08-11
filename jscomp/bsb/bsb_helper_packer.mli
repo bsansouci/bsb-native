@@ -24,4 +24,9 @@
 
 type pack_t = PackBytecode | PackNative
 
-val pack : pack_t -> batch_files:string list -> includes:string list -> ocamlfind_packages:string list -> unit
+val pack : pack_t -> 
+  batch_files:string list -> 
+  includes:string list -> 
+  ocamlfind_packages:string list -> 
+  bs_super_errors:bool -> 
+  unit

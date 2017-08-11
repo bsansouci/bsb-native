@@ -24,4 +24,11 @@
 
 type link_t = LinkBytecode of string | LinkNative of string
 
-val link : link_t -> main_module:string -> batch_files:string list -> clibs:string list -> includes:string list -> ocamlfind_packages:string list -> unit
+val link : link_t -> 
+  main_module:string -> 
+  batch_files:string list -> 
+  clibs:string list -> 
+  includes:string list -> 
+  ocamlfind_packages:string list -> 
+  bs_super_errors:bool -> 
+  unit

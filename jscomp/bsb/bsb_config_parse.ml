@@ -128,6 +128,7 @@ let interpret_json
   let package_name = ref None in 
   let namespace = ref false in 
   let bs_external_includes = ref [] in 
+  let bs_super_errors = ref false in
   let allowed_build_kinds = ref Bsb_default.allowed_build_kinds in
   (** we should not resolve it too early,
       since it is external configuration, no {!Bsb_build_util.convert_and_resolve_path}
@@ -260,6 +261,7 @@ let interpret_json
     |? (Bsb_build_schemas.build_script, `Str (fun s -> build_script := Some s))
     |? (Bsb_build_schemas.allowed_build_kinds, `Arr (fun s -> allowed_build_kinds := get_allowed_build_kinds s))
     |? (Bsb_build_schemas.ocamlfind_dependencies, `Arr (fun s -> ocamlfind_dependencies := get_list_string s))
+    |? (Bsb_build_schemas.bs_super_errors, `Bool (fun b -> bs_super_errors := b))
     |> ignore ;
     begin match String_map.find_opt Bsb_build_schemas.sources map with 
       | Some x -> 
@@ -319,7 +321,10 @@ let interpret_json
           entries = !entries;
           generators = !generators ; 
           cut_generators = !cut_generators;
-
+          
+          
+          bs_super_errors = !bs_super_errors;
+          
           static_libraries = !static_libraries;
           build_script = !build_script;
           allowed_build_kinds = !allowed_build_kinds;

@@ -45,6 +45,8 @@ let collect_file name =
 (* let output_prefix = ref None *)
 let ocamlfind_packages = ref []
 
+let bs_super_errors = ref false
+
 let dev_group = ref 0
 let namespace = ref None
 let link link_byte_or_native = 
@@ -58,6 +60,7 @@ let link link_byte_or_native =
       ~batch_files:!batch_files
       ~clibs:(List.rev !clibs)
       ~ocamlfind_packages:!ocamlfind_packages
+      ~bs_super_errors:!bs_super_errors
   end
 
 let anonymous filename =
@@ -140,6 +143,7 @@ let () =
         ~includes:!includes
         ~batch_files:!batch_files
         ~ocamlfind_packages:!ocamlfind_packages
+        ~bs_super_errors:!bs_super_errors
     )),
     " pack native files (cmx) into a library file (cmxa)";
 
@@ -149,9 +153,13 @@ let () =
         ~includes:!includes
         ~batch_files:!batch_files
         ~ocamlfind_packages:!ocamlfind_packages
+        ~bs_super_errors:!bs_super_errors
     )),
     " pack bytecode files (cmo) into a library file (cma)";
-
+    
+    "-bs-super-errors", (Arg.Bool (fun b -> bs_super_errors := b)),
+    " Better error message combined with other tools ";
+    
     "-add-clib", (Arg.String add_clib),
     " adds a .a library file to be linked into the final executable"
     ] anonymous usage

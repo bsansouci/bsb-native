@@ -76,6 +76,9 @@ let output_ninja
       reason_react_jsx;
       generators ;
       namespace ; 
+        
+      
+      bs_super_errors;
       
       entries;
       static_libraries;
@@ -106,6 +109,7 @@ let output_ninja
   let ppx_flags = Bsb_build_util.flag_concat dash_ppx ppx_flags in
   let bsc_flags =  String.concat Ext_string.single_space bsc_flags in
   let refmt_flags = String.concat Ext_string.single_space refmt_flags in
+  let bs_super_errors = if bs_super_errors then "-bs-super-errors" else "" in
   begin
     let () =
       
@@ -146,7 +150,16 @@ let output_ninja
              ; (* make it configurable in the future *)
           Bsb_ninja_global_vars.refmt_flags, refmt_flags;
           Bsb_ninja_global_vars.namespace , namespace_flag ; 
-
+          
+          Bsb_ninja_global_vars.bs_super_errors_ocamlfind, 
+          (* Jumping through hoops. When ocamlfind is used we need to pass the argument 
+             to the underlying compiler and not ocamlfind, so we use -passopt. Otherwise we don't.
+             For bsb_helper we also don't. *)
+            if ocamlfind_dependencies <> [] && String.length bs_super_errors > 0 
+              then "-passopt " ^ bs_super_errors 
+              else bs_super_errors;
+          Bsb_ninja_global_vars.bs_super_errors, bs_super_errors;
+          
           Bsb_ninja_global_vars.external_deps_for_linking, Bsb_build_util.flag_concat dash_i external_deps_for_linking;
           Bsb_ninja_global_vars.ocamlc, if ocamlfind_dependencies = [] then ocamlc ^ ".opt" else ocamlc;
           Bsb_ninja_global_vars.ocamlopt, if ocamlfind_dependencies = [] then ocamlopt ^ ".opt" else ocamlopt;

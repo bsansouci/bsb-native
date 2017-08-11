@@ -98,7 +98,6 @@ bin/bsdep.ml : syntax/ast_signature.mli
 bin/bsdep.ml : syntax/ast_structure.mli
 bin/bsdep.ml : ../vendor/ocaml/driver/compenv.mli
 bin/bsdep.ml : ../vendor/ocaml/parsing/depend.mli
-bin/bsdep.ml : ../vendor/ocaml/parsing/parser.mli
 bin/bsdep.ml : ../vendor/ocaml/utils/terminfo.mli
 bin/bsdep.ml : ../vendor/ocaml/utils/warnings.mli
 bin/bsdep.ml : syntax/ast_attributes.mli

@@ -2802,6 +2802,9 @@ let namespace = "namespace"
 
 let package_sep = "-"
 
+let bs_super_errors = "bs_super_errors"
+let bs_super_errors_ocamlfind = "bs_super_errors_ocamlfind"
+
 let ocamlc = "ocamlc"
 let ocamlopt = "ocamlopt"
 let ocamlfind = "ocamlfind"
@@ -4515,7 +4518,14 @@ module Bsb_helper_linker : sig
 
 type link_t = LinkBytecode of string | LinkNative of string
 
-val link : link_t -> main_module:string -> batch_files:string list -> clibs:string list -> includes:string list -> ocamlfind_packages:string list -> unit
+val link : link_t -> 
+  main_module:string -> 
+  batch_files:string list -> 
+  clibs:string list -> 
+  includes:string list -> 
+  ocamlfind_packages:string list -> 
+  bs_super_errors:bool -> 
+  unit
 
 end = struct
 #1 "bsb_helper_linker.ml"
@@ -4545,7 +4555,7 @@ end = struct
 
 type link_t = LinkBytecode of string | LinkNative of string
 
-let link link_byte_or_native ~main_module ~batch_files ~clibs ~includes ~ocamlfind_packages =
+let link link_byte_or_native ~main_module ~batch_files ~clibs ~includes ~ocamlfind_packages ~bs_super_errors =
   let suffix_object_files, suffix_library_files, compiler, add_custom, output_file = begin match link_byte_or_native with
   | LinkBytecode output_file -> Literals.suffix_cmo, Literals.suffix_cma , "ocamlc"  , true, output_file
   | LinkNative output_file   -> Literals.suffix_cmx, Literals.suffix_cmxa, "ocamlopt", false, output_file
@@ -4595,12 +4605,16 @@ let link link_byte_or_native ~main_module ~batch_files ~clibs ~includes ~ocamlfi
      *)
     if ocamlfind_packages = [] then
       let compiler = compiler ^ ".opt" in
-      let list_of_args = compiler :: "-g" :: "-o" :: output_file :: all_object_files in
+      let list_of_args = (compiler :: "-g" 
+        :: (if bs_super_errors then ["-bs-super-errors"] else [])) 
+        @ "-o" :: output_file :: all_object_files in
       Unix.execvp
         compiler
         (Array.of_list (list_of_args))
     else begin
-      let list_of_args = ("ocamlfind" :: compiler :: "-linkpkg" :: ocamlfind_packages) @ ("-g" :: "-o" :: output_file :: all_object_files) in
+      let list_of_args = ("ocamlfind" :: compiler :: "-linkpkg" :: ocamlfind_packages) 
+        @ (if bs_super_errors then ["-passopt"; "-bs-super-errors"] else []) 
+        @ ("-g" :: "-o" :: output_file :: all_object_files) in
       Unix.execvp
         "ocamlfind"
         (Array.of_list (list_of_args))
@@ -4637,7 +4651,12 @@ module Bsb_helper_packer : sig
 
 type pack_t = PackBytecode | PackNative
 
-val pack : pack_t -> batch_files:string list -> includes:string list -> ocamlfind_packages:string list -> unit
+val pack : pack_t -> 
+  batch_files:string list -> 
+  includes:string list -> 
+  ocamlfind_packages:string list -> 
+  bs_super_errors:bool -> 
+  unit
 
 end = struct
 #1 "bsb_helper_packer.ml"
@@ -4667,7 +4686,7 @@ end = struct
 
 type pack_t = PackBytecode | PackNative
 
-let pack pack_byte_or_native ~batch_files ~includes ~ocamlfind_packages =
+let pack pack_byte_or_native ~batch_files ~includes ~ocamlfind_packages ~bs_super_errors =
   let suffix_object_files, suffix_library_files, compiler, custom_flag = begin match pack_byte_or_native with
   | PackBytecode -> Literals.suffix_cmo, Literals.suffix_cma , "ocamlc", true
   | PackNative   -> Literals.suffix_cmx, Literals.suffix_cmxa, "ocamlopt", false
@@ -4710,9 +4729,12 @@ let pack pack_byte_or_native ~batch_files ~includes ~ocamlfind_packages =
       let compiler = compiler ^ ".opt" in
       Unix.execvp
         compiler
-          (Array.of_list (compiler :: "-a" :: "-g" :: "-o" :: (Literals.library_file ^ suffix_library_files) :: includes @ all_object_files))
+          (Array.of_list ((compiler :: "-a" :: "-g" :: (if bs_super_errors then ["-bs-super-errors"] else []) )
+            @ "-o" :: (Literals.library_file ^ suffix_library_files) :: includes @ all_object_files))
     else begin
-      let list_of_args = ("ocamlfind" :: compiler :: "-a" :: "-g" :: ocamlfind_packages) @  ("-o" :: (Literals.library_file ^ suffix_library_files) :: includes @ all_object_files) in
+      let list_of_args = ("ocamlfind" :: compiler :: "-a" :: "-g" :: ocamlfind_packages) 
+      @ ((if bs_super_errors then ["-passopt"; "-bs-super-errors"] else []))
+      @  ("-o" :: (Literals.library_file ^ suffix_library_files) :: includes @ all_object_files) in
       Unix.execvp
         "ocamlfind"
           (Array.of_list list_of_args)
@@ -4808,6 +4830,8 @@ let collect_file name =
 (* let output_prefix = ref None *)
 let ocamlfind_packages = ref []
 
+let bs_super_errors = ref false
+
 let dev_group = ref 0
 let namespace = ref None
 let link link_byte_or_native = 
@@ -4821,6 +4845,7 @@ let link link_byte_or_native =
       ~batch_files:!batch_files
       ~clibs:(List.rev !clibs)
       ~ocamlfind_packages:!ocamlfind_packages
+      ~bs_super_errors:!bs_super_errors
   end
 
 let anonymous filename =
@@ -4903,6 +4928,7 @@ let () =
         ~includes:!includes
         ~batch_files:!batch_files
         ~ocamlfind_packages:!ocamlfind_packages
+        ~bs_super_errors:!bs_super_errors
     )),
     " pack native files (cmx) into a library file (cmxa)";
 
@@ -4912,9 +4938,13 @@ let () =
         ~includes:!includes
         ~batch_files:!batch_files
         ~ocamlfind_packages:!ocamlfind_packages
+        ~bs_super_errors:!bs_super_errors
     )),
     " pack bytecode files (cmo) into a library file (cma)";
-
+    
+    "-bs-super-errors", (Arg.Bool (fun b -> bs_super_errors := b)),
+    " Better error message combined with other tools ";
+    
     "-add-clib", (Arg.String add_clib),
     " adds a .a library file to be linked into the final executable"
     ] anonymous usage

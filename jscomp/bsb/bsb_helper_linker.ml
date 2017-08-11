@@ -24,7 +24,7 @@
 
 type link_t = LinkBytecode of string | LinkNative of string
 
-let link link_byte_or_native ~main_module ~batch_files ~clibs ~includes ~ocamlfind_packages =
+let link link_byte_or_native ~main_module ~batch_files ~clibs ~includes ~ocamlfind_packages ~bs_super_errors =
   let suffix_object_files, suffix_library_files, compiler, add_custom, output_file = begin match link_byte_or_native with
   | LinkBytecode output_file -> Literals.suffix_cmo, Literals.suffix_cma , "ocamlc"  , true, output_file
   | LinkNative output_file   -> Literals.suffix_cmx, Literals.suffix_cmxa, "ocamlopt", false, output_file
@@ -74,12 +74,16 @@ let link link_byte_or_native ~main_module ~batch_files ~clibs ~includes ~ocamlfi
      *)
     if ocamlfind_packages = [] then
       let compiler = compiler ^ ".opt" in
-      let list_of_args = compiler :: "-g" :: "-o" :: output_file :: all_object_files in
+      let list_of_args = (compiler :: "-g" 
+        :: (if bs_super_errors then ["-bs-super-errors"] else [])) 
+        @ "-o" :: output_file :: all_object_files in
       Unix.execvp
         compiler
         (Array.of_list (list_of_args))
     else begin
-      let list_of_args = ("ocamlfind" :: compiler :: "-linkpkg" :: ocamlfind_packages) @ ("-g" :: "-o" :: output_file :: all_object_files) in
+      let list_of_args = ("ocamlfind" :: compiler :: "-linkpkg" :: ocamlfind_packages) 
+        @ (if bs_super_errors then ["-passopt"; "-bs-super-errors"] else []) 
+        @ ("-g" :: "-o" :: output_file :: all_object_files) in
       Unix.execvp
         "ocamlfind"
         (Array.of_list (list_of_args))

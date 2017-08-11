@@ -78,6 +78,9 @@ let edge = "edge"
 let namespace = "namespace"
 let in_source = "in-source"
 
+
+let bs_super_errors = "bs-super-errors"
+
 let static_libraries = "static_libraries"
 let c_linker_flags = "c_linker_flags"
 let build_script = "build_script"

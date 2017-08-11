@@ -51,6 +51,9 @@ let namespace = "namespace"
 
 let package_sep = "-"
 
+let bs_super_errors = "bs_super_errors"
+let bs_super_errors_ocamlfind = "bs_super_errors_ocamlfind"
+
 let ocamlc = "ocamlc"
 let ocamlopt = "ocamlopt"
 let ocamlfind = "ocamlfind"

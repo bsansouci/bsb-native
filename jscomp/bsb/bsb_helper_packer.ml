@@ -24,7 +24,7 @@
 
 type pack_t = PackBytecode | PackNative
 
-let pack pack_byte_or_native ~batch_files ~includes ~ocamlfind_packages =
+let pack pack_byte_or_native ~batch_files ~includes ~ocamlfind_packages ~bs_super_errors =
   let suffix_object_files, suffix_library_files, compiler, custom_flag = begin match pack_byte_or_native with
   | PackBytecode -> Literals.suffix_cmo, Literals.suffix_cma , "ocamlc", true
   | PackNative   -> Literals.suffix_cmx, Literals.suffix_cmxa, "ocamlopt", false
@@ -67,9 +67,12 @@ let pack pack_byte_or_native ~batch_files ~includes ~ocamlfind_packages =
       let compiler = compiler ^ ".opt" in
       Unix.execvp
         compiler
-          (Array.of_list (compiler :: "-a" :: "-g" :: "-o" :: (Literals.library_file ^ suffix_library_files) :: includes @ all_object_files))
+          (Array.of_list ((compiler :: "-a" :: "-g" :: (if bs_super_errors then ["-bs-super-errors"] else []) )
+            @ "-o" :: (Literals.library_file ^ suffix_library_files) :: includes @ all_object_files))
     else begin
-      let list_of_args = ("ocamlfind" :: compiler :: "-a" :: "-g" :: ocamlfind_packages) @  ("-o" :: (Literals.library_file ^ suffix_library_files) :: includes @ all_object_files) in
+      let list_of_args = ("ocamlfind" :: compiler :: "-a" :: "-g" :: ocamlfind_packages) 
+      @ ((if bs_super_errors then ["-passopt"; "-bs-super-errors"] else []))
+      @  ("-o" :: (Literals.library_file ^ suffix_library_files) :: includes @ all_object_files) in
       Unix.execvp
         "ocamlfind"
           (Array.of_list list_of_args)
