@@ -101,7 +101,7 @@ function non_windows_npm_release() {
     console.log("Installing")
     child_process.execSync(make + ' VERBOSE=true install', working_config);
     if (!hasGlobalOcaml) {
-        child_process.execSync(make + ' install', {cwd: path.join(__dirname, "..", "ocaml_src"), stdio:[0, 1, 2]});
+        child_process.execSync(make + ' install', {cwd: path.join(__dirname, "..", "vendor", "ocaml"), stdio:[0, 1, 2]});
     }
 }
 
