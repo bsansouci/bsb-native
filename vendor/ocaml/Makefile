@@ -72,12 +72,15 @@ COMP=bytecomp/lambda.cmo bytecomp/printlambda.cmo \
   driver/pparse.cmo driver/main_args.cmo \
   driver/compenv.cmo driver/compmisc.cmo 
 
-EXT_SRCS = ext_color
-EXT_CMOS=$(addprefix ../../jscomp/ext/, $(addsuffix .cmo, $(EXT_SRCS)))
-SUPER_ERRORS_SRCS=super_misc super_warnings super_typecore super_typetexp super_location super_main
-SUPER_ERRORS_CMOS=$(addprefix ../../jscomp/super_errors/, $(addsuffix .cmo, $(SUPER_ERRORS_SRCS)))
 
-COMMON=$(UTILS) $(PARSING) $(TYPING) $(COMP) $(EXT_CMOS) $(SUPER_ERRORS_CMOS)
+# @Hack We hardcode `super_packed` here. It's generated with the following 
+# command:
+# ../../jscomp/bin/bspack.exe -bs-no-implicit-include -bs-main Super_main -I ../../jscomp/super_errors/ -I ../../jscomp/ext/ -o super_packed.ml
+# 
+# We probably should fix the makefile up to point to some rules which allow
+# building super_errors in a better way.
+#        Ben - August 11th 2017
+COMMON=$(UTILS) $(PARSING) $(TYPING) $(COMP) super_packed.cmo
 
 BYTECOMP=bytecomp/meta.cmo bytecomp/instruct.cmo bytecomp/bytegen.cmo \
   bytecomp/printinstr.cmo bytecomp/opcodes.cmo bytecomp/emitcode.cmo \
