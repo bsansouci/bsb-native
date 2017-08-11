@@ -72,7 +72,7 @@ COMP=bytecomp/lambda.cmo bytecomp/printlambda.cmo \
   driver/pparse.cmo driver/main_args.cmo \
   driver/compenv.cmo driver/compmisc.cmo 
 
-COMMON=$(UTILS) $(PARSING) $(TYPING) $(COMP)
+COMMON=$(UTILS) $(PARSING) $(TYPING) $(COMP) super_packed.cmo
 
 BYTECOMP=bytecomp/meta.cmo bytecomp/instruct.cmo bytecomp/bytegen.cmo \
   bytecomp/printinstr.cmo bytecomp/opcodes.cmo bytecomp/emitcode.cmo \

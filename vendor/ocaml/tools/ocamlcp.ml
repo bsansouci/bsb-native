@@ -41,6 +41,10 @@ let incompatible o =
 
 module Options = Main_args.Make_bytecomp_options (struct
   let _a () = make_archive := true; option "-a" ()
+  
+#if undefined  BS_NO_COMPILER_PATCH then 
+  let _super_errors () = ()
+#end
   let _absname = option "-absname"
   let _annot = option "-annot"
   let _binannot = option "-bin-annot"
