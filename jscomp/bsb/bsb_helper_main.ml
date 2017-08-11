@@ -157,7 +157,7 @@ let () =
     )),
     " pack bytecode files (cmo) into a library file (cma)";
     
-    "-bs-super-errors", (Arg.Bool (fun b -> bs_super_errors := b)),
+    "-bs-super-errors", (Arg.Unit (fun () -> bs_super_errors := true)),
     " Better error message combined with other tools ";
     
     "-add-clib", (Arg.String add_clib),
