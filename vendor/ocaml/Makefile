@@ -72,11 +72,12 @@ COMP=bytecomp/lambda.cmo bytecomp/printlambda.cmo \
   driver/pparse.cmo driver/main_args.cmo \
   driver/compenv.cmo driver/compmisc.cmo 
 
+EXT_SRCS = ext_color
+EXT_CMOS=$(addprefix ../../jscomp/ext/, $(addsuffix .cmo, $(EXT_SRCS)))
 SUPER_ERRORS_SRCS=super_misc super_warnings super_typecore super_typetexp super_location super_main
-
 SUPER_ERRORS_CMOS=$(addprefix ../../jscomp/super_errors/, $(addsuffix .cmo, $(SUPER_ERRORS_SRCS)))
 
-COMMON=$(UTILS) $(PARSING) $(TYPING) $(COMP) $(SUPER_ERRORS_CMOS)
+COMMON=$(UTILS) $(PARSING) $(TYPING) $(COMP) $(EXT_CMOS) $(SUPER_ERRORS_CMOS)
 
 BYTECOMP=bytecomp/meta.cmo bytecomp/instruct.cmo bytecomp/bytegen.cmo \
   bytecomp/printinstr.cmo bytecomp/opcodes.cmo bytecomp/emitcode.cmo \
