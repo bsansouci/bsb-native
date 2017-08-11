@@ -287,6 +287,7 @@ bin/whole_compiler.ml : ../vendor/ocaml/bytecomp/switch.ml
 bin/whole_compiler.ml : ../vendor/ocaml/driver/compenv.mli
 bin/whole_compiler.ml : ../vendor/ocaml/driver/compmisc.ml
 bin/whole_compiler.ml : ../vendor/ocaml/parsing/depend.mli
+bin/whole_compiler.ml : ../vendor/ocaml/parsing/parser.mli
 bin/whole_compiler.ml : ../vendor/ocaml/typing/datarepr.ml
 bin/whole_compiler.ml : ../vendor/ocaml/typing/parmatch.ml
 bin/whole_compiler.ml : ../vendor/ocaml/typing/printtyp.ml

@@ -11086,7 +11086,7 @@ let interpret_json
   let package_name = ref None in 
   let namespace = ref false in 
   let bs_external_includes = ref [] in 
-  let bs_super_errors = ref true in
+  let bs_super_errors = ref false in
   let allowed_build_kinds = ref Bsb_default.allowed_build_kinds in
   (** we should not resolve it too early,
       since it is external configuration, no {!Bsb_build_util.convert_and_resolve_path}
@@ -11219,9 +11219,7 @@ let interpret_json
     |? (Bsb_build_schemas.build_script, `Str (fun s -> build_script := Some s))
     |? (Bsb_build_schemas.allowed_build_kinds, `Arr (fun s -> allowed_build_kinds := get_allowed_build_kinds s))
     |? (Bsb_build_schemas.ocamlfind_dependencies, `Arr (fun s -> ocamlfind_dependencies := get_list_string s))
-    |? (Bsb_build_schemas.bs_super_errors, `Bool (fun b -> 
-      print_endline "It's set to false mannn";
-    bs_super_errors := b))
+    |? (Bsb_build_schemas.bs_super_errors, `Bool (fun b -> bs_super_errors := b))
     |> ignore ;
     begin match String_map.find_opt Bsb_build_schemas.sources map with 
       | Some x -> 
@@ -11556,6 +11554,7 @@ let namespace = "namespace"
 let package_sep = "-"
 
 let bs_super_errors = "bs_super_errors"
+let bs_super_errors_ocamlfind = "bs_super_errors_ocamlfind"
 
 let ocamlc = "ocamlc"
 let ocamlopt = "ocamlopt"
@@ -11844,28 +11843,28 @@ let build_cmi =
 
 let build_cmo_cmi_bytecode =
   define
-    ~command:"${ocamlfind} ${ocamlc} ${bs_super_errors} ${bs_package_includes} ${bsc_lib_includes} ${ocamlfind_dependencies} ${bsc_extra_includes} \
+    ~command:"${ocamlfind} ${ocamlc} ${bs_super_errors_ocamlfind} ${bs_package_includes} ${bsc_lib_includes} ${ocamlfind_dependencies} ${bsc_extra_includes} \
               -o ${out} ${warnings} -g -c -intf-suffix .mliast_simple -impl ${in}_simple ${postbuild}"
     ~depfile:"${in}.d"
     "build_cmo_cmi_bytecode"
     
 let build_cmi_bytecode =
   define
-    ~command:"${ocamlfind} ${ocamlc} ${bs_super_errors} ${bs_package_includes} ${bsc_lib_includes} ${ocamlfind_dependencies} ${bsc_extra_includes} \
+    ~command:"${ocamlfind} ${ocamlc} ${bs_super_errors_ocamlfind} ${bs_package_includes} ${bsc_lib_includes} ${ocamlfind_dependencies} ${bsc_extra_includes} \
               -o ${out} ${warnings} -g -c -intf ${in}_simple ${postbuild}"
     ~depfile:"${in}.d"
     "build_cmi_bytecode"
 
 let build_cmx_cmi_native =
   define
-    ~command:"${ocamlfind} ${ocamlopt} ${bs_super_errors} ${bs_package_includes} ${bsc_lib_includes} ${ocamlfind_dependencies} ${bsc_extra_includes} \
+    ~command:"${ocamlfind} ${ocamlopt} ${bs_super_errors_ocamlfind} ${bs_package_includes} ${bsc_lib_includes} ${ocamlfind_dependencies} ${bsc_extra_includes} \
               -o ${out} ${warnings} -g -c -intf-suffix .mliast_simple -impl ${in}_simple ${postbuild}"
     ~depfile:"${in}.d"
     "build_cmx_cmi_native"
 
 let build_cmi_native =
   define
-    ~command:"${ocamlfind} ${ocamlopt} ${bs_super_errors} ${bs_package_includes} ${bsc_lib_includes} ${ocamlfind_dependencies} ${bsc_extra_includes} \
+    ~command:"${ocamlfind} ${ocamlopt} ${bs_super_errors_ocamlfind} ${bs_package_includes} ${bsc_lib_includes} ${ocamlfind_dependencies} ${bsc_extra_includes} \
               -o ${out} ${warnings} -g -c -intf ${in}_simple ${postbuild}"
     ~depfile:"${in}.d"
     "build_cmi_native"
@@ -13103,10 +13102,14 @@ let output_ninja
           Bsb_ninja_global_vars.refmt_flags, refmt_flags;
           Bsb_ninja_global_vars.namespace , namespace_flag ; 
           
-          Bsb_ninja_global_vars.bs_super_errors, 
+          Bsb_ninja_global_vars.bs_super_errors_ocamlfind, 
+          (* Jumping through hoops. When ocamlfind is used we need to pass the argument 
+             to the underlying compiler and not ocamlfind, so we use -passopt. Otherwise we don't.
+             For bsb_helper we also don't. *)
             if ocamlfind_dependencies <> [] && String.length bs_super_errors > 0 
               then "-passopt " ^ bs_super_errors 
               else bs_super_errors;
+          Bsb_ninja_global_vars.bs_super_errors, bs_super_errors;
           
           Bsb_ninja_global_vars.external_deps_for_linking, Bsb_build_util.flag_concat dash_i external_deps_for_linking;
           Bsb_ninja_global_vars.ocamlc, if ocamlfind_dependencies = [] then ocamlc ^ ".opt" else ocamlc;
@@ -13244,9 +13247,7 @@ let output_ninja
   end
 
 end
-(** Interface as module  *)
-module Config
-= struct
+module Config : sig 
 #1 "config.mli"
 (***********************************************************************)
 (*                                                                     *)
@@ -13377,6 +13378,151 @@ val target : string
         (* Whether the compiler is a cross-compiler *)
 
 val print_config : out_channel -> unit;;
+
+end = struct
+#1 "config.ml"
+(***********************************************************************)
+(*                                                                     *)
+(*                                OCaml                                *)
+(*                                                                     *)
+(*            Xavier Leroy, projet Cristal, INRIA Rocquencourt         *)
+(*                                                                     *)
+(*  Copyright 1996 Institut National de Recherche en Informatique et   *)
+(*  en Automatique.  All rights reserved.  This file is distributed    *)
+(*  under the terms of the Q Public License version 1.0.               *)
+(*                                                                     *)
+(***********************************************************************)
+
+(***********************************************************************)
+(**                                                                   **)
+(**               WARNING WARNING WARNING                             **)
+(**                                                                   **)
+(** When you change this file, you must make the parallel change      **)
+(** in config.mlbuild                                                 **)
+(**                                                                   **)
+(***********************************************************************)
+
+
+(* The main OCaml version string has moved to ../VERSION *)
+let version = Sys.ocaml_version
+
+let standard_library_default = "/Users/benjamin/Desktop/bucklescript/vendor/ocaml/lib/ocaml"
+
+let standard_library =
+ 
+  try 
+    Sys.getenv "BSLIB"
+  with Not_found -> 
+
+    standard_library_default
+
+let standard_runtime = "/Users/benjamin/Desktop/bucklescript/vendor/ocaml/bin/ocamlrun"
+let ccomp_type = "cc"
+let bytecomp_c_compiler = "gcc -O  -Wall -D_FILE_OFFSET_BITS=64 -D_REENTRANT -O "
+let bytecomp_c_libraries = "-lcurses -lpthread"
+let native_c_compiler = "gcc -O  -D_FILE_OFFSET_BITS=64 -D_REENTRANT"
+let native_c_libraries = ""
+let native_pack_linker = "ld -r -arch x86_64  -o "
+let ranlib = "ranlib"
+let ar = "ar"
+let cc_profile = "-pg"
+let mkdll = "gcc -bundle -flat_namespace -undefined suppress -Wl,-no_compact_unwind"
+let mkexe = "gcc -Wl,-no_compact_unwind"
+let mkmaindll = "gcc -bundle -flat_namespace -undefined suppress -Wl,-no_compact_unwind"
+
+let exec_magic_number = "Caml1999X011"
+and cmi_magic_number = "Caml1999I017"
+and cmo_magic_number = "Caml1999O010"
+and cma_magic_number = "Caml1999A011"
+and cmx_magic_number = "Caml1999Y014"
+and cmxa_magic_number = "Caml1999Z013"
+and ast_impl_magic_number = "Caml1999M016"
+and ast_intf_magic_number = "Caml1999N015"
+and cmxs_magic_number = "Caml2007D002"
+and cmt_magic_number = "Caml2012T004"
+
+let load_path = ref ([] : string list)
+
+let interface_suffix = ref ".mli"
+
+let max_tag = 245
+(* This is normally the same as in obj.ml, but we have to define it
+   separately because it can differ when we're in the middle of a
+   bootstrapping phase. *)
+let lazy_tag = 246
+
+let max_young_wosize = 256
+let stack_threshold = 256 (* see byterun/config.h *)
+
+let architecture = "amd64"
+let model = "default"
+let system = "macosx"
+
+let asm = "clang -arch x86_64 -c"
+let asm_cfi_supported = true
+let with_frame_pointers = false
+
+let ext_obj = ".o"
+let ext_asm = ".s"
+let ext_lib = ".a"
+let ext_dll = ".so"
+
+let host = "x86_64-apple-darwin16.7.0"
+let target = "x86_64-apple-darwin16.7.0"
+
+let default_executable_name =
+  match Sys.os_type with
+    "Unix" -> "a.out"
+  | "Win32" | "Cygwin" -> "camlprog.exe"
+  | _ -> "camlprog"
+
+let systhread_supported = true;;
+
+let print_config oc =
+  let p name valu = Printf.fprintf oc "%s: %s\n" name valu in
+  let p_bool name valu = Printf.fprintf oc "%s: %B\n" name valu in
+  p "version" version;
+  p "standard_library_default" standard_library_default;
+  p "standard_library" standard_library;
+  p "standard_runtime" standard_runtime;
+  p "ccomp_type" ccomp_type;
+  p "bytecomp_c_compiler" bytecomp_c_compiler;
+  p "bytecomp_c_libraries" bytecomp_c_libraries;
+  p "native_c_compiler" native_c_compiler;
+  p "native_c_libraries" native_c_libraries;
+  p "native_pack_linker" native_pack_linker;
+  p "ranlib" ranlib;
+  p "cc_profile" cc_profile;
+  p "architecture" architecture;
+  p "model" model;
+  p "system" system;
+  p "asm" asm;
+  p_bool "asm_cfi_supported" asm_cfi_supported;
+  p_bool "with_frame_pointers" with_frame_pointers;
+  p "ext_obj" ext_obj;
+  p "ext_asm" ext_asm;
+  p "ext_lib" ext_lib;
+  p "ext_dll" ext_dll;
+  p "os_type" Sys.os_type;
+  p "default_executable_name" default_executable_name;
+  p_bool "systhread_supported" systhread_supported;
+  p "host" host;
+  p "target" target;
+
+  (* print the magic number *)
+  p "exec_magic_number" exec_magic_number;
+  p "cmi_magic_number" cmi_magic_number;
+  p "cmo_magic_number" cmo_magic_number;
+  p "cma_magic_number" cma_magic_number;
+  p "cmx_magic_number" cmx_magic_number;
+  p "cmxa_magic_number" cmxa_magic_number;
+  p "ast_impl_magic_number" ast_impl_magic_number;
+  p "ast_intf_magic_number" ast_intf_magic_number;
+  p "cmxs_magic_number" cmxs_magic_number;
+  p "cmt_magic_number" cmt_magic_number;
+
+  flush oc;
+;;
 
 end
 module Clflags : sig 

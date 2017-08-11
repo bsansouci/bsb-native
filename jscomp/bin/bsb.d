@@ -89,6 +89,7 @@ bin/bsb.ml : ext/ext_json_parse.ml
 bin/bsb.ml : ext/ext_json_types.ml
 bin/bsb.ml : ext/ext_pervasives.ml
 bin/bsb.ml : ext/string_hashtbl.ml
+bin/bsb.ml : ../vendor/ocaml/utils/config.ml
 bin/bsb.ml : bsb/bsb_build_cache.ml
 bin/bsb.ml : bsb/bsb_build_util.mli
 bin/bsb.ml : bsb/bsb_merlin_gen.mli
