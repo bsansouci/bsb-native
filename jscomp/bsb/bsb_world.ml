@@ -75,7 +75,7 @@ let install_targets ~cmdline_build_kind cwd (config : Bsb_config_types.t option)
 
 
 
-let build_bs_deps cwd ~root_project_dir ~cmdline_build_kind deps =
+let build_bs_deps cwd ~root_project_dir ~cmdline_build_kind ~main_bs_super_errors deps =
   let bsc_dir = Bsb_build_util.get_bsc_dir cwd in
   let ocaml_dir = Bsb_build_util.get_ocaml_dir bsc_dir in
   let vendor_ninja = bsc_dir // "ninja.exe" in
@@ -97,6 +97,7 @@ let build_bs_deps cwd ~root_project_dir ~cmdline_build_kind deps =
              ~root_project_dir
              ~forced:true
              ~cmdline_build_kind
+             ~main_bs_super_errors
              cwd bsc_dir ocaml_dir in (* set true to force regenrate ninja file so we have [config_opt]*)
            let config = begin match config_opt with 
             | None ->
@@ -145,5 +146,5 @@ let build_bs_deps cwd ~root_project_dir ~cmdline_build_kind deps =
 
 let make_world_deps cwd ~root_project_dir ~cmdline_build_kind =
   print_endline "\nMaking the dependency world!";
-  let deps = Bsb_config_parse.package_specs_from_bsconfig () in
-  build_bs_deps cwd ~root_project_dir ~cmdline_build_kind deps
+  let (deps, main_bs_super_errors) = Bsb_config_parse.package_specs_and_super_errors_from_bsconfig () in
+  build_bs_deps cwd ~root_project_dir ~cmdline_build_kind ~main_bs_super_errors deps

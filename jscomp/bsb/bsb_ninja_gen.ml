@@ -58,6 +58,7 @@ let output_ninja
     ~root_project_dir
     ~is_top_level
     ~cmdline_build_kind
+    ~main_bs_super_errors
     ({
       package_name;
       external_includes;
@@ -78,7 +79,7 @@ let output_ninja
       namespace ; 
         
       
-      bs_super_errors;
+      (* bs_super_errors; *)
       
       entries;
       static_libraries;
@@ -109,7 +110,7 @@ let output_ninja
   let ppx_flags = Bsb_build_util.flag_concat dash_ppx ppx_flags in
   let bsc_flags =  String.concat Ext_string.single_space bsc_flags in
   let refmt_flags = String.concat Ext_string.single_space refmt_flags in
-  let bs_super_errors = if bs_super_errors then "-bs-super-errors" else "" in
+  let bs_super_errors = if main_bs_super_errors then "-bs-super-errors" else "" in
   begin
     let () =
       

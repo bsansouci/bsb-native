@@ -34,6 +34,7 @@ let (//) = Ext_filename.combine
 *)
 let regenerate_ninja
   ?external_deps_for_linking_and_clibs
+  ?main_bs_super_errors
   ~is_top_level
   ~no_dev
   ~override_package_specs
@@ -158,7 +159,20 @@ let regenerate_ninja
             end
           end
         | Some all_deps -> all_deps in
-        Bsb_ninja_gen.output_ninja ~external_deps_for_linking_and_clibs ~cwd ~bsc_dir ~ocaml_dir ~root_project_dir ~is_top_level ~cmdline_build_kind:cmdline_build_kind config;
+        let main_bs_super_errors = begin match main_bs_super_errors with 
+          | None -> config.Bsb_config_types.bs_super_errors
+          | Some bs_super_errors -> bs_super_errors
+        end in 
+        Bsb_ninja_gen.output_ninja 
+          ~external_deps_for_linking_and_clibs 
+          ~cwd 
+          ~bsc_dir 
+          ~ocaml_dir 
+          ~root_project_dir 
+          ~is_top_level 
+          ~cmdline_build_kind 
+          ~main_bs_super_errors
+          config;
         Literals.bsconfig_json :: config.globbed_dirs
         |> List.map
           (fun x ->

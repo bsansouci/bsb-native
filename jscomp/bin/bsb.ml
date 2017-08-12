@@ -10939,8 +10939,8 @@ module Bsb_config_parse : sig
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
 
-val package_specs_from_bsconfig : 
-    unit -> Bsb_package_specs.t
+val package_specs_and_super_errors_from_bsconfig : 
+    unit -> (Bsb_package_specs.t * bool)
 
 
 
@@ -11043,17 +11043,20 @@ let parse_entries (field : Ext_json_types.t array) =
 
 
 
-let package_specs_from_bsconfig () = 
+let package_specs_and_super_errors_from_bsconfig () = 
   let json = Ext_json_parse.parse_json_from_file Literals.bsconfig_json in
   begin match json with
     | Obj {map} ->
-      begin 
+      let package_specs = begin 
         match String_map.find_opt Bsb_build_schemas.package_specs map with 
         | Some x ->
           Bsb_package_specs.from_json x
         | None -> 
           Bsb_package_specs.default_package_specs
-      end
+      end in
+      let bs_super_errors = ref false in
+      map |? (Bsb_build_schemas.bs_super_errors, `Bool (fun b -> bs_super_errors := b)) |> ignore;
+      (package_specs, !bs_super_errors)
     | _ -> assert false
   end
 
@@ -12945,6 +12948,7 @@ val output_ninja :
   root_project_dir:string ->
   is_top_level: bool ->
   cmdline_build_kind:Bsb_config_types.compilation_kind_t ->
+  main_bs_super_errors:bool ->
   Bsb_config_types.t -> unit 
 
 end = struct
@@ -13009,6 +13013,7 @@ let output_ninja
     ~root_project_dir
     ~is_top_level
     ~cmdline_build_kind
+    ~main_bs_super_errors
     ({
       package_name;
       external_includes;
@@ -13029,7 +13034,7 @@ let output_ninja
       namespace ; 
         
       
-      bs_super_errors;
+      (* bs_super_errors; *)
       
       entries;
       static_libraries;
@@ -13060,7 +13065,7 @@ let output_ninja
   let ppx_flags = Bsb_build_util.flag_concat dash_ppx ppx_flags in
   let bsc_flags =  String.concat Ext_string.single_space bsc_flags in
   let refmt_flags = String.concat Ext_string.single_space refmt_flags in
-  let bs_super_errors = if bs_super_errors then "-bs-super-errors" else "" in
+  let bs_super_errors = if main_bs_super_errors then "-bs-super-errors" else "" in
   begin
     let () =
       
@@ -18354,6 +18359,7 @@ module Bsb_ninja_regen : sig
   
 val regenerate_ninja :
   ?external_deps_for_linking_and_clibs:(string list) * (string list) * (string list) ->
+  ?main_bs_super_errors:bool ->
   is_top_level:bool ->
   no_dev:bool ->
   override_package_specs:Bsb_package_specs.t option ->
@@ -18402,6 +18408,7 @@ let (//) = Ext_filename.combine
 *)
 let regenerate_ninja
   ?external_deps_for_linking_and_clibs
+  ?main_bs_super_errors
   ~is_top_level
   ~no_dev
   ~override_package_specs
@@ -18526,7 +18533,20 @@ let regenerate_ninja
             end
           end
         | Some all_deps -> all_deps in
-        Bsb_ninja_gen.output_ninja ~external_deps_for_linking_and_clibs ~cwd ~bsc_dir ~ocaml_dir ~root_project_dir ~is_top_level ~cmdline_build_kind:cmdline_build_kind config;
+        let main_bs_super_errors = begin match main_bs_super_errors with 
+          | None -> config.Bsb_config_types.bs_super_errors
+          | Some bs_super_errors -> bs_super_errors
+        end in 
+        Bsb_ninja_gen.output_ninja 
+          ~external_deps_for_linking_and_clibs 
+          ~cwd 
+          ~bsc_dir 
+          ~ocaml_dir 
+          ~root_project_dir 
+          ~is_top_level 
+          ~cmdline_build_kind 
+          ~main_bs_super_errors
+          config;
         Literals.bsconfig_json :: config.globbed_dirs
         |> List.map
           (fun x ->
@@ -18825,7 +18845,7 @@ let install_targets ~cmdline_build_kind cwd (config : Bsb_config_types.t option)
 
 
 
-let build_bs_deps cwd ~root_project_dir ~cmdline_build_kind deps =
+let build_bs_deps cwd ~root_project_dir ~cmdline_build_kind ~main_bs_super_errors deps =
   let bsc_dir = Bsb_build_util.get_bsc_dir cwd in
   let ocaml_dir = Bsb_build_util.get_ocaml_dir bsc_dir in
   let vendor_ninja = bsc_dir // "ninja.exe" in
@@ -18847,6 +18867,7 @@ let build_bs_deps cwd ~root_project_dir ~cmdline_build_kind deps =
              ~root_project_dir
              ~forced:true
              ~cmdline_build_kind
+             ~main_bs_super_errors
              cwd bsc_dir ocaml_dir in (* set true to force regenrate ninja file so we have [config_opt]*)
            let config = begin match config_opt with 
             | None ->
@@ -18895,8 +18916,8 @@ let build_bs_deps cwd ~root_project_dir ~cmdline_build_kind deps =
 
 let make_world_deps cwd ~root_project_dir ~cmdline_build_kind =
   print_endline "\nMaking the dependency world!";
-  let deps = Bsb_config_parse.package_specs_from_bsconfig () in
-  build_bs_deps cwd ~root_project_dir ~cmdline_build_kind deps
+  let (deps, main_bs_super_errors) = Bsb_config_parse.package_specs_and_super_errors_from_bsconfig () in
+  build_bs_deps cwd ~root_project_dir ~cmdline_build_kind ~main_bs_super_errors deps
 
 end
 module Bsb_main : sig 
