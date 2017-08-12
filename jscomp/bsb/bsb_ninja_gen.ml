@@ -99,7 +99,7 @@ let output_ninja
     | Bsb_config_types.Native   -> "native"
     | Bsb_config_types.Bytecode -> "bytecode"
   end in
-  if entries = [] then
+  if entries = [] && is_top_level then
     failwith @@ "Could not find an item in the entries field to compile to '" ^ nested ^ "'";
   let oc = open_out_bin (cwd // Bsb_config.lib_bs // nested // Literals.build_ninja) in
   let bsc = bsc_dir // bsc_exe in   (* The path to [bsc.exe] independent of config  *)
