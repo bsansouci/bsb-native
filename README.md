@@ -20,17 +20,18 @@ For [example](https://github.com/bsansouci/BetterErrors/tree/bsb-support):
 }
 ```
 
-## Use
+## Run
 
-`./node_modules/.bin/bsb -backend bytecode -make-world -w` (or add an [npm script](https://docs.npmjs.com/misc/scripts))
+`./node_modules/.bin/bsb` (or add an [npm script](https://docs.npmjs.com/misc/scripts) to simply run `bsb`)
 
+## Useful flags
 The `-make-world` flag builds all of the dependencies.
 
 The `-w` enabled the watch mode which will rebuild on any source file change.
 
-The `-backend` flag tells `bsb-native` to build all entries marked as building to bytecode.
+The `-backend [js|bytecode|native]` flag tells `bsb-native` to build all entries in the `bsconfig.json` to either `js`, `bytecode` or `native`.
 
-The build artifacts are put into a folder called `lib`. The executable, in this example, would be at `lib/bs/bytecode/index.byte`
+The build artifacts are put into the folder `lib/bs`. The bytecode executable would be at `lib/bs/bytecode/index.byte` and the native one at `lib/bs/native/index.native`.
 
 ## Multi-target
 `bsb-native` actually supports building Reason/OCaml to JS as well as to native/bytecode. What that enables is code that is truly cross platform, that depends on a JS implementation of a library or a native implementation, and bsb-native will build the right implementation depending on what you target.
