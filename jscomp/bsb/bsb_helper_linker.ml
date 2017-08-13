@@ -60,7 +60,7 @@ let link link_byte_or_native ~main_module ~batch_files ~clibs ~includes ~ocamlfi
         (Ext_filename.combine dir (Literals.library_file ^ suffix_library_files)) :: acc)
       [] includes in
     (* This list will be reversed so we append the otherlibs object files at the end, and they'll end at the beginning. *)
-    let otherlibs = Bsb_helper_dep_graph.get_otherlibs_dependencies dependency_graph suffix_library_files in
+    let otherlibs = Bsb_helper_dep_graph.get_otherlibs_dependencies ~ocamlfind:(ocamlfind_packages <> []) dependency_graph suffix_library_files in
     let clibs = if add_custom && clibs <> [] then
       "-custom" :: clibs
     else
@@ -81,9 +81,11 @@ let link link_byte_or_native ~main_module ~batch_files ~clibs ~includes ~ocamlfi
         compiler
         (Array.of_list (list_of_args))
     else begin
-      let list_of_args = ("ocamlfind" :: compiler :: "-linkpkg" :: ocamlfind_packages) 
+      let list_of_args = ("ocamlfind" :: compiler :: []) 
         @ (if bs_super_errors then ["-passopt"; "-bs-super-errors"] else []) 
+        @ ("-linkpkg" :: ocamlfind_packages)
         @ ("-g" :: "-o" :: output_file :: all_object_files) in
+      (* List.iter (fun a -> print_endline a) list_of_args; *)
       Unix.execvp
         "ocamlfind"
         (Array.of_list (list_of_args))

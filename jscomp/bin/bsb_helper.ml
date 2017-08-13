@@ -4301,7 +4301,7 @@ val simple_collect_from_main :
            string -> string Queue.t
 
 (* Returns a list of extra modules which are part of the "otherlibs" stdlib to link in. *)
-val get_otherlibs_dependencies : String_set.t String_map.t -> string -> string list
+val get_otherlibs_dependencies : ocamlfind:bool -> String_set.t String_map.t -> string -> string list
 
 end = struct
 #1 "bsb_helper_dep_graph.ml"
@@ -4399,12 +4399,11 @@ let simple_collect_from_main ?alias_map ast_table main_module =
   visit (String_set.empty) [] main_module ;
   result
 
-let get_otherlibs_dependencies dependency_graph file_extension =
+let get_otherlibs_dependencies ~ocamlfind dependency_graph file_extension =
   let set_of_otherlib_deps = String_set.empty
-    |> String_set.add ("unix" ^ file_extension)
-    |> String_set.add ("bigarray" ^ file_extension)
-    |> String_set.add ("str" ^ file_extension)
-    |> String_set.add ("nums" ^ file_extension)
+    |> String_set.add ("unix")
+    |> String_set.add ("bigarray")
+    |> String_set.add ("str")
     (** We need to add -thread when adding threads. Not sure why.
         Will do this later.
            - Ben May 4th 2017
@@ -4413,7 +4412,16 @@ let get_otherlibs_dependencies dependency_graph file_extension =
     (* |> String_set.add ("dynlink" ^ file_extension) *)
     (* |> String_set.add ("graphics" ^ file_extension) *)
   in
-  String_set.fold (fun v acc -> v :: acc) set_of_otherlib_deps []
+  (* When we're using ocamlfind, we should link those libraries using the -package 
+     mechanism to allow it to dedup dependencies. Otherwise we reference those 
+     libraries with their file names, ocaml will know where to find them. *)
+  if ocamlfind then
+    let set_of_otherlib_deps = set_of_otherlib_deps |> String_set.add ("num") in
+    String_set.fold (fun v acc -> "-package" :: v :: acc) set_of_otherlib_deps []
+  else 
+    (* the package and the file are named differently sometimes... *)
+    let set_of_otherlib_deps = set_of_otherlib_deps |> String_set.add ("nums") in
+    String_set.fold (fun v acc -> (v ^ file_extension) :: acc) set_of_otherlib_deps []
 
 end
 module Bsb_helper_extract : sig 
@@ -4591,7 +4599,7 @@ let link link_byte_or_native ~main_module ~batch_files ~clibs ~includes ~ocamlfi
         (Ext_filename.combine dir (Literals.library_file ^ suffix_library_files)) :: acc)
       [] includes in
     (* This list will be reversed so we append the otherlibs object files at the end, and they'll end at the beginning. *)
-    let otherlibs = Bsb_helper_dep_graph.get_otherlibs_dependencies dependency_graph suffix_library_files in
+    let otherlibs = Bsb_helper_dep_graph.get_otherlibs_dependencies ~ocamlfind:(ocamlfind_packages <> []) dependency_graph suffix_library_files in
     let clibs = if add_custom && clibs <> [] then
       "-custom" :: clibs
     else
@@ -4612,9 +4620,11 @@ let link link_byte_or_native ~main_module ~batch_files ~clibs ~includes ~ocamlfi
         compiler
         (Array.of_list (list_of_args))
     else begin
-      let list_of_args = ("ocamlfind" :: compiler :: "-linkpkg" :: ocamlfind_packages) 
+      let list_of_args = ("ocamlfind" :: compiler :: []) 
         @ (if bs_super_errors then ["-passopt"; "-bs-super-errors"] else []) 
+        @ ("-linkpkg" :: ocamlfind_packages)
         @ ("-g" :: "-o" :: output_file :: all_object_files) in
+      (* List.iter (fun a -> print_endline a) list_of_args; *)
       Unix.execvp
         "ocamlfind"
         (Array.of_list (list_of_args))
