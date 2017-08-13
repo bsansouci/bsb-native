@@ -5839,7 +5839,7 @@ let walk_all_deps dir cb =
 let get_ocaml_dir cwd =
   if Ext_sys.is_windows_or_cygwin then begin
     Format.fprintf Format.err_formatter "@{<warning>Windows not supported.@}";
-    (Filename.dirname (get_bsc_dir cwd)) // "ocaml_src"
+    (Filename.dirname (get_bsc_dir cwd)) // "vendor" // "ocaml"
   end else begin
     let ocamlc = Bsb_unix.run_command_capture_stdout "which ocamlc" in
     (* TODO(sansouci): Probably pretty brittle. If there is no output to stdout
@@ -5847,7 +5847,7 @@ let get_ocaml_dir cwd =
        We just assume that it's bad either way and we simply fallback to the
        local `ocamlc`. *)
     if ocamlc = "" then
-      (Filename.dirname (get_bsc_dir cwd)) // "ocaml_src"
+      (Filename.dirname (get_bsc_dir cwd)) // "vendor" // "ocaml"
     else Filename.dirname ocamlc
   end
 
