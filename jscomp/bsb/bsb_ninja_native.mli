@@ -31,7 +31,7 @@ val handle_file_groups : out_channel ->
   is_top_level:bool ->
   entries:Bsb_config_types.entries_t list ->
   compile_target:compile_target_t ->
-  cmdline_build_kind:Bsb_config_types.compilation_kind_t ->
+  backend:Bsb_config_types.compilation_kind_t ->
   package_specs:Bsb_package_specs.t ->  
   js_post_build_cmd:string option -> 
   files_to_install:String_hash_set.t ->  

@@ -32,6 +32,6 @@ val output_ninja :
   ocaml_dir:string ->
   root_project_dir:string ->
   is_top_level: bool ->
-  cmdline_build_kind:Bsb_config_types.compilation_kind_t ->
+  backend:Bsb_config_types.compilation_kind_t ->
   main_bs_super_errors:bool ->
   Bsb_config_types.t -> unit 

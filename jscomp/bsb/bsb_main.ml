@@ -48,19 +48,22 @@ let cmdline_build_kind = ref Bsb_config_types.Js
 *)
 let is_cmdline_build_kind_set = ref false
 
-let get_string_backend () =
+let get_backend () =
+  (* If cmdline_build_kind is set we use it, otherwise we actually shadow it for the first entry. *)
   if !is_cmdline_build_kind_set then
-    match !cmdline_build_kind with
-    | Bsb_config_types.Js       -> "js"
-    | Bsb_config_types.Native   -> "native"
-    | Bsb_config_types.Bytecode -> "bytecode"
-  else begin
+    !cmdline_build_kind
+  else
     let entries = Bsb_config_parse.entries_from_bsconfig () in 
-    match List.hd entries with
-      | Bsb_config_types.JsTarget _       -> "js"
-      | Bsb_config_types.NativeTarget _   -> "native"
-      | Bsb_config_types.BytecodeTarget _ -> "bytecode"
-  end
+    begin match List.hd entries with
+      | Bsb_config_types.JsTarget _       -> Bsb_config_types.Js
+      | Bsb_config_types.NativeTarget _   -> Bsb_config_types.Native
+      | Bsb_config_types.BytecodeTarget _ -> Bsb_config_types.Bytecode
+    end 
+
+let get_string_backend = function
+  | Bsb_config_types.Js       -> "js"
+  | Bsb_config_types.Native   -> "native"
+  | Bsb_config_types.Bytecode -> "bytecode"
 
 let watch_exit () =
   print_endline "\nStart Watching now ";
@@ -69,7 +72,7 @@ let watch_exit () =
           Ben - July 23rd 2017 
    *)
   let backend = "-backend" in
-  let backend_kind = get_string_backend () in
+  let backend_kind = get_string_backend (get_backend ()) in
   let bsb_watcher =
     Bsb_build_util.get_bsc_dir cwd // "bsb_watcher.js" in
   if Ext_sys.is_windows_or_cygwin then
@@ -95,7 +98,7 @@ let set_make_world () = make_world := true
 (* Takes a cleanFunc and calls it on the right folder. *)
 let clean cleanFunc =
   if !is_cmdline_build_kind_set then
-    let nested = get_string_backend () in
+    let nested = get_string_backend (get_backend ()) in
     cleanFunc ~nested bsc_dir cwd
   else begin
     Format.fprintf Format.std_formatter 
@@ -125,7 +128,7 @@ let bsb_main_flags : (string * Arg.spec * string) list=
     " Init sample project to get started. Note (`bsb -init sample` will create a sample project while `bsb -init .` will resuse current directory)";
     "-theme", Arg.String set_theme,
     " The theme for project initialization, default is basic(https://github.com/bucklescript/bucklescript/tree/master/jscomp/bsb/templates)";
-    "-query", Arg.String (fun s -> Bsb_query.query ~cwd ~bsc_dir ~cmdline_build_kind:!cmdline_build_kind s ),
+    "-query", Arg.String (fun s -> Bsb_query.query ~cwd ~bsc_dir ~backend:(get_backend ()) s ),
     " (internal)Query metadata about the build";
     "-themes", Arg.Unit Bsb_init.list_themes,
     " List all available themes";
@@ -207,16 +210,7 @@ let () =
       (* Quickly parse the backend argument to make sure we're building to the right target. *)
       Arg.parse bsb_main_flags handle_anonymous_arg usage;
 
-      (* If cmdline_build_kind is set we use it, otherwise we actually shadow it for the first entry. *)
-      let cmdline_build_kind = if !is_cmdline_build_kind_set then
-        !cmdline_build_kind
-      else begin
-        let entries = Bsb_config_parse.entries_from_bsconfig () in 
-        match List.hd entries with
-          | Bsb_config_types.JsTarget _       -> Bsb_config_types.Js
-          | Bsb_config_types.NativeTarget _   -> Bsb_config_types.Native
-          | Bsb_config_types.BytecodeTarget _ -> Bsb_config_types.Bytecode
-      end in
+      let backend = get_backend () in
       (* print_endline __LOC__; *)
       (* TODO(sansouci): Optimize this. Not passing external_deps_for_linking_and_clibs 
          will cause regenerate_ninja to re-crawl the external dep graph (only 
@@ -226,10 +220,10 @@ let () =
           ~generate_watch_metadata:true
           ~root_project_dir:cwd
           ~forced:true
-          ~cmdline_build_kind
+          ~backend
           cwd bsc_dir ocaml_dir
       in
-      let nested = get_string_backend () in
+      let nested = get_string_backend backend in
       ninja_command_exit  vendor_ninja [||] nested
     end
   | argv -> 
@@ -240,21 +234,11 @@ let () =
         begin
           Arg.parse bsb_main_flags handle_anonymous_arg usage;
           
-          (* If cmdline_build_kind is set we use it, otherwise we actually shadow it for the first entry. *)
-          let cmdline_build_kind = if !is_cmdline_build_kind_set then
-            !cmdline_build_kind
-          else
-            let entries = Bsb_config_parse.entries_from_bsconfig () in 
-            begin match List.hd entries with
-              | Bsb_config_types.JsTarget _       -> Bsb_config_types.Js
-              | Bsb_config_types.NativeTarget _   -> Bsb_config_types.Native
-              | Bsb_config_types.BytecodeTarget _ -> Bsb_config_types.Bytecode
-            end 
-          in
           (* first, check whether we're in boilerplate generation mode, aka -init foo -theme bar *)
           match !generate_theme_with_path with
           | Some path -> Bsb_init.init_sample_project ~cwd ~theme:!current_theme path
           | None -> 
+            let backend = get_backend () in
             (* [-make-world] should never be combined with [-package-specs] *)
             let make_world = !make_world in 
             begin match make_world, !force_regenerate with
@@ -271,7 +255,7 @@ let () =
                 (* If -make-world is passed we first do that because we'll collect
                    the library files as we go. *)
                 let external_deps_for_linking_and_clibs = if make_world then
-                  Some (Bsb_world.make_world_deps cwd ~root_project_dir:cwd ~cmdline_build_kind)
+                  Some (Bsb_world.make_world_deps cwd ~root_project_dir:cwd ~backend)
                 else None in
                 (* don't regenerate files when we only run [bsb -clean-world] *)
                 let _ = Bsb_ninja_regen.regenerate_ninja 
@@ -282,7 +266,7 @@ let () =
                   ~no_dev:false 
                   ~root_project_dir:cwd
                   ~forced:force_regenerate
-                  ~cmdline_build_kind
+                  ~backend
                   cwd bsc_dir ocaml_dir in
                 if !watch_mode then begin
                   watch_exit ()
@@ -292,7 +276,7 @@ let () =
                      [bsb -regen ]
                   *)
                 end else begin
-                  let nested = get_string_backend () in
+                  let nested = get_string_backend backend in
                   ninja_command_exit vendor_ninja [||] nested
                 end
             end;
@@ -302,21 +286,11 @@ let () =
         begin
           Arg.parse_argv bsb_args bsb_main_flags handle_anonymous_arg usage ;
           
-          (* If cmdline_build_kind is set we use it, otherwise we actually shadow it for the first entry. *)
-          let cmdline_build_kind = if !is_cmdline_build_kind_set then
-            !cmdline_build_kind
-          else
-            let entries = Bsb_config_parse.entries_from_bsconfig () in 
-            begin match List.hd entries with
-              | Bsb_config_types.JsTarget _       -> Bsb_config_types.Js
-              | Bsb_config_types.NativeTarget _   -> Bsb_config_types.Native
-              | Bsb_config_types.BytecodeTarget _ -> Bsb_config_types.Bytecode
-            end 
-          in
+          let backend = get_backend () in
           
           (* [-make-world] should never be combined with [-package-specs] *)
           let external_deps_for_linking_and_clibs = if !make_world then 
-            Some (Bsb_world.make_world_deps cwd ~root_project_dir:cwd ~cmdline_build_kind)
+            Some (Bsb_world.make_world_deps cwd ~root_project_dir:cwd ~backend)
           else None in
           let _ = Bsb_ninja_regen.regenerate_ninja 
             ?external_deps_for_linking_and_clibs
@@ -326,11 +300,11 @@ let () =
             ~no_dev:false
             ~root_project_dir:cwd
             ~forced:!force_regenerate
-            ~cmdline_build_kind
+            ~backend
             cwd bsc_dir ocaml_dir in
           if !watch_mode then watch_exit ()
           else begin 
-            let nested = get_string_backend () in
+            let nested = get_string_backend backend in
             ninja_command_exit vendor_ninja ninja_args nested
           end
         end

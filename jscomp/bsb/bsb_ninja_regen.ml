@@ -41,12 +41,12 @@ let regenerate_ninja
   ~generate_watch_metadata
   ~forced
   ~root_project_dir
-  ~cmdline_build_kind
+  ~backend
   cwd bsc_dir ocaml_dir 
   : _ option =
   let output_deps = cwd // Bsb_config.lib_bs // bsdeps in
   let reason : Bsb_bsdeps.check_result =
-    Bsb_bsdeps.check ~cwd  ~forced ~file:output_deps cmdline_build_kind in
+    Bsb_bsdeps.check ~cwd  ~forced ~file:output_deps backend in
   let () = 
     Format.fprintf Format.std_formatter  
       "@{<info>BSB check@} build spec : %a @." Bsb_bsdeps.pp_check_result reason in 
@@ -59,7 +59,7 @@ let regenerate_ninja
     | Bsb_source_directory_changed  
     | Bsb_different_cmdline_arg
     | Other _ ->
-      let nested = begin match cmdline_build_kind with
+      let nested = begin match backend with
         | Bsb_config_types.Js       -> "js"
         | Bsb_config_types.Native   -> "native"
         | Bsb_config_types.Bytecode -> "bytecode"
@@ -76,10 +76,10 @@ let regenerate_ninja
           ~bsc_dir
           ~generate_watch_metadata
           ~no_dev
-          ~compilation_kind:cmdline_build_kind
+          ~backend
           cwd in 
       begin 
-        Bsb_merlin_gen.merlin_file_gen ~cwd
+        Bsb_merlin_gen.merlin_file_gen ~cwd ~backend
           (bsc_dir // bsppx_exe) config;
         (match config.namespace with 
         | None -> ()
@@ -98,7 +98,7 @@ let regenerate_ninja
              
              If we're aiming at building Native or Bytecode, we do walk the external 
              dep graph and build a topologically sorted list of all of them. *)
-          begin match cmdline_build_kind with
+          begin match backend with
           | Bsb_config_types.Js -> ([], [], []) (* No work for the JS flow! *)
           | Bsb_config_types.Bytecode
           | Bsb_config_types.Native ->
@@ -137,9 +137,9 @@ let regenerate_ninja
                         ~bsc_dir
                         ~generate_watch_metadata:false
                         ~no_dev:true
-                        ~compilation_kind:cmdline_build_kind
+                        ~backend
                         cwd in
-                    begin match cmdline_build_kind with 
+                    begin match backend with 
                     | Bsb_config_types.Js ->  assert false
                     | Bsb_config_types.Bytecode 
                       when List.mem Bsb_config_types.Bytecode Bsb_config_types.(innerConfig.allowed_build_kinds)-> 
@@ -170,7 +170,7 @@ let regenerate_ninja
           ~ocaml_dir 
           ~root_project_dir 
           ~is_top_level 
-          ~cmdline_build_kind 
+          ~backend 
           ~main_bs_super_errors
           config;
         Literals.bsconfig_json :: config.globbed_dirs
@@ -180,7 +180,7 @@ let regenerate_ninja
                stamp = (Unix.stat (cwd // x)).st_mtime
              }
           )
-        |> (fun x -> Bsb_bsdeps.store ~cwd ~file:output_deps (Array.of_list x) cmdline_build_kind);
+        |> (fun x -> Bsb_bsdeps.store ~cwd ~file:output_deps (Array.of_list x) backend);
         Some config 
       end 
   end

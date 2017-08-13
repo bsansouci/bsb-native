@@ -25,7 +25,7 @@
 
 let (//) = Ext_filename.combine
 
-let install_targets ~cmdline_build_kind cwd (config : Bsb_config_types.t option) =
+let install_targets ~backend cwd (config : Bsb_config_types.t option) =
   (** TODO: create the animation effect *)
   let install ~destdir file = 
     if Bsb_file.install_if_exists ~destdir file  then 
@@ -42,7 +42,7 @@ let install_targets ~cmdline_build_kind cwd (config : Bsb_config_types.t option)
   match config with 
   | None -> ()
   | Some {files_to_install} -> 
-    let nested = begin match cmdline_build_kind with
+    let nested = begin match backend with
       | Bsb_config_types.Js       -> "js"
       | Bsb_config_types.Native   -> "native"
       | Bsb_config_types.Bytecode -> "bytecode"
@@ -75,7 +75,7 @@ let install_targets ~cmdline_build_kind cwd (config : Bsb_config_types.t option)
 
 
 
-let build_bs_deps cwd ~root_project_dir ~cmdline_build_kind ~main_bs_super_errors deps =
+let build_bs_deps cwd ~root_project_dir ~backend ~main_bs_super_errors deps =
   let bsc_dir = Bsb_build_util.get_bsc_dir cwd in
   let ocaml_dir = Bsb_build_util.get_ocaml_dir bsc_dir in
   let vendor_ninja = bsc_dir // "ninja.exe" in
@@ -96,7 +96,7 @@ let build_bs_deps cwd ~root_project_dir ~cmdline_build_kind ~main_bs_super_error
              ~override_package_specs:(Some deps) 
              ~root_project_dir
              ~forced:true
-             ~cmdline_build_kind
+             ~backend
              ~main_bs_super_errors
              cwd bsc_dir ocaml_dir in (* set true to force regenrate ninja file so we have [config_opt]*)
            let config = begin match config_opt with 
@@ -107,17 +107,17 @@ let build_bs_deps cwd ~root_project_dir ~cmdline_build_kind ~main_bs_super_error
                 ~bsc_dir
                 ~generate_watch_metadata:false
                 ~no_dev:true
-                ~compilation_kind:cmdline_build_kind
+                ~backend
                 cwd
             | Some config -> config
            end in
            (* Append at the head for a correct topological sort. 
               walk_all_deps does a simple DFS, so all we need to do is to append at the head of 
               a list to build a topologically sorted list of external deps.*)
-            if List.mem cmdline_build_kind Bsb_config_types.(config.allowed_build_kinds) then begin
+            if List.mem backend Bsb_config_types.(config.allowed_build_kinds) then begin
               all_clibs := (List.rev Bsb_config_types.(config.static_libraries)) @ !all_clibs;
               all_ocamlfind_dependencies := Bsb_config_types.(config.ocamlfind_dependencies) @ !all_ocamlfind_dependencies;
-              let nested = begin match cmdline_build_kind with 
+              let nested = begin match backend with 
               | Bsb_config_types.Js -> "js"
               | Bsb_config_types.Bytecode -> 
                 all_external_deps := (cwd // Bsb_config.lib_ocaml // "bytecode") :: !all_external_deps;
@@ -136,7 +136,7 @@ let build_bs_deps cwd ~root_project_dir ~cmdline_build_kind ~main_bs_super_error
                 Note that we can check if ninja print "no work to do", 
                 then don't need reinstall more
              *)
-             install_targets ~cmdline_build_kind cwd config_opt;
+             install_targets ~backend cwd config_opt;
            end
          end
     );
@@ -144,7 +144,7 @@ let build_bs_deps cwd ~root_project_dir ~cmdline_build_kind ~main_bs_super_error
   (List.rev !all_external_deps, List.rev !all_clibs, List.rev !all_ocamlfind_dependencies)
 
 
-let make_world_deps cwd ~root_project_dir ~cmdline_build_kind =
+let make_world_deps cwd ~root_project_dir ~backend =
   print_endline "\nMaking the dependency world!";
   let (deps, main_bs_super_errors) = Bsb_config_parse.package_specs_and_super_errors_from_bsconfig () in
-  build_bs_deps cwd ~root_project_dir ~cmdline_build_kind ~main_bs_super_errors deps
+  build_bs_deps cwd ~root_project_dir ~backend ~main_bs_super_errors deps

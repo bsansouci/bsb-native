@@ -9488,7 +9488,7 @@ val interpret_json :
     bsc_dir:string -> 
     generate_watch_metadata:bool -> 
     no_dev:bool -> 
-    compilation_kind:Bsb_config_types.compilation_kind_t ->
+    backend:Bsb_config_types.compilation_kind_t ->
     string -> 
     Bsb_config_types.t
 
@@ -9522,9 +9522,9 @@ let config_file_bak = "bsconfig.json.bak"
 let get_list_string = Bsb_build_util.get_list_string
 let (//) = Ext_filename.combine
 
-let resolve_package compilation_kind cwd  package_name = 
+let resolve_package backend cwd  package_name = 
   let x =  Bsb_pkg.resolve_bs_package ~cwd package_name  in
-  let nested = match compilation_kind with
+  let nested = match backend with
     | Bsb_config_types.Js -> "js"
     | Bsb_config_types.Bytecode -> "bytecode"
     | Bsb_config_types.Native -> "native"
@@ -9622,7 +9622,7 @@ let interpret_json
     ~bsc_dir 
     ~generate_watch_metadata
     ~no_dev 
-    ~compilation_kind
+    ~backend
     cwd  
 
   : Bsb_config_types.t =
@@ -9727,13 +9727,13 @@ let interpret_json
         |> ignore
       end)
 
-    |? (Bsb_build_schemas.bs_dependencies, `Arr (fun s -> bs_dependencies := Bsb_build_util.get_list_string s |> List.map (resolve_package compilation_kind cwd)))
+    |? (Bsb_build_schemas.bs_dependencies, `Arr (fun s -> bs_dependencies := Bsb_build_util.get_list_string s |> List.map (resolve_package backend cwd)))
     |? (Bsb_build_schemas.bs_dev_dependencies,
         `Arr (fun s ->
             if not  no_dev then 
               bs_dev_dependencies
               := Bsb_build_util.get_list_string s
-                 |> List.map (resolve_package compilation_kind cwd))
+                 |> List.map (resolve_package backend cwd))
        )
 
     (* More design *)
@@ -11335,7 +11335,8 @@ module Bsb_merlin_gen : sig
 
 
 val merlin_file_gen : 
-    cwd:string -> string  -> Bsb_config_types.t ->  unit 
+    cwd:string -> backend:Bsb_config_types.compilation_kind_t -> string  -> Bsb_config_types.t ->  unit 
+
 end = struct
 #1 "bsb_merlin_gen.ml"
 (* Copyright (C) 2015-2016 Bloomberg Finance L.P.
@@ -11415,7 +11416,7 @@ let merlin_flg_ppx = "\nFLG -ppx "
 let merlin_s = "\nS "
 let merlin_b = "\nB "
 
-
+let merlin_pkg = "\nPKG"
 let merlin_flg = "\nFLG "
 let bs_flg_prefix = "-bs-"
 
@@ -11427,7 +11428,7 @@ let bsc_flg_to_merlin_ocamlc_flg bsc_flags  =
         Literals.dash_nostdlib::bsc_flags) 
 
 
-let merlin_file_gen ~cwd
+let merlin_file_gen ~cwd ~backend
     built_in_ppx
     ({bs_file_groups = res_files ; 
       generate_merlin;
@@ -11438,9 +11439,15 @@ let merlin_file_gen ~cwd
       built_in_dependency;
       external_includes; 
       reason_react_jsx ; 
+      ocamlfind_dependencies;
      } : Bsb_config_types.t)
   =
-  if generate_merlin then begin     
+  if generate_merlin then begin
+    let nested = match backend with
+      | Bsb_config_types.Js       -> "js"
+      | Bsb_config_types.Native   -> "native"
+      | Bsb_config_types.Bytecode -> "bytecode" 
+    in
     let buffer = Buffer.create 1024 in
     ppx_flags
     |> List.iter (fun x ->
@@ -11500,8 +11507,13 @@ let merlin_file_gen ~cwd
         Buffer.add_string buffer merlin_s;
         Buffer.add_string buffer x.dir ;
         Buffer.add_string buffer merlin_b;
-        Buffer.add_string buffer (Bsb_config.lib_bs//x.dir) ;
+        Buffer.add_string buffer (Bsb_config.lib_bs // nested // x.dir) ;
       ) ;
+    Buffer.add_string buffer merlin_pkg;
+    ocamlfind_dependencies |> List.iter (fun x ->
+      Buffer.add_string buffer " ";
+      Buffer.add_string buffer x;
+    );
     Buffer.add_string buffer "\n";
     revise_merlin (cwd // merlin) buffer 
   end
@@ -12526,7 +12538,7 @@ val handle_file_groups : out_channel ->
   is_top_level:bool ->
   entries:Bsb_config_types.entries_t list ->
   compile_target:compile_target_t ->
-  cmdline_build_kind:Bsb_config_types.compilation_kind_t ->
+  backend:Bsb_config_types.compilation_kind_t ->
   package_specs:Bsb_package_specs.t ->  
   js_post_build_cmd:string option -> 
   files_to_install:String_hash_set.t ->  
@@ -12807,7 +12819,7 @@ let link oc ret ~entries ~file_groups ~static_libraries =
         (String.lowercase main_module_name) ^ ".byte"  , Rules.linking_bytecode, Literals.suffix_cmo, main_module_name
       | Bsb_config_types.NativeTarget main_module_name   -> 
         (String.lowercase main_module_name) ^ ".native", Rules.linking_native  , Literals.suffix_cmx, main_module_name
-    end in
+      end in
     let (all_mlast_files, all_cmo_or_cmx_files, all_cmi_files) =
       List.fold_left (fun acc group -> 
         String_map.fold (fun _ (v : Bsb_build_cache.module_info) (all_mlast_files, all_cmo_or_cmx_files, all_cmi_files) -> 
@@ -12849,9 +12861,9 @@ let link oc ret ~entries ~file_groups ~static_libraries =
     acc
   ) ret entries
     
-let pack oc ret ~cmdline_build_kind ~file_groups =
+let pack oc ret ~backend ~file_groups =
   let output_cma_or_cmxa, rule_name, suffix_cmo_or_cmx =
-    begin match cmdline_build_kind with
+    begin match backend with
     (* These cases could benefit from a better error message. *)
     | Bsb_config_types.Js       -> assert false
     | Bsb_config_types.Bytecode -> Literals.library_file ^ Literals.suffix_cma , Rules.build_cma_library , Literals.suffix_cmo
@@ -12900,7 +12912,7 @@ let handle_file_groups oc
   ~is_top_level
   ~entries
   ~compile_target
-  ~cmdline_build_kind
+  ~backend
   ~package_specs
   ~js_post_build_cmd
   ~files_to_install
@@ -12917,7 +12929,7 @@ let handle_file_groups oc
   if is_top_level then
     link oc ret ~entries ~file_groups ~static_libraries
   else
-    pack oc ret ~cmdline_build_kind ~file_groups
+    pack oc ret ~backend ~file_groups
 
 end
 module Bsb_ninja_gen : sig 
@@ -12956,7 +12968,7 @@ val output_ninja :
   ocaml_dir:string ->
   root_project_dir:string ->
   is_top_level: bool ->
-  cmdline_build_kind:Bsb_config_types.compilation_kind_t ->
+  backend:Bsb_config_types.compilation_kind_t ->
   main_bs_super_errors:bool ->
   Bsb_config_types.t -> unit 
 
@@ -13021,7 +13033,7 @@ let output_ninja
     ~ocaml_dir         
     ~root_project_dir
     ~is_top_level
-    ~cmdline_build_kind
+    ~backend
     ~main_bs_super_errors
     ({
       package_name;
@@ -13054,11 +13066,11 @@ let output_ninja
   =
   let custom_rules = Bsb_rule.reset generators in 
   let entries = List.filter (fun e -> match e with 
-    | Bsb_config_types.JsTarget _       -> cmdline_build_kind = Bsb_config_types.Js
-    | Bsb_config_types.NativeTarget _   -> cmdline_build_kind = Bsb_config_types.Native
-    | Bsb_config_types.BytecodeTarget _ -> cmdline_build_kind = Bsb_config_types.Bytecode
+    | Bsb_config_types.JsTarget _       -> backend = Bsb_config_types.Js
+    | Bsb_config_types.NativeTarget _   -> backend = Bsb_config_types.Native
+    | Bsb_config_types.BytecodeTarget _ -> backend = Bsb_config_types.Bytecode
   ) entries in
-  let nested = begin match cmdline_build_kind with
+  let nested = begin match backend with
     | Bsb_config_types.Js       -> "js"
     | Bsb_config_types.Native   -> "native"
     | Bsb_config_types.Bytecode -> "bytecode"
@@ -13184,7 +13196,7 @@ let output_ninja
         static_resources;
     in
     let (all_info, should_build) =
-    match cmdline_build_kind with
+    match backend with
     | Bsb_config_types.Js -> 
       if List.mem Bsb_config_types.Js allowed_build_kinds then
         (Bsb_ninja_file_groups.handle_file_groups oc
@@ -13203,7 +13215,7 @@ let output_ninja
           ~is_top_level
           ~entries
           ~compile_target:Bsb_ninja_native.Bytecode
-          ~cmdline_build_kind
+          ~backend
           ~package_specs
           ~js_post_build_cmd
           ~files_to_install
@@ -13219,7 +13231,7 @@ let output_ninja
           ~is_top_level
           ~entries
           ~compile_target:Bsb_ninja_native.Native
-          ~cmdline_build_kind
+          ~backend
           ~package_specs
           ~js_post_build_cmd
           ~files_to_install
@@ -18374,7 +18386,7 @@ val regenerate_ninja :
   generate_watch_metadata: bool -> 
   forced: bool -> 
   root_project_dir:string ->
-  cmdline_build_kind: Bsb_config_types.compilation_kind_t ->
+  backend: Bsb_config_types.compilation_kind_t ->
   string ->  string ->  string -> 
   Bsb_config_types.t option 
 
@@ -18423,12 +18435,12 @@ let regenerate_ninja
   ~generate_watch_metadata
   ~forced
   ~root_project_dir
-  ~cmdline_build_kind
+  ~backend
   cwd bsc_dir ocaml_dir 
   : _ option =
   let output_deps = cwd // Bsb_config.lib_bs // bsdeps in
   let reason : Bsb_bsdeps.check_result =
-    Bsb_bsdeps.check ~cwd  ~forced ~file:output_deps cmdline_build_kind in
+    Bsb_bsdeps.check ~cwd  ~forced ~file:output_deps backend in
   let () = 
     Format.fprintf Format.std_formatter  
       "@{<info>BSB check@} build spec : %a @." Bsb_bsdeps.pp_check_result reason in 
@@ -18441,7 +18453,7 @@ let regenerate_ninja
     | Bsb_source_directory_changed  
     | Bsb_different_cmdline_arg
     | Other _ ->
-      let nested = begin match cmdline_build_kind with
+      let nested = begin match backend with
         | Bsb_config_types.Js       -> "js"
         | Bsb_config_types.Native   -> "native"
         | Bsb_config_types.Bytecode -> "bytecode"
@@ -18458,10 +18470,10 @@ let regenerate_ninja
           ~bsc_dir
           ~generate_watch_metadata
           ~no_dev
-          ~compilation_kind:cmdline_build_kind
+          ~backend
           cwd in 
       begin 
-        Bsb_merlin_gen.merlin_file_gen ~cwd
+        Bsb_merlin_gen.merlin_file_gen ~cwd ~backend
           (bsc_dir // bsppx_exe) config;
         (match config.namespace with 
         | None -> ()
@@ -18480,7 +18492,7 @@ let regenerate_ninja
              
              If we're aiming at building Native or Bytecode, we do walk the external 
              dep graph and build a topologically sorted list of all of them. *)
-          begin match cmdline_build_kind with
+          begin match backend with
           | Bsb_config_types.Js -> ([], [], []) (* No work for the JS flow! *)
           | Bsb_config_types.Bytecode
           | Bsb_config_types.Native ->
@@ -18519,9 +18531,9 @@ let regenerate_ninja
                         ~bsc_dir
                         ~generate_watch_metadata:false
                         ~no_dev:true
-                        ~compilation_kind:cmdline_build_kind
+                        ~backend
                         cwd in
-                    begin match cmdline_build_kind with 
+                    begin match backend with 
                     | Bsb_config_types.Js ->  assert false
                     | Bsb_config_types.Bytecode 
                       when List.mem Bsb_config_types.Bytecode Bsb_config_types.(innerConfig.allowed_build_kinds)-> 
@@ -18552,7 +18564,7 @@ let regenerate_ninja
           ~ocaml_dir 
           ~root_project_dir 
           ~is_top_level 
-          ~cmdline_build_kind 
+          ~backend 
           ~main_bs_super_errors
           config;
         Literals.bsconfig_json :: config.globbed_dirs
@@ -18562,7 +18574,7 @@ let regenerate_ninja
                stamp = (Unix.stat (cwd // x)).st_mtime
              }
           )
-        |> (fun x -> Bsb_bsdeps.store ~cwd ~file:output_deps (Array.of_list x) cmdline_build_kind);
+        |> (fun x -> Bsb_bsdeps.store ~cwd ~file:output_deps (Array.of_list x) backend);
         Some config 
       end 
   end
@@ -18599,7 +18611,7 @@ module Bsb_query : sig
 
 val query: cwd:string -> 
            bsc_dir:string -> 
-           cmdline_build_kind:Bsb_config_types.compilation_kind_t -> 
+           backend:Bsb_config_types.compilation_kind_t -> 
            string -> unit  
 
 end = struct
@@ -18647,7 +18659,7 @@ let query_sources ({bs_file_groups} : Bsb_config_types.t) : Ext_json_noloc.t
   |> Ext_json_noloc.arr 
 
 
-let query_current_package_sources cwd cmdline_build_kind bsc_dir = 
+let query_current_package_sources cwd backend bsc_dir = 
   let ocaml_dir = Bsb_build_util.get_ocaml_dir bsc_dir in
     let config_opt  = Bsb_ninja_regen.regenerate_ninja 
       ~is_top_level:true
@@ -18655,7 +18667,7 @@ let query_current_package_sources cwd cmdline_build_kind bsc_dir =
       ~no_dev:false
       ~override_package_specs:None
       ~generate_watch_metadata:true
-      ~forced:true ~cmdline_build_kind cwd bsc_dir ocaml_dir in 
+      ~forced:true ~backend cwd bsc_dir ocaml_dir in 
     match config_opt with   
     | None -> None
      
@@ -18663,10 +18675,10 @@ let query_current_package_sources cwd cmdline_build_kind bsc_dir =
       Some (query_sources config)
 
 
-let query ~cwd ~bsc_dir ~cmdline_build_kind str = 
+let query ~cwd ~bsc_dir ~backend str = 
   match str with 
   | "sources" -> 
-    begin match query_current_package_sources cwd cmdline_build_kind bsc_dir with 
+    begin match query_current_package_sources cwd backend bsc_dir with 
     | None -> raise (Arg.Bad "internal error in query")
     | Some config -> 
       output_string stdout 
@@ -18771,7 +18783,7 @@ module Bsb_world : sig
 val make_world_deps:
   string ->
   root_project_dir:string ->
-  cmdline_build_kind:Bsb_config_types.compilation_kind_t ->
+  backend:Bsb_config_types.compilation_kind_t ->
   (string list) * (string list) * (string list)
 
 end = struct
@@ -18803,7 +18815,7 @@ end = struct
 
 let (//) = Ext_filename.combine
 
-let install_targets ~cmdline_build_kind cwd (config : Bsb_config_types.t option) =
+let install_targets ~backend cwd (config : Bsb_config_types.t option) =
   (** TODO: create the animation effect *)
   let install ~destdir file = 
     if Bsb_file.install_if_exists ~destdir file  then 
@@ -18820,7 +18832,7 @@ let install_targets ~cmdline_build_kind cwd (config : Bsb_config_types.t option)
   match config with 
   | None -> ()
   | Some {files_to_install} -> 
-    let nested = begin match cmdline_build_kind with
+    let nested = begin match backend with
       | Bsb_config_types.Js       -> "js"
       | Bsb_config_types.Native   -> "native"
       | Bsb_config_types.Bytecode -> "bytecode"
@@ -18853,7 +18865,7 @@ let install_targets ~cmdline_build_kind cwd (config : Bsb_config_types.t option)
 
 
 
-let build_bs_deps cwd ~root_project_dir ~cmdline_build_kind ~main_bs_super_errors deps =
+let build_bs_deps cwd ~root_project_dir ~backend ~main_bs_super_errors deps =
   let bsc_dir = Bsb_build_util.get_bsc_dir cwd in
   let ocaml_dir = Bsb_build_util.get_ocaml_dir bsc_dir in
   let vendor_ninja = bsc_dir // "ninja.exe" in
@@ -18874,7 +18886,7 @@ let build_bs_deps cwd ~root_project_dir ~cmdline_build_kind ~main_bs_super_error
              ~override_package_specs:(Some deps) 
              ~root_project_dir
              ~forced:true
-             ~cmdline_build_kind
+             ~backend
              ~main_bs_super_errors
              cwd bsc_dir ocaml_dir in (* set true to force regenrate ninja file so we have [config_opt]*)
            let config = begin match config_opt with 
@@ -18885,17 +18897,17 @@ let build_bs_deps cwd ~root_project_dir ~cmdline_build_kind ~main_bs_super_error
                 ~bsc_dir
                 ~generate_watch_metadata:false
                 ~no_dev:true
-                ~compilation_kind:cmdline_build_kind
+                ~backend
                 cwd
             | Some config -> config
            end in
            (* Append at the head for a correct topological sort. 
               walk_all_deps does a simple DFS, so all we need to do is to append at the head of 
               a list to build a topologically sorted list of external deps.*)
-            if List.mem cmdline_build_kind Bsb_config_types.(config.allowed_build_kinds) then begin
+            if List.mem backend Bsb_config_types.(config.allowed_build_kinds) then begin
               all_clibs := (List.rev Bsb_config_types.(config.static_libraries)) @ !all_clibs;
               all_ocamlfind_dependencies := Bsb_config_types.(config.ocamlfind_dependencies) @ !all_ocamlfind_dependencies;
-              let nested = begin match cmdline_build_kind with 
+              let nested = begin match backend with 
               | Bsb_config_types.Js -> "js"
               | Bsb_config_types.Bytecode -> 
                 all_external_deps := (cwd // Bsb_config.lib_ocaml // "bytecode") :: !all_external_deps;
@@ -18914,7 +18926,7 @@ let build_bs_deps cwd ~root_project_dir ~cmdline_build_kind ~main_bs_super_error
                 Note that we can check if ninja print "no work to do", 
                 then don't need reinstall more
              *)
-             install_targets ~cmdline_build_kind cwd config_opt;
+             install_targets ~backend cwd config_opt;
            end
          end
     );
@@ -18922,10 +18934,10 @@ let build_bs_deps cwd ~root_project_dir ~cmdline_build_kind ~main_bs_super_error
   (List.rev !all_external_deps, List.rev !all_clibs, List.rev !all_ocamlfind_dependencies)
 
 
-let make_world_deps cwd ~root_project_dir ~cmdline_build_kind =
+let make_world_deps cwd ~root_project_dir ~backend =
   print_endline "\nMaking the dependency world!";
   let (deps, main_bs_super_errors) = Bsb_config_parse.package_specs_and_super_errors_from_bsconfig () in
-  build_bs_deps cwd ~root_project_dir ~cmdline_build_kind ~main_bs_super_errors deps
+  build_bs_deps cwd ~root_project_dir ~backend ~main_bs_super_errors deps
 
 end
 module Bsb_main : sig 
@@ -18984,19 +18996,22 @@ let cmdline_build_kind = ref Bsb_config_types.Js
 *)
 let is_cmdline_build_kind_set = ref false
 
-let get_string_backend () =
+let get_backend () =
+  (* If cmdline_build_kind is set we use it, otherwise we actually shadow it for the first entry. *)
   if !is_cmdline_build_kind_set then
-    match !cmdline_build_kind with
-    | Bsb_config_types.Js       -> "js"
-    | Bsb_config_types.Native   -> "native"
-    | Bsb_config_types.Bytecode -> "bytecode"
-  else begin
+    !cmdline_build_kind
+  else
     let entries = Bsb_config_parse.entries_from_bsconfig () in 
-    match List.hd entries with
-      | Bsb_config_types.JsTarget _       -> "js"
-      | Bsb_config_types.NativeTarget _   -> "native"
-      | Bsb_config_types.BytecodeTarget _ -> "bytecode"
-  end
+    begin match List.hd entries with
+      | Bsb_config_types.JsTarget _       -> Bsb_config_types.Js
+      | Bsb_config_types.NativeTarget _   -> Bsb_config_types.Native
+      | Bsb_config_types.BytecodeTarget _ -> Bsb_config_types.Bytecode
+    end 
+
+let get_string_backend = function
+  | Bsb_config_types.Js       -> "js"
+  | Bsb_config_types.Native   -> "native"
+  | Bsb_config_types.Bytecode -> "bytecode"
 
 let watch_exit () =
   print_endline "\nStart Watching now ";
@@ -19005,7 +19020,7 @@ let watch_exit () =
           Ben - July 23rd 2017 
    *)
   let backend = "-backend" in
-  let backend_kind = get_string_backend () in
+  let backend_kind = get_string_backend (get_backend ()) in
   let bsb_watcher =
     Bsb_build_util.get_bsc_dir cwd // "bsb_watcher.js" in
   if Ext_sys.is_windows_or_cygwin then
@@ -19031,7 +19046,7 @@ let set_make_world () = make_world := true
 (* Takes a cleanFunc and calls it on the right folder. *)
 let clean cleanFunc =
   if !is_cmdline_build_kind_set then
-    let nested = get_string_backend () in
+    let nested = get_string_backend (get_backend ()) in
     cleanFunc ~nested bsc_dir cwd
   else begin
     Format.fprintf Format.std_formatter 
@@ -19061,7 +19076,7 @@ let bsb_main_flags : (string * Arg.spec * string) list=
     " Init sample project to get started. Note (`bsb -init sample` will create a sample project while `bsb -init .` will resuse current directory)";
     "-theme", Arg.String set_theme,
     " The theme for project initialization, default is basic(https://github.com/bucklescript/bucklescript/tree/master/jscomp/bsb/templates)";
-    "-query", Arg.String (fun s -> Bsb_query.query ~cwd ~bsc_dir ~cmdline_build_kind:!cmdline_build_kind s ),
+    "-query", Arg.String (fun s -> Bsb_query.query ~cwd ~bsc_dir ~backend:(get_backend ()) s ),
     " (internal)Query metadata about the build";
     "-themes", Arg.Unit Bsb_init.list_themes,
     " List all available themes";
@@ -19143,16 +19158,7 @@ let () =
       (* Quickly parse the backend argument to make sure we're building to the right target. *)
       Arg.parse bsb_main_flags handle_anonymous_arg usage;
 
-      (* If cmdline_build_kind is set we use it, otherwise we actually shadow it for the first entry. *)
-      let cmdline_build_kind = if !is_cmdline_build_kind_set then
-        !cmdline_build_kind
-      else begin
-        let entries = Bsb_config_parse.entries_from_bsconfig () in 
-        match List.hd entries with
-          | Bsb_config_types.JsTarget _       -> Bsb_config_types.Js
-          | Bsb_config_types.NativeTarget _   -> Bsb_config_types.Native
-          | Bsb_config_types.BytecodeTarget _ -> Bsb_config_types.Bytecode
-      end in
+      let backend = get_backend () in
       (* print_endline __LOC__; *)
       (* TODO(sansouci): Optimize this. Not passing external_deps_for_linking_and_clibs 
          will cause regenerate_ninja to re-crawl the external dep graph (only 
@@ -19162,10 +19168,10 @@ let () =
           ~generate_watch_metadata:true
           ~root_project_dir:cwd
           ~forced:true
-          ~cmdline_build_kind
+          ~backend
           cwd bsc_dir ocaml_dir
       in
-      let nested = get_string_backend () in
+      let nested = get_string_backend backend in
       ninja_command_exit  vendor_ninja [||] nested
     end
   | argv -> 
@@ -19176,21 +19182,11 @@ let () =
         begin
           Arg.parse bsb_main_flags handle_anonymous_arg usage;
           
-          (* If cmdline_build_kind is set we use it, otherwise we actually shadow it for the first entry. *)
-          let cmdline_build_kind = if !is_cmdline_build_kind_set then
-            !cmdline_build_kind
-          else
-            let entries = Bsb_config_parse.entries_from_bsconfig () in 
-            begin match List.hd entries with
-              | Bsb_config_types.JsTarget _       -> Bsb_config_types.Js
-              | Bsb_config_types.NativeTarget _   -> Bsb_config_types.Native
-              | Bsb_config_types.BytecodeTarget _ -> Bsb_config_types.Bytecode
-            end 
-          in
           (* first, check whether we're in boilerplate generation mode, aka -init foo -theme bar *)
           match !generate_theme_with_path with
           | Some path -> Bsb_init.init_sample_project ~cwd ~theme:!current_theme path
           | None -> 
+            let backend = get_backend () in
             (* [-make-world] should never be combined with [-package-specs] *)
             let make_world = !make_world in 
             begin match make_world, !force_regenerate with
@@ -19207,7 +19203,7 @@ let () =
                 (* If -make-world is passed we first do that because we'll collect
                    the library files as we go. *)
                 let external_deps_for_linking_and_clibs = if make_world then
-                  Some (Bsb_world.make_world_deps cwd ~root_project_dir:cwd ~cmdline_build_kind)
+                  Some (Bsb_world.make_world_deps cwd ~root_project_dir:cwd ~backend)
                 else None in
                 (* don't regenerate files when we only run [bsb -clean-world] *)
                 let _ = Bsb_ninja_regen.regenerate_ninja 
@@ -19218,7 +19214,7 @@ let () =
                   ~no_dev:false 
                   ~root_project_dir:cwd
                   ~forced:force_regenerate
-                  ~cmdline_build_kind
+                  ~backend
                   cwd bsc_dir ocaml_dir in
                 if !watch_mode then begin
                   watch_exit ()
@@ -19228,7 +19224,7 @@ let () =
                      [bsb -regen ]
                   *)
                 end else begin
-                  let nested = get_string_backend () in
+                  let nested = get_string_backend backend in
                   ninja_command_exit vendor_ninja [||] nested
                 end
             end;
@@ -19238,21 +19234,11 @@ let () =
         begin
           Arg.parse_argv bsb_args bsb_main_flags handle_anonymous_arg usage ;
           
-          (* If cmdline_build_kind is set we use it, otherwise we actually shadow it for the first entry. *)
-          let cmdline_build_kind = if !is_cmdline_build_kind_set then
-            !cmdline_build_kind
-          else
-            let entries = Bsb_config_parse.entries_from_bsconfig () in 
-            begin match List.hd entries with
-              | Bsb_config_types.JsTarget _       -> Bsb_config_types.Js
-              | Bsb_config_types.NativeTarget _   -> Bsb_config_types.Native
-              | Bsb_config_types.BytecodeTarget _ -> Bsb_config_types.Bytecode
-            end 
-          in
+          let backend = get_backend () in
           
           (* [-make-world] should never be combined with [-package-specs] *)
           let external_deps_for_linking_and_clibs = if !make_world then 
-            Some (Bsb_world.make_world_deps cwd ~root_project_dir:cwd ~cmdline_build_kind)
+            Some (Bsb_world.make_world_deps cwd ~root_project_dir:cwd ~backend)
           else None in
           let _ = Bsb_ninja_regen.regenerate_ninja 
             ?external_deps_for_linking_and_clibs
@@ -19262,11 +19248,11 @@ let () =
             ~no_dev:false
             ~root_project_dir:cwd
             ~forced:!force_regenerate
-            ~cmdline_build_kind
+            ~backend
             cwd bsc_dir ocaml_dir in
           if !watch_mode then watch_exit ()
           else begin 
-            let nested = get_string_backend () in
+            let nested = get_string_backend backend in
             ninja_command_exit vendor_ninja ninja_args nested
           end
         end

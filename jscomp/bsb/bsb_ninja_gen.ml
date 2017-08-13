@@ -57,7 +57,7 @@ let output_ninja
     ~ocaml_dir         
     ~root_project_dir
     ~is_top_level
-    ~cmdline_build_kind
+    ~backend
     ~main_bs_super_errors
     ({
       package_name;
@@ -90,11 +90,11 @@ let output_ninja
   =
   let custom_rules = Bsb_rule.reset generators in 
   let entries = List.filter (fun e -> match e with 
-    | Bsb_config_types.JsTarget _       -> cmdline_build_kind = Bsb_config_types.Js
-    | Bsb_config_types.NativeTarget _   -> cmdline_build_kind = Bsb_config_types.Native
-    | Bsb_config_types.BytecodeTarget _ -> cmdline_build_kind = Bsb_config_types.Bytecode
+    | Bsb_config_types.JsTarget _       -> backend = Bsb_config_types.Js
+    | Bsb_config_types.NativeTarget _   -> backend = Bsb_config_types.Native
+    | Bsb_config_types.BytecodeTarget _ -> backend = Bsb_config_types.Bytecode
   ) entries in
-  let nested = begin match cmdline_build_kind with
+  let nested = begin match backend with
     | Bsb_config_types.Js       -> "js"
     | Bsb_config_types.Native   -> "native"
     | Bsb_config_types.Bytecode -> "bytecode"
@@ -220,7 +220,7 @@ let output_ninja
         static_resources;
     in
     let (all_info, should_build) =
-    match cmdline_build_kind with
+    match backend with
     | Bsb_config_types.Js -> 
       if List.mem Bsb_config_types.Js allowed_build_kinds then
         (Bsb_ninja_file_groups.handle_file_groups oc
@@ -239,7 +239,7 @@ let output_ninja
           ~is_top_level
           ~entries
           ~compile_target:Bsb_ninja_native.Bytecode
-          ~cmdline_build_kind
+          ~backend
           ~package_specs
           ~js_post_build_cmd
           ~files_to_install
@@ -255,7 +255,7 @@ let output_ninja
           ~is_top_level
           ~entries
           ~compile_target:Bsb_ninja_native.Native
-          ~cmdline_build_kind
+          ~backend
           ~package_specs
           ~js_post_build_cmd
           ~files_to_install

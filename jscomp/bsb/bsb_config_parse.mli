@@ -33,6 +33,6 @@ val interpret_json :
     bsc_dir:string -> 
     generate_watch_metadata:bool -> 
     no_dev:bool -> 
-    compilation_kind:Bsb_config_types.compilation_kind_t ->
+    backend:Bsb_config_types.compilation_kind_t ->
     string -> 
     Bsb_config_types.t

@@ -75,7 +75,7 @@ let merlin_flg_ppx = "\nFLG -ppx "
 let merlin_s = "\nS "
 let merlin_b = "\nB "
 
-
+let merlin_pkg = "\nPKG"
 let merlin_flg = "\nFLG "
 let bs_flg_prefix = "-bs-"
 
@@ -87,7 +87,7 @@ let bsc_flg_to_merlin_ocamlc_flg bsc_flags  =
         Literals.dash_nostdlib::bsc_flags) 
 
 
-let merlin_file_gen ~cwd
+let merlin_file_gen ~cwd ~backend
     built_in_ppx
     ({bs_file_groups = res_files ; 
       generate_merlin;
@@ -98,9 +98,15 @@ let merlin_file_gen ~cwd
       built_in_dependency;
       external_includes; 
       reason_react_jsx ; 
+      ocamlfind_dependencies;
      } : Bsb_config_types.t)
   =
-  if generate_merlin then begin     
+  if generate_merlin then begin
+    let nested = match backend with
+      | Bsb_config_types.Js       -> "js"
+      | Bsb_config_types.Native   -> "native"
+      | Bsb_config_types.Bytecode -> "bytecode" 
+    in
     let buffer = Buffer.create 1024 in
     ppx_flags
     |> List.iter (fun x ->
@@ -160,8 +166,13 @@ let merlin_file_gen ~cwd
         Buffer.add_string buffer merlin_s;
         Buffer.add_string buffer x.dir ;
         Buffer.add_string buffer merlin_b;
-        Buffer.add_string buffer (Bsb_config.lib_bs//x.dir) ;
+        Buffer.add_string buffer (Bsb_config.lib_bs // nested // x.dir) ;
       ) ;
+    Buffer.add_string buffer merlin_pkg;
+    ocamlfind_dependencies |> List.iter (fun x ->
+      Buffer.add_string buffer " ";
+      Buffer.add_string buffer x;
+    );
     Buffer.add_string buffer "\n";
     revise_merlin (cwd // merlin) buffer 
   end

@@ -269,7 +269,7 @@ let link oc ret ~entries ~file_groups ~static_libraries =
         (String.lowercase main_module_name) ^ ".byte"  , Rules.linking_bytecode, Literals.suffix_cmo, main_module_name
       | Bsb_config_types.NativeTarget main_module_name   -> 
         (String.lowercase main_module_name) ^ ".native", Rules.linking_native  , Literals.suffix_cmx, main_module_name
-    end in
+      end in
     let (all_mlast_files, all_cmo_or_cmx_files, all_cmi_files) =
       List.fold_left (fun acc group -> 
         String_map.fold (fun _ (v : Bsb_build_cache.module_info) (all_mlast_files, all_cmo_or_cmx_files, all_cmi_files) -> 
@@ -311,9 +311,9 @@ let link oc ret ~entries ~file_groups ~static_libraries =
     acc
   ) ret entries
     
-let pack oc ret ~cmdline_build_kind ~file_groups =
+let pack oc ret ~backend ~file_groups =
   let output_cma_or_cmxa, rule_name, suffix_cmo_or_cmx =
-    begin match cmdline_build_kind with
+    begin match backend with
     (* These cases could benefit from a better error message. *)
     | Bsb_config_types.Js       -> assert false
     | Bsb_config_types.Bytecode -> Literals.library_file ^ Literals.suffix_cma , Rules.build_cma_library , Literals.suffix_cmo
@@ -362,7 +362,7 @@ let handle_file_groups oc
   ~is_top_level
   ~entries
   ~compile_target
-  ~cmdline_build_kind
+  ~backend
   ~package_specs
   ~js_post_build_cmd
   ~files_to_install
@@ -379,4 +379,4 @@ let handle_file_groups oc
   if is_top_level then
     link oc ret ~entries ~file_groups ~static_libraries
   else
-    pack oc ret ~cmdline_build_kind ~file_groups
+    pack oc ret ~backend ~file_groups
