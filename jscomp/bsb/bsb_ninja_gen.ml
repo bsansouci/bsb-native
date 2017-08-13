@@ -164,8 +164,8 @@ let output_ninja
           Bsb_ninja_global_vars.bs_super_errors, bs_super_errors;
           
           Bsb_ninja_global_vars.external_deps_for_linking, Bsb_build_util.flag_concat dash_i external_deps_for_linking;
-          Bsb_ninja_global_vars.ocamlc, if ocamlfind_dependencies = [] then ocamlc ^ ".opt" else ocamlc;
-          Bsb_ninja_global_vars.ocamlopt, if ocamlfind_dependencies = [] then ocamlopt ^ ".opt" else ocamlopt;
+          Bsb_ninja_global_vars.ocamlc, if ocamlfind_dependencies = [] then ocaml_dir // ocamlc ^ ".opt" else ocamlc;
+          Bsb_ninja_global_vars.ocamlopt, if ocamlfind_dependencies = [] then ocaml_dir // ocamlopt ^ ".opt" else ocamlopt;
           Bsb_ninja_global_vars.ocamlfind, if ocamlfind_dependencies = [] then "" else ocamlfind;
           Bsb_ninja_global_vars.ocamlfind_dependencies,  Bsb_build_util.flag_concat "-package" (external_ocamlfind_dependencies @ ocamlfind_dependencies);
           Bsb_build_schemas.bsb_dir_group, "0"  (*TODO: avoid name conflict in the future *)
