@@ -206,7 +206,7 @@ let () =
     begin
       (* Quickly parse the backend argument to make sure we're building to the right target. *)
       Arg.parse bsb_main_flags handle_anonymous_arg usage;
-      print_endline @@ "blabla ";
+
       (* If cmdline_build_kind is set we use it, otherwise we actually shadow it for the first entry. *)
       let cmdline_build_kind = if !is_cmdline_build_kind_set then
         !cmdline_build_kind
