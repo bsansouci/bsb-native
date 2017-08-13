@@ -18984,20 +18984,28 @@ let cmdline_build_kind = ref Bsb_config_types.Js
 *)
 let is_cmdline_build_kind_set = ref false
 
+let get_string_backend () =
+  if !is_cmdline_build_kind_set then
+    match !cmdline_build_kind with
+    | Bsb_config_types.Js       -> "js"
+    | Bsb_config_types.Native   -> "native"
+    | Bsb_config_types.Bytecode -> "bytecode"
+  else begin
+    let entries = Bsb_config_parse.entries_from_bsconfig () in 
+    match List.hd entries with
+      | Bsb_config_types.JsTarget _       -> "js"
+      | Bsb_config_types.NativeTarget _   -> "native"
+      | Bsb_config_types.BytecodeTarget _ -> "bytecode"
+  end
+
 let watch_exit () =
   print_endline "\nStart Watching now ";
-  (* @TODO windows support here. We need to pass those args to the nodejs file. 
+  (* @Incomplete windows support here. We need to pass those args to the nodejs file. 
      Didn't bother for now.
           Ben - July 23rd 2017 
    *)
-  let (backend, backend_kind) = match !cmdline_build_kind with 
-    (* @hack we don't actually know the file path, we make it up because we know
-       that we don't actually care about the path. 
-       This will bite us back some day. *)
-    | Bsb_config_types.Js -> ("-backend", "js")
-    | Bsb_config_types.Bytecode -> ("-backend", "bytecode")
-    | Bsb_config_types.Native -> ("-backend", "native")
-  in
+  let backend = "-backend" in
+  let backend_kind = get_string_backend () in
   let bsb_watcher =
     Bsb_build_util.get_bsc_dir cwd // "bsb_watcher.js" in
   if Ext_sys.is_windows_or_cygwin then
@@ -19018,26 +19026,12 @@ let separator = "--"
 let watch_mode = ref false
 let make_world = ref false 
 let set_make_world () = make_world := true
-
-let get_build_dir () =
-  if !is_cmdline_build_kind_set then
-    match !cmdline_build_kind with
-    | Bsb_config_types.Js       -> "js"
-    | Bsb_config_types.Native   -> "native"
-    | Bsb_config_types.Bytecode -> "bytecode"
-  else begin
-    let entries = Bsb_config_parse.entries_from_bsconfig () in 
-    match List.hd entries with
-      | Bsb_config_types.JsTarget _       -> "js"
-      | Bsb_config_types.NativeTarget _   -> "native"
-      | Bsb_config_types.BytecodeTarget _ -> "bytecode"
-  end
   
 
 (* Takes a cleanFunc and calls it on the right folder. *)
 let clean cleanFunc =
   if !is_cmdline_build_kind_set then
-    let nested = get_build_dir () in
+    let nested = get_string_backend () in
     cleanFunc ~nested bsc_dir cwd
   else begin
     Format.fprintf Format.std_formatter 
@@ -19171,7 +19165,7 @@ let () =
           ~cmdline_build_kind
           cwd bsc_dir ocaml_dir
       in
-      let nested = get_build_dir () in
+      let nested = get_string_backend () in
       ninja_command_exit  vendor_ninja [||] nested
     end
   | argv -> 
@@ -19234,7 +19228,7 @@ let () =
                      [bsb -regen ]
                   *)
                 end else begin
-                  let nested = get_build_dir () in
+                  let nested = get_string_backend () in
                   ninja_command_exit vendor_ninja [||] nested
                 end
             end;
@@ -19272,7 +19266,7 @@ let () =
             cwd bsc_dir ocaml_dir in
           if !watch_mode then watch_exit ()
           else begin 
-            let nested = get_build_dir () in
+            let nested = get_string_backend () in
             ninja_command_exit vendor_ninja ninja_args nested
           end
         end
