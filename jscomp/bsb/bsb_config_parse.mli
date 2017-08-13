@@ -25,7 +25,7 @@
 val package_specs_and_super_errors_from_bsconfig : 
     unit -> (Bsb_package_specs.t * bool)
 
-
+val entries_from_bsconfig : unit -> Bsb_config_types.entries_t list
 
 
 val interpret_json : 

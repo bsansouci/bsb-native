@@ -9062,6 +9062,787 @@ type t =
   }
 
 end
+module Bsb_default : sig 
+#1 "bsb_default.mli"
+(* Copyright (C) 2015-2016 Bloomberg Finance L.P.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * In addition to the permissions granted to you by the LGPL, you may combine
+ * or link a "work that uses the Library" with a publicly distributed version
+ * of this file to produce a combined library or application, then distribute
+ * that combined work under the terms of your choosing, with no requirement
+ * to comply with the obligations normally placed on you by section 4 of the
+ * LGPL version 3 (or the corresponding section of a later version of the LGPL
+ * should you choose to use a later version).
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
+
+
+
+val warnings : string 
+
+val bsc_flags : string list 
+
+val refmt_flags : string list 
+
+
+
+val main_entries : Bsb_config_types.entries_t list
+
+val allowed_build_kinds : Bsb_config_types.compilation_kind_t list
+
+end = struct
+#1 "bsb_default.ml"
+(* Copyright (C) 2015-2016 Bloomberg Finance L.P.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * In addition to the permissions granted to you by the LGPL, you may combine
+ * or link a "work that uses the Library" with a publicly distributed version
+ * of this file to produce a combined library or application, then distribute
+ * that combined work under the terms of your choosing, with no requirement
+ * to comply with the obligations normally placed on you by section 4 of the
+ * LGPL version 3 (or the corresponding section of a later version of the LGPL
+ * should you choose to use a later version).
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
+
+
+(**
+   6
+   Label omitted in function application.
+   7
+   Method overridden.
+   9
+   Missing fields in a record pattern. (*Not always desired, in some cases need [@@@warning "+9"] *)      
+        27
+        Innocuous unused variable: unused variable that is not bound with let nor as, and doesn’t start with an underscore (_) character.      
+        29
+        Unescaped end-of-line in a string constant (non-portable code).
+        32 .. 39 Unused  blabla
+        44
+        Open statement shadows an already defined identifier.
+        45
+        Open statement shadows an already defined label or constructor.
+        48
+        Implicit elimination of optional arguments.
+        https://caml.inria.fr/mantis/view.php?id=6352
+
+*)  
+let warnings = "-40+6+7+27+32..39+44+45"
+
+let bsc_flags = 
+  [
+    "-no-alias-deps";
+    "-color"; "always" ;
+  ]
+
+
+
+let refmt_flags = ["--print"; "binary"]
+
+
+
+let main_entries = [Bsb_config_types.JsTarget "Index"]
+
+let allowed_build_kinds = [Bsb_config_types.Js; Bsb_config_types.Bytecode; Bsb_config_types.Native]
+
+end
+module Ext_json_noloc : sig 
+#1 "ext_json_noloc.mli"
+(* Copyright (C) 2017- Authors of BuckleScript
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * In addition to the permissions granted to you by the LGPL, you may combine
+ * or link a "work that uses the Library" with a publicly distributed version
+ * of this file to produce a combined library or application, then distribute
+ * that combined work under the terms of your choosing, with no requirement
+ * to comply with the obligations normally placed on you by section 4 of the
+ * LGPL version 3 (or the corresponding section of a later version of the LGPL
+ * should you choose to use a later version).
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
+
+
+type t 
+
+val true_  : t 
+val false_ : t 
+val null : t 
+val str : string -> t 
+val flo : string -> t 
+val arr : t array -> t 
+val obj : t String_map.t -> t 
+val kvs : (string * t) list -> t 
+val equal : t -> t -> bool 
+val to_string : t -> string 
+
+
+val to_channel : out_channel -> t -> unit
+end = struct
+#1 "ext_json_noloc.ml"
+(* Copyright (C) 2017- Authors of BuckleScript
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * In addition to the permissions granted to you by the LGPL, you may combine
+ * or link a "work that uses the Library" with a publicly distributed version
+ * of this file to produce a combined library or application, then distribute
+ * that combined work under the terms of your choosing, with no requirement
+ * to comply with the obligations normally placed on you by section 4 of the
+ * LGPL version 3 (or the corresponding section of a later version of the LGPL
+ * should you choose to use a later version).
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
+
+
+type t = 
+  | True 
+  | False 
+  | Null 
+  | Flo of string 
+  | Str of string
+  | Arr of t array 
+  | Obj of t String_map.t
+
+
+(** poor man's serialization *)
+
+let quot x = 
+    "\"" ^ String.escaped x ^ "\""
+
+let true_ = True
+let false_ = False
+let null = Null 
+let str s  = Str s 
+let flo s = Flo s 
+let arr s = Arr s 
+let obj s = Obj s 
+let kvs s = 
+  Obj (String_map.of_list s)
+  
+let rec equal 
+    (x : t)
+    (y : t) = 
+  match x with 
+  | Null  -> (* [%p? Null _ ] *)
+    begin match y with
+      | Null  -> true
+      | _ -> false end
+  | Str str  -> 
+    begin match y with 
+      | Str str2 -> str = str2
+      | _ -> false end
+  | Flo flo 
+    ->
+    begin match y with
+      |  Flo flo2 -> 
+        flo = flo2 
+      | _ -> false
+    end
+  | True  -> 
+    begin match y with 
+      | True  -> true 
+      | _ -> false 
+    end
+  | False  -> 
+    begin match y with 
+      | False  -> true 
+      | _ -> false 
+    end     
+  | Arr content 
+    -> 
+    begin match y with 
+      | Arr content2
+        ->
+        Ext_array.for_all2_no_exn equal content content2
+      | _ -> false 
+    end
+
+  | Obj map -> 
+    begin match y with 
+      | Obj map2 -> 
+        String_map.equal equal map map2
+      | _ -> false 
+    end 
+
+let rec encode_aux (x : t ) 
+    (buf : Buffer.t) : unit =  
+  let a str = Buffer.add_string buf str in 
+  match x with 
+  | Null  -> a "null"
+  | Str s   -> a (quot s)
+  | Flo  s -> 
+    a s (* 
+    since our parsing keep the original float representation, we just dump it as is, there is no cases like [nan] *)
+  | Arr  content -> 
+    begin match content with 
+      | [||] -> a "[]"
+      | _ -> 
+        a "[ ";
+        encode_aux
+          (Array.unsafe_get content 0)
+          buf ; 
+        for i = 1 to Array.length content - 1 do 
+          a " , ";
+          encode_aux 
+            (Array.unsafe_get content i)
+            buf
+        done;    
+        a " ]"
+    end
+  | True  -> a "true"
+  | False  -> a "false"
+  | Obj map -> 
+    if String_map.is_empty map then 
+      a "{}"
+    else 
+      begin  
+        (*prerr_endline "WEIRD";
+        prerr_endline (string_of_int @@ String_map.cardinal map );   *)
+        a "{ ";
+        let _ : int =  String_map.fold (fun  k v i -> 
+            if i <> 0 then begin
+              a " , " 
+            end; 
+            a (quot k);
+            a " : ";
+            encode_aux v buf ;
+            i + 1 
+          ) map 0 in 
+          a " }"
+      end
+
+
+let to_string x  = 
+    let buf = Buffer.create 1024 in 
+    encode_aux x buf ;
+    Buffer.contents buf 
+
+let to_channel (oc : out_channel) x  = 
+    let buf = Buffer.create 1024 in 
+    encode_aux x buf ;
+    Buffer.output_buffer oc buf   
+end
+module Bsb_watcher_gen : sig 
+#1 "bsb_watcher_gen.mli"
+(* Copyright (C) 2017- Authors of BuckleScript
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * In addition to the permissions granted to you by the LGPL, you may combine
+ * or link a "work that uses the Library" with a publicly distributed version
+ * of this file to produce a combined library or application, then distribute
+ * that combined work under the terms of your choosing, with no requirement
+ * to comply with the obligations normally placed on you by section 4 of the
+ * LGPL version 3 (or the corresponding section of a later version of the LGPL
+ * should you choose to use a later version).
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
+
+(** This module try to generate some meta data so that
+  everytime [bsconfig.json] is reload, we can re-read
+  such meta data changes in the watcher.
+  
+  Another way of doing it is processing [bsconfig.json] 
+  directly in [watcher] but that would 
+  mean the duplication of logic in [bsb] and [bsb_watcher]
+*)
+val generate_sourcedirs_meta : 
+  string -> Bsb_parse_sources.t -> unit 
+end = struct
+#1 "bsb_watcher_gen.ml"
+(* Copyright (C) 2017- Authors of BuckleScript
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * In addition to the permissions granted to you by the LGPL, you may combine
+ * or link a "work that uses the Library" with a publicly distributed version
+ * of this file to produce a combined library or application, then distribute
+ * that combined work under the terms of your choosing, with no requirement
+ * to comply with the obligations normally placed on you by section 4 of the
+ * LGPL version 3 (or the corresponding section of a later version of the LGPL
+ * should you choose to use a later version).
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
+
+
+let (//) = Ext_filename.combine
+
+let sourcedirs_meta = ".sourcedirs.json"
+
+let generate_sourcedirs_meta cwd (res : Bsb_parse_sources.t) = 
+  let ochan = open_out_bin (cwd // Bsb_config.lib_bs // sourcedirs_meta) in
+  let v = 
+    Ext_json_noloc.(
+      kvs [
+        "dirs" ,
+      arr (Ext_array.of_list_map ( fun (x : Bsb_parse_sources.file_group) -> 
+      str x.dir 
+      ) res.files ) ;
+      "generated" ,
+      arr @@ Array.of_list @@ List.fold_left (fun acc (x : Bsb_parse_sources.file_group) -> 
+      Ext_list.flat_map_acc (fun x -> List.map str x.Bsb_parse_sources.output) acc  x.generators 
+      )  [] res.files 
+      ]
+     ) in 
+  Ext_json_noloc.to_channel ochan v ;
+  close_out ochan
+end
+module Bsb_config_parse : sig 
+#1 "bsb_config_parse.mli"
+(* Copyright (C) 2015-2016 Bloomberg Finance L.P.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * In addition to the permissions granted to you by the LGPL, you may combine
+ * or link a "work that uses the Library" with a publicly distributed version
+ * of this file to produce a combined library or application, then distribute
+ * that combined work under the terms of your choosing, with no requirement
+ * to comply with the obligations normally placed on you by section 4 of the
+ * LGPL version 3 (or the corresponding section of a later version of the LGPL
+ * should you choose to use a later version).
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
+
+val package_specs_and_super_errors_from_bsconfig : 
+    unit -> (Bsb_package_specs.t * bool)
+
+val entries_from_bsconfig : unit -> Bsb_config_types.entries_t list
+
+
+val interpret_json : 
+    override_package_specs:Bsb_package_specs.t option -> 
+    bsc_dir:string -> 
+    generate_watch_metadata:bool -> 
+    no_dev:bool -> 
+    compilation_kind:Bsb_config_types.compilation_kind_t ->
+    string -> 
+    Bsb_config_types.t
+
+end = struct
+#1 "bsb_config_parse.ml"
+(* Copyright (C) 2015-2016 Bloomberg Finance L.P.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * In addition to the permissions granted to you by the LGPL, you may combine
+ * or link a "work that uses the Library" with a publicly distributed version
+ * of this file to produce a combined library or application, then distribute
+ * that combined work under the terms of your choosing, with no requirement
+ * to comply with the obligations normally placed on you by section 4 of the
+ * LGPL version 3 (or the corresponding section of a later version of the LGPL
+ * should you choose to use a later version).
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
+
+let config_file_bak = "bsconfig.json.bak"
+let get_list_string = Bsb_build_util.get_list_string
+let (//) = Ext_filename.combine
+
+let resolve_package compilation_kind cwd  package_name = 
+  let x =  Bsb_pkg.resolve_bs_package ~cwd package_name  in
+  let nested = match compilation_kind with
+    | Bsb_config_types.Js -> "js"
+    | Bsb_config_types.Bytecode -> "bytecode"
+    | Bsb_config_types.Native -> "native"
+  in
+  {
+    Bsb_config_types.package_name ;
+    package_install_path = x // Bsb_config.lib_ocaml // nested
+  }
+
+let get_allowed_build_kinds arr =  
+  arr
+  |> get_list_string
+  |> List.fold_left (fun acc x ->
+    let el = match x with
+    | "js"       -> Bsb_config_types.Js
+    | "bytecode" -> Bsb_config_types.Bytecode
+    | "native"   -> Bsb_config_types.Native
+    | _ -> failwith "allowed_build_kinds can only be 'js', 'bytecode' or 'native'"
+    in el :: acc
+  ) []
+
+(* Key is the path *)
+let (|?)  m (key, cb) =
+  m  |> Ext_json.test key cb
+
+let parse_entries (field : Ext_json_types.t array) =
+  Ext_array.to_list_map (function
+    | Ext_json_types.Obj {map} ->
+      (* kind defaults to bytecode *)
+      let kind = ref "js" in
+      let main = ref None in
+      let _ = map
+        |? (Bsb_build_schemas.kind, `Str (fun x -> kind := x))
+        |? (Bsb_build_schemas.main, `Str (fun x -> main := Some x))
+      in
+      let mainModule = begin match !main with
+      (* This is technically optional when compiling to js *)
+      | None when !kind = Literals.js ->
+        "Index"
+      | None -> 
+        failwith "Missing field 'main'. That field is required its value needs to be the main module for the target"
+      | Some mainModule -> mainModule
+      end in
+      if !kind = Literals.native then
+        Some (Bsb_config_types.NativeTarget mainModule)
+      else if !kind = Literals.bytecode then
+        Some (Bsb_config_types.BytecodeTarget mainModule)
+      else if !kind = Literals.js then
+        Some (Bsb_config_types.JsTarget mainModule)
+      else
+        failwith "Missing field 'kind'. That field is required and its value be 'js', 'native' or 'bytecode'"
+    | _ -> failwith "Unrecognized object inside array 'entries' field.") 
+  field
+
+
+
+let package_specs_and_super_errors_from_bsconfig () = 
+  let json = Ext_json_parse.parse_json_from_file Literals.bsconfig_json in
+  begin match json with
+    | Obj {map} ->
+      let package_specs = begin 
+        match String_map.find_opt Bsb_build_schemas.package_specs map with 
+        | Some x ->
+          Bsb_package_specs.from_json x
+        | None -> 
+          Bsb_package_specs.default_package_specs
+      end in
+      let bs_super_errors = ref false in
+      map |? (Bsb_build_schemas.bs_super_errors, `Bool (fun b -> bs_super_errors := b)) |> ignore;
+      (package_specs, !bs_super_errors)
+    | _ -> assert false
+  end
+
+let entries_from_bsconfig () = 
+  let json = Ext_json_parse.parse_json_from_file Literals.bsconfig_json in
+  begin match json with
+    | Obj {map} ->
+      let entries = ref Bsb_default.main_entries in
+      map |? (Bsb_build_schemas.entries, `Arr (fun s -> entries := parse_entries s)) |> ignore;
+      !entries
+    | _ -> assert false
+  end
+
+
+
+(*TODO: it is a little mess that [cwd] and [project dir] are shared*)
+
+
+
+
+(** ATT: make sure such function is re-entrant. 
+    With a given [cwd] it works anywhere*)
+let interpret_json 
+    ~override_package_specs
+    ~bsc_dir 
+    ~generate_watch_metadata
+    ~no_dev 
+    ~compilation_kind
+    cwd  
+
+  : Bsb_config_types.t =
+  
+  let reason_react_jsx = ref None in 
+  let config_json = (cwd // Literals.bsconfig_json) in
+  let refmt = ref None in
+  let refmt_flags = ref Bsb_default.refmt_flags in
+  let build_script = ref None in
+  let static_libraries = ref [] in
+  let package_name = ref None in 
+  let namespace = ref false in 
+  let bs_external_includes = ref [] in 
+  let bs_super_errors = ref false in
+  let allowed_build_kinds = ref Bsb_default.allowed_build_kinds in
+  (** we should not resolve it too early,
+      since it is external configuration, no {!Bsb_build_util.convert_and_resolve_path}
+  *)
+  let bsc_flags = ref Bsb_default.bsc_flags in  
+  let warnings = ref Bsb_default.warnings in
+  let ocamlfind_dependencies = ref [] in
+  let ppx_flags = ref []in 
+
+  let js_post_build_cmd = ref None in 
+  let built_in_package = ref None in
+  let generate_merlin = ref true in 
+  let generators = ref String_map.empty in 
+
+  (* When we plan to add more deps here,
+     Make sure check it is consistent that for nested deps, we have a 
+     quck check by just re-parsing deps 
+     Make sure it works with [-make-world] [-clean-world]
+  *)
+  let bs_dependencies = ref [] in 
+  let bs_dev_dependencies = ref [] in
+  (* Setting ninja is a bit complex
+     1. if [build.ninja] does use [ninja] we need set a variable
+     2. we need store it so that we can call ninja correctly
+  *)
+  let entries = ref Bsb_default.main_entries in
+  let cut_generators = ref false in 
+  let config_json_chan = open_in_bin config_json  in
+  let global_data = Ext_json_parse.parse_json_from_chan config_json_chan  in
+  match global_data with
+  | Obj { map} ->
+    (* The default situation is empty *)
+    (match String_map.find_opt Bsb_build_schemas.use_stdlib map with      
+     | Some (False _) -> 
+       ()
+     | None 
+     | Some _ ->
+      let x = Bsb_pkg.resolve_bs_package ~cwd Bs_version.package_name  in
+      built_in_package := Some ({
+        Bsb_config_types.package_name = Bs_version.package_name;
+        package_install_path = x // Bsb_config.lib_ocaml;
+      });
+    ) ;
+    let package_specs =     
+      match String_map.find_opt Bsb_build_schemas.package_specs map with 
+      | Some x ->
+        Bsb_package_specs.from_json x 
+      | None ->  Bsb_package_specs.default_package_specs 
+    in
+    map
+    |? (Bsb_build_schemas.reason, `Obj begin fun m -> 
+      match String_map.find_opt Bsb_build_schemas.react_jsx m with 
+      
+      | Some (False _)
+      | None -> ()
+      | Some (Flo{loc; flo}) -> 
+        begin match flo with 
+        | "1" -> 
+        reason_react_jsx := 
+            Some (Filename.quote (Filename.concat bsc_dir Literals.reactjs_jsx_ppx_exe) )
+        | "2" -> 
+          reason_react_jsx := 
+            Some (Filename.quote 
+              (Filename.concat bsc_dir Literals.reactjs_jsx_ppx_2_exe) )
+        | _ -> Bsb_exception.failf ~loc "Unsupported jsx version %s" flo
+        end
+      | Some (True _) -> 
+        reason_react_jsx := 
+            Some (Filename.quote (Filename.concat bsc_dir Literals.reactjs_jsx_ppx_exe) 
+            )
+      | Some x -> Bsb_exception.failf ~loc:(Ext_json.loc_of x) 
+      "Unexpected input for jsx"
+      end)
+
+    |? (Bsb_build_schemas.generate_merlin, `Bool (fun b ->
+        generate_merlin := b
+      ))
+    |? (Bsb_build_schemas.name, `Str (fun s -> package_name := Some s))
+    |? (Bsb_build_schemas.namespace, `Bool (fun b ->
+        namespace := b
+     ))
+    |? (Bsb_build_schemas.js_post_build, `Obj begin fun m ->
+        m |? (Bsb_build_schemas.cmd , `Str (fun s -> 
+            js_post_build_cmd := Some (Bsb_build_util.resolve_bsb_magic_file ~cwd ~desc:Bsb_build_schemas.js_post_build s)
+
+          )
+          )
+        |> ignore
+      end)
+
+    |? (Bsb_build_schemas.bs_dependencies, `Arr (fun s -> bs_dependencies := Bsb_build_util.get_list_string s |> List.map (resolve_package compilation_kind cwd)))
+    |? (Bsb_build_schemas.bs_dev_dependencies,
+        `Arr (fun s ->
+            if not  no_dev then 
+              bs_dev_dependencies
+              := Bsb_build_util.get_list_string s
+                 |> List.map (resolve_package compilation_kind cwd))
+       )
+
+    (* More design *)
+    |? (Bsb_build_schemas.bs_external_includes, `Arr (fun s -> bs_external_includes := get_list_string s))
+    |? (Bsb_build_schemas.bsc_flags, `Arr (fun s -> bsc_flags := Bsb_build_util.get_list_string_acc s !bsc_flags))
+    |? (Bsb_build_schemas.warnings, `Str (fun s -> warnings := s))
+    |? (Bsb_build_schemas.ppx_flags, `Arr (fun s -> 
+        ppx_flags := s |> get_list_string |> List.map (fun p ->
+            if p = "" then failwith "invalid ppx, empty string found"
+            else Bsb_build_util.resolve_bsb_magic_file ~cwd ~desc:Bsb_build_schemas.ppx_flags p
+          )
+      ))
+    |? (Bsb_build_schemas.cut_generators, `Bool (fun b -> cut_generators := b))
+    |? (Bsb_build_schemas.generators, `Arr (fun s ->
+        generators :=
+          Array.fold_left (fun acc json -> 
+            match (json : Ext_json_types.t) with 
+            | Obj {map = m ; loc}  -> 
+              begin match String_map.find_opt  Bsb_build_schemas.name m,
+                          String_map.find_opt  Bsb_build_schemas.command m with 
+              | Some (Str {str = name}), Some ( Str {str = command}) -> 
+                String_map.add name command acc 
+              | _, _ -> 
+                Bsb_exception.failf ~loc {| generators exepect format like { "name" : "cppo",  "command"  : "cppo $in -o $out"} |}
+              end
+            | _ -> acc ) String_map.empty  s  ))
+    |? (Bsb_build_schemas.refmt, `Str (fun s -> 
+        refmt := Some (Bsb_build_util.resolve_bsb_magic_file ~cwd ~desc:Bsb_build_schemas.refmt s) ))
+    |? (Bsb_build_schemas.refmt_flags, `Arr (fun s -> refmt_flags := get_list_string s))
+    |? (Bsb_build_schemas.entries, `Arr (fun s -> entries := parse_entries s))
+    |? (Bsb_build_schemas.static_libraries, `Arr (fun s -> static_libraries := (List.map (fun v -> cwd // v) (get_list_string s))))
+    |? (Bsb_build_schemas.c_linker_flags, `Arr (fun s -> static_libraries := (List.fold_left (fun acc v -> "-ccopt" :: v :: acc) [] (List.rev (get_list_string s))) @ !static_libraries))
+    |? (Bsb_build_schemas.build_script, `Str (fun s -> build_script := Some s))
+    |? (Bsb_build_schemas.allowed_build_kinds, `Arr (fun s -> allowed_build_kinds := get_allowed_build_kinds s))
+    |? (Bsb_build_schemas.ocamlfind_dependencies, `Arr (fun s -> ocamlfind_dependencies := get_list_string s))
+    |? (Bsb_build_schemas.bs_super_errors, `Bool (fun b -> bs_super_errors := b))
+    |> ignore ;
+    begin match String_map.find_opt Bsb_build_schemas.sources map with 
+      | Some x -> 
+        let res = Bsb_parse_sources.parse_sources 
+            {no_dev; 
+             dir_index =
+               Bsb_dir_index.lib_dir_index; cwd = Filename.current_dir_name; 
+             root = cwd; cut_generators = !cut_generators}  x in 
+        if generate_watch_metadata then
+          Bsb_watcher_gen.generate_sourcedirs_meta cwd res ;     
+        begin match List.sort Ext_file_pp.interval_compare  res.intervals with
+          | [] -> ()
+          | queue ->
+            let file_size = in_channel_length config_json_chan in
+            let output_file = (cwd //config_file_bak) in 
+            let oc = open_out_bin output_file in
+            let () =
+              Ext_file_pp.process_wholes
+                queue file_size config_json_chan oc in
+            close_out oc ;
+            close_in config_json_chan ;
+            Unix.unlink config_json;
+            Unix.rename output_file config_json
+        end;
+        let package_name =       
+          (match !package_name with
+             | Some name -> name
+             | None ->
+               failwith "Error: Package name is required. Please specify a `name` in `bsconfig.json`"
+            ) in 
+        let namespace =     
+          if !namespace then 
+            Some (Ext_string.module_name_of_package_name package_name)
+          else   None  in 
+        {
+          package_name ;
+          namespace;    
+          external_includes = !bs_external_includes;
+          bsc_flags = !bsc_flags ;
+          warnings = !warnings;
+          ppx_flags = !ppx_flags ;
+          bs_dependencies = !bs_dependencies;
+          bs_dev_dependencies = !bs_dev_dependencies;
+          refmt = !refmt ;
+          refmt_flags = !refmt_flags ;
+          js_post_build_cmd =  !js_post_build_cmd ;
+          package_specs = 
+            (match override_package_specs with 
+            | None ->  package_specs
+            | Some x -> x );
+          globbed_dirs = res.globbed_dirs; 
+          bs_file_groups = res.files; 
+          files_to_install = String_hash_set.create 96;
+          built_in_dependency = !built_in_package;
+          generate_merlin = !generate_merlin ;
+          reason_react_jsx = !reason_react_jsx ;  
+          entries = !entries;
+          generators = !generators ; 
+          cut_generators = !cut_generators;
+          
+          
+          bs_super_errors = !bs_super_errors;
+          
+          static_libraries = !static_libraries;
+          build_script = !build_script;
+          allowed_build_kinds = !allowed_build_kinds;
+          ocamlfind_dependencies = !ocamlfind_dependencies;
+        }
+      | None -> failwith "no sources specified, please checkout the schema for more details"
+    end
+  | _ -> failwith "bsconfig.json expect a json object {}"
+
+end
 module Bsb_regex : sig 
 #1 "bsb_regex.mli"
 
@@ -10522,778 +11303,6 @@ let store ~cwd ~file:name file_stamps cmdline_build_kind =
       bsb_version ;
       bsc_version = Bs_version.version; 
       cmdline_build_kind = cmdline_build_kind; }
-
-end
-module Bsb_default : sig 
-#1 "bsb_default.mli"
-(* Copyright (C) 2015-2016 Bloomberg Finance L.P.
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Lesser General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * In addition to the permissions granted to you by the LGPL, you may combine
- * or link a "work that uses the Library" with a publicly distributed version
- * of this file to produce a combined library or application, then distribute
- * that combined work under the terms of your choosing, with no requirement
- * to comply with the obligations normally placed on you by section 4 of the
- * LGPL version 3 (or the corresponding section of a later version of the LGPL
- * should you choose to use a later version).
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Lesser General Public License for more details.
- *
- * You should have received a copy of the GNU Lesser General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
-
-
-
-val warnings : string 
-
-val bsc_flags : string list 
-
-val refmt_flags : string list 
-
-
-
-val main_entries : Bsb_config_types.entries_t list
-
-val allowed_build_kinds : Bsb_config_types.compilation_kind_t list
-
-end = struct
-#1 "bsb_default.ml"
-(* Copyright (C) 2015-2016 Bloomberg Finance L.P.
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Lesser General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * In addition to the permissions granted to you by the LGPL, you may combine
- * or link a "work that uses the Library" with a publicly distributed version
- * of this file to produce a combined library or application, then distribute
- * that combined work under the terms of your choosing, with no requirement
- * to comply with the obligations normally placed on you by section 4 of the
- * LGPL version 3 (or the corresponding section of a later version of the LGPL
- * should you choose to use a later version).
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Lesser General Public License for more details.
- *
- * You should have received a copy of the GNU Lesser General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
-
-
-(**
-   6
-   Label omitted in function application.
-   7
-   Method overridden.
-   9
-   Missing fields in a record pattern. (*Not always desired, in some cases need [@@@warning "+9"] *)      
-        27
-        Innocuous unused variable: unused variable that is not bound with let nor as, and doesn’t start with an underscore (_) character.      
-        29
-        Unescaped end-of-line in a string constant (non-portable code).
-        32 .. 39 Unused  blabla
-        44
-        Open statement shadows an already defined identifier.
-        45
-        Open statement shadows an already defined label or constructor.
-        48
-        Implicit elimination of optional arguments.
-        https://caml.inria.fr/mantis/view.php?id=6352
-
-*)  
-let warnings = "-40+6+7+27+32..39+44+45"
-
-let bsc_flags = 
-  [
-    "-no-alias-deps";
-    "-color"; "always" ;
-  ]
-
-
-
-let refmt_flags = ["--print"; "binary"]
-
-
-
-let main_entries = [Bsb_config_types.JsTarget "Index"]
-
-let allowed_build_kinds = [Bsb_config_types.Js; Bsb_config_types.Bytecode; Bsb_config_types.Native]
-
-end
-module Ext_json_noloc : sig 
-#1 "ext_json_noloc.mli"
-(* Copyright (C) 2017- Authors of BuckleScript
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Lesser General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * In addition to the permissions granted to you by the LGPL, you may combine
- * or link a "work that uses the Library" with a publicly distributed version
- * of this file to produce a combined library or application, then distribute
- * that combined work under the terms of your choosing, with no requirement
- * to comply with the obligations normally placed on you by section 4 of the
- * LGPL version 3 (or the corresponding section of a later version of the LGPL
- * should you choose to use a later version).
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Lesser General Public License for more details.
- *
- * You should have received a copy of the GNU Lesser General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
-
-
-type t 
-
-val true_  : t 
-val false_ : t 
-val null : t 
-val str : string -> t 
-val flo : string -> t 
-val arr : t array -> t 
-val obj : t String_map.t -> t 
-val kvs : (string * t) list -> t 
-val equal : t -> t -> bool 
-val to_string : t -> string 
-
-
-val to_channel : out_channel -> t -> unit
-end = struct
-#1 "ext_json_noloc.ml"
-(* Copyright (C) 2017- Authors of BuckleScript
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Lesser General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * In addition to the permissions granted to you by the LGPL, you may combine
- * or link a "work that uses the Library" with a publicly distributed version
- * of this file to produce a combined library or application, then distribute
- * that combined work under the terms of your choosing, with no requirement
- * to comply with the obligations normally placed on you by section 4 of the
- * LGPL version 3 (or the corresponding section of a later version of the LGPL
- * should you choose to use a later version).
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Lesser General Public License for more details.
- *
- * You should have received a copy of the GNU Lesser General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
-
-
-type t = 
-  | True 
-  | False 
-  | Null 
-  | Flo of string 
-  | Str of string
-  | Arr of t array 
-  | Obj of t String_map.t
-
-
-(** poor man's serialization *)
-
-let quot x = 
-    "\"" ^ String.escaped x ^ "\""
-
-let true_ = True
-let false_ = False
-let null = Null 
-let str s  = Str s 
-let flo s = Flo s 
-let arr s = Arr s 
-let obj s = Obj s 
-let kvs s = 
-  Obj (String_map.of_list s)
-  
-let rec equal 
-    (x : t)
-    (y : t) = 
-  match x with 
-  | Null  -> (* [%p? Null _ ] *)
-    begin match y with
-      | Null  -> true
-      | _ -> false end
-  | Str str  -> 
-    begin match y with 
-      | Str str2 -> str = str2
-      | _ -> false end
-  | Flo flo 
-    ->
-    begin match y with
-      |  Flo flo2 -> 
-        flo = flo2 
-      | _ -> false
-    end
-  | True  -> 
-    begin match y with 
-      | True  -> true 
-      | _ -> false 
-    end
-  | False  -> 
-    begin match y with 
-      | False  -> true 
-      | _ -> false 
-    end     
-  | Arr content 
-    -> 
-    begin match y with 
-      | Arr content2
-        ->
-        Ext_array.for_all2_no_exn equal content content2
-      | _ -> false 
-    end
-
-  | Obj map -> 
-    begin match y with 
-      | Obj map2 -> 
-        String_map.equal equal map map2
-      | _ -> false 
-    end 
-
-let rec encode_aux (x : t ) 
-    (buf : Buffer.t) : unit =  
-  let a str = Buffer.add_string buf str in 
-  match x with 
-  | Null  -> a "null"
-  | Str s   -> a (quot s)
-  | Flo  s -> 
-    a s (* 
-    since our parsing keep the original float representation, we just dump it as is, there is no cases like [nan] *)
-  | Arr  content -> 
-    begin match content with 
-      | [||] -> a "[]"
-      | _ -> 
-        a "[ ";
-        encode_aux
-          (Array.unsafe_get content 0)
-          buf ; 
-        for i = 1 to Array.length content - 1 do 
-          a " , ";
-          encode_aux 
-            (Array.unsafe_get content i)
-            buf
-        done;    
-        a " ]"
-    end
-  | True  -> a "true"
-  | False  -> a "false"
-  | Obj map -> 
-    if String_map.is_empty map then 
-      a "{}"
-    else 
-      begin  
-        (*prerr_endline "WEIRD";
-        prerr_endline (string_of_int @@ String_map.cardinal map );   *)
-        a "{ ";
-        let _ : int =  String_map.fold (fun  k v i -> 
-            if i <> 0 then begin
-              a " , " 
-            end; 
-            a (quot k);
-            a " : ";
-            encode_aux v buf ;
-            i + 1 
-          ) map 0 in 
-          a " }"
-      end
-
-
-let to_string x  = 
-    let buf = Buffer.create 1024 in 
-    encode_aux x buf ;
-    Buffer.contents buf 
-
-let to_channel (oc : out_channel) x  = 
-    let buf = Buffer.create 1024 in 
-    encode_aux x buf ;
-    Buffer.output_buffer oc buf   
-end
-module Bsb_watcher_gen : sig 
-#1 "bsb_watcher_gen.mli"
-(* Copyright (C) 2017- Authors of BuckleScript
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Lesser General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * In addition to the permissions granted to you by the LGPL, you may combine
- * or link a "work that uses the Library" with a publicly distributed version
- * of this file to produce a combined library or application, then distribute
- * that combined work under the terms of your choosing, with no requirement
- * to comply with the obligations normally placed on you by section 4 of the
- * LGPL version 3 (or the corresponding section of a later version of the LGPL
- * should you choose to use a later version).
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Lesser General Public License for more details.
- *
- * You should have received a copy of the GNU Lesser General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
-
-(** This module try to generate some meta data so that
-  everytime [bsconfig.json] is reload, we can re-read
-  such meta data changes in the watcher.
-  
-  Another way of doing it is processing [bsconfig.json] 
-  directly in [watcher] but that would 
-  mean the duplication of logic in [bsb] and [bsb_watcher]
-*)
-val generate_sourcedirs_meta : 
-  string -> Bsb_parse_sources.t -> unit 
-end = struct
-#1 "bsb_watcher_gen.ml"
-(* Copyright (C) 2017- Authors of BuckleScript
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Lesser General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * In addition to the permissions granted to you by the LGPL, you may combine
- * or link a "work that uses the Library" with a publicly distributed version
- * of this file to produce a combined library or application, then distribute
- * that combined work under the terms of your choosing, with no requirement
- * to comply with the obligations normally placed on you by section 4 of the
- * LGPL version 3 (or the corresponding section of a later version of the LGPL
- * should you choose to use a later version).
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Lesser General Public License for more details.
- *
- * You should have received a copy of the GNU Lesser General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
-
-
-let (//) = Ext_filename.combine
-
-let sourcedirs_meta = ".sourcedirs.json"
-
-let generate_sourcedirs_meta cwd (res : Bsb_parse_sources.t) = 
-  let ochan = open_out_bin (cwd // Bsb_config.lib_bs // sourcedirs_meta) in
-  let v = 
-    Ext_json_noloc.(
-      kvs [
-        "dirs" ,
-      arr (Ext_array.of_list_map ( fun (x : Bsb_parse_sources.file_group) -> 
-      str x.dir 
-      ) res.files ) ;
-      "generated" ,
-      arr @@ Array.of_list @@ List.fold_left (fun acc (x : Bsb_parse_sources.file_group) -> 
-      Ext_list.flat_map_acc (fun x -> List.map str x.Bsb_parse_sources.output) acc  x.generators 
-      )  [] res.files 
-      ]
-     ) in 
-  Ext_json_noloc.to_channel ochan v ;
-  close_out ochan
-end
-module Bsb_config_parse : sig 
-#1 "bsb_config_parse.mli"
-(* Copyright (C) 2015-2016 Bloomberg Finance L.P.
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Lesser General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * In addition to the permissions granted to you by the LGPL, you may combine
- * or link a "work that uses the Library" with a publicly distributed version
- * of this file to produce a combined library or application, then distribute
- * that combined work under the terms of your choosing, with no requirement
- * to comply with the obligations normally placed on you by section 4 of the
- * LGPL version 3 (or the corresponding section of a later version of the LGPL
- * should you choose to use a later version).
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Lesser General Public License for more details.
- *
- * You should have received a copy of the GNU Lesser General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
-
-val package_specs_and_super_errors_from_bsconfig : 
-    unit -> (Bsb_package_specs.t * bool)
-
-
-
-
-val interpret_json : 
-    override_package_specs:Bsb_package_specs.t option -> 
-    bsc_dir:string -> 
-    generate_watch_metadata:bool -> 
-    no_dev:bool -> 
-    compilation_kind:Bsb_config_types.compilation_kind_t ->
-    string -> 
-    Bsb_config_types.t
-
-end = struct
-#1 "bsb_config_parse.ml"
-(* Copyright (C) 2015-2016 Bloomberg Finance L.P.
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Lesser General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * In addition to the permissions granted to you by the LGPL, you may combine
- * or link a "work that uses the Library" with a publicly distributed version
- * of this file to produce a combined library or application, then distribute
- * that combined work under the terms of your choosing, with no requirement
- * to comply with the obligations normally placed on you by section 4 of the
- * LGPL version 3 (or the corresponding section of a later version of the LGPL
- * should you choose to use a later version).
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Lesser General Public License for more details.
- *
- * You should have received a copy of the GNU Lesser General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
-
-let config_file_bak = "bsconfig.json.bak"
-let get_list_string = Bsb_build_util.get_list_string
-let (//) = Ext_filename.combine
-
-let resolve_package compilation_kind cwd  package_name = 
-  let x =  Bsb_pkg.resolve_bs_package ~cwd package_name  in
-  let nested = match compilation_kind with
-    | Bsb_config_types.Js -> "js"
-    | Bsb_config_types.Bytecode -> "bytecode"
-    | Bsb_config_types.Native -> "native"
-  in
-  {
-    Bsb_config_types.package_name ;
-    package_install_path = x // Bsb_config.lib_ocaml // nested
-  }
-
-let get_allowed_build_kinds arr =  
-  arr
-  |> get_list_string
-  |> List.fold_left (fun acc x ->
-    let el = match x with
-    | "js"       -> Bsb_config_types.Js
-    | "bytecode" -> Bsb_config_types.Bytecode
-    | "native"   -> Bsb_config_types.Native
-    | _ -> failwith "allowed_build_kinds can only be 'js', 'bytecode' or 'native'"
-    in el :: acc
-  ) []
-
-(* Key is the path *)
-let (|?)  m (key, cb) =
-  m  |> Ext_json.test key cb
-
-let parse_entries (field : Ext_json_types.t array) =
-  Ext_array.to_list_map (function
-    | Ext_json_types.Obj {map} ->
-      (* kind defaults to bytecode *)
-      let kind = ref "js" in
-      let main = ref None in
-      let _ = map
-        |? (Bsb_build_schemas.kind, `Str (fun x -> kind := x))
-        |? (Bsb_build_schemas.main, `Str (fun x -> main := Some x))
-      in
-      let mainModule = begin match !main with
-      (* This is technically optional when compiling to js *)
-      | None when !kind = Literals.js ->
-        "Index"
-      | None -> 
-        failwith "Missing field 'main'. That field is required its value needs to be the main module for the target"
-      | Some mainModule -> mainModule
-      end in
-      if !kind = Literals.native then
-        Some (Bsb_config_types.NativeTarget mainModule)
-      else if !kind = Literals.bytecode then
-        Some (Bsb_config_types.BytecodeTarget mainModule)
-      else if !kind = Literals.js then
-        Some (Bsb_config_types.JsTarget mainModule)
-      else
-        failwith "Missing field 'kind'. That field is required and its value be 'js', 'native' or 'bytecode'"
-    | _ -> failwith "Unrecognized object inside array 'entries' field.") 
-  field
-
-
-
-let package_specs_and_super_errors_from_bsconfig () = 
-  let json = Ext_json_parse.parse_json_from_file Literals.bsconfig_json in
-  begin match json with
-    | Obj {map} ->
-      let package_specs = begin 
-        match String_map.find_opt Bsb_build_schemas.package_specs map with 
-        | Some x ->
-          Bsb_package_specs.from_json x
-        | None -> 
-          Bsb_package_specs.default_package_specs
-      end in
-      let bs_super_errors = ref false in
-      map |? (Bsb_build_schemas.bs_super_errors, `Bool (fun b -> bs_super_errors := b)) |> ignore;
-      (package_specs, !bs_super_errors)
-    | _ -> assert false
-  end
-
-
-
-
-(*TODO: it is a little mess that [cwd] and [project dir] are shared*)
-
-
-
-
-(** ATT: make sure such function is re-entrant. 
-    With a given [cwd] it works anywhere*)
-let interpret_json 
-    ~override_package_specs
-    ~bsc_dir 
-    ~generate_watch_metadata
-    ~no_dev 
-    ~compilation_kind
-    cwd  
-
-  : Bsb_config_types.t =
-  
-  let reason_react_jsx = ref None in 
-  let config_json = (cwd // Literals.bsconfig_json) in
-  let refmt = ref None in
-  let refmt_flags = ref Bsb_default.refmt_flags in
-  let build_script = ref None in
-  let static_libraries = ref [] in
-  let package_name = ref None in 
-  let namespace = ref false in 
-  let bs_external_includes = ref [] in 
-  let bs_super_errors = ref false in
-  let allowed_build_kinds = ref Bsb_default.allowed_build_kinds in
-  (** we should not resolve it too early,
-      since it is external configuration, no {!Bsb_build_util.convert_and_resolve_path}
-  *)
-  let bsc_flags = ref Bsb_default.bsc_flags in  
-  let warnings = ref Bsb_default.warnings in
-  let ocamlfind_dependencies = ref [] in
-  let ppx_flags = ref []in 
-
-  let js_post_build_cmd = ref None in 
-  let built_in_package = ref None in
-  let generate_merlin = ref true in 
-  let generators = ref String_map.empty in 
-
-  (* When we plan to add more deps here,
-     Make sure check it is consistent that for nested deps, we have a 
-     quck check by just re-parsing deps 
-     Make sure it works with [-make-world] [-clean-world]
-  *)
-  let bs_dependencies = ref [] in 
-  let bs_dev_dependencies = ref [] in
-  (* Setting ninja is a bit complex
-     1. if [build.ninja] does use [ninja] we need set a variable
-     2. we need store it so that we can call ninja correctly
-  *)
-  let entries = ref Bsb_default.main_entries in
-  let cut_generators = ref false in 
-  let config_json_chan = open_in_bin config_json  in
-  let global_data = Ext_json_parse.parse_json_from_chan config_json_chan  in
-  match global_data with
-  | Obj { map} ->
-    (* The default situation is empty *)
-    (match String_map.find_opt Bsb_build_schemas.use_stdlib map with      
-     | Some (False _) -> 
-       ()
-     | None 
-     | Some _ ->
-      let x = Bsb_pkg.resolve_bs_package ~cwd Bs_version.package_name  in
-      built_in_package := Some ({
-        Bsb_config_types.package_name = Bs_version.package_name;
-        package_install_path = x // Bsb_config.lib_ocaml;
-      });
-    ) ;
-    let package_specs =     
-      match String_map.find_opt Bsb_build_schemas.package_specs map with 
-      | Some x ->
-        Bsb_package_specs.from_json x 
-      | None ->  Bsb_package_specs.default_package_specs 
-    in
-    map
-    |? (Bsb_build_schemas.reason, `Obj begin fun m -> 
-      match String_map.find_opt Bsb_build_schemas.react_jsx m with 
-      
-      | Some (False _)
-      | None -> ()
-      | Some (Flo{loc; flo}) -> 
-        begin match flo with 
-        | "1" -> 
-        reason_react_jsx := 
-            Some (Filename.quote (Filename.concat bsc_dir Literals.reactjs_jsx_ppx_exe) )
-        | "2" -> 
-          reason_react_jsx := 
-            Some (Filename.quote 
-              (Filename.concat bsc_dir Literals.reactjs_jsx_ppx_2_exe) )
-        | _ -> Bsb_exception.failf ~loc "Unsupported jsx version %s" flo
-        end
-      | Some (True _) -> 
-        reason_react_jsx := 
-            Some (Filename.quote (Filename.concat bsc_dir Literals.reactjs_jsx_ppx_exe) 
-            )
-      | Some x -> Bsb_exception.failf ~loc:(Ext_json.loc_of x) 
-      "Unexpected input for jsx"
-      end)
-
-    |? (Bsb_build_schemas.generate_merlin, `Bool (fun b ->
-        generate_merlin := b
-      ))
-    |? (Bsb_build_schemas.name, `Str (fun s -> package_name := Some s))
-    |? (Bsb_build_schemas.namespace, `Bool (fun b ->
-        namespace := b
-     ))
-    |? (Bsb_build_schemas.js_post_build, `Obj begin fun m ->
-        m |? (Bsb_build_schemas.cmd , `Str (fun s -> 
-            js_post_build_cmd := Some (Bsb_build_util.resolve_bsb_magic_file ~cwd ~desc:Bsb_build_schemas.js_post_build s)
-
-          )
-          )
-        |> ignore
-      end)
-
-    |? (Bsb_build_schemas.bs_dependencies, `Arr (fun s -> bs_dependencies := Bsb_build_util.get_list_string s |> List.map (resolve_package compilation_kind cwd)))
-    |? (Bsb_build_schemas.bs_dev_dependencies,
-        `Arr (fun s ->
-            if not  no_dev then 
-              bs_dev_dependencies
-              := Bsb_build_util.get_list_string s
-                 |> List.map (resolve_package compilation_kind cwd))
-       )
-
-    (* More design *)
-    |? (Bsb_build_schemas.bs_external_includes, `Arr (fun s -> bs_external_includes := get_list_string s))
-    |? (Bsb_build_schemas.bsc_flags, `Arr (fun s -> bsc_flags := Bsb_build_util.get_list_string_acc s !bsc_flags))
-    |? (Bsb_build_schemas.warnings, `Str (fun s -> warnings := s))
-    |? (Bsb_build_schemas.ppx_flags, `Arr (fun s -> 
-        ppx_flags := s |> get_list_string |> List.map (fun p ->
-            if p = "" then failwith "invalid ppx, empty string found"
-            else Bsb_build_util.resolve_bsb_magic_file ~cwd ~desc:Bsb_build_schemas.ppx_flags p
-          )
-      ))
-    |? (Bsb_build_schemas.cut_generators, `Bool (fun b -> cut_generators := b))
-    |? (Bsb_build_schemas.generators, `Arr (fun s ->
-        generators :=
-          Array.fold_left (fun acc json -> 
-            match (json : Ext_json_types.t) with 
-            | Obj {map = m ; loc}  -> 
-              begin match String_map.find_opt  Bsb_build_schemas.name m,
-                          String_map.find_opt  Bsb_build_schemas.command m with 
-              | Some (Str {str = name}), Some ( Str {str = command}) -> 
-                String_map.add name command acc 
-              | _, _ -> 
-                Bsb_exception.failf ~loc {| generators exepect format like { "name" : "cppo",  "command"  : "cppo $in -o $out"} |}
-              end
-            | _ -> acc ) String_map.empty  s  ))
-    |? (Bsb_build_schemas.refmt, `Str (fun s -> 
-        refmt := Some (Bsb_build_util.resolve_bsb_magic_file ~cwd ~desc:Bsb_build_schemas.refmt s) ))
-    |? (Bsb_build_schemas.refmt_flags, `Arr (fun s -> refmt_flags := get_list_string s))
-    |? (Bsb_build_schemas.entries, `Arr (fun s -> entries := parse_entries s))
-    |? (Bsb_build_schemas.static_libraries, `Arr (fun s -> static_libraries := (List.map (fun v -> cwd // v) (get_list_string s))))
-    |? (Bsb_build_schemas.c_linker_flags, `Arr (fun s -> static_libraries := (List.fold_left (fun acc v -> "-ccopt" :: v :: acc) [] (List.rev (get_list_string s))) @ !static_libraries))
-    |? (Bsb_build_schemas.build_script, `Str (fun s -> build_script := Some s))
-    |? (Bsb_build_schemas.allowed_build_kinds, `Arr (fun s -> allowed_build_kinds := get_allowed_build_kinds s))
-    |? (Bsb_build_schemas.ocamlfind_dependencies, `Arr (fun s -> ocamlfind_dependencies := get_list_string s))
-    |? (Bsb_build_schemas.bs_super_errors, `Bool (fun b -> bs_super_errors := b))
-    |> ignore ;
-    begin match String_map.find_opt Bsb_build_schemas.sources map with 
-      | Some x -> 
-        let res = Bsb_parse_sources.parse_sources 
-            {no_dev; 
-             dir_index =
-               Bsb_dir_index.lib_dir_index; cwd = Filename.current_dir_name; 
-             root = cwd; cut_generators = !cut_generators}  x in 
-        if generate_watch_metadata then
-          Bsb_watcher_gen.generate_sourcedirs_meta cwd res ;     
-        begin match List.sort Ext_file_pp.interval_compare  res.intervals with
-          | [] -> ()
-          | queue ->
-            let file_size = in_channel_length config_json_chan in
-            let output_file = (cwd //config_file_bak) in 
-            let oc = open_out_bin output_file in
-            let () =
-              Ext_file_pp.process_wholes
-                queue file_size config_json_chan oc in
-            close_out oc ;
-            close_in config_json_chan ;
-            Unix.unlink config_json;
-            Unix.rename output_file config_json
-        end;
-        let package_name =       
-          (match !package_name with
-             | Some name -> name
-             | None ->
-               failwith "Error: Package name is required. Please specify a `name` in `bsconfig.json`"
-            ) in 
-        let namespace =     
-          if !namespace then 
-            Some (Ext_string.module_name_of_package_name package_name)
-          else   None  in 
-        {
-          package_name ;
-          namespace;    
-          external_includes = !bs_external_includes;
-          bsc_flags = !bsc_flags ;
-          warnings = !warnings;
-          ppx_flags = !ppx_flags ;
-          bs_dependencies = !bs_dependencies;
-          bs_dev_dependencies = !bs_dev_dependencies;
-          refmt = !refmt ;
-          refmt_flags = !refmt_flags ;
-          js_post_build_cmd =  !js_post_build_cmd ;
-          package_specs = 
-            (match override_package_specs with 
-            | None ->  package_specs
-            | Some x -> x );
-          globbed_dirs = res.globbed_dirs; 
-          bs_file_groups = res.files; 
-          files_to_install = String_hash_set.create 96;
-          built_in_dependency = !built_in_package;
-          generate_merlin = !generate_merlin ;
-          reason_react_jsx = !reason_react_jsx ;  
-          entries = !entries;
-          generators = !generators ; 
-          cut_generators = !cut_generators;
-          
-          
-          bs_super_errors = !bs_super_errors;
-          
-          static_libraries = !static_libraries;
-          build_script = !build_script;
-          allowed_build_kinds = !allowed_build_kinds;
-          ocamlfind_dependencies = !ocamlfind_dependencies;
-        }
-      | None -> failwith "no sources specified, please checkout the schema for more details"
-    end
-  | _ -> failwith "bsconfig.json expect a json object {}"
 
 end
 module Bsb_merlin_gen : sig 
@@ -13061,9 +13070,6 @@ let output_ninja
   let bsb_helper = bsc_dir // bsb_helper_exe in (* The path to [bsb_heler.exe] *)
   let ocamlc = "ocamlc" in
   let ocamlopt = "ocamlopt" in
-  (* let ocamlc = ocaml_dir // ocamlc_exe in
-  let ocamlopt = ocaml_dir // ocamlopt_exe in *)
-  (* let builddir = Bsb_config.lib_bs in  *)
   let ppx_flags = Bsb_build_util.flag_concat dash_ppx ppx_flags in
   let bsc_flags =  String.concat Ext_string.single_space bsc_flags in
   let refmt_flags = String.concat Ext_string.single_space refmt_flags in
@@ -19014,22 +19020,32 @@ let make_world = ref false
 let set_make_world () = make_world := true
 
 let get_build_dir () =
-  match !cmdline_build_kind with
+  if !is_cmdline_build_kind_set then
+    match !cmdline_build_kind with
     | Bsb_config_types.Js       -> "js"
     | Bsb_config_types.Native   -> "native"
     | Bsb_config_types.Bytecode -> "bytecode"
+  else begin
+    let entries = Bsb_config_parse.entries_from_bsconfig () in 
+    match List.hd entries with
+      | Bsb_config_types.JsTarget _       -> "js"
+      | Bsb_config_types.NativeTarget _   -> "native"
+      | Bsb_config_types.BytecodeTarget _ -> "bytecode"
+  end
+  
 
 (* Takes a cleanFunc and calls it on the right folder. *)
 let clean cleanFunc =
-  if not !is_cmdline_build_kind_set then begin
+  if !is_cmdline_build_kind_set then
+    let nested = get_build_dir () in
+    cleanFunc ~nested bsc_dir cwd
+  else begin
     Format.fprintf Format.std_formatter 
       "@{<warning>Cleaning all artifacts because -backend wasn't set before '-clean' or '-clean-world'.@}@.";
     cleanFunc ~nested:"js" bsc_dir cwd;
     cleanFunc ~nested:"bytecode" bsc_dir cwd;
     cleanFunc ~nested:"native" bsc_dir cwd;
-  end else
-    let nested = get_build_dir () in
-    cleanFunc ~nested bsc_dir cwd
+  end
 
 let bsb_main_flags : (string * Arg.spec * string) list=
   [
@@ -19132,7 +19148,17 @@ let () =
     begin
       (* Quickly parse the backend argument to make sure we're building to the right target. *)
       Arg.parse bsb_main_flags handle_anonymous_arg usage;
-      
+      print_endline @@ "blabla ";
+      (* If cmdline_build_kind is set we use it, otherwise we actually shadow it for the first entry. *)
+      let cmdline_build_kind = if !is_cmdline_build_kind_set then
+        !cmdline_build_kind
+      else begin
+        let entries = Bsb_config_parse.entries_from_bsconfig () in 
+        match List.hd entries with
+          | Bsb_config_types.JsTarget _       -> Bsb_config_types.Js
+          | Bsb_config_types.NativeTarget _   -> Bsb_config_types.Native
+          | Bsb_config_types.BytecodeTarget _ -> Bsb_config_types.Bytecode
+      end in
       (* print_endline __LOC__; *)
       (* TODO(sansouci): Optimize this. Not passing external_deps_for_linking_and_clibs 
          will cause regenerate_ninja to re-crawl the external dep graph (only 
@@ -19142,7 +19168,7 @@ let () =
           ~generate_watch_metadata:true
           ~root_project_dir:cwd
           ~forced:true
-          ~cmdline_build_kind:!cmdline_build_kind
+          ~cmdline_build_kind
           cwd bsc_dir ocaml_dir
       in
       let nested = get_build_dir () in
@@ -19155,6 +19181,18 @@ let () =
         ->
         begin
           Arg.parse bsb_main_flags handle_anonymous_arg usage;
+          
+          (* If cmdline_build_kind is set we use it, otherwise we actually shadow it for the first entry. *)
+          let cmdline_build_kind = if !is_cmdline_build_kind_set then
+            !cmdline_build_kind
+          else
+            let entries = Bsb_config_parse.entries_from_bsconfig () in 
+            begin match List.hd entries with
+              | Bsb_config_types.JsTarget _       -> Bsb_config_types.Js
+              | Bsb_config_types.NativeTarget _   -> Bsb_config_types.Native
+              | Bsb_config_types.BytecodeTarget _ -> Bsb_config_types.Bytecode
+            end 
+          in
           (* first, check whether we're in boilerplate generation mode, aka -init foo -theme bar *)
           match !generate_theme_with_path with
           | Some path -> Bsb_init.init_sample_project ~cwd ~theme:!current_theme path
@@ -19175,7 +19213,7 @@ let () =
                 (* If -make-world is passed we first do that because we'll collect
                    the library files as we go. *)
                 let external_deps_for_linking_and_clibs = if make_world then
-                  Some (Bsb_world.make_world_deps cwd ~root_project_dir:cwd ~cmdline_build_kind:!cmdline_build_kind)
+                  Some (Bsb_world.make_world_deps cwd ~root_project_dir:cwd ~cmdline_build_kind)
                 else None in
                 (* don't regenerate files when we only run [bsb -clean-world] *)
                 let _ = Bsb_ninja_regen.regenerate_ninja 
@@ -19186,7 +19224,7 @@ let () =
                   ~no_dev:false 
                   ~root_project_dir:cwd
                   ~forced:force_regenerate
-                  ~cmdline_build_kind:!cmdline_build_kind
+                  ~cmdline_build_kind
                   cwd bsc_dir ocaml_dir in
                 if !watch_mode then begin
                   watch_exit ()
@@ -19204,10 +19242,23 @@ let () =
       | `Split (bsb_args,ninja_args)
         -> (* -make-world all dependencies fall into this category *)
         begin
-          Arg.parse_argv bsb_args bsb_main_flags handle_anonymous_arg usage ;          
+          Arg.parse_argv bsb_args bsb_main_flags handle_anonymous_arg usage ;
+          
+          (* If cmdline_build_kind is set we use it, otherwise we actually shadow it for the first entry. *)
+          let cmdline_build_kind = if !is_cmdline_build_kind_set then
+            !cmdline_build_kind
+          else
+            let entries = Bsb_config_parse.entries_from_bsconfig () in 
+            begin match List.hd entries with
+              | Bsb_config_types.JsTarget _       -> Bsb_config_types.Js
+              | Bsb_config_types.NativeTarget _   -> Bsb_config_types.Native
+              | Bsb_config_types.BytecodeTarget _ -> Bsb_config_types.Bytecode
+            end 
+          in
+          
           (* [-make-world] should never be combined with [-package-specs] *)
           let external_deps_for_linking_and_clibs = if !make_world then 
-            Some (Bsb_world.make_world_deps cwd ~root_project_dir:cwd ~cmdline_build_kind:!cmdline_build_kind)
+            Some (Bsb_world.make_world_deps cwd ~root_project_dir:cwd ~cmdline_build_kind)
           else None in
           let _ = Bsb_ninja_regen.regenerate_ninja 
             ?external_deps_for_linking_and_clibs
@@ -19217,7 +19268,7 @@ let () =
             ~no_dev:false
             ~root_project_dir:cwd
             ~forced:!force_regenerate
-            ~cmdline_build_kind:!cmdline_build_kind
+            ~cmdline_build_kind
             cwd bsc_dir ocaml_dir in
           if !watch_mode then watch_exit ()
           else begin 

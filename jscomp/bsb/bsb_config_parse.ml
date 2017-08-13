@@ -102,6 +102,15 @@ let package_specs_and_super_errors_from_bsconfig () =
     | _ -> assert false
   end
 
+let entries_from_bsconfig () = 
+  let json = Ext_json_parse.parse_json_from_file Literals.bsconfig_json in
+  begin match json with
+    | Obj {map} ->
+      let entries = ref Bsb_default.main_entries in
+      map |? (Bsb_build_schemas.entries, `Arr (fun s -> entries := parse_entries s)) |> ignore;
+      !entries
+    | _ -> assert false
+  end
 
 
 

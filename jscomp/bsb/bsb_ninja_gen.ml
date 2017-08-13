@@ -106,9 +106,6 @@ let output_ninja
   let bsb_helper = bsc_dir // bsb_helper_exe in (* The path to [bsb_heler.exe] *)
   let ocamlc = "ocamlc" in
   let ocamlopt = "ocamlopt" in
-  (* let ocamlc = ocaml_dir // ocamlc_exe in
-  let ocamlopt = ocaml_dir // ocamlopt_exe in *)
-  (* let builddir = Bsb_config.lib_bs in  *)
   let ppx_flags = Bsb_build_util.flag_concat dash_ppx ppx_flags in
   let bsc_flags =  String.concat Ext_string.single_space bsc_flags in
   let refmt_flags = String.concat Ext_string.single_space refmt_flags in
