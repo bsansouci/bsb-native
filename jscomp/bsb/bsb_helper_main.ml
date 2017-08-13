@@ -61,6 +61,7 @@ let link link_byte_or_native =
       ~clibs:(List.rev !clibs)
       ~ocamlfind_packages:!ocamlfind_packages
       ~bs_super_errors:!bs_super_errors
+      ~cwd:(Sys.getcwd ())
   end
 
 let anonymous filename =
@@ -144,6 +145,7 @@ let () =
         ~batch_files:!batch_files
         ~ocamlfind_packages:!ocamlfind_packages
         ~bs_super_errors:!bs_super_errors
+        ~cwd:(Sys.getcwd ())
     )),
     " pack native files (cmx) into a library file (cmxa)";
 
@@ -154,6 +156,7 @@ let () =
         ~batch_files:!batch_files
         ~ocamlfind_packages:!ocamlfind_packages
         ~bs_super_errors:!bs_super_errors
+        ~cwd:(Sys.getcwd ())
     )),
     " pack bytecode files (cmo) into a library file (cma)";
     

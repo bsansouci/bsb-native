@@ -29,4 +29,5 @@ val pack : pack_t ->
   includes:string list -> 
   ocamlfind_packages:string list -> 
   bs_super_errors:bool -> 
+  cwd:string ->
   unit

@@ -24,7 +24,9 @@
 
 type link_t = LinkBytecode of string | LinkNative of string
 
-let link link_byte_or_native ~main_module ~batch_files ~clibs ~includes ~ocamlfind_packages ~bs_super_errors =
+let (//) = Ext_filename.combine
+
+let link link_byte_or_native ~main_module ~batch_files ~clibs ~includes ~ocamlfind_packages ~bs_super_errors ~cwd =
   let suffix_object_files, suffix_library_files, compiler, add_custom, output_file = begin match link_byte_or_native with
   | LinkBytecode output_file -> Literals.suffix_cmo, Literals.suffix_cma , "ocamlc"  , true, output_file
   | LinkNative output_file   -> Literals.suffix_cmx, Literals.suffix_cmxa, "ocamlopt", false, output_file
@@ -73,7 +75,9 @@ let link link_byte_or_native ~main_module ~batch_files ~clibs ~includes ~ocamlfi
        to install ocamlfind. 
      *)
     if ocamlfind_packages = [] then
-      let compiler = compiler ^ ".opt" in
+      let bsc_dir = Bsb_build_util.get_bsc_dir cwd in
+      let ocaml_dir = Bsb_build_util.get_ocaml_dir bsc_dir in
+      let compiler = ocaml_dir // compiler ^ ".opt" in
       let list_of_args = (compiler :: "-g" 
         :: (if bs_super_errors then ["-bs-super-errors"] else [])) 
         @ "-o" :: output_file :: all_object_files in

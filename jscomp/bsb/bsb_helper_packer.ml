@@ -24,7 +24,9 @@
 
 type pack_t = PackBytecode | PackNative
 
-let pack pack_byte_or_native ~batch_files ~includes ~ocamlfind_packages ~bs_super_errors =
+let (//) = Ext_filename.combine
+
+let pack pack_byte_or_native ~batch_files ~includes ~ocamlfind_packages ~bs_super_errors ~cwd =
   let suffix_object_files, suffix_library_files, compiler, custom_flag = begin match pack_byte_or_native with
   | PackBytecode -> Literals.suffix_cmo, Literals.suffix_cma , "ocamlc", true
   | PackNative   -> Literals.suffix_cmx, Literals.suffix_cmxa, "ocamlopt", false
@@ -64,7 +66,9 @@ let pack pack_byte_or_native ~batch_files ~includes ~ocamlfind_packages ~bs_supe
        So if you don't care about opam dependencies you can solely rely on Bucklescript and npm, no need 
        to install ocamlfind. *)
     if ocamlfind_packages = [] then
-      let compiler = compiler ^ ".opt" in
+      let bsc_dir = Bsb_build_util.get_bsc_dir cwd in
+      let ocaml_dir = Bsb_build_util.get_ocaml_dir bsc_dir in
+      let compiler = ocaml_dir // compiler ^ ".opt" in
       Unix.execvp
         compiler
           (Array.of_list ((compiler :: "-a" :: "-g" :: (if bs_super_errors then ["-bs-super-errors"] else []) )
