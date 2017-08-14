@@ -179,9 +179,10 @@ let interpret_json
      | None 
      | Some _ ->
       let x = Bsb_pkg.resolve_bs_package ~cwd Bs_version.package_name  in
+      let folder = Bsb_build_util.get_ocaml_lib_dir ~is_js:(backend = Bsb_config_types.Js) cwd in
       built_in_package := Some ({
         Bsb_config_types.package_name = Bs_version.package_name;
-        package_install_path = x // Bsb_config.lib_ocaml;
+        package_install_path = x // folder;
       });
     ) ;
     let package_specs =     

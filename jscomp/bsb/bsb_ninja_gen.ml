@@ -275,7 +275,7 @@ let output_ninja
     let _ = match build_script with
     | Some build_script when should_build ->
       let build_script = Ext_string.ninja_escaped build_script in
-      let ocaml_lib = Bsb_build_util.get_ocaml_lib_dir cwd in
+      let ocaml_lib = Bsb_build_util.get_ocaml_lib_dir ~is_js:(backend = Bsb_config_types.Js) cwd in
       (* TODO(sansouci): Fix this super ghetto environment variable setup... This is not cross platform! *)
       let envvars = "export OCAML_LIB=" ^ ocaml_lib ^ " && " 
                   ^ "export OCAML_SYSTHREADS=" ^ (ocaml_dir // "otherlibs" // "systhreads") ^ " && " 

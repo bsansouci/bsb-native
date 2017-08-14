@@ -247,7 +247,7 @@ let get_ocaml_dir cwd =
     else Filename.dirname ocamlc
   end
 
-let get_ocaml_lib_dir cwd =
+let get_ocaml_lib_dir ~is_js cwd =
   if Ext_sys.is_windows_or_cygwin then begin
     Format.fprintf Format.err_formatter "@{<warning>Windows not supported.@}";
     (Filename.dirname (get_bsc_dir cwd)) // "lib" // "ocaml"
@@ -258,6 +258,8 @@ let get_ocaml_lib_dir cwd =
        We just assume that it's bad either way and we simply fallback to the
        local `ocamlc`. *)
     if ocaml_lib = "" then
-      (Filename.dirname (get_bsc_dir cwd)) // "lib" // "ocaml"
+      let folder = if is_js then "lib" // "ocaml"
+        else "vendor" // "ocaml" // "lib" // "ocaml" in
+      (Filename.dirname (get_bsc_dir cwd)) // folder
     else (String.sub ocaml_lib 0 (String.length ocaml_lib - 1))
   end

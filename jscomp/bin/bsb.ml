@@ -5598,7 +5598,7 @@ val walk_all_deps : string -> (package_context -> unit) -> unit
 
 val get_ocaml_dir: string -> string
 
-val get_ocaml_lib_dir : string -> string
+val get_ocaml_lib_dir : is_js:bool -> string -> string
 
 end = struct
 #1 "bsb_build_util.ml"
@@ -5851,7 +5851,7 @@ let get_ocaml_dir cwd =
     else Filename.dirname ocamlc
   end
 
-let get_ocaml_lib_dir cwd =
+let get_ocaml_lib_dir ~is_js cwd =
   if Ext_sys.is_windows_or_cygwin then begin
     Format.fprintf Format.err_formatter "@{<warning>Windows not supported.@}";
     (Filename.dirname (get_bsc_dir cwd)) // "lib" // "ocaml"
@@ -5862,7 +5862,9 @@ let get_ocaml_lib_dir cwd =
        We just assume that it's bad either way and we simply fallback to the
        local `ocamlc`. *)
     if ocaml_lib = "" then
-      (Filename.dirname (get_bsc_dir cwd)) // "lib" // "ocaml"
+      let folder = if is_js then "lib" // "ocaml"
+        else "vendor" // "ocaml" // "lib" // "ocaml" in
+      (Filename.dirname (get_bsc_dir cwd)) // folder
     else (String.sub ocaml_lib 0 (String.length ocaml_lib - 1))
   end
 
@@ -9675,9 +9677,10 @@ let interpret_json
      | None 
      | Some _ ->
       let x = Bsb_pkg.resolve_bs_package ~cwd Bs_version.package_name  in
+      let folder = Bsb_build_util.get_ocaml_lib_dir ~is_js:(backend = Bsb_config_types.Js) cwd in
       built_in_package := Some ({
         Bsb_config_types.package_name = Bs_version.package_name;
-        package_install_path = x // Bsb_config.lib_ocaml;
+        package_install_path = x // folder;
       });
     ) ;
     let package_specs =     
@@ -11474,7 +11477,12 @@ let merlin_file_gen ~cwd ~backend
         Buffer.add_string buffer path ;
         Buffer.add_string buffer merlin_b;
         Buffer.add_string buffer path ;
-      );      
+      ); 
+    (* @Incomplete we should use
+      let p = Bsb_build_util.get_ocaml_lib_dir ~is_js:
+      
+      To get the vendor/ocaml/lib/ocaml directory here when we're building to native or bytecode.
+      we also should be thinking about supporting linking another stdlib. *)
     (match built_in_dependency with
      | None -> ()
      | Some package -> 
@@ -13251,7 +13259,7 @@ let output_ninja
     let _ = match build_script with
     | Some build_script when should_build ->
       let build_script = Ext_string.ninja_escaped build_script in
-      let ocaml_lib = Bsb_build_util.get_ocaml_lib_dir cwd in
+      let ocaml_lib = Bsb_build_util.get_ocaml_lib_dir ~is_js:(backend = Bsb_config_types.Js) cwd in
       (* TODO(sansouci): Fix this super ghetto environment variable setup... This is not cross platform! *)
       let envvars = "export OCAML_LIB=" ^ ocaml_lib ^ " && " 
                   ^ "export OCAML_SYSTHREADS=" ^ (ocaml_dir // "otherlibs" // "systhreads") ^ " && " 

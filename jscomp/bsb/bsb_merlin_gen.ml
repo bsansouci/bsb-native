@@ -133,7 +133,7 @@ let merlin_file_gen ~cwd ~backend
         Buffer.add_string buffer path ;
         Buffer.add_string buffer merlin_b;
         Buffer.add_string buffer path ;
-      );      
+      ); 
     (match built_in_dependency with
      | None -> ()
      | Some package -> 
