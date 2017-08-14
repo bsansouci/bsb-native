@@ -252,14 +252,16 @@ let get_ocaml_lib_dir ~is_js cwd =
     Format.fprintf Format.err_formatter "@{<warning>Windows not supported.@}";
     (Filename.dirname (get_bsc_dir cwd)) // "lib" // "ocaml"
   end else begin
-    let ocaml_lib = Bsb_unix.run_command_capture_stdout "ocamlc -where" in
-    (* TODO(sansouci): Probably pretty brittle. If there is no output to stdout
-       it's likely there was an error on stderr of the kind "ocamlc not found".
-       We just assume that it's bad either way and we simply fallback to the
-       local `ocamlc`. *)
-    if ocaml_lib = "" then
-      let folder = if is_js then "lib" // "ocaml"
-        else "vendor" // "ocaml" // "lib" // "ocaml" in
-      (Filename.dirname (get_bsc_dir cwd)) // folder
-    else (String.sub ocaml_lib 0 (String.length ocaml_lib - 1))
+    let basedirname = (Filename.dirname (get_bsc_dir cwd)) in 
+    if is_js then basedirname // "lib" // "ocaml"
+    else begin 
+      let ocaml_lib = Bsb_unix.run_command_capture_stdout "ocamlc -where" in
+      (* TODO(sansouci): Probably pretty brittle. If there is no output to stdout
+         it's likely there was an error on stderr of the kind "ocamlc not found".
+         We just assume that it's bad either way and we simply fallback to the
+         local `ocamlc`. *)
+      if ocaml_lib = "" then
+        basedirname // "vendor" // "ocaml" // "lib" // "ocaml"
+      else (String.sub ocaml_lib 0 (String.length ocaml_lib - 1))
+    end
   end

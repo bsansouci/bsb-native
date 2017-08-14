@@ -280,7 +280,7 @@ let output_ninja
       let envvars = "export OCAML_LIB=" ^ ocaml_lib ^ " && " 
                   ^ "export OCAML_SYSTHREADS=" ^ (ocaml_dir // "otherlibs" // "systhreads") ^ " && " 
                   ^ "export PATH=$$PATH:" ^ (root_project_dir // "node_modules" // ".bin") ^ ":" ^ ocaml_dir ^ ":" ^ (root_project_dir // "node_modules" // "bs-platform" // "bin") ^ " && " in
-      (* We move out of lib/bs so that the command is ran from the root project. *)
+      (* We move out of lib/bs/XYZ so that the command is ran from the root project. *)
       let rule = Bsb_rule.define ~command:("cd ../../.. && " ^ envvars ^ build_script) "build_script" in
       Bsb_ninja_util.output_build oc
         ~order_only_deps:(static_resources @ all_info.all_config_deps)

@@ -47,7 +47,7 @@ let install_targets ~backend cwd (config : Bsb_config_types.t option) =
       | Bsb_config_types.Native   -> "native"
       | Bsb_config_types.Bytecode -> "bytecode"
     end in
-    let destdir = cwd // Bsb_config.lib_ocaml // nested in (* lib is already there after building, so just mkdir [lib/ocaml] *)
+    let destdir = cwd // Bsb_config.lib_ocaml // nested in (* lib is already there after building, so just mkdir [lib/ocaml/XYZ] *)
     if not @@ Sys.file_exists destdir then begin Bsb_build_util.mkp destdir  end;
     begin
       Format.fprintf Format.std_formatter "@{<info>Installing started@}@.";

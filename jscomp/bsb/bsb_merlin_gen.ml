@@ -102,11 +102,6 @@ let merlin_file_gen ~cwd ~backend
      } : Bsb_config_types.t)
   =
   if generate_merlin then begin
-    let nested = match backend with
-      | Bsb_config_types.Js       -> "js"
-      | Bsb_config_types.Native   -> "native"
-      | Bsb_config_types.Bytecode -> "bytecode" 
-    in
     let buffer = Buffer.create 1024 in
     ppx_flags
     |> List.iter (fun x ->
@@ -161,7 +156,12 @@ let merlin_file_gen ~cwd ~backend
         Buffer.add_string buffer merlin_b;
         Buffer.add_string buffer path ;
       );
-
+    
+    let nested = match backend with
+      | Bsb_config_types.Js       -> "js"
+      | Bsb_config_types.Native   -> "native"
+      | Bsb_config_types.Bytecode -> "bytecode" 
+    in
     res_files |> List.iter (fun (x : Bsb_parse_sources.file_group) -> 
         Buffer.add_string buffer merlin_s;
         Buffer.add_string buffer x.dir ;

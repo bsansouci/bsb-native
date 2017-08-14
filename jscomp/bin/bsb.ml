@@ -5856,16 +5856,18 @@ let get_ocaml_lib_dir ~is_js cwd =
     Format.fprintf Format.err_formatter "@{<warning>Windows not supported.@}";
     (Filename.dirname (get_bsc_dir cwd)) // "lib" // "ocaml"
   end else begin
-    let ocaml_lib = Bsb_unix.run_command_capture_stdout "ocamlc -where" in
-    (* TODO(sansouci): Probably pretty brittle. If there is no output to stdout
-       it's likely there was an error on stderr of the kind "ocamlc not found".
-       We just assume that it's bad either way and we simply fallback to the
-       local `ocamlc`. *)
-    if ocaml_lib = "" then
-      let folder = if is_js then "lib" // "ocaml"
-        else "vendor" // "ocaml" // "lib" // "ocaml" in
-      (Filename.dirname (get_bsc_dir cwd)) // folder
-    else (String.sub ocaml_lib 0 (String.length ocaml_lib - 1))
+    let basedirname = (Filename.dirname (get_bsc_dir cwd)) in 
+    if is_js then basedirname // "lib" // "ocaml"
+    else begin 
+      let ocaml_lib = Bsb_unix.run_command_capture_stdout "ocamlc -where" in
+      (* TODO(sansouci): Probably pretty brittle. If there is no output to stdout
+         it's likely there was an error on stderr of the kind "ocamlc not found".
+         We just assume that it's bad either way and we simply fallback to the
+         local `ocamlc`. *)
+      if ocaml_lib = "" then
+        basedirname // "vendor" // "ocaml" // "lib" // "ocaml"
+      else (String.sub ocaml_lib 0 (String.length ocaml_lib - 1))
+    end
   end
 
 end
@@ -9677,10 +9679,16 @@ let interpret_json
      | None 
      | Some _ ->
       let x = Bsb_pkg.resolve_bs_package ~cwd Bs_version.package_name  in
-      let folder = Bsb_build_util.get_ocaml_lib_dir ~is_js:(backend = Bsb_config_types.Js) cwd in
+      (* @Hack This is used by bsc, when compiling to js, AND for the .merlin
+         generation.  *)
+      let nested = begin match backend with 
+      | Bsb_config_types.Js       -> "js"
+      | Bsb_config_types.Native   -> "native"
+      | Bsb_config_types.Bytecode -> "bytecode"
+      end in
       built_in_package := Some ({
         Bsb_config_types.package_name = Bs_version.package_name;
-        package_install_path = x // folder;
+        package_install_path = x // Bsb_config.lib_ocaml // nested;
       });
     ) ;
     let package_specs =     
@@ -11446,11 +11454,6 @@ let merlin_file_gen ~cwd ~backend
      } : Bsb_config_types.t)
   =
   if generate_merlin then begin
-    let nested = match backend with
-      | Bsb_config_types.Js       -> "js"
-      | Bsb_config_types.Native   -> "native"
-      | Bsb_config_types.Bytecode -> "bytecode" 
-    in
     let buffer = Buffer.create 1024 in
     ppx_flags
     |> List.iter (fun x ->
@@ -11478,11 +11481,6 @@ let merlin_file_gen ~cwd ~backend
         Buffer.add_string buffer merlin_b;
         Buffer.add_string buffer path ;
       ); 
-    (* @Incomplete we should use
-      let p = Bsb_build_util.get_ocaml_lib_dir ~is_js:
-      
-      To get the vendor/ocaml/lib/ocaml directory here when we're building to native or bytecode.
-      we also should be thinking about supporting linking another stdlib. *)
     (match built_in_dependency with
      | None -> ()
      | Some package -> 
@@ -11510,7 +11508,12 @@ let merlin_file_gen ~cwd ~backend
         Buffer.add_string buffer merlin_b;
         Buffer.add_string buffer path ;
       );
-
+    
+    let nested = match backend with
+      | Bsb_config_types.Js       -> "js"
+      | Bsb_config_types.Native   -> "native"
+      | Bsb_config_types.Bytecode -> "bytecode" 
+    in
     res_files |> List.iter (fun (x : Bsb_parse_sources.file_group) -> 
         Buffer.add_string buffer merlin_s;
         Buffer.add_string buffer x.dir ;
@@ -13264,7 +13267,7 @@ let output_ninja
       let envvars = "export OCAML_LIB=" ^ ocaml_lib ^ " && " 
                   ^ "export OCAML_SYSTHREADS=" ^ (ocaml_dir // "otherlibs" // "systhreads") ^ " && " 
                   ^ "export PATH=$$PATH:" ^ (root_project_dir // "node_modules" // ".bin") ^ ":" ^ ocaml_dir ^ ":" ^ (root_project_dir // "node_modules" // "bs-platform" // "bin") ^ " && " in
-      (* We move out of lib/bs so that the command is ran from the root project. *)
+      (* We move out of lib/bs/XYZ so that the command is ran from the root project. *)
       let rule = Bsb_rule.define ~command:("cd ../../.. && " ^ envvars ^ build_script) "build_script" in
       Bsb_ninja_util.output_build oc
         ~order_only_deps:(static_resources @ all_info.all_config_deps)
@@ -18845,7 +18848,7 @@ let install_targets ~backend cwd (config : Bsb_config_types.t option) =
       | Bsb_config_types.Native   -> "native"
       | Bsb_config_types.Bytecode -> "bytecode"
     end in
-    let destdir = cwd // Bsb_config.lib_ocaml // nested in (* lib is already there after building, so just mkdir [lib/ocaml] *)
+    let destdir = cwd // Bsb_config.lib_ocaml // nested in (* lib is already there after building, so just mkdir [lib/ocaml/XYZ] *)
     if not @@ Sys.file_exists destdir then begin Bsb_build_util.mkp destdir  end;
     begin
       Format.fprintf Format.std_formatter "@{<info>Installing started@}@.";
