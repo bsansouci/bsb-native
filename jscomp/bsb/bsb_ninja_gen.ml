@@ -228,6 +228,7 @@ let output_ninja
           ~package_specs
           ~js_post_build_cmd
           ~files_to_install
+          ~backend
           bs_file_groups 
           Bsb_ninja_file_groups.zero, 
         true)

@@ -262,8 +262,14 @@ let handle_file_group oc ~custom_rules
 
 let handle_file_groups
     oc ~package_specs ~js_post_build_cmd
-    ~files_to_install ~custom_rules
+    ~files_to_install ~custom_rules ~backend
     (file_groups  :  Bsb_parse_sources.file_group list) st =
+  let file_groups = List.filter (fun group ->
+    match backend with 
+    | Bsb_config_types.Js       -> List.mem Bsb_parse_sources.Js group.Bsb_parse_sources.kind
+    | Bsb_config_types.Native   -> List.mem Bsb_parse_sources.Native group.Bsb_parse_sources.kind
+    | Bsb_config_types.Bytecode -> List.mem Bsb_parse_sources.Bytecode group.Bsb_parse_sources.kind
+  ) file_groups in 
   List.fold_left 
     (handle_file_group oc ~package_specs ~custom_rules ~js_post_build_cmd files_to_install ) 
     st  file_groups

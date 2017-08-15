@@ -34,6 +34,8 @@ type build_generator =
     output : string list;
     command : string}
 
+type compilation_kind_t = Js | Bytecode | Native
+
 type  file_group = 
   { dir : string ; 
     (* currently relative path expected for ninja file generation *)
@@ -43,6 +45,7 @@ type  file_group =
     public : public;
     dir_index : Bsb_dir_index.t; 
     generators : build_generator list;
+    kind: compilation_kind_t list;
   } 
 
 

@@ -35,6 +35,7 @@ val handle_file_groups : out_channel ->
   package_specs:Bsb_package_specs.t ->  
   js_post_build_cmd:string option -> 
   files_to_install:String_hash_set.t ->  
-  custom_rules:Bsb_rule.t String_map.t -> 
+  custom_rules:Bsb_rule.t String_map.t ->
+  backend:Bsb_config_types.compilation_kind_t -> 
   Bsb_parse_sources.file_group list ->
   info -> info

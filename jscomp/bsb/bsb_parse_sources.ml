@@ -37,6 +37,8 @@ type build_generator =
     output : string list;
     command : string}
 
+type compilation_kind_t = Js | Bytecode | Native
+
 type  file_group = 
   { dir : string ;
     sources : Bsb_build_cache.t; 
@@ -44,8 +46,9 @@ type  file_group =
     public : public ;
     dir_index : Bsb_dir_index.t  ;
     generators : build_generator list ; 
+    kind: compilation_kind_t list;
     (* output of [generators] should be added to [sources],
-      if it is [.ml,.mli,.re,.rei]
+      if it is [.ml,.mli,.re,.rei]   
     *)
   } 
 
@@ -101,7 +104,6 @@ let  handle_list_files acc
     loc_start loc_end
     ],
   files
-
 
 
 
@@ -192,6 +194,7 @@ and parsing_source_dir_map
   let public = ref Export_all in (* TODO: move to {!Bsb_default} later*)
   let cur_update_queue = ref [] in 
   let cur_globbed_dirs = ref [] in 
+  let kind = ref [Js; Bytecode; Native] in
   let generators : build_generator list ref  = ref [] in
   begin match String_map.find_opt Bsb_build_schemas.generators x with
   | Some (Arr { content ; loc_start}) ->
@@ -287,6 +290,23 @@ and parsing_source_dir_map
     | Some x -> Bsb_exception.failwith_config x "files field expect array or object "
 
   end;
+  (* kind matching *)
+  begin match String_map.find_opt Bsb_build_schemas.kind x with 
+    | Some (Arr {loc_start; content = s }) -> (* [ a,b ] *)      
+      kind := List.map (fun (s : string) ->
+        match s with 
+        | "js"       -> Js
+        | "native"   -> Native
+        | "bytecode" -> Bytecode
+        | str -> Bsb_exception.failf ~loc:loc_start "'kind' field expects one of: 'js', 'bytecode' or 'native'. Found '%s'" str
+      ) (Bsb_build_util.get_list_string s) 
+    | Some (Str {str = "js"} )       -> kind := [Js]
+    | Some (Str {str = "native"} )   -> kind := [Native]
+    | Some (Str {str = "bytecode"} ) -> kind := [Bytecode]
+    | Some x -> Bsb_exception.failwith_config x "'kind' field expects one of: 'js', 'bytecode' or 'native'"
+    | None -> ()
+  end;
+  
   x   
   |?  (Bsb_build_schemas.resources ,
        `Arr (fun s  ->
@@ -308,6 +328,7 @@ and parsing_source_dir_map
        public = !public;
        dir_index = cxt.dir_index ;
        generators = !generators ; 
+       kind = !kind;
       } in 
     let children, children_update_queue, children_globbed_dirs = 
       match String_map.find_opt Bsb_build_schemas.subdirs x with 
