@@ -707,7 +707,6 @@ val is_valid_source_name :
 *)
 val is_valid_npm_package_name : string -> bool 
 
-val module_name_of_package_name : string -> string
 
 
 val no_char : string -> char -> int -> int -> bool 
@@ -1113,31 +1112,6 @@ let is_valid_npm_package_name (s : string) =
          | _ -> false )
   | _ -> false 
 
-let module_name_of_package_name (s : string) : string = 
-  let len = String.length s in 
-  let buf = Buffer.create len in 
-  let add capital ch = 
-    Buffer.add_char buf 
-      (if capital then 
-        (Char.uppercase ch)
-      else ch) in    
-  let rec aux capital off len =     
-      if off >= len then ()
-      else 
-        let ch = String.unsafe_get s off in
-        match ch with 
-        | 'a' .. 'z' 
-        | 'A' .. 'Z' 
-        | '0' .. '9'
-          ->
-          add capital ch ; 
-          aux false (off + 1) len 
-        | '-' -> 
-          aux true (off + 1) len 
-        | _ -> aux capital (off+1) len
-         in 
-   aux true 0 len ;
-   Buffer.contents buf 
 
 type check_result = 
   | Good 
@@ -3817,11 +3791,7 @@ val get_extension : string -> string
 
 val simple_convert_node_path_to_os_path : string -> string
 
-(* Note  we have to output uncapitalized file Name, 
-  or at least be consistent, since by reading cmi file on Case insensitive OS, we don't really know it is `list.cmi` or `List.cmi`, so that `require (./list.js)` or `require(./List.js)`
-  relevant issues: #1609, #913 
-*)
-val output_js_basename :  string -> string 
+
 end = struct
 #1 "ext_filename.ml"
 (* Copyright (C) 2015-2016 Bloomberg Finance L.P.
@@ -4188,8 +4158,7 @@ let simple_convert_node_path_to_os_path =
   else failwith ("Unknown OS : " ^ Sys.os_type)
 
 
-let output_js_basename s = 
-  String.uncapitalize s ^ Literals.suffix_js
+
 end
 module Ext_json_parse : sig 
 #1 "ext_json_parse.mli"
@@ -6080,6 +6049,124 @@ let clean_bs_deps ~nested bsc_dir proj_dir =
 let clean_self ~nested bsc_dir proj_dir = clean_bs_garbage ~nested bsc_dir proj_dir
 
 end
+module Ext_package_name : sig 
+#1 "ext_package_name.mli"
+(* Copyright (C) 2017- Authors of BuckleScript
+ * 
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * In addition to the permissions granted to you by the LGPL, you may combine
+ * or link a "work that uses the Library" with a publicly distributed version
+ * of this file to produce a combined library or application, then distribute
+ * that combined work under the terms of your choosing, with no requirement
+ * to comply with the obligations normally placed on you by section 4 of the
+ * LGPL version 3 (or the corresponding section of a later version of the LGPL
+ * should you choose to use a later version).
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ * 
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
+
+
+val make : pkg:string -> string -> string 
+
+val remove_package_suffix: string -> string 
+
+(* Note  we have to output uncapitalized file Name, 
+  or at least be consistent, since by reading cmi file on Case insensitive OS, we don't really know it is `list.cmi` or `List.cmi`, so that `require (./list.js)` or `require(./List.js)`
+  relevant issues: #1609, #913 
+*)
+val js_name_of_basename :  string -> string 
+
+val module_name_of_package_name : string -> string
+
+end = struct
+#1 "ext_package_name.ml"
+
+(* Copyright (C) 2015-2016 Bloomberg Finance L.P.
+ * 
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * In addition to the permissions granted to you by the LGPL, you may combine
+ * or link a "work that uses the Library" with a publicly distributed version
+ * of this file to produce a combined library or application, then distribute
+ * that combined work under the terms of your choosing, with no requirement
+ * to comply with the obligations normally placed on you by section 4 of the
+ * LGPL version 3 (or the corresponding section of a later version of the LGPL
+ * should you choose to use a later version).
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ * 
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
+
+
+ (* Note the build system should check the validity of filenames
+    espeically, it should not contain '-'
+ *)
+ let package_sep_char = '-'
+ let package_sep = "-"
+
+ let make ~pkg cunit  = 
+    cunit ^ package_sep ^ pkg 
+    
+
+let rec rindex_rec s i c =
+  if i < 0 then i else
+  if String.unsafe_get s i = c then i else rindex_rec s (i - 1) c;;
+    
+let remove_package_suffix name =
+    let i = rindex_rec name (String.length name - 1) package_sep_char in 
+    if i < 0 then name 
+    else String.sub name 0 i 
+
+
+let js_name_of_basename s = 
+  remove_package_suffix (String.uncapitalize s) ^ Literals.suffix_js
+  
+  
+let module_name_of_package_name (s : string) : string = 
+  let len = String.length s in 
+  let buf = Buffer.create len in 
+  let add capital ch = 
+    Buffer.add_char buf 
+      (if capital then 
+        (Char.uppercase ch)
+      else ch) in    
+  let rec aux capital off len =     
+      if off >= len then ()
+      else 
+        let ch = String.unsafe_get s off in
+        match ch with 
+        | 'a' .. 'z' 
+        | 'A' .. 'Z' 
+        | '0' .. '9'
+          ->
+          add capital ch ; 
+          aux false (off + 1) len 
+        | '-' -> 
+          aux true (off + 1) len 
+        | _ -> aux capital (off+1) len
+         in 
+   aux true 0 len ;
+   Buffer.contents buf 
+
+end
 module Bsb_package_specs : sig 
 #1 "bsb_package_specs.mli"
 (* Copyright (C) 2017 Authors of BuckleScript
@@ -6321,7 +6408,7 @@ let get_list_of_output_js
     package_specs output_file_sans_extension = 
   Spec_set.fold (fun format acc ->
       package_output format 
-        (Ext_filename.output_js_basename output_file_sans_extension)
+        ( Ext_package_name.js_name_of_basename output_file_sans_extension)
       :: acc
     ) package_specs []
 
@@ -8333,7 +8420,7 @@ type cxt = {
   cut_generators : bool
 }
 
-
+  
 (** entry is to the 
     [sources] in the schema
 
@@ -8390,6 +8477,14 @@ type build_generator =
 
 type compilation_kind_t = Js | Bytecode | Native
 
+let is_input_or_output(xs : build_generator list) (x : string)  = 
+  List.exists 
+    (fun  ({input; output} : build_generator) -> 
+       let it_is = (fun y -> y = x ) in
+       List.exists it_is input ||
+       List.exists it_is output
+    ) xs 
+
 type  file_group = 
   { dir : string ;
     sources : Bsb_build_cache.t; 
@@ -8399,7 +8494,7 @@ type  file_group =
     generators : build_generator list ; 
     kind: compilation_kind_t list;
     (* output of [generators] should be added to [sources],
-      if it is [.ml,.mli,.re,.rei]   
+       if it is [.ml,.mli,.re,.rei]
     *)
   } 
 
@@ -8421,7 +8516,8 @@ let (|?)  m (key, cb) =
   m  |> Ext_json.test key cb 
 
 
-let warning_unused_file : _ format = "@{<warning>IGNORED@}: file %s under %s is ignored because it can't be turned into a valid module name. The build system transforms a file name into a module name by upper-casing the first letter@."
+let warning_unused_file : _ format = 
+    "@{<warning>IGNORED@}: file %s under %s is ignored because it can't be turned into a valid module name. The build system transforms a file name into a module name by upper-casing the first letter@."
 
 type cxt = {
   no_dev : bool ;
@@ -8431,29 +8527,58 @@ type cxt = {
   cut_generators : bool
 }
 
+let collect_pub_modules 
+    (xs : Ext_json_types.t array)
+    (cache : Bsb_build_cache.t) : String_set.t = 
+  let set = ref String_set.empty in 
+  for i = 0 to Array.length xs - 1 do 
+    let v = Array.unsafe_get xs i in 
+    match v with 
+    | Str { str ; loc }
+      -> 
+      if String_map.mem str cache then 
+        set := String_set.add str !set
+      else 
+      begin 
+        Format.fprintf Format.err_formatter
+        "@{<warning>IGNORED@} %S in public is ignored since it is not\
+        an existing module@." str
+      end  
+    | _ -> 
+      Bsb_exception.failf 
+        ~loc:(Ext_json.loc_of v)
+        "public excpect a list of strings"
+  done  ;
+  !set
+(* String_set.of_list (Bsb_build_util.get_list_string xs) *)
+
 let  handle_list_files acc
-  ({ cwd = dir ; root} : cxt)  
-    loc_start loc_end : Ext_file_pp.interval list * _ =    
+    ({ cwd = dir ; root} : cxt)  
+    loc_start loc_end 
+    is_input_or_output
+  : Ext_file_pp.interval list * _ =    
   (** detect files to be populated later  *)
   let files_array = readdir root dir  in 
   let dyn_file_array = String_vec.make (Array.length files_array) in 
   let files  =
     Array.fold_left (fun acc name -> 
-        match Ext_string.is_valid_source_name name with 
-        | Good ->   begin 
-            let new_acc = Bsb_build_cache.map_update ~dir acc name  in 
-            String_vec.push name dyn_file_array ;
-            new_acc 
-          end 
-        | Invalid_module_name ->
-          Format.fprintf Format.err_formatter
-            warning_unused_file name dir ;
-          acc 
-        | Suffix_mismatch -> acc 
+        if is_input_or_output name then acc 
+        else
+          match Ext_string.is_valid_source_name name with 
+          | Good ->   begin 
+              let new_acc = Bsb_build_cache.map_update ~dir acc name  in 
+              String_vec.push name dyn_file_array ;
+              new_acc 
+            end 
+          | Invalid_module_name ->
+            Format.fprintf Format.err_formatter
+              warning_unused_file name dir ;
+            acc 
+          | Suffix_mismatch -> acc 
       ) acc files_array in 
   [ Ext_file_pp.patch_action dyn_file_array 
-    loc_start loc_end
-    ],
+      loc_start loc_end
+  ],
   files
 
 
@@ -8474,7 +8599,9 @@ let (++) (u : t)  (v : t)  =
       globbed_dirs = u.globbed_dirs @ v.globbed_dirs ; 
     }
 
-let get_input_output loc_start (content : Ext_json_types.t array) : string list * string list = 
+let get_input_output 
+    loc_start 
+    (content : Ext_json_types.t array) : string list * string list = 
   let error () = 
     Bsb_exception.failf ~loc:loc_start {| invalid edge format, expect  ["output" , ":", "input" ]|}
   in  
@@ -8495,18 +8622,21 @@ let get_input_output loc_start (content : Ext_json_types.t array) : string list 
         | Str {str = ":"} -> 
           error () 
         | Str {str} -> 
-            Some str (* More rigirous error checking: It would trigger a ninja syntax error *)
+          Some str (* More rigirous error checking: It would trigger a ninja syntax error *)
         | _ -> None) input
+
+
 
 (** [dir_index] can be inherited  *)
 let rec 
-  parsing_simple_dir ({no_dev; dir_index;  cwd} as cxt ) dir =
+  parsing_simple_dir ({no_dev; dir_index;  cwd} as cxt ) dir : t =
   if no_dev && not (Bsb_dir_index.is_lib_dir dir_index)  then empty 
-  else parsing_source_dir_map 
-    {cxt with
-     cwd = cwd // Ext_filename.simple_convert_node_path_to_os_path dir
-    }
-    String_map.empty
+  else 
+    parsing_source_dir_map 
+      {cxt with
+       cwd = cwd // Ext_filename.simple_convert_node_path_to_os_path dir
+      }
+      String_map.empty
 
 and parsing_source ({no_dev; dir_index ; cwd} as cxt ) (x : Ext_json_types.t )
   : t  =
@@ -8523,22 +8653,24 @@ and parsing_source ({no_dev; dir_index ; cwd} as cxt ) (x : Ext_json_types.t )
     else 
       let dir = 
         match String_map.find_opt Bsb_build_schemas.dir map with 
-        | Some (Str{str=s}) -> 
-          cwd // Ext_filename.simple_convert_node_path_to_os_path s 
-
+        | Some (Str{str}) -> 
+          Ext_filename.simple_convert_node_path_to_os_path str 
         | Some x -> Bsb_exception.failwith_config x "dir expected to be a string"
         | None -> 
-        Bsb_exception.failwith_config x
-          {|required field %s  missing, please checkout the schema http://bucklescript.github.io/bucklescript/docson/#build-schema.json |} "dir"
+          Bsb_exception.failwith_config x
+            {|required field %S  missing, please checkout the schema http://bucklescript.github.io/bucklescript/docson/#build-schema.json |} 
+            Bsb_build_schemas.dir
       in
-
-      parsing_source_dir_map {cxt with dir_index = current_dir_index; cwd=dir} map
+      parsing_source_dir_map {cxt with dir_index = current_dir_index; cwd= cwd // dir} map
   | _ -> empty 
 
+(** 
+   { dir : xx, files : ... } [dir] is already extracted 
+   major work done in this function      
+*)
 and parsing_source_dir_map 
     ({ cwd =  dir; no_dev; cut_generators } as cxt )
-    (x : Ext_json_types.t String_map.t)
-    (* { dir : xx, files : ... } [dir] is already extracted *)
+    (x : Ext_json_types.t String_map.t) : t     
   = 
   let cur_sources : Bsb_build_cache.module_info String_map.t ref = ref String_map.empty in
   let resources = ref [] in 
@@ -8548,48 +8680,76 @@ and parsing_source_dir_map
   let kind = ref [Js; Bytecode; Native] in
   let generators : build_generator list ref  = ref [] in
   begin match String_map.find_opt Bsb_build_schemas.generators x with
-  | Some (Arr { content ; loc_start}) ->
-    (* Need check is dev build or not *)
-    content 
-    |> Array.iter (fun (x : Ext_json_types.t) ->
-      match x with
-      | Obj { map = generator; loc} ->
-        begin match String_map.find_opt Bsb_build_schemas.name generator,
-          String_map.find_opt Bsb_build_schemas.edge generator
-         with
-         | Some (Str{str = command}), Some (Arr {content })->
+    | Some (Arr { content ; loc_start}) ->
+      (* Need check is dev build or not *)
+      content 
+      |> Array.iter (fun (x : Ext_json_types.t) ->
+          match x with
+          | Obj { map = generator; loc} ->
+            begin match String_map.find_opt Bsb_build_schemas.name generator,
+                        String_map.find_opt Bsb_build_schemas.edge generator
+              with
+              | Some (Str{str = command}), Some (Arr {content })->
 
-           let output, input = get_input_output loc_start content in 
-           if not cut_generators && not no_dev then begin 
-             generators := {input ; output ; command } :: !generators
-           end;
-          (* ATTENTION: Now adding source files, it may be re-added again later when scanning files (not explicit files input)
-           *)
-           output |> List.iter begin fun  output -> 
-             begin match Ext_string.is_valid_source_name output with
-               | Good ->
-                 cur_sources := Bsb_build_cache.map_update ~dir !cur_sources output
-               | Invalid_module_name ->
-                 ()
-               (*Format.fprintf Format.err_formatter warning_unused_file output dir *)
-               | Suffix_mismatch -> ()
-             end
-           end
-         | _ ->
-          Bsb_exception.failf ~loc "Invalid generator format"
-         end
-      | _ -> Bsb_exception.failf ~loc:(Ext_json.loc_of x) "Invalid generator format"
-       )
-  | Some x  -> Bsb_exception.failf ~loc:(Ext_json.loc_of x ) "Invalid generators format"
-  | None -> ()
+                let output, input = get_input_output loc_start content in 
+                if not cut_generators && not no_dev then begin 
+                  generators := {input ; output ; command } :: !generators
+                end;
+                (* ATTENTION: Now adding source files, 
+                   it may be re-added again later when scanning files (not explicit files input)
+                *)
+                output |> List.iter begin fun  output -> 
+                  begin match Ext_string.is_valid_source_name output with
+                    | Good ->
+                      cur_sources := Bsb_build_cache.map_update ~dir !cur_sources output
+                    | Invalid_module_name ->                  
+                      Format.fprintf Format.err_formatter warning_unused_file output dir 
+                    | Suffix_mismatch -> ()
+                  end
+                end
+              | _ ->
+                Bsb_exception.failf ~loc "Invalid generator format"
+            end
+          | _ -> Bsb_exception.failf ~loc:(Ext_json.loc_of x) "Invalid generator format"
+        )
+    | Some x  -> Bsb_exception.failf ~loc:(Ext_json.loc_of x ) "Invalid generators format"
+    | None -> ()
   end
   ;
+  let generators = !generators in 
   begin match String_map.find_opt Bsb_build_schemas.files x with 
-    | Some (Arr {loc_start;loc_end; content = [||] }) -> (* [ ] *) 
-      let tasks, files =  handle_list_files !cur_sources cxt  loc_start loc_end in
+    | None ->  (* No setting on [!files]*)
+      let file_array = readdir cxt.root dir in 
+      (** We should avoid temporary files *)
+      cur_sources := 
+        Array.fold_left (fun acc name -> 
+            if is_input_or_output generators name then 
+              acc 
+            else 
+              match Ext_string.is_valid_source_name name with 
+              | Good -> 
+                Bsb_build_cache.map_update  ~dir acc name 
+              | Invalid_module_name ->
+                Format.fprintf Format.err_formatter
+                  warning_unused_file
+                  name dir 
+                ; 
+                acc 
+              | Suffix_mismatch ->  acc
+          ) !cur_sources file_array;
+      cur_globbed_dirs :=  [dir]  
+    | Some (Arr {loc_start;loc_end; content = [||] }) -> 
+      (* [ ] populatd by scanning the dir (just once) *) 
+      let tasks, files =  
+        handle_list_files !cur_sources cxt 
+          loc_start loc_end (is_input_or_output  generators) in
       cur_update_queue := tasks ;
       cur_sources := files
-    | Some (Arr {loc_start;loc_end; content = s }) -> (* [ a,b ] *)      
+
+    | Some (Arr {loc_start;loc_end; content = s }) -> 
+      (* [ a,b ] populated by users themselves 
+         TODO: still need check?
+      *)      
       cur_sources := 
         Array.fold_left (fun acc (s : Ext_json_types.t) ->
             match s with 
@@ -8616,28 +8776,12 @@ and parsing_source_dir_map
         | None , _ -> Bsb_exception.failf ~loc  "missing field: slow-re"  in 
       let file_array = readdir cxt.root dir in 
       cur_sources := Array.fold_left (fun acc name -> 
-          if predicate name then 
+          if is_input_or_output generators name || not (predicate name) then acc 
+          else 
             Bsb_build_cache.map_update  ~dir acc name 
-          else acc
         ) !cur_sources file_array;
       cur_globbed_dirs := [dir]              
-    | None ->  (* No setting on [!files]*)
-      let file_array = readdir cxt.root dir in 
-      (** We should avoid temporary files *)
-      cur_sources := 
-        Array.fold_left (fun acc name -> 
-            match Ext_string.is_valid_source_name name with 
-            | Good -> 
-              Bsb_build_cache.map_update  ~dir acc name 
-            | Invalid_module_name ->
-              Format.fprintf Format.err_formatter
-                warning_unused_file
-               name dir 
-              ; 
-              acc 
-            | Suffix_mismatch ->  acc
-          ) !cur_sources file_array;
-      cur_globbed_dirs :=  [dir]  
+
     | Some x -> Bsb_exception.failwith_config x "files field expect array or object "
 
   end;
@@ -8658,43 +8802,44 @@ and parsing_source_dir_map
     | None -> ()
   end;
   
+  let cur_sources = !cur_sources in 
   x   
   |?  (Bsb_build_schemas.resources ,
        `Arr (fun s  ->
            resources := Bsb_build_util.get_list_string s 
          ))
   |? (Bsb_build_schemas.public, `Str_loc (fun s loc -> 
-        if s = Bsb_build_schemas.export_all then public := Export_all else 
-        if s = Bsb_build_schemas.export_none then public := Export_none else 
-          Bsb_exception.failf ~loc "invalid str for %s "  s 
-      ))
-    |? (Bsb_build_schemas.public, `Arr (fun s -> 
-        public := Export_set (String_set.of_list (Bsb_build_util.get_list_string s ) )
-      ) )
-    |> ignore ;
-    let cur_file = 
-      {dir = dir; 
-       sources = !cur_sources; 
-       resources = !resources;
-       public = !public;
-       dir_index = cxt.dir_index ;
-       generators = !generators ; 
-       kind = !kind;
-      } in 
-    let children, children_update_queue, children_globbed_dirs = 
-      match String_map.find_opt Bsb_build_schemas.subdirs x with 
-      | Some s -> 
-        let res  = parse_sources cxt s in 
-        res.files ,
-        res.intervals,
-        res.globbed_dirs
-      | None -> [], [], []  in 
+      if s = Bsb_build_schemas.export_all then public := Export_all else 
+      if s = Bsb_build_schemas.export_none then public := Export_none else 
+        Bsb_exception.failf ~loc "invalid str for %s "  s 
+    ))
+  |? (Bsb_build_schemas.public, `Arr (fun s -> 
+      public := Export_set (collect_pub_modules s cur_sources)
+    ) )
+  |> ignore ;
+  let cur_file = 
+    {dir = dir; 
+     sources = cur_sources; 
+     resources = !resources;
+     public = !public;
+     dir_index = cxt.dir_index ;
+     generators ; 
+     kind = !kind;
+    } in 
+  let children, children_update_queue, children_globbed_dirs = 
+    match String_map.find_opt Bsb_build_schemas.subdirs x with 
+    | Some s -> 
+      let res  = parse_sources cxt s in 
+      res.files ,
+      res.intervals,
+      res.globbed_dirs
+    | None -> [], [], []  in 
 
-    {
-      files =  cur_file :: children;
-      intervals = !cur_update_queue @ children_update_queue ;
-      globbed_dirs = !cur_globbed_dirs @ children_globbed_dirs;
-    } 
+  {
+    files =  cur_file :: children;
+    intervals = !cur_update_queue @ children_update_queue ;
+    globbed_dirs = !cur_globbed_dirs @ children_globbed_dirs;
+  } 
 
 (* and parsing_simple_dir dir_index cwd  dir  : t = 
    parsing_source dir_index cwd (String_map.singleton Bsb_build_schemas.dir dir)
@@ -9055,7 +9200,7 @@ type compilation_kind_t = Js | Bytecode | Native
 type t = 
   {
     package_name : string ; 
-    namespace : string option;
+    namespace : string option; 
     external_includes : string list ; 
     warnings : string ;
     bsc_flags : string list ;
@@ -9835,13 +9980,13 @@ let interpret_json
              | None ->
                failwith "Error: Package name is required. Please specify a `name` in `bsconfig.json`"
             ) in 
-        let namespace =     
+         let namespace =     
           if !namespace then 
-            Some (Ext_string.module_name_of_package_name package_name)
-          else   None  in 
+            Some (Ext_package_name.module_name_of_package_name package_name)
+          else   None  in  
         {
           package_name ;
-          namespace;    
+          namespace ;    
           external_includes = !bs_external_includes;
           bsc_flags = !bsc_flags ;
           warnings = !warnings;
@@ -10157,6 +10302,7 @@ let root = OCamlRes.Res.([
        {\n\
       \  \"name\": \"${bsb:name}\",\n\
       \  \"version\": \"${bsb:proj-version}\",\n\
+      \  \"bsc-flags\": [\"-bs-super-errors\"],\n\
       \  \"sources\": [\n\
       \    \"src\"\n\
       \  ],\n\
@@ -10195,13 +10341,15 @@ let root = OCamlRes.Res.([
     Dir ("src", [
       File ("test.cpp.ml",
         "\n\
-         \n\
+         (* \n\
          #define FS_VAL(name,ty) external name : ty = \"\" [@@bs.module \"fs\"]\n\
          \n\
          \n\
          FS_VAL(readdirSync, string -> string array)\n\
+        \ *)\n\
          \n\
-         ") ;
+         \n\
+        \ let ocaml = OCAML") ;
       File ("demo.ml",
         "\n\
          \n\
@@ -10261,7 +10409,7 @@ let root = OCamlRes.Res.([
       \  \"generators\": [\n\
       \    {\n\
       \      \"name\" : \"cpp\",\n\
-      \      \"command\": \"gcc -x c -P -traditional-cpp -C -E $in -o $out\"\n\
+      \      \"command\": \"sed 's/OCAML/3/' $in > $out\"\n\
       \    }\n\
       \  ],\n\
       \  \"bs-dependencies\" : [\n\
@@ -10608,6 +10756,7 @@ let root = OCamlRes.Res.([
        {\n\
       \  \"name\" : \"${bsb:name}\",\n\
       \  \"reason\" : {\"react-jsx\" : 2},\n\
+      \  \"bsc-flags\": [\"-bs-super-errors\"],\n\
       \  \"bs-dependencies\": [\"reason-react\"],\n\
       \  \"sources\": [\n\
       \    {\n\
@@ -11242,8 +11391,8 @@ type t =
   }
 
 
-let magic_number = "BS_DEP_INFOS_20170723"
-let bsb_version = "20170723+dev"
+let magic_number = "BS_DEP_INFOS_20170809"
+let bsb_version = "20170809+dev"
 (* TODO: for such small data structure, maybe text format is better *)
 
 let write (fname : string)  (x : t) =
@@ -11455,6 +11604,15 @@ let merlin_pkg = "\nPKG"
 let merlin_flg = "\nFLG "
 let bs_flg_prefix = "-bs-"
 
+let output_merlin_namespace buffer ns= 
+  match ns with 
+  | None -> ()
+  | Some x -> 
+    Buffer.add_string buffer merlin_b ; 
+    Buffer.add_string buffer Bsb_config.lib_bs ; 
+    Buffer.add_string buffer merlin_flg ; 
+    Buffer.add_string buffer "-open ";
+    Buffer.add_string buffer x 
 
 let bsc_flg_to_merlin_ocamlc_flg bsc_flags  =
   merlin_flg ^ 
@@ -11475,10 +11633,18 @@ let merlin_file_gen ~cwd ~backend
       external_includes; 
       reason_react_jsx ; 
       ocamlfind_dependencies;
+      namespace;
+      package_name
      } : Bsb_config_types.t)
   =
   if generate_merlin then begin
     let buffer = Buffer.create 1024 in
+    (* let namespace = 
+        if namespace then 
+          (Some (Ext_package_name.module_name_of_package_name package_name))
+        else None
+    in          *)
+    output_merlin_namespace buffer namespace; 
     ppx_flags
     |> List.iter (fun x ->
         Buffer.add_string buffer (merlin_flg_ppx ^ x )
@@ -11609,6 +11775,7 @@ let refmt_flags = "refmt_flags"
 let postbuild = "postbuild"
 
 let namespace = "namespace" 
+let open_package = "open_package"
 
 let package_sep = "-"
 
@@ -11681,6 +11848,7 @@ val linking_native : t
 val build_cma_library : t
 val build_cmxa_library : t
 
+val build_package : t 
 
 (** rules are generally composed of built-in rules and customized rules, there are two design choices:
     1. respect custom rules with the same name, then we need adjust our built-in 
@@ -11882,23 +12050,27 @@ let copy_resources =
 let build_cmj_js =
   define
     ~command:"${bsc} ${bs_super_errors} ${bs_package_flags} -bs-assume-has-mli -bs-no-builtin-ppx-ml -bs-no-implicit-include  \
-              ${bs_package_includes} ${bsc_lib_includes} ${bsc_extra_includes} ${warnings} ${bsc_flags} -o ${in} -c  ${in} $postbuild"
+              ${bs_package_includes} ${bsc_lib_includes} ${bsc_extra_includes} ${warnings} ${open_package} ${bsc_flags} -o ${out} -c  ${in} $postbuild"
     ~depfile:"${in}.d"
     "build_cmj_only"
 
 let build_cmj_cmi_js =
   define
     ~command:"${bsc} ${bs_super_errors} ${bs_package_flags} -bs-assume-no-mli -bs-no-builtin-ppx-ml -bs-no-implicit-include \
-              ${bs_package_includes} ${bsc_lib_includes} ${bsc_extra_includes} ${warnings} ${bsc_flags} -o ${in} -c  ${in} $postbuild"
+              ${bs_package_includes} ${bsc_lib_includes} ${bsc_extra_includes} ${warnings} ${open_package} ${bsc_flags} -o ${out} -c  ${in} $postbuild"
     ~depfile:"${in}.d"
     "build_cmj_cmi" (* the compiler should never consult [.cmi] when [.mli] does not exist *)
 let build_cmi =
   define
     ~command:"${bsc} ${bs_super_errors} ${bs_package_flags} -bs-no-builtin-ppx-mli -bs-no-implicit-include \
-              ${bs_package_includes} ${bsc_lib_includes} ${bsc_extra_includes} ${warnings} ${bsc_flags} -o ${out} -c  ${in}"
+              ${bs_package_includes} ${bsc_lib_includes} ${bsc_extra_includes} ${open_package} ${warnings} ${bsc_flags} -o ${out} -c  ${in}"
     ~depfile:"${in}.d"
     "build_cmi" (* the compiler should always consult [.cmi], current the vanilla ocaml compiler only consult [.cmi] when [.mli] found*)
 
+let build_package = 
+  define
+    ~command:"${bsc} -w -49 -no-alias-deps -c ${in}"
+    "build_package"
 
 let build_cmo_cmi_bytecode =
   define
@@ -11987,6 +12159,8 @@ let reset (custom_rules : string String_map.t) =
     linking_native.used <- false;
     build_cma_library.used <- false;
     build_cmxa_library.used <- false;
+
+    build_package.used <- false;
     
     String_map.mapi (fun name command -> 
         define ~command name
@@ -12250,21 +12424,21 @@ module Bsb_ninja_file_groups : sig
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
 
 
- type info = {
-  all_config_deps : string list  ;
+type info =  string list  
 
-}
 
 val zero : info
 
 
-val handle_file_groups : out_channel ->
+val handle_file_groups :
+  out_channel ->
   package_specs:Bsb_package_specs.t ->  
   js_post_build_cmd:string option -> 
   files_to_install:String_hash_set.t ->  
   custom_rules:Bsb_rule.t String_map.t ->
   backend:Bsb_config_types.compilation_kind_t -> 
   Bsb_parse_sources.file_group list ->
+  string option ->
   info -> info
 
 end = struct
@@ -12296,20 +12470,16 @@ end = struct
 let (//) = Ext_filename.combine
 
 type info =
-  { all_config_deps : string list  ; (* Figure out [.d] files *)
-  }
+  string list   
+(* Figure out a list of files 
+   to be built before building cm*
+*)
+
 
 let zero : info =
-  { all_config_deps = [] ;
-  }
+  [] 
 
-let (++) (us : info) (vs : info) =
-  if us == zero then vs else
-  if vs == zero then us
-  else
-    {
-      all_config_deps  = us.all_config_deps @ vs.all_config_deps;
-    }
+
 
 
 
@@ -12367,6 +12537,7 @@ let emit_impl_build
     ~no_intf_file:(no_intf_file : bool) 
     js_post_build_cmd
     ~is_re
+    namespace
     filename_sans_extension
   : info =    
   let input = 
@@ -12375,10 +12546,17 @@ let emit_impl_build
        else filename_sans_extension ^ Literals.suffix_ml  ) in
   let output_mlast = filename_sans_extension  ^ Literals.suffix_mlast in
   let output_mlastd = filename_sans_extension ^ Literals.suffix_mlastd in
-  let file_cmi = filename_sans_extension ^ Literals.suffix_cmi in
-  let output_cmj =  filename_sans_extension ^ Literals.suffix_cmj in
+  let output_filename_sans_extension = 
+    match namespace with 
+    | None -> 
+      filename_sans_extension 
+    | Some pkg -> 
+      Ext_package_name.make ~pkg filename_sans_extension
+  in 
+  let file_cmi =  output_filename_sans_extension ^ Literals.suffix_cmi in
+  let output_cmj =  output_filename_sans_extension ^ Literals.suffix_cmj in
   let output_js =
-    Bsb_package_specs.get_list_of_output_js package_specs filename_sans_extension in 
+    Bsb_package_specs.get_list_of_output_js package_specs output_filename_sans_extension in 
   let common_shadows = 
     make_common_shadows package_specs
       (Filename.dirname file_cmi)
@@ -12417,11 +12595,11 @@ let emit_impl_build
     Bsb_ninja_util.output_build oc
       ~output:output_cmj
       ~shadows
-      ~outputs:  (output_js @ cm_outputs)
+      ~implicit_outputs:  (output_js @ cm_outputs)
       ~input:output_mlast
       ~implicit_deps:deps
       ~rule;
-    {all_config_deps = [output_mlastd] }
+    [output_mlastd] 
   end 
 
 
@@ -12430,16 +12608,24 @@ let emit_intf_build
     (group_dir_index : Bsb_dir_index.t)
     oc
     ~is_re
+    namespace
     filename_sans_extension
   : info =
-  
+
   let input = 
     Bsb_config.proj_rel 
       (if is_re then filename_sans_extension ^ Literals.suffix_rei 
        else filename_sans_extension ^ Literals.suffix_mli) in
   let output_mliast = filename_sans_extension ^ Literals.suffix_mliast in
   let output_mliastd = filename_sans_extension ^ Literals.suffix_mliastd in
-  let output_cmi = filename_sans_extension ^ Literals.suffix_cmi in
+  let output_filename_sans_extension = 
+    match namespace with 
+    | None -> 
+      filename_sans_extension 
+    | Some pkg -> 
+      Ext_package_name.make ~pkg filename_sans_extension
+  in 
+  let output_cmi = output_filename_sans_extension ^ Literals.suffix_cmi in
   let common_shadows = 
     make_common_shadows package_specs
       (Filename.dirname output_cmi)
@@ -12464,9 +12650,8 @@ let emit_intf_build
     ~output:output_cmi
     ~input:output_mliast
     ~rule:Bsb_rule.build_cmi;
-  {
-    all_config_deps = [output_mliastd];
-  }    
+  [output_mliastd]
+
 
 
 let handle_module_info 
@@ -12475,6 +12660,7 @@ let handle_module_info
     js_post_build_cmd
     oc  module_name 
     ( module_info : Bsb_build_cache.module_info)
+    namespace
   : info =
   match module_info.ml, module_info.mli with
   | Ml_source (input_impl,impl_is_re), 
@@ -12486,12 +12672,14 @@ let handle_module_info
       ~no_intf_file:false
       ~is_re:impl_is_re
       js_post_build_cmd      
-      input_impl  ++ 
+      namespace
+      input_impl  @ 
     emit_intf_build 
       package_specs
       group_dir_index
       oc         
       ~is_re:intf_is_re
+      namespace
       input_intf 
   | Ml_source(input,is_re), Mli_empty ->
     emit_impl_build 
@@ -12501,6 +12689,7 @@ let handle_module_info
       ~no_intf_file:true
       js_post_build_cmd      
       ~is_re
+      namespace
       input 
   | Ml_empty, Mli_source(input,is_re) ->    
     emit_intf_build 
@@ -12508,13 +12697,21 @@ let handle_module_info
       group_dir_index
       oc         
       ~is_re
+      namespace
       input 
   | Ml_empty, Mli_empty -> zero
 
 
-let handle_file_group oc ~custom_rules 
-    ~package_specs ~js_post_build_cmd  
-    (files_to_install : String_hash_set.t) acc (group: Bsb_parse_sources.file_group) : info =
+let handle_file_group 
+    oc 
+    ~custom_rules 
+    ~package_specs 
+    ~js_post_build_cmd  
+    (files_to_install : String_hash_set.t) 
+    (namespace  : string option)
+    acc 
+    (group: Bsb_parse_sources.file_group ) 
+  : info =
 
   handle_generators oc group custom_rules ;
   String_map.fold (fun  module_name module_info  acc ->
@@ -12522,19 +12719,25 @@ let handle_file_group oc ~custom_rules
         match group.public with
         | Export_all -> true
         | Export_none -> false
-        | Export_set set ->  String_set.mem module_name set in
+        | Export_set set ->  
+          String_set.mem module_name set in
       if installable then 
         String_hash_set.add files_to_install (Bsb_build_cache.filename_sans_suffix_of_module_info module_info);
       (handle_module_info group.dir_index 
          package_specs js_post_build_cmd 
-         oc module_name module_info) ++  acc
+         oc 
+         module_name 
+         module_info
+         namespace
+      ) @  acc
     ) group.sources  acc 
 
 
 let handle_file_groups
     oc ~package_specs ~js_post_build_cmd
     ~files_to_install ~custom_rules ~backend
-    (file_groups  :  Bsb_parse_sources.file_group list) st =
+    (file_groups  :  Bsb_parse_sources.file_group list) 
+    namespace (st : info) : info =
   let file_groups = List.filter (fun group ->
     match backend with 
     | Bsb_config_types.Js       -> List.mem Bsb_parse_sources.Js group.Bsb_parse_sources.kind
@@ -12542,7 +12745,11 @@ let handle_file_groups
     | Bsb_config_types.Bytecode -> List.mem Bsb_parse_sources.Bytecode group.Bsb_parse_sources.kind
   ) file_groups in 
   List.fold_left 
-    (handle_file_group oc ~package_specs ~custom_rules ~js_post_build_cmd files_to_install ) 
+    (handle_file_group 
+       oc ~package_specs ~custom_rules ~js_post_build_cmd
+       files_to_install 
+       namespace
+    ) 
     st  file_groups
 
 end
@@ -12587,7 +12794,9 @@ val handle_file_groups : out_channel ->
   files_to_install:String_hash_set.t ->  
   static_libraries:string list ->
   Bsb_parse_sources.file_group list ->
-  Bsb_ninja_file_groups.info -> Bsb_ninja_file_groups.info
+  string option ->
+  Bsb_ninja_file_groups.info -> 
+  Bsb_ninja_file_groups.info
 
 end = struct
 #1 "bsb_ninja_native.ml"
@@ -12623,16 +12832,6 @@ type compile_target_t = Native | Bytecode
 let output_build = Bsb_ninja_util.output_build
 
 let (//) = Ext_filename.combine
-
-let (++) (us : Bsb_ninja_file_groups.info) (vs : Bsb_ninja_file_groups.info) =
-  if us == Bsb_ninja_file_groups.zero then vs else
-  if vs == Bsb_ninja_file_groups.zero then us
-  else
-    {
-      all_config_deps  = us.all_config_deps @ vs.all_config_deps
-    ;
-      (* all_installs = us.all_installs @ vs.all_installs *)
-    }
 
 let install_file module_info files_to_install =
   String_hash_set.add  files_to_install (Bsb_build_cache.filename_sans_suffix_of_module_info module_info)
@@ -12760,10 +12959,7 @@ let handle_file_group oc
               ~implicit_deps:deps
               ~rule:rule_name ;
             if installable then begin install_file module_info files_to_install end;
-            {all_config_deps = [output_mlastd]; 
-            (* all_installs = [output_cmi];   *)
-            }
-
+            [output_mlastd]
           end
         | `Mli
         | `Rei ->
@@ -12794,10 +12990,7 @@ let handle_file_group oc
             (* ~implicit_deps:[output_mliastd] *)
             ~rule;
           if installable then begin install_file module_info files_to_install end ;
-          {
-            all_config_deps = [output_mliastd];
-            (* all_installs = [output_cmi]; *)
-          }
+          [output_mliastd]
 
       end
     in
@@ -12805,14 +12998,14 @@ let handle_file_group oc
       | Ml_source (input, false) -> emit_build `Ml input
       | Ml_source (input, true) -> emit_build `Re input
       | Ml_empty -> Bsb_ninja_file_groups.zero
-    end ++
+    end @
     begin match module_info.mli with
       | Mli_source (mli_file, false)  ->
         emit_build `Mli mli_file
       | Mli_source (rei_file, true) ->
         emit_build `Rei rei_file
       | Mli_empty -> Bsb_ninja_file_groups.zero
-    end ++
+    end @
     (* begin match module_info.mll with
       | Some mll_file ->
         begin match module_info.ml with
@@ -12821,7 +13014,7 @@ let handle_file_group oc
             failwith ("both "^ mll_file ^ " and " ^ input ^ " are found in source listings" )
         end
       | None -> Bsb_ninja_file_groups.zero
-    end ++  *)
+    end @  *)
     info
 
   in
@@ -12945,9 +13138,7 @@ let pack oc ret ~backend ~file_groups =
       ~inputs:all_cmo_or_cmx_files
       ~implicit_deps:all_cmi_files
       ~rule:rule_name ;
-    ret ++ ({all_config_deps = []; 
-    (* all_installs = [output_cma_or_cmxa];  *)
-  })
+    ret @ []
   end else ret
 
 let handle_file_groups oc
@@ -12960,7 +13151,7 @@ let handle_file_groups oc
   ~js_post_build_cmd
   ~files_to_install
   ~static_libraries
-  (file_groups  :  Bsb_parse_sources.file_group list) st =
+  (file_groups  :  Bsb_parse_sources.file_group list) namespace st =
   let file_groups = List.filter (fun group ->
     match backend with 
     | Bsb_config_types.Js       -> List.mem Bsb_parse_sources.Js group.Bsb_parse_sources.kind
@@ -13010,7 +13201,7 @@ module Bsb_ninja_gen : sig
 (** 
   generate ninja file based on [cwd] and [bsc_dir]
 *)
-val output_ninja :
+val output_ninja_and_namespace_map :
   external_deps_for_linking_and_clibs:string list * string list * string list ->
   cwd:string ->
   bsc_dir:string ->  
@@ -13075,7 +13266,7 @@ let dash_i = "-I"
 let refmt_exe = "refmt.exe"
 let dash_ppx = "-ppx"
 
-let output_ninja
+let output_ninja_and_namespace_map
     ~external_deps_for_linking_and_clibs:(external_deps_for_linking, external_static_libraries, external_ocamlfind_dependencies)
     ~cwd
     ~bsc_dir  
@@ -13176,13 +13367,13 @@ let output_ninja
           Bsb_ninja_global_vars.refmt_flags, refmt_flags;
           Bsb_ninja_global_vars.namespace , namespace_flag ; 
           
-          Bsb_ninja_global_vars.bs_super_errors_ocamlfind, 
+          (* Bsb_ninja_global_vars.bs_super_errors_ocamlfind,  *)
           (* Jumping through hoops. When ocamlfind is used we need to pass the argument 
              to the underlying compiler and not ocamlfind, so we use -passopt. Otherwise we don't.
              For bsb_helper we also don't. *)
-            if ocamlfind_dependencies <> [] && String.length bs_super_errors > 0 
+            (* if ocamlfind_dependencies <> [] && String.length bs_super_errors > 0 
               then "-passopt " ^ bs_super_errors 
-              else bs_super_errors;
+              else bs_super_errors; *)
           Bsb_ninja_global_vars.bs_super_errors, bs_super_errors;
           
           Bsb_ninja_global_vars.external_deps_for_linking, Bsb_build_util.flag_concat dash_i external_deps_for_linking;
@@ -13255,6 +13446,7 @@ let output_ninja
           ~files_to_install
           ~backend
           bs_file_groups 
+          namespace
           Bsb_ninja_file_groups.zero, 
         true)
       else (Bsb_ninja_file_groups.zero, false)
@@ -13271,6 +13463,7 @@ let output_ninja
           ~files_to_install
           ~static_libraries:(external_static_libraries @ static_libraries)
           bs_file_groups
+          namespace
           Bsb_ninja_file_groups.zero,
         true)
       else (Bsb_ninja_file_groups.zero, false)
@@ -13287,6 +13480,7 @@ let output_ninja
           ~files_to_install
           ~static_libraries:(external_static_libraries @ static_libraries)
           bs_file_groups
+          namespace
           Bsb_ninja_file_groups.zero,
         true)
       else (Bsb_ninja_file_groups.zero, false)
@@ -13309,12 +13503,12 @@ let output_ninja
       (* We move out of lib/bs/XYZ so that the command is ran from the root project. *)
       let rule = Bsb_rule.define ~command:("cd ../../.. && " ^ envvars ^ build_script) "build_script" in
       Bsb_ninja_util.output_build oc
-        ~order_only_deps:(static_resources @ all_info.all_config_deps)
+        ~order_only_deps:(static_resources @ all_info)
         ~input:""
         ~output:Literals.build_ninja
         ~rule;
     | _ ->
-      Bsb_ninja_util.phony oc ~order_only_deps:(static_resources @ all_info.all_config_deps)
+      Bsb_ninja_util.phony oc ~order_only_deps:(static_resources @ all_info)
         ~inputs:[]
         ~output:Literals.build_ninja ; 
     in
@@ -18190,15 +18384,15 @@ end = struct
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
 
-let package_sep = Bsb_ninja_global_vars.package_sep
+
 (**
-  {[
-    module List = XX__List    
-  ]}
-  vs
-  {[
-    module List = List__XX
-  ]}
+   {[
+     module List = XX__List    
+   ]}
+   vs
+   {[
+     module List = List__XX
+   ]}
 *)
 open Ast_helper
 let loc = Location.none
@@ -18206,16 +18400,22 @@ let loc = Location.none
 let make_structure_item pkg_name cunit : Parsetree.structure_item =
   Str.module_ 
     (Mb.mk {txt = cunit; loc }
-       (Mod.ident {txt = Lident (pkg_name ^ package_sep ^ cunit) ; loc}))
+       (Mod.ident 
+          {txt = Lident 
+               ( Ext_package_name.make ~pkg:pkg_name cunit)
+          ; loc}))
 
 let make_signature_item pkg_name cunit : Parsetree.signature_item = 
   Sig.module_
     (Md.mk {txt = cunit; loc}
-       (Mty.alias {txt = Lident (pkg_name ^ package_sep ^ cunit); loc})
+       (Mty.alias 
+          {txt = Lident 
+            ( Ext_package_name.make ~pkg:pkg_name cunit)
+          ; loc})
     )        
 
 let make_structure pkg_name cunits : Parsetree.structure =     
-    cunits |> List.map (make_structure_item pkg_name)
+  cunits |> List.map (make_structure_item pkg_name)
 
 let make_signature pkg_name cunits  : Parsetree.signature = 
   cunits |> List.map (make_signature_item pkg_name)  
@@ -18338,8 +18538,8 @@ module Bsb_pkg_map_gen : sig
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
 
 
- val output : 
-  cwd:string ->
+val output : 
+  dir:string ->
   string -> 
   Bsb_parse_sources.file_group list ->
   unit 
@@ -18372,13 +18572,15 @@ end = struct
 let (//) = Ext_filename.combine
 
 
-let output ~cwd namespace 
+
+
+
+
+let output ~dir namespace 
     (file_groups : Bsb_parse_sources.file_group list)
   = 
-  (* FIXME : *)
-  let fname = namespace ^ ".ml" in 
-  let oc = open_out_bin 
-      (cwd // Bsb_config.lib_bs// fname ) in 
+  let fname = namespace ^ Literals.suffix_ml in 
+  let oc = open_out_bin (dir// fname ) in 
   let modules =     
     List.fold_left 
     (fun acc (x : Bsb_parse_sources.file_group) ->
@@ -18531,7 +18733,7 @@ let regenerate_ninja
           (* generate a map file
             TODO: adapt ninja rules
           *)
-          Bsb_pkg_map_gen.output ~cwd namespace config.bs_file_groups
+          Bsb_pkg_map_gen.output ~dir:cwd namespace config.bs_file_groups
         );
         let external_deps_for_linking_and_clibs = match external_deps_for_linking_and_clibs with 
         | None -> 
@@ -18607,7 +18809,7 @@ let regenerate_ninja
           | None -> config.Bsb_config_types.bs_super_errors
           | Some bs_super_errors -> bs_super_errors
         end in 
-        Bsb_ninja_gen.output_ninja 
+        Bsb_ninja_gen.output_ninja_and_namespace_map 
           ~external_deps_for_linking_and_clibs 
           ~cwd 
           ~bsc_dir 
@@ -18872,44 +19074,59 @@ let install_targets ~backend cwd (config : Bsb_config_types.t option) =
       begin 
         ()
         (*Format.pp_print_string Format.std_formatter "=> "; 
-        Format.pp_print_string Format.std_formatter destdir;
-        Format.pp_print_string Format.std_formatter "<= ";
-        Format.pp_print_string Format.std_formatter file ;
-        Format.pp_print_string Format.std_formatter "\r"; 
-        Format.pp_print_flush Format.std_formatter ();*)
+          Format.pp_print_string Format.std_formatter destdir;
+          Format.pp_print_string Format.std_formatter "<= ";
+          Format.pp_print_string Format.std_formatter file ;
+          Format.pp_print_string Format.std_formatter "\r"; 
+          Format.pp_print_flush Format.std_formatter ();*)
       end
   in
+  let install_filename_sans_extension destdir namespace nested x = 
+    let x = 
+      match namespace with 
+      | None -> x 
+      | Some pkg -> Ext_package_name.make ~pkg x in 
+    install ~destdir (cwd // x ^  Literals.suffix_ml) ;
+    install ~destdir (cwd // x ^  Literals.suffix_re) ;
+    install ~destdir (cwd // x ^ Literals.suffix_mli) ;
+    install ~destdir (cwd // x ^  Literals.suffix_rei) ;
+    
+    (* The library file generated by bsb for each external dep has the 
+       same name because they're in different folders and because it makes
+       linking easier. *)
+    install ~destdir (cwd // Bsb_config.lib_bs // nested // Literals.library_file ^ Literals.suffix_a) ;
+    install ~destdir (cwd // Bsb_config.lib_bs // nested // Literals.library_file ^ Literals.suffix_cma) ;
+    install ~destdir (cwd // Bsb_config.lib_bs // nested // Literals.library_file ^ Literals.suffix_cmxa) ;
+    
+    install ~destdir (cwd // Bsb_config.lib_bs// nested // x ^ Literals.suffix_cmi) ;
+    install ~destdir (cwd // Bsb_config.lib_bs// nested // x ^ Literals.suffix_cmj) ;
+    install ~destdir (cwd // Bsb_config.lib_bs// nested // x ^ Literals.suffix_cmt) ;
+    install ~destdir (cwd // Bsb_config.lib_bs// nested // x ^ Literals.suffix_cmti) ;
+
+  in   
   match config with 
   | None -> ()
-  | Some {files_to_install} -> 
+  | Some {files_to_install; namespace; package_name} -> 
     let nested = begin match backend with
       | Bsb_config_types.Js       -> "js"
       | Bsb_config_types.Native   -> "native"
       | Bsb_config_types.Bytecode -> "bytecode"
     end in
-    let destdir = cwd // Bsb_config.lib_ocaml // nested in (* lib is already there after building, so just mkdir [lib/ocaml/XYZ] *)
+    let destdir = cwd // Bsb_config.lib_ocaml // nested in (* lib is already there after building, so just mkdir [lib/ocaml] *)
     if not @@ Sys.file_exists destdir then begin Bsb_build_util.mkp destdir  end;
     begin
       Format.fprintf Format.std_formatter "@{<info>Installing started@}@.";
       (*Format.pp_print_flush Format.std_formatter ();*)
-      String_hash_set.iter (fun x ->
-          install ~destdir (cwd // x ^  Literals.suffix_ml) ;
-          install ~destdir (cwd // x ^  Literals.suffix_re) ;
-          install ~destdir (cwd // x ^ Literals.suffix_mli) ;
-          install ~destdir (cwd // x ^  Literals.suffix_rei) ;
-
-          (* The library file generated by bsb for each external dep has the 
-             same name because they're in different folders and because it makes
-             linking easier. *)
-          install ~destdir (cwd // Bsb_config.lib_bs // nested // Literals.library_file ^ Literals.suffix_a) ;
-          install ~destdir (cwd // Bsb_config.lib_bs // nested // Literals.library_file ^ Literals.suffix_cma) ;
-          install ~destdir (cwd // Bsb_config.lib_bs // nested // Literals.library_file ^ Literals.suffix_cmxa) ;
-
-          install ~destdir (cwd // Bsb_config.lib_bs // nested // x ^ Literals.suffix_cmi) ;
-          install ~destdir (cwd // Bsb_config.lib_bs // nested // x ^ Literals.suffix_cmj) ;
-          install ~destdir (cwd // Bsb_config.lib_bs // nested // x ^ Literals.suffix_cmt) ;
-          install ~destdir (cwd // Bsb_config.lib_bs // nested // x ^ Literals.suffix_cmti) ;
-        ) files_to_install;
+      (* Format.fprintf Format.std_formatter "@{<info>%s@} Installed @." x;  *)
+      (* let namespace = 
+        if namespace then
+          Some (Ext_package_name.module_name_of_package_name package_name) 
+        else None in *)
+      (match namespace with
+      | None -> ()
+      | Some x -> 
+          install_filename_sans_extension destdir None nested  x);
+      String_hash_set.iter (install_filename_sans_extension destdir namespace nested) files_to_install;
       Format.fprintf Format.std_formatter "@{<info>Installing finished@} @.";
     end
 

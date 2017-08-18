@@ -238,6 +238,7 @@ bin/whole_compiler.ml : core/lam_pass_exits.mli
 bin/whole_compiler.ml : core/lam_stats_util.mli
 bin/whole_compiler.ml : depends/ast_extract.mli
 bin/whole_compiler.ml : depends/bs_exception.ml
+bin/whole_compiler.ml : ext/ext_package_name.ml
 bin/whole_compiler.ml : ext/string_hash_set.mli
 bin/whole_compiler.ml : syntax/ast_core_type.ml
 bin/whole_compiler.ml : syntax/ast_external.mli
@@ -265,6 +266,7 @@ bin/whole_compiler.ml : core/js_of_lam_option.ml
 bin/whole_compiler.ml : core/js_of_lam_record.ml
 bin/whole_compiler.ml : core/js_of_lam_string.ml
 bin/whole_compiler.ml : core/js_of_lam_tuple.mli
+bin/whole_compiler.ml : core/js_packages_info.ml
 bin/whole_compiler.ml : core/js_pass_flatten.mli
 bin/whole_compiler.ml : core/lam_beta_reduce.mli
 bin/whole_compiler.ml : core/lam_bounded_vars.ml
@@ -276,6 +278,7 @@ bin/whole_compiler.ml : core/lam_module_ident.ml
 bin/whole_compiler.ml : core/lam_pass_collect.ml
 bin/whole_compiler.ml : core/lam_stats_export.ml
 bin/whole_compiler.ml : depends/bs_exception.mli
+bin/whole_compiler.ml : ext/ext_package_name.mli
 bin/whole_compiler.ml : syntax/ast_attributes.ml
 bin/whole_compiler.ml : syntax/ast_core_type.mli
 bin/whole_compiler.ml : syntax/ast_derive_dyn.ml
@@ -304,7 +307,8 @@ bin/whole_compiler.ml : core/js_of_lam_option.mli
 bin/whole_compiler.ml : core/js_of_lam_record.mli
 bin/whole_compiler.ml : core/js_of_lam_string.mli
 bin/whole_compiler.ml : core/js_of_lam_variant.ml
-bin/whole_compiler.ml : core/js_program_loader.ml
+bin/whole_compiler.ml : core/js_packages_info.mli
+bin/whole_compiler.ml : core/js_packages_state.ml
 bin/whole_compiler.ml : core/lam_bounded_vars.mli
 bin/whole_compiler.ml : core/lam_compile_const.ml
 bin/whole_compiler.ml : core/lam_compile_defs.mli
@@ -337,7 +341,8 @@ bin/whole_compiler.ml : ../vendor/ocaml/typing/typetexp.mli
 bin/whole_compiler.ml : ../vendor/ocaml/utils/consistbl.mli
 bin/whole_compiler.ml : core/js_implementation.mli
 bin/whole_compiler.ml : core/js_of_lam_variant.mli
-bin/whole_compiler.ml : core/js_program_loader.mli
+bin/whole_compiler.ml : core/js_packages_state.mli
+bin/whole_compiler.ml : core/js_runtime_modules.ml
 bin/whole_compiler.ml : core/lam_compile_const.mli
 bin/whole_compiler.ml : core/lam_compile_global.ml
 bin/whole_compiler.ml : core/lam_compile_group.mli
@@ -446,3 +451,5 @@ bin/whole_compiler.ml : ext/ordered_hash_map_local_ident.ml
 bin/whole_compiler.ml : ext/ordered_hash_map_local_ident.mli
 bin/whole_compiler.ml : core/js_pass_flatten_and_mark_dead.ml
 bin/whole_compiler.ml : core/js_pass_flatten_and_mark_dead.mli
+bin/whole_compiler.ml : reason_outcome_printer/tweaked_reason_oprint.ml
+bin/whole_compiler.ml : reason_outcome_printer/reason_outcome_printer_main.ml

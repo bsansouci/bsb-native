@@ -50,7 +50,7 @@ let dash_i = "-I"
 let refmt_exe = "refmt.exe"
 let dash_ppx = "-ppx"
 
-let output_ninja
+let output_ninja_and_namespace_map
     ~external_deps_for_linking_and_clibs:(external_deps_for_linking, external_static_libraries, external_ocamlfind_dependencies)
     ~cwd
     ~bsc_dir  
@@ -151,13 +151,13 @@ let output_ninja
           Bsb_ninja_global_vars.refmt_flags, refmt_flags;
           Bsb_ninja_global_vars.namespace , namespace_flag ; 
           
-          Bsb_ninja_global_vars.bs_super_errors_ocamlfind, 
+          (* Bsb_ninja_global_vars.bs_super_errors_ocamlfind,  *)
           (* Jumping through hoops. When ocamlfind is used we need to pass the argument 
              to the underlying compiler and not ocamlfind, so we use -passopt. Otherwise we don't.
              For bsb_helper we also don't. *)
-            if ocamlfind_dependencies <> [] && String.length bs_super_errors > 0 
+            (* if ocamlfind_dependencies <> [] && String.length bs_super_errors > 0 
               then "-passopt " ^ bs_super_errors 
-              else bs_super_errors;
+              else bs_super_errors; *)
           Bsb_ninja_global_vars.bs_super_errors, bs_super_errors;
           
           Bsb_ninja_global_vars.external_deps_for_linking, Bsb_build_util.flag_concat dash_i external_deps_for_linking;
@@ -230,6 +230,7 @@ let output_ninja
           ~files_to_install
           ~backend
           bs_file_groups 
+          namespace
           Bsb_ninja_file_groups.zero, 
         true)
       else (Bsb_ninja_file_groups.zero, false)
@@ -246,6 +247,7 @@ let output_ninja
           ~files_to_install
           ~static_libraries:(external_static_libraries @ static_libraries)
           bs_file_groups
+          namespace
           Bsb_ninja_file_groups.zero,
         true)
       else (Bsb_ninja_file_groups.zero, false)
@@ -262,6 +264,7 @@ let output_ninja
           ~files_to_install
           ~static_libraries:(external_static_libraries @ static_libraries)
           bs_file_groups
+          namespace
           Bsb_ninja_file_groups.zero,
         true)
       else (Bsb_ninja_file_groups.zero, false)
@@ -284,12 +287,12 @@ let output_ninja
       (* We move out of lib/bs/XYZ so that the command is ran from the root project. *)
       let rule = Bsb_rule.define ~command:("cd ../../.. && " ^ envvars ^ build_script) "build_script" in
       Bsb_ninja_util.output_build oc
-        ~order_only_deps:(static_resources @ all_info.all_config_deps)
+        ~order_only_deps:(static_resources @ all_info)
         ~input:""
         ~output:Literals.build_ninja
         ~rule;
     | _ ->
-      Bsb_ninja_util.phony oc ~order_only_deps:(static_resources @ all_info.all_config_deps)
+      Bsb_ninja_util.phony oc ~order_only_deps:(static_resources @ all_info)
         ~inputs:[]
         ~output:Literals.build_ninja ; 
     in

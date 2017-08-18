@@ -40,7 +40,7 @@ type compilation_kind_t = Js | Bytecode | Native
 type t = 
   {
     package_name : string ; 
-    namespace : string option;
+    namespace : string option; 
     external_includes : string list ; 
     warnings : string ;
     bsc_flags : string list ;

@@ -79,6 +79,15 @@ let merlin_pkg = "\nPKG"
 let merlin_flg = "\nFLG "
 let bs_flg_prefix = "-bs-"
 
+let output_merlin_namespace buffer ns= 
+  match ns with 
+  | None -> ()
+  | Some x -> 
+    Buffer.add_string buffer merlin_b ; 
+    Buffer.add_string buffer Bsb_config.lib_bs ; 
+    Buffer.add_string buffer merlin_flg ; 
+    Buffer.add_string buffer "-open ";
+    Buffer.add_string buffer x 
 
 let bsc_flg_to_merlin_ocamlc_flg bsc_flags  =
   merlin_flg ^ 
@@ -99,10 +108,18 @@ let merlin_file_gen ~cwd ~backend
       external_includes; 
       reason_react_jsx ; 
       ocamlfind_dependencies;
+      namespace;
+      package_name
      } : Bsb_config_types.t)
   =
   if generate_merlin then begin
     let buffer = Buffer.create 1024 in
+    (* let namespace = 
+        if namespace then 
+          (Some (Ext_package_name.module_name_of_package_name package_name))
+        else None
+    in          *)
+    output_merlin_namespace buffer namespace; 
     ppx_flags
     |> List.iter (fun x ->
         Buffer.add_string buffer (merlin_flg_ppx ^ x )

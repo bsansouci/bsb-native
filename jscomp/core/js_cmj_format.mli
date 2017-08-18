@@ -69,8 +69,7 @@ type effect = string option
 type t = {
   values : cmj_value String_map.t;
   effect : effect;
-  (* goog_package : string option; *)
-  npm_package_path : Js_config.packages_info;
+  npm_package_path : Js_packages_info.t;
 }
 
 val single_na : arity
@@ -82,3 +81,7 @@ val from_file : string -> t
 val from_string : string -> t
 
 val to_file : string -> t -> unit
+
+
+(** return path and meta data *)
+val find_cmj : string -> string * t

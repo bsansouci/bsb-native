@@ -501,7 +501,6 @@ val is_valid_source_name :
 *)
 val is_valid_npm_package_name : string -> bool 
 
-val module_name_of_package_name : string -> string
 
 
 val no_char : string -> char -> int -> int -> bool 
@@ -907,31 +906,6 @@ let is_valid_npm_package_name (s : string) =
          | _ -> false )
   | _ -> false 
 
-let module_name_of_package_name (s : string) : string = 
-  let len = String.length s in 
-  let buf = Buffer.create len in 
-  let add capital ch = 
-    Buffer.add_char buf 
-      (if capital then 
-        (Char.uppercase ch)
-      else ch) in    
-  let rec aux capital off len =     
-      if off >= len then ()
-      else 
-        let ch = String.unsafe_get s off in
-        match ch with 
-        | 'a' .. 'z' 
-        | 'A' .. 'Z' 
-        | '0' .. '9'
-          ->
-          add capital ch ; 
-          aux false (off + 1) len 
-        | '-' -> 
-          aux true (off + 1) len 
-        | _ -> aux capital (off+1) len
-         in 
-   aux true 0 len ;
-   Buffer.contents buf 
 
 type check_result = 
   | Good 
@@ -1464,11 +1438,7 @@ val get_extension : string -> string
 
 val simple_convert_node_path_to_os_path : string -> string
 
-(* Note  we have to output uncapitalized file Name, 
-  or at least be consistent, since by reading cmi file on Case insensitive OS, we don't really know it is `list.cmi` or `List.cmi`, so that `require (./list.js)` or `require(./List.js)`
-  relevant issues: #1609, #913 
-*)
-val output_js_basename :  string -> string 
+
 end = struct
 #1 "ext_filename.ml"
 (* Copyright (C) 2015-2016 Bloomberg Finance L.P.
@@ -1835,8 +1805,7 @@ let simple_convert_node_path_to_os_path =
   else failwith ("Unknown OS : " ^ Sys.os_type)
 
 
-let output_js_basename s = 
-  String.uncapitalize s ^ Literals.suffix_js
+
 end
 module Map_gen
 = struct
@@ -2746,10 +2715,9 @@ let string_of_bsb_dev_include i =
 
 let reset () = dir_index := 0
 end
-module Bsb_ninja_global_vars
-= struct
-#1 "bsb_ninja_global_vars.ml"
-(* Copyright (C) 2017 Authors of BuckleScript
+module Ext_package_name : sig 
+#1 "ext_package_name.mli"
+(* Copyright (C) 2017- Authors of BuckleScript
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
@@ -2774,43 +2742,95 @@ module Bsb_ninja_global_vars
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
 
 
- 
-let bs_package_flags = "bs_package_flags"
+val make : pkg:string -> string -> string 
 
-let bsc = "bsc" 
+val remove_package_suffix: string -> string 
 
-let src_root_dir = "src_root_dir"
-let bsb_helper = "bsb_helper"
+(* Note  we have to output uncapitalized file Name, 
+  or at least be consistent, since by reading cmi file on Case insensitive OS, we don't really know it is `list.cmi` or `List.cmi`, so that `require (./list.js)` or `require(./List.js)`
+  relevant issues: #1609, #913 
+*)
+val js_name_of_basename :  string -> string 
 
-let bsc_flags = "bsc_flags"
+val module_name_of_package_name : string -> string
 
-let ppx_flags = "ppx_flags"
+end = struct
+#1 "ext_package_name.ml"
 
-let bs_package_includes = "bs_package_includes"
+(* Copyright (C) 2015-2016 Bloomberg Finance L.P.
+ * 
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * In addition to the permissions granted to you by the LGPL, you may combine
+ * or link a "work that uses the Library" with a publicly distributed version
+ * of this file to produce a combined library or application, then distribute
+ * that combined work under the terms of your choosing, with no requirement
+ * to comply with the obligations normally placed on you by section 4 of the
+ * LGPL version 3 (or the corresponding section of a later version of the LGPL
+ * should you choose to use a later version).
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ * 
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
 
-let bs_package_dev_includes = "bs_package_dev_includes"
 
-let refmt = "refmt"
+ (* Note the build system should check the validity of filenames
+    espeically, it should not contain '-'
+ *)
+ let package_sep_char = '-'
+ let package_sep = "-"
 
-let reason_react_jsx = "reason_react_jsx"
+ let make ~pkg cunit  = 
+    cunit ^ package_sep ^ pkg 
+    
 
-let refmt_flags = "refmt_flags"
+let rec rindex_rec s i c =
+  if i < 0 then i else
+  if String.unsafe_get s i = c then i else rindex_rec s (i - 1) c;;
+    
+let remove_package_suffix name =
+    let i = rindex_rec name (String.length name - 1) package_sep_char in 
+    if i < 0 then name 
+    else String.sub name 0 i 
 
-let postbuild = "postbuild"
 
-let namespace = "namespace" 
-
-let package_sep = "-"
-
-let bs_super_errors = "bs_super_errors"
-let bs_super_errors_ocamlfind = "bs_super_errors_ocamlfind"
-
-let ocamlc = "ocamlc"
-let ocamlopt = "ocamlopt"
-let ocamlfind = "ocamlfind"
-let ocamlfind_dependencies = "ocamlfind_dependencies"
-
-let external_deps_for_linking = "external_deps_for_linking"
+let js_name_of_basename s = 
+  remove_package_suffix (String.uncapitalize s) ^ Literals.suffix_js
+  
+  
+let module_name_of_package_name (s : string) : string = 
+  let len = String.length s in 
+  let buf = Buffer.create len in 
+  let add capital ch = 
+    Buffer.add_char buf 
+      (if capital then 
+        (Char.uppercase ch)
+      else ch) in    
+  let rec aux capital off len =     
+      if off >= len then ()
+      else 
+        let ch = String.unsafe_get s off in
+        match ch with 
+        | 'a' .. 'z' 
+        | 'A' .. 'Z' 
+        | '0' .. '9'
+          ->
+          add capital ch ; 
+          aux false (off + 1) len 
+        | '-' -> 
+          aux true (off + 1) len 
+        | _ -> aux capital (off+1) len
+         in 
+   aux true 0 len ;
+   Buffer.contents buf 
 
 end
 module Bsb_depfile_gen : sig 
@@ -2913,13 +2933,10 @@ let read_deps fn =
 type kind = Js | Bytecode | Native
 
 let output_file oc source namespace = 
-  output_string oc source ;
   match namespace with 
-  | None -> ()
-  | Some x ->
-    output_string oc 
-      Bsb_ninja_global_vars.package_sep ; 
-    output_string oc x 
+  | None -> output_string oc source ;
+  | Some pkg ->
+    output_string oc ( Ext_package_name.make ~pkg source)
 
 (** for bucklescript artifacts 
     [lhs_suffix] is [.cmj]

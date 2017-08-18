@@ -113,6 +113,7 @@ bin/bsb.ml : bsb/bsb_ninja_native.ml
 bin/bsb.ml : bsb/bsb_ninja_regen.mli
 bin/bsb.ml : bsb/bsb_pkg_map_gen.mli
 bin/bsb.ml : bsb/bsb_watcher_gen.mli
+bin/bsb.ml : ext/ext_package_name.ml
 bin/bsb.ml : ext/string_hash_set.mli
 bin/bsb.ml : ../vendor/ocaml/utils/clflags.mli
 bin/bsb.ml : ../vendor/ocaml/utils/terminfo.ml
@@ -122,6 +123,7 @@ bin/bsb.ml : bsb/bsb_config_parse.mli
 bin/bsb.ml : bsb/bsb_ninja_native.mli
 bin/bsb.ml : bsb/bsb_package_specs.ml
 bin/bsb.ml : bsb/bsb_parse_sources.ml
+bin/bsb.ml : ext/ext_package_name.mli
 bin/bsb.ml : ../vendor/ocaml/utils/terminfo.mli
 bin/bsb.ml : ../vendor/ocaml/utils/warnings.mli
 bin/bsb.ml : bsb/bsb_package_specs.mli

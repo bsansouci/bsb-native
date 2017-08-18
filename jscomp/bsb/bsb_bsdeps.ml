@@ -36,8 +36,8 @@ type t =
   }
 
 
-let magic_number = "BS_DEP_INFOS_20170723"
-let bsb_version = "20170723+dev"
+let magic_number = "BS_DEP_INFOS_20170809"
+let bsb_version = "20170809+dev"
 (* TODO: for such small data structure, maybe text format is better *)
 
 let write (fname : string)  (x : t) =
