@@ -32,7 +32,6 @@ bin/bsdep.ml : syntax/ast_pat.mli
 bin/bsdep.ml : syntax/ast_util.ml
 bin/bsdep.ml : bin/configDummy.mli
 bin/bsdep.ml : common/js_config.ml
-bin/bsdep.ml : ext/ext_filename.ml
 bin/bsdep.ml : ext/ext_js_regex.ml
 bin/bsdep.ml : ext/ext_position.ml
 bin/bsdep.ml : ext/hash_set_gen.ml
@@ -42,7 +41,6 @@ bin/bsdep.ml : syntax/ppx_entry.ml
 bin/bsdep.ml : ../vendor/ocaml/utils/misc.ml
 bin/bsdep.ml : common/bs_version.ml
 bin/bsdep.ml : common/js_config.mli
-bin/bsdep.ml : ext/ext_filename.mli
 bin/bsdep.ml : ext/ext_js_regex.mli
 bin/bsdep.ml : ext/ext_position.mli
 bin/bsdep.ml : syntax/ast_derive.ml

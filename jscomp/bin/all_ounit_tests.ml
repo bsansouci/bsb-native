@@ -1800,7 +1800,6 @@ val is_valid_source_name :
 *)
 val is_valid_npm_package_name : string -> bool 
 
-val module_name_of_package_name : string -> string
 
 
 val no_char : string -> char -> int -> int -> bool 
@@ -2206,31 +2205,6 @@ let is_valid_npm_package_name (s : string) =
          | _ -> false )
   | _ -> false 
 
-let module_name_of_package_name (s : string) : string = 
-  let len = String.length s in 
-  let buf = Buffer.create len in 
-  let add capital ch = 
-    Buffer.add_char buf 
-      (if capital then 
-        (Char.uppercase ch)
-      else ch) in    
-  let rec aux capital off len =     
-      if off >= len then ()
-      else 
-        let ch = String.unsafe_get s off in
-        match ch with 
-        | 'a' .. 'z' 
-        | 'A' .. 'Z' 
-        | '0' .. '9'
-          ->
-          add capital ch ; 
-          aux false (off + 1) len 
-        | '-' -> 
-          aux true (off + 1) len 
-        | _ -> aux capital (off+1) len
-         in 
-   aux true 0 len ;
-   Buffer.contents buf 
 
 type check_result = 
   | Good 
@@ -6493,7 +6467,7 @@ module Ext_ident : sig
 
 (** A wrapper around [Ident] module in compiler-libs*)
 
-val is_js : Ident.t -> bool
+ val is_js : Ident.t -> bool 
 
 val is_js_object : Ident.t -> bool
 
@@ -6502,17 +6476,15 @@ val create_js : string -> Ident.t
 
 val create : string -> Ident.t
 
-(* val create_js_module : string -> Ident.t  *)
-
-val make_js_object : Ident.t -> unit
+ val make_js_object : Ident.t -> unit 
 
 val reset : unit -> unit
 
-val gen_js :  ?name:string -> unit -> Ident.t
+val create_tmp :  ?name:string -> unit -> Ident.t
 
-val make_unused : unit -> Ident.t
+val make_unused : unit -> Ident.t 
 
-val is_unused_ident : Ident.t -> bool 
+
 
 (**
    Invariant: if name is not converted, the reference should be equal
@@ -6522,7 +6494,7 @@ val property_no_need_convert : string -> bool
 
 val undefined : Ident.t 
 val is_js_or_global : Ident.t -> bool
-val nil : Ident.t
+ val nil : Ident.t 
 
 
 val compare : Ident.t -> Ident.t -> int
@@ -6566,11 +6538,11 @@ let js_flag = 0b1_000 (* check with ocaml compiler *)
 (* let js_module_flag = 0b10_000 (\* javascript external modules *\) *)
 (* TODO:
     check name conflicts with javascript conventions
-    {[
-    Ext_ident.convert "^";;
-    - : string = "$caret"
-    ]}
- *)
+   {[
+     Ext_ident.convert "^";;
+     - : string = "$caret"
+   ]}
+*)
 let js_object_flag = 0b100_000 (* javascript object flags *)
 
 let is_js (i : Ident.t) = 
@@ -6585,24 +6557,30 @@ let is_js_object (i : Ident.t) =
 
 let make_js_object (i : Ident.t) = 
   i.flags <- i.flags lor js_object_flag 
-      
+
 (* It's a js function hard coded by js api, so when printing,
    it should preserve the name 
- *)
+*)
 let create_js (name : string) : Ident.t  = 
   { name = name; flags = js_flag ; stamp = 0}
+
+let create = Ident.create
+
+(* FIXME: no need for `$' operator *)
+let create_tmp ?(name=Literals.tmp) () = create name 
+
 
 let js_module_table : Ident.t String_hashtbl.t = String_hashtbl.create 31 
 
 (* This is for a js exeternal module, we can change it when printing
    for example
    {[
-   var React$1 = require('react');
-   React$1.render(..)
+     var React$1 = require('react');
+     React$1.render(..)
    ]}
 
    Given a name, if duplicated, they should  have the same id
- *)
+*)
 let create_js_module (name : string) : Ident.t = 
   let name = 
     String.concat "" @@ List.map (String.capitalize ) @@ 
@@ -6611,18 +6589,15 @@ let create_js_module (name : string) : Ident.t =
       react-dom 
       react--dom
       check collision later
-   *)
+  *)
   match String_hashtbl.find_exn js_module_table name  with 
   | exception Not_found -> 
-      let ans = Ident.create name in
-      (* let ans = { v with flags = js_module_flag} in  *)
-      String_hashtbl.add js_module_table name ans;
-      ans
+    let ans = Ident.create name in
+    (* let ans = { v with flags = js_module_flag} in  *)
+    String_hashtbl.add js_module_table name ans;
+    ans
   | v -> (* v *) Ident.rename v  
 
-let create = Ident.create
-
-let gen_js ?(name="$js") () = create name 
 
 let reserved_words = 
   [|
@@ -6668,55 +6643,55 @@ let reserved_words =
 
     (* also reserved in ECMAScript 6 *)
     "await";
-   
-   "event";
-   "location";
-   "window";
-   "document";
-   "eval";
-   "navigator";
-   (* "self"; *)
-   
-   "Array";
-   "Date";
-   "Math";
-   "JSON";
-   "Object";
-   "RegExp";
-   "String";
-   "Boolean";
-   "Number";
 
-   "Map"; (* es6*)
-   "Set";
+    "event";
+    "location";
+    "window";
+    "document";
+    "eval";
+    "navigator";
+    (* "self"; *)
 
-   "Infinity";
-   "isFinite";
-   
-   "ActiveXObject";
-   "XMLHttpRequest";
-   "XDomainRequest";
-   
-   "DOMException";
-   "Error";
-   "SyntaxError";
-   "arguments";
-   
-   "decodeURI";
-   "decodeURIComponent";
-   "encodeURI";
-   "encodeURIComponent";
-   "escape";
-   "unescape";
+    "Array";
+    "Date";
+    "Math";
+    "JSON";
+    "Object";
+    "RegExp";
+    "String";
+    "Boolean";
+    "Number";
 
-   "isNaN";
-   "parseFloat";
-   "parseInt";
-   
-   (** reserved for commonjs and NodeJS globals*)   
-   "require";
-   "exports";
-   "module";
+    "Map"; (* es6*)
+    "Set";
+
+    "Infinity";
+    "isFinite";
+
+    "ActiveXObject";
+    "XMLHttpRequest";
+    "XDomainRequest";
+
+    "DOMException";
+    "Error";
+    "SyntaxError";
+    "arguments";
+
+    "decodeURI";
+    "decodeURIComponent";
+    "encodeURI";
+    "encodeURIComponent";
+    "escape";
+    "unescape";
+
+    "isNaN";
+    "parseFloat";
+    "parseInt";
+
+    (** reserved for commonjs and NodeJS globals*)   
+    "require";
+    "exports";
+    "module";
     "clearImmediate";
     "clearInterval";
     "clearTimeout";
@@ -6741,58 +6716,88 @@ let reserved_map =
 
 
 
-
+exception Not_normal_letter of int 
 let name_mangle name = 
-  let module E = struct exception Not_normal_letter of int end in
-     let len = String.length name  in
-     try
-       for i  = 0 to len - 1 do 
-         match String.unsafe_get name i with 
-         | 'a' .. 'z' | 'A' .. 'Z'
-         | '0' .. '9' | '_' | '$' -> ()
-         | _ -> raise (E.Not_normal_letter i)
-       done;
-       name
-     with E.Not_normal_letter i ->
-       String.sub name 0 i ^ 
-       (let buffer = Buffer.create len in 
-        for j = i to  len - 1 do 
-          let c = String.unsafe_get name j in
-          match c with 
-          | '*' -> Buffer.add_string buffer "$star"
-          | '\'' -> Buffer.add_string buffer "$prime"
-          | '!' -> Buffer.add_string buffer "$bang"
-          | '>' -> Buffer.add_string buffer "$great"
-          | '<' -> Buffer.add_string buffer "$less"
-          | '=' -> Buffer.add_string buffer "$eq"
-          | '+' -> Buffer.add_string buffer "$plus"
-          | '-' -> Buffer.add_string buffer "$neg"
-          | '@' -> Buffer.add_string buffer "$at"
-          | '^' -> Buffer.add_string buffer "$caret"
-          | '/' -> Buffer.add_string buffer "$slash"
-          | '|' -> Buffer.add_string buffer "$pipe"
-          | '.' -> Buffer.add_string buffer "$dot"
-          | '%' -> Buffer.add_string buffer "$percent"
-          | '~' -> Buffer.add_string buffer "$tilde"
-          | '#' -> Buffer.add_string buffer "$hash"
-          | 'a'..'z' | 'A'..'Z'| '_'|'$' |'0'..'9'-> Buffer.add_char buffer  c
-          | _ -> Buffer.add_string buffer "$unknown"
-        done; Buffer.contents buffer)
 
+  let len = String.length name  in
+  try
+    for i  = 0 to len - 1 do 
+      match String.unsafe_get name i with 
+      | 'a' .. 'z' | 'A' .. 'Z'
+      | '0' .. '9' | '_' | '$'
+        -> ()
+      | _ -> raise (Not_normal_letter i)
+    done;
+    name (* Normal letter *)
+  with 
+  | Not_normal_letter 0 ->
 
+    let buffer = Buffer.create len in 
+    for j = 0 to  len - 1 do 
+      let c = String.unsafe_get name j in
+      match c with 
+      | '*' -> Buffer.add_string buffer "$star"
+      | '\'' -> Buffer.add_string buffer "$prime"
+      | '!' -> Buffer.add_string buffer "$bang"
+      | '>' -> Buffer.add_string buffer "$great"
+      | '<' -> Buffer.add_string buffer "$less"
+      | '=' -> Buffer.add_string buffer "$eq"
+      | '+' -> Buffer.add_string buffer "$plus"
+      | '-' -> Buffer.add_string buffer "$neg"
+      | '@' -> Buffer.add_string buffer "$at"
+      | '^' -> Buffer.add_string buffer "$caret"
+      | '/' -> Buffer.add_string buffer "$slash"
+      | '|' -> Buffer.add_string buffer "$pipe"
+      | '.' -> Buffer.add_string buffer "$dot"
+      | '%' -> Buffer.add_string buffer "$percent"
+      | '~' -> Buffer.add_string buffer "$tilde"
+      | '#' -> Buffer.add_string buffer "$hash"
+      | 'a'..'z' | 'A'..'Z'| '_' 
+      | '$'
+      | '0'..'9'-> Buffer.add_char buffer  c
+      | _ -> Buffer.add_string buffer "$unknown"
+    done; Buffer.contents buffer
+  | Not_normal_letter i -> 
+    String.sub name 0 i ^
+    (let buffer = Buffer.create len in 
+     for j = i to  len - 1 do 
+       let c = String.unsafe_get name j in
+       match c with 
+       | '*' -> Buffer.add_string buffer "$star"
+       | '\'' -> Buffer.add_string buffer "$prime"
+       | '!' -> Buffer.add_string buffer "$bang"
+       | '>' -> Buffer.add_string buffer "$great"
+       | '<' -> Buffer.add_string buffer "$less"
+       | '=' -> Buffer.add_string buffer "$eq"
+       | '+' -> Buffer.add_string buffer "$plus"
+       | '-' -> Buffer.add_string buffer "$" 
+        (* Note ocaml compiler also has [self-] *)
+       | '@' -> Buffer.add_string buffer "$at"
+       | '^' -> Buffer.add_string buffer "$caret"
+       | '/' -> Buffer.add_string buffer "$slash"
+       | '|' -> Buffer.add_string buffer "$pipe"
+       | '.' -> Buffer.add_string buffer "$dot"
+       | '%' -> Buffer.add_string buffer "$percent"
+       | '~' -> Buffer.add_string buffer "$tilde"
+       | '#' -> Buffer.add_string buffer "$hash"
+       | '$' -> Buffer.add_string buffer "$dollar"
+       | 'a'..'z' | 'A'..'Z'| '_'        
+       | '0'..'9'-> Buffer.add_char buffer  c
+       | _ -> Buffer.add_string buffer "$unknown"
+     done; Buffer.contents buffer)
 (* TODO:
     check name conflicts with javascript conventions
-    {[
-    Ext_ident.convert "^";;
-    - : string = "$caret"
-    ]}
-  [convert name] if [name] is a js keyword,add "$$"
-  otherwise do the name mangling to make sure ocaml identifier it is 
-  a valid js identifier
- *)
+   {[
+     Ext_ident.convert "^";;
+     - : string = "$caret"
+   ]}
+   [convert name] if [name] is a js keyword,add "$$"
+   otherwise do the name mangling to make sure ocaml identifier it is 
+   a valid js identifier
+*)
 let convert (name : string) = 
-   if  String_hash_set.mem reserved_map name  then "$$" ^ name 
-   else name_mangle name 
+  if  String_hash_set.mem reserved_map name  then "$$" ^ name 
+  else name_mangle name 
 
 (** keyword could be used in property *)
 let property_no_need_convert s = 
@@ -6804,7 +6809,7 @@ let property_no_need_convert s =
 *)
 let make_unused () = create "_"
 
-let is_unused_ident i = Ident.name i = "_"
+
 
 let reset () = 
   String_hashtbl.clear js_module_table
@@ -6816,17 +6821,17 @@ let nil = create_js "null"
 (* Has to be total order, [x < y] 
    and [x > y] should be consistent
    flags are not relevant here 
- *)
+*)
 let compare (x : Ident.t ) ( y : Ident.t) = 
   let u = x.stamp - y.stamp in
   if u = 0 then 
-     Ext_string.compare x.name y.name 
+    Ext_string.compare x.name y.name 
   else u 
 
 let equal ( x : Ident.t) ( y : Ident.t) = 
   if x.stamp <> 0 then x.stamp = y.stamp
   else y.stamp = 0 && x.name = y.name
-   
+
 
 end
 module Hash_set_ident_mask : sig 
@@ -11416,11 +11421,7 @@ val get_extension : string -> string
 
 val simple_convert_node_path_to_os_path : string -> string
 
-(* Note  we have to output uncapitalized file Name, 
-  or at least be consistent, since by reading cmi file on Case insensitive OS, we don't really know it is `list.cmi` or `List.cmi`, so that `require (./list.js)` or `require(./List.js)`
-  relevant issues: #1609, #913 
-*)
-val output_js_basename :  string -> string 
+
 end = struct
 #1 "ext_filename.ml"
 (* Copyright (C) 2015-2016 Bloomberg Finance L.P.
@@ -11787,8 +11788,7 @@ let simple_convert_node_path_to_os_path =
   else failwith ("Unknown OS : " ^ Sys.os_type)
 
 
-let output_js_basename s = 
-  String.uncapitalize s ^ Literals.suffix_js
+
 end
 module Ounit_path_tests
 = struct
@@ -13640,6 +13640,124 @@ let suites =
         end;
     ]
 end
+module Ext_package_name : sig 
+#1 "ext_package_name.mli"
+(* Copyright (C) 2017- Authors of BuckleScript
+ * 
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * In addition to the permissions granted to you by the LGPL, you may combine
+ * or link a "work that uses the Library" with a publicly distributed version
+ * of this file to produce a combined library or application, then distribute
+ * that combined work under the terms of your choosing, with no requirement
+ * to comply with the obligations normally placed on you by section 4 of the
+ * LGPL version 3 (or the corresponding section of a later version of the LGPL
+ * should you choose to use a later version).
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ * 
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
+
+
+val make : pkg:string -> string -> string 
+
+val remove_package_suffix: string -> string 
+
+(* Note  we have to output uncapitalized file Name, 
+  or at least be consistent, since by reading cmi file on Case insensitive OS, we don't really know it is `list.cmi` or `List.cmi`, so that `require (./list.js)` or `require(./List.js)`
+  relevant issues: #1609, #913 
+*)
+val js_name_of_basename :  string -> string 
+
+val module_name_of_package_name : string -> string
+
+end = struct
+#1 "ext_package_name.ml"
+
+(* Copyright (C) 2015-2016 Bloomberg Finance L.P.
+ * 
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * In addition to the permissions granted to you by the LGPL, you may combine
+ * or link a "work that uses the Library" with a publicly distributed version
+ * of this file to produce a combined library or application, then distribute
+ * that combined work under the terms of your choosing, with no requirement
+ * to comply with the obligations normally placed on you by section 4 of the
+ * LGPL version 3 (or the corresponding section of a later version of the LGPL
+ * should you choose to use a later version).
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ * 
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
+
+
+ (* Note the build system should check the validity of filenames
+    espeically, it should not contain '-'
+ *)
+ let package_sep_char = '-'
+ let package_sep = "-"
+
+ let make ~pkg cunit  = 
+    cunit ^ package_sep ^ pkg 
+    
+
+let rec rindex_rec s i c =
+  if i < 0 then i else
+  if String.unsafe_get s i = c then i else rindex_rec s (i - 1) c;;
+    
+let remove_package_suffix name =
+    let i = rindex_rec name (String.length name - 1) package_sep_char in 
+    if i < 0 then name 
+    else String.sub name 0 i 
+
+
+let js_name_of_basename s = 
+  remove_package_suffix (String.uncapitalize s) ^ Literals.suffix_js
+  
+  
+let module_name_of_package_name (s : string) : string = 
+  let len = String.length s in 
+  let buf = Buffer.create len in 
+  let add capital ch = 
+    Buffer.add_char buf 
+      (if capital then 
+        (Char.uppercase ch)
+      else ch) in    
+  let rec aux capital off len =     
+      if off >= len then ()
+      else 
+        let ch = String.unsafe_get s off in
+        match ch with 
+        | 'a' .. 'z' 
+        | 'A' .. 'Z' 
+        | '0' .. '9'
+          ->
+          add capital ch ; 
+          aux false (off + 1) len 
+        | '-' -> 
+          aux true (off + 1) len 
+        | _ -> aux capital (off+1) len
+         in 
+   aux true 0 len ;
+   Buffer.contents buf 
+
+end
 module Ounit_data_random
 = struct
 #1 "ounit_data_random.ml"
@@ -13722,12 +13840,12 @@ let suites =
     __LOC__ >:: begin fun _ -> 
       OUnit.assert_bool __LOC__ @@
       List.for_all Ext_string.is_valid_npm_package_name
-      ["x"; "@angualr"; "test"; "hi-x"; "hi-"]
+        ["x"; "@angualr"; "test"; "hi-x"; "hi-"]
       ;
       OUnit.assert_bool __LOC__ @@
       List.for_all 
-      (fun x -> not (Ext_string.is_valid_npm_package_name x))
-      ["x "; "x'"; "Test"; "hI"]
+        (fun x -> not (Ext_string.is_valid_npm_package_name x))
+        ["x "; "x'"; "Test"; "hI"]
       ;
     end;
     __LOC__ >:: begin fun _ -> 
@@ -13876,12 +13994,12 @@ let suites =
         (Ext_string.equal
            (Ext_string.concat3 "a0" "a11" "") "a0a11"
         );
- 
+
       OUnit.assert_bool __LOC__ 
         (Ext_string.equal
            (Ext_string.concat4 "a0" "a1" "a2" "a3") "a0a1a2a3"
         );
-     OUnit.assert_bool __LOC__ 
+      OUnit.assert_bool __LOC__ 
         (Ext_string.equal
            (Ext_string.concat4 "a0" "a11" "" "a33") "a0a11a33"
         );   
@@ -13931,7 +14049,7 @@ let suites =
            (Ext_string.concat_array Ext_string.single_space [|"a0";"a1"; "a2"|])
            "a0 a1 a2"
         );   
-       OUnit.assert_bool __LOC__
+      OUnit.assert_bool __LOC__
         (Ext_string.equal 
            (Ext_string.concat_array Ext_string.single_space [|"a0";"a1"; "a2";"a3"|])
            "a0 a1 a2 a3"
@@ -13951,20 +14069,30 @@ let suites =
            (Ext_string.concat_array Ext_string.single_space [|"0";"a1"; "2";"3";"d"; ""; "e"|])
            "0 a1 2 3 d  e"
         );        
-  
+
     end;
 
     __LOC__ >:: begin fun _ ->
-      Ext_string.module_name_of_package_name "bs-json"
+      Ext_package_name.module_name_of_package_name "bs-json"
       =~ "BsJson"
     end;
     __LOC__ >:: begin fun _ ->
-      Ext_string.module_name_of_package_name
-      "reason-react"
+      Ext_package_name.module_name_of_package_name
+        "reason-react"
       =~ "ReasonReact";
-      Ext_string.module_name_of_package_name
-      "reason"
+      Ext_package_name.module_name_of_package_name
+        "reason"
       =~ "Reason"
+    end;
+    __LOC__ >:: begin fun _ -> 
+      Ext_package_name.js_name_of_basename "a-b"
+      =~ "a.js";
+      Ext_package_name.js_name_of_basename "a-"
+      =~ "a.js";
+      Ext_package_name.js_name_of_basename "a--"
+      =~ "a-.js";
+      Ext_package_name.js_name_of_basename "AA-b"
+      =~ "aA.js";
     end
   ]
 

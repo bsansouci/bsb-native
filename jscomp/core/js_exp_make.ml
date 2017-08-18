@@ -388,7 +388,7 @@ let array_length ?comment (e : t) : t =
 let string_length ?comment (e : t) : t =
   match e.expression_desc with 
   | Str(_,v) -> int ?comment (Int32.of_int (String.length v)) 
-    (* No optimization for {j||j}*)
+  (* No optimization for {j||j}*)
   | _ -> { expression_desc = Length (e, String) ; comment }
 
 let bytes_length ?comment (e : t) : t = 
@@ -520,7 +520,7 @@ let bool v = if  v then caml_true else caml_false
 *)
 let rec triple_equal ?comment (e0 : t) (e1 : t ) : t = 
   match e0.expression_desc, e1.expression_desc with
-  | Var (Id ({name = "undefined"|"null"; } as id)), 
+  | Var (Id ({name = "undefined"|"null"} as id)), 
     (Char_of_int _ | Char_to_int _ 
     | Bool _ | Number _ | Typeof _ | Int_of_boolean _ 
     | Fun _ | Array _ | Caml_block _ )
@@ -891,11 +891,11 @@ let public_method_call meth_name obj label cache args =
   let len = List.length args in 
   (* econd (int_equal (tag obj ) obj_int_tag_literal) *)
   if len <= 7 then          
-    runtime_call Js_config.caml_oo_curry 
+    runtime_call Js_runtime_modules.caml_oo_curry 
       ("js" ^ string_of_int (len + 1) )
       (label:: ( int cache) :: obj::args)
   else 
-    runtime_call Js_config.caml_oo_curry "js"
+    runtime_call Js_runtime_modules.caml_oo_curry "js"
       [label; 
        int cache;
        obj ;  
@@ -1174,7 +1174,7 @@ let int32_div ~checked ?comment
     end
   | _, _ -> 
     if checked  then 
-      runtime_call Js_config.int32 "div" [e1; e2]
+      runtime_call Js_runtime_modules.int32 "div" [e1; e2]
     else to_int32 (float_div ?comment e1 e2)
 
 
@@ -1188,7 +1188,7 @@ let int32_mod ~checked ?comment e1 (e2 : t) : J.expression =
 
   | _ -> 
     if checked then 
-      runtime_call Js_config.int32 "mod_" [e1;e2]
+      runtime_call Js_runtime_modules.int32 "mod_" [e1;e2]
     else 
       { comment ; 
         expression_desc = Bin (Mod, e1,e2)
@@ -1229,9 +1229,9 @@ let int32_mul ?comment
     if i >= 0 then 
       int32_lsl e (small_int i)
     else 
-      runtime_call ?comment Js_config.int32 Literals.imul [e1;e2]
+      runtime_call ?comment Js_runtime_modules.int32 Literals.imul [e1;e2]
   | _ -> 
-    runtime_call ?comment Js_config.int32 Literals.imul [e1;e2]
+    runtime_call ?comment Js_runtime_modules.int32 Literals.imul [e1;e2]
 
 let unchecked_int32_mul ?comment e1 e2 : J.expression = 
   { comment ; 
@@ -1300,23 +1300,33 @@ let js_bool ?comment x : t =
 
 let is_undef ?comment x = triple_equal ?comment x undefined
 
-
+let is_null_undefined ?comment (x: t) : t = 
+  match x.expression_desc with 
+  | Var (Id ({name = "undefined" | "null"} as id))
+    when Ext_ident.is_js id 
+    -> caml_true
+  | Number _ | Array _ | Caml_block _ -> caml_false
+  | _ -> 
+    bool_of_boolean
+    { comment ; 
+      expression_desc = Is_null_undefined_to_boolean x 
+    }
 let not_implemented ?comment (s : string) : t =  
   runtime_call
-    Js_config.missing_polyfill
+    Js_runtime_modules.missing_polyfill
     "not_implemented" 
     [str (s ^ " not implemented by bucklescript yet\n")]
 
-  (* call ~info:Js_call_info.ml_full_call *)
-  (*   { *)
-  (*     comment ; *)
-  (*     expression_desc =  *)
-  (*       Fun (false,[], ( *)
-  (*           [{J.statement_desc = *)
-  (*               Throw (str ?comment  *)
-  (*                        (s ^ " not implemented by bucklescript yet\n")) ; *)
-  (*             comment}]) , *)
-  (*            Js_fun_env.empty 0) *)
-  (*   } [] *)
+(* call ~info:Js_call_info.ml_full_call *)
+(*   { *)
+(*     comment ; *)
+(*     expression_desc =  *)
+(*       Fun (false,[], ( *)
+(*           [{J.statement_desc = *)
+(*               Throw (str ?comment  *)
+(*                        (s ^ " not implemented by bucklescript yet\n")) ; *)
+(*             comment}]) , *)
+(*            Js_fun_env.empty 0) *)
+(*   } [] *)
 
 

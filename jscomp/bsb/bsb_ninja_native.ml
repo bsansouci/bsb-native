@@ -31,16 +31,6 @@ let output_build = Bsb_ninja_util.output_build
 
 let (//) = Ext_filename.combine
 
-let (++) (us : Bsb_ninja_file_groups.info) (vs : Bsb_ninja_file_groups.info) =
-  if us == Bsb_ninja_file_groups.zero then vs else
-  if vs == Bsb_ninja_file_groups.zero then us
-  else
-    {
-      all_config_deps  = us.all_config_deps @ vs.all_config_deps
-    ;
-      (* all_installs = us.all_installs @ vs.all_installs *)
-    }
-
 let install_file module_info files_to_install =
   String_hash_set.add  files_to_install (Bsb_build_cache.filename_sans_suffix_of_module_info module_info)
 
@@ -167,10 +157,7 @@ let handle_file_group oc
               ~implicit_deps:deps
               ~rule:rule_name ;
             if installable then begin install_file module_info files_to_install end;
-            {all_config_deps = [output_mlastd]; 
-            (* all_installs = [output_cmi];   *)
-            }
-
+            [output_mlastd]
           end
         | `Mli
         | `Rei ->
@@ -201,10 +188,7 @@ let handle_file_group oc
             (* ~implicit_deps:[output_mliastd] *)
             ~rule;
           if installable then begin install_file module_info files_to_install end ;
-          {
-            all_config_deps = [output_mliastd];
-            (* all_installs = [output_cmi]; *)
-          }
+          [output_mliastd]
 
       end
     in
@@ -212,14 +196,14 @@ let handle_file_group oc
       | Ml_source (input, false) -> emit_build `Ml input
       | Ml_source (input, true) -> emit_build `Re input
       | Ml_empty -> Bsb_ninja_file_groups.zero
-    end ++
+    end @
     begin match module_info.mli with
       | Mli_source (mli_file, false)  ->
         emit_build `Mli mli_file
       | Mli_source (rei_file, true) ->
         emit_build `Rei rei_file
       | Mli_empty -> Bsb_ninja_file_groups.zero
-    end ++
+    end @
     (* begin match module_info.mll with
       | Some mll_file ->
         begin match module_info.ml with
@@ -228,7 +212,7 @@ let handle_file_group oc
             failwith ("both "^ mll_file ^ " and " ^ input ^ " are found in source listings" )
         end
       | None -> Bsb_ninja_file_groups.zero
-    end ++  *)
+    end @  *)
     info
 
   in
@@ -352,9 +336,7 @@ let pack oc ret ~backend ~file_groups =
       ~inputs:all_cmo_or_cmx_files
       ~implicit_deps:all_cmi_files
       ~rule:rule_name ;
-    ret ++ ({all_config_deps = []; 
-    (* all_installs = [output_cma_or_cmxa];  *)
-  })
+    ret @ []
   end else ret
 
 let handle_file_groups oc
@@ -367,7 +349,7 @@ let handle_file_groups oc
   ~js_post_build_cmd
   ~files_to_install
   ~static_libraries
-  (file_groups  :  Bsb_parse_sources.file_group list) st =
+  (file_groups  :  Bsb_parse_sources.file_group list) namespace st =
   let file_groups = List.filter (fun group ->
     match backend with 
     | Bsb_config_types.Js       -> List.mem Bsb_parse_sources.Js group.Bsb_parse_sources.kind

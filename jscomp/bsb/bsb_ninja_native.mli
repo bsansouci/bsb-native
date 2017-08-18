@@ -37,4 +37,6 @@ val handle_file_groups : out_channel ->
   files_to_install:String_hash_set.t ->  
   static_libraries:string list ->
   Bsb_parse_sources.file_group list ->
-  Bsb_ninja_file_groups.info -> Bsb_ninja_file_groups.info
+  string option ->
+  Bsb_ninja_file_groups.info -> 
+  Bsb_ninja_file_groups.info

@@ -67,9 +67,14 @@ type + 'a undefined
 (** value of this type can be either [undefined] or ['a]
     this type is the same as type [t] in {!Undefined}  *)
 
-type + 'a null_undefined
+type + 'a nullable
 (** value of this type can be [undefined], [null] or ['a]
     this type is the same as type [t] n {!Null_undefined} *)
+
+type + 'a null_undefined = 'a nullable    
+
+external toOpt : 'a nullable  -> 'a option = "#null_undefined_to_opt"
+external test : 'a nullable -> bool = "#is_nil_undef"
 
 type boolean
 (** The value could be either  {!Js.true_} or {!Js.false_}.
@@ -109,6 +114,9 @@ external log3 : 'a -> 'b -> 'c -> unit = "log"
 external log4 : 'a -> 'b -> 'c -> 'd -> unit = "log" 
 [@@bs.val] [@@bs.scope "console"]
 (** A convenience function to log everything *)
+external logMany : 'a array -> unit = "log"
+[@@bs.val] [@@bs.scope "console"] [@@bs.splice]
+(** A convenience function to log more than 4 arguments *)
 
 (** {4 operators }*)
 
@@ -138,8 +146,9 @@ module Null = Js_null
 
 module Undefined = Js_undefined
 (** Provide utilities around {!undefined} *)
-module Null_undefined = Js_null_undefined
+module Nullable = Js_null_undefined
 (** Provide utilities arond {!null_undefined} *)
+module Null_undefined = Js_null_undefined
 
 module Exn = Js_exn
 (** Provide utilities for dealing with Js exceptions *)

@@ -87,7 +87,7 @@ let regenerate_ninja
           (* generate a map file
             TODO: adapt ninja rules
           *)
-          Bsb_pkg_map_gen.output ~cwd namespace config.bs_file_groups
+          Bsb_pkg_map_gen.output ~dir:cwd namespace config.bs_file_groups
         );
         let external_deps_for_linking_and_clibs = match external_deps_for_linking_and_clibs with 
         | None -> 
@@ -163,7 +163,7 @@ let regenerate_ninja
           | None -> config.Bsb_config_types.bs_super_errors
           | Some bs_super_errors -> bs_super_errors
         end in 
-        Bsb_ninja_gen.output_ninja 
+        Bsb_ninja_gen.output_ninja_and_namespace_map 
           ~external_deps_for_linking_and_clibs 
           ~cwd 
           ~bsc_dir 

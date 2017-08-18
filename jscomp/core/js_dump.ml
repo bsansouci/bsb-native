@@ -20,7 +20,16 @@
 *)
 (* Authors: Jérôme Vouillon, Hongbo Zhang  *)
 
-
+let string_of_module_id 
+    ~hint_output_dir 
+    module_system
+    id
+  = 
+  Js_packages_info.string_of_module_id
+    ~hint_output_dir  module_system
+    (Js_packages_state.get_packages_info ())
+    Lam_compile_env.get_package_path_from_cmj
+    id
 
 (*
   http://stackoverflow.com/questions/2846283/what-are-the-rules-for-javascripts-automatic-semicolon-insertion-asi
@@ -114,7 +123,8 @@ module L = struct
   let eq = "="
   let le = "<="
   let ge = ">="
-  let plus_plus = "++" (* FIXME: use (i = i + 1 | 0) instead *)
+  let plus_plus = "++" 
+  (*  FIXME: use (i = i + 1 | 0) instead  *)
   let minus_minus = "--"
   let caml_block = "Block"
   let caml_block_create = "__"
@@ -144,41 +154,9 @@ let best_string_quote s =
   else '"'
 
 
-(**
-   same as {!Js_dump.ident} except it generates a string instead of doing the printing
-*)
-let str_of_ident (cxt : Ext_pp_scope.t) (id : Ident.t)   =
-  if Ext_ident.is_js id then (* reserved by compiler *)
-    ( id.name , cxt) 
-  else 
-    (* For fast/debug mode, we can generate the name as 
-       [Printf.sprintf "%s$%d" name id.stamp] which is 
-       not relevant to the context       
-    *)    
-    let name = Ext_ident.convert id.name in
-    let i,new_cxt = Ext_pp_scope.add_ident  id cxt in
-    (* Attention: 
-       $$Array.length, due to the fact that global module is 
-       always printed in the begining(via imports), so you get a gurantee, 
-       (global modules will not be printed as [List$1]) 
-
-       However, this means we loose the ability of dynamic loading, is it a big 
-       deal? we can fix this by a scanning first, since we already know which 
-       modules are global
-
-       check [test/test_global_print.ml] for regression
-
-    *)
-    (if i == 0 then 
-       name 
-     else
-       Printf.sprintf"%s$%d" name i), new_cxt 
 
 
-let ident (cxt : Ext_pp_scope.t) f (id : Ident.t) : Ext_pp_scope.t  =
-  let str, cxt = str_of_ident cxt id in
-  P.string f str; 
-  cxt   
+
 
 (** Avoid to allocate single char string too many times*)
 let array_str1 =
@@ -273,16 +251,16 @@ let property_access f s =
 let rec comma_idents  cxt f (ls : Ident.t list)  =
   match ls with
   | [] -> cxt
-  | [x] -> ident cxt f x
+  | [x] -> Ext_pp_scope.ident cxt f x
   | y :: ys ->
-    let cxt = ident cxt f y in
+    let cxt = Ext_pp_scope.ident cxt f y in
     P.string f L.comma;
     comma_idents cxt f ys  
 let ipp_ident cxt f id un_used = 
   if un_used then 
-    ident cxt f (Ext_ident.make_unused ())
+    Ext_pp_scope.ident cxt f (Ext_ident.make_unused ())
   else 
-    ident cxt f id  
+    Ext_pp_scope.ident cxt f id  
 let rec formal_parameter_list cxt (f : P.t) method_ l env =
   let offset = if method_ then 1 else 0 in   
   let rec aux i cxt l = 
@@ -298,7 +276,9 @@ let rec formal_parameter_list cxt (f : P.t) method_ l env =
   | [] -> cxt 
   | [i] -> 
     (** necessary, since some js libraries like [mocha]...*)
-    if Js_fun_env.get_unused env offset then cxt else ident cxt f i 
+    if Js_fun_env.get_unused env offset then cxt 
+    else
+      Ext_pp_scope.ident cxt f i 
   | _ -> 
     aux offset cxt l  
 
@@ -341,7 +321,7 @@ let rec
 
   try_optimize_curry cxt f len function_id = 
   begin           
-    P.string f Js_config.curry;
+    P.string f Js_runtime_modules.curry;
     P.string f L.dot;
     P.string f "__";
     P.string f (Printf.sprintf "%d" len);
@@ -382,7 +362,7 @@ and  pp_function method_
       | Name_top i | Name_non_top i  -> 
         P.string f L.var; 
         P.space f ; 
-        let cxt = ident cxt f i in
+        let cxt = Ext_pp_scope.ident cxt f i in
         P.space f ;
         P.string f L.eq;
         P.space f ;
@@ -432,7 +412,7 @@ and  pp_function method_
                 begin               
                   P.string f L.var ; 
                   P.space f; 
-                  let cxt = ident cxt f (List.hd l) in 
+                  let cxt = Ext_pp_scope.ident cxt f (List.hd l) in 
                   P.space f ; 
                   P.string f L.eq ; 
                   P.space f ;
@@ -480,7 +460,7 @@ and  pp_function method_
               | Name_non_top x  -> 
                 P.string f L.var ;
                 P.space f ; 
-                ignore @@ ident inner_cxt f x ; 
+                ignore @@ Ext_pp_scope.ident inner_cxt f x ; 
                 P.space f ;
                 P.string f L.eq ;
                 P.space f ; 
@@ -491,7 +471,7 @@ and  pp_function method_
               | Name_top x  -> 
                 P.string f L.function_;
                 P.space f ;
-                ignore (ident inner_cxt f x);
+                ignore (Ext_pp_scope.ident inner_cxt f x);
                 param_body ();
             end;
           end
@@ -511,7 +491,7 @@ and  pp_function method_
                | Name_non_top name | Name_top name->
                  P.string f L.var;
                  P.space f;
-                 ignore @@ ident inner_cxt f name ;
+                 ignore @@ Ext_pp_scope.ident inner_cxt f name ;
                  P.space f ;
                  P.string f L.eq;
                  P.space f ;
@@ -531,7 +511,7 @@ and  pp_function method_
                 P.space f ;
                 (match name with 
                  | No_name  -> () 
-                 | Name_non_top x | Name_top x -> ignore (ident inner_cxt f x));
+                 | Name_non_top x | Name_top x -> ignore (Ext_pp_scope.ident inner_cxt f x));
                 param_body ()
               end);
           P.string f L.lparen;
@@ -605,14 +585,14 @@ and loop  :  'a . Ext_pp_scope.t ->
 and vident cxt f  (v : J.vident) =
   begin match v with 
     | Id v | Qualified(v, _, None) ->  
-      ident cxt f v
+      Ext_pp_scope.ident cxt f v
     | Qualified (id, (Ml | Runtime),  Some name) ->
-      let cxt = ident cxt f id in
+      let cxt = Ext_pp_scope.ident cxt f id in
       P.string f L.dot;
       P.string f (Ext_ident.convert  name);
       cxt
     | Qualified (id, External _, Some name) ->
-      let cxt = ident cxt f id in
+      let cxt = Ext_pp_scope.ident cxt f id in
       property_access f name ;
       cxt
 
@@ -662,7 +642,7 @@ and
 
           | _ , _ -> 
             (* ipp_comment f (Some "!") *)
-            P.string f  Js_config.curry; 
+            P.string f  Js_runtime_modules.curry; 
             P.string f L.dot;
             let len = List.length el in
             if 1 <= len && len <= 8 then  
@@ -856,6 +836,18 @@ and
     if l > 12 
     then P.paren_group f 1 action 
     else action ()
+  | Is_null_undefined_to_boolean e ->
+    let action = (fun _ -> 
+        let cxt = expression 1 cxt f e in 
+        P.space f ;
+        P.string f "==";
+        P.space f ;
+        P.string f L.null;
+        cxt)  in 
+    if l > 0 then      
+      P.paren_group f 1 action
+    else action ()  
+
   | Caml_not e ->
     expression_desc cxt l f (Bin (Minus, E.one_int_literal, e))
 
@@ -1103,7 +1095,7 @@ and
     let action () = 
       let cxt = expression 15 cxt f e in
       property_access f s ;
-      (* See [Js_program_loader.obj_of_exports] 
+      (* See [ .obj_of_exports] 
          maybe in the ast level we should have 
          refer and export
       *)
@@ -1218,7 +1210,7 @@ and variable_declaration top cxt f
       begin
         P.string f L.var;
         P.space f;
-        let cxt = ident cxt  f i in
+        let cxt = Ext_pp_scope.ident cxt  f i in
         semi f ; 
         cxt
       end 
@@ -1238,7 +1230,7 @@ and variable_declaration top cxt f
           | _, _ -> 
             P.string f L.var;
             P.space f;
-            let cxt = ident cxt f name in
+            let cxt = Ext_pp_scope.ident cxt f name in
             P.space f ;
             P.string f L.eq;
             P.space f ;
@@ -1323,6 +1315,7 @@ and statement_desc top cxt f (s : J.statement_desc) : Ext_pp_scope.t =
       | Dot _
       | Cond _
       | Bin _ 
+      | Is_null_undefined_to_boolean _
       | String_access _ 
       | Access _
       | Array_of_size _ 
@@ -1424,7 +1417,7 @@ and statement_desc top cxt f (s : J.statement_desc) : Ext_pp_scope.t =
            | Some ident_expression , (Number _ | Var _ ) -> 
              P.string f L.var;
              P.space f;
-             let cxt  =  ident cxt f id in
+             let cxt  =  Ext_pp_scope.ident cxt f id in
              P.space f; 
              P.string f L.eq;
              P.space f;
@@ -1432,7 +1425,7 @@ and statement_desc top cxt f (s : J.statement_desc) : Ext_pp_scope.t =
            | Some ident_expression, _ -> 
              P.string f L.var;
              P.space f;
-             let cxt  =  ident cxt f id in
+             let cxt  =  Ext_pp_scope.ident cxt f id in
              P.space f;
              P.string f L.eq;
              P.space f; 
@@ -1440,7 +1433,7 @@ and statement_desc top cxt f (s : J.statement_desc) : Ext_pp_scope.t =
              P.space f ; 
              P.string f L.comma;
              let id = Ext_ident.create (Ident.name id ^ "_finish") in
-             let cxt = ident cxt f id in
+             let cxt = Ext_pp_scope.ident cxt f id in
              P.space f ; 
              P.string f L.eq;
              P.space f;
@@ -1451,7 +1444,7 @@ and statement_desc top cxt f (s : J.statement_desc) : Ext_pp_scope.t =
              P.string f L.var;
              P.space f ;
              let id = Ext_ident.create (Ident.name id ^ "_finish") in
-             let cxt = ident cxt f id in
+             let cxt = Ext_pp_scope.ident cxt f id in
              P.space f ; 
              P.string f L.eq ; 
              P.space f ; 
@@ -1460,7 +1453,7 @@ and statement_desc top cxt f (s : J.statement_desc) : Ext_pp_scope.t =
 
         semi f ; 
         P.space f;
-        let cxt = ident cxt f id in
+        let cxt = Ext_pp_scope.ident cxt f id in
         P.space f;
         let right_prec  = 
 
@@ -1486,7 +1479,7 @@ and statement_desc top cxt f (s : J.statement_desc) : Ext_pp_scope.t =
           match direction with 
           | Upto -> P.string f L.plus_plus
           | Downto -> P.string f L.minus_minus in
-        ident cxt f id
+        Ext_pp_scope.ident cxt f id
       in
       block  cxt f s  in
     let lexical = Js_closure.get_lexical_scope env in
@@ -1503,9 +1496,9 @@ and statement_desc top cxt f (s : J.statement_desc) : Ext_pp_scope.t =
         let rec aux  cxt f ls  =
           match ls with
           | [] -> cxt
-          | [x] -> ident cxt f x
+          | [x] -> Ext_pp_scope.ident cxt f x
           | y :: ys ->
-            let cxt = ident cxt f y in
+            let cxt = Ext_pp_scope.ident cxt f y in
             P.string f L.comma;
             aux cxt f ys  in
         P.vgroup f 0
@@ -1622,7 +1615,7 @@ and statement_desc top cxt f (s : J.statement_desc) : Ext_pp_scope.t =
       | Some (i, b) ->
         P.newline f;
         P.string f "catch (";
-        let cxt = ident cxt f i in
+        let cxt = Ext_pp_scope.ident cxt f i in
         P.string f ")";
         block cxt f b
     in 
@@ -1658,7 +1651,7 @@ let exports cxt f (idents : Ident.t list) =
     List.fold_left (fun (cxt, acc, len ) (id : Ident.t) -> 
         let id_name = id.name in 
         let s = Ext_ident.convert id_name in        
-        let str,cxt  = str_of_ident cxt id in         
+        let str,cxt  = Ext_pp_scope.str_of_ident cxt id in         
         cxt, ( 
           if id_name = default_export then 
             (default_export, str) :: (s,str)::acc 
@@ -1685,12 +1678,12 @@ let es6_export cxt f (idents : Ident.t list) =
     List.fold_left (fun (cxt, acc, len ) (id : Ident.t) -> 
         let id_name = id.name in 
         let s = Ext_ident.convert id_name in        
-        let str,cxt  = str_of_ident cxt id in         
+        let str,cxt  = Ext_pp_scope.str_of_ident cxt id in         
         cxt, ( 
           if id_name = default_export then 
             (default_export,str)::(s,str)::acc
           else 
-          (s,str) :: acc ) , max len (String.length s)   )
+            (s,str) :: acc ) , max len (String.length s)   )
       (cxt, [], 0)  idents in    
   P.newline f ;
   P.string f L.export ; 
@@ -1719,7 +1712,7 @@ let requires require_lit cxt f (modules : (Ident.t * string) list ) =
   let outer_cxt, reversed_list, margin  =
     List.fold_left
       (fun (cxt, acc, len) (id,s) ->
-         let str, cxt = str_of_ident cxt id  in
+         let str, cxt = Ext_pp_scope.str_of_ident cxt id  in
          cxt, ((str,s) :: acc), (max len (String.length str))
       )
       (cxt, [], 0)  modules in
@@ -1745,7 +1738,7 @@ let imports  cxt f (modules : (Ident.t * string) list ) =
   let outer_cxt, reversed_list, margin  =
     List.fold_left
       (fun (cxt, acc, len) (id,s) ->
-         let str, cxt = str_of_ident cxt id  in
+         let str, cxt = Ext_pp_scope.str_of_ident cxt id  in
          cxt, ((str,s) :: acc), (max len (String.length str))
       )
       (cxt, [], 0)  modules in
@@ -1792,8 +1785,11 @@ let goog_program ~output_prefix f goog_package (x : J.deps_program)  =
       (List.map 
          (fun x -> 
             Lam_module_ident.id x,
-            Js_program_loader.string_of_module_id
-              ~output_prefix Goog x)
+            string_of_module_id
+              ~hint_output_dir:(Filename.dirname output_prefix) 
+              Goog 
+              x)
+
          x.modules) 
   in
   program f cxt x.program  
@@ -1807,9 +1803,10 @@ let node_program ~output_prefix f ( x : J.deps_program) =
       (List.map 
          (fun x -> 
             Lam_module_ident.id x,
-            Js_program_loader.string_of_module_id
-              ~output_prefix
-              NodeJS x)
+            string_of_module_id
+              ~hint_output_dir:(Filename.dirname output_prefix)
+              NodeJS 
+              x)
          x.modules)
   in
   program f cxt x.program  
@@ -1824,7 +1821,11 @@ let amd_program ~output_prefix kind f (  x : J.deps_program) =
   P.string f (Printf.sprintf "%S" L.exports);
 
   List.iter (fun x ->
-      let s = Js_program_loader.string_of_module_id ~output_prefix kind x in
+      let s : string = 
+        string_of_module_id
+          ~hint_output_dir:(Filename.dirname output_prefix) 
+          kind 
+          x in
       P.string f L.comma ;
       P.space f; 
       pp_string f  s;
@@ -1841,7 +1842,7 @@ let amd_program ~output_prefix kind f (  x : J.deps_program) =
         let id = Lam_module_ident.id x in
         P.string f L.comma;
         P.space f ; 
-        ident cxt f id
+        Ext_pp_scope.ident cxt f id
       ) cxt x.modules     
   in
   P.string f ")";
@@ -1861,9 +1862,10 @@ let es6_program  ~output_prefix fmt f (  x : J.deps_program) =
       (List.map 
          (fun x -> 
             Lam_module_ident.id x,
-            Js_program_loader.string_of_module_id
-              ~output_prefix
-              fmt x)
+            string_of_module_id
+              ~hint_output_dir:(Filename.dirname output_prefix)
+              fmt 
+              x)
          x.modules)
   in
   let () = P.force_newline f in 
@@ -1882,7 +1884,7 @@ let es6_program  ~output_prefix fmt f (  x : J.deps_program) =
 
 let pp_deps_program
     ~output_prefix
-    (kind : Lam_module_ident.system )
+    (kind : Js_packages_info.module_system )
     (program  : J.deps_program) (f : Ext_pp.t) = 
   begin
     if not !Js_config.no_version_header then 
@@ -1902,7 +1904,7 @@ let pp_deps_program
         | Goog  -> 
           let goog_package = 
             let v = Js_config.get_module_name () in
-            match Js_config.get_package_name () with 
+            match Js_packages_state.get_package_name () with 
             | None 
               -> v 
             | Some x -> x ^ "." ^ v 
