@@ -11710,11 +11710,13 @@ let merlin_file_gen ~cwd ~backend
         Buffer.add_string buffer merlin_b;
         Buffer.add_string buffer (Bsb_config.lib_bs // nested // x.dir) ;
       ) ;
-    Buffer.add_string buffer merlin_pkg;
-    ocamlfind_dependencies |> List.iter (fun x ->
-      Buffer.add_string buffer " ";
-      Buffer.add_string buffer x;
-    );
+    if List.length ocamlfind_dependencies > 0 then begin
+      Buffer.add_string buffer merlin_pkg;
+      ocamlfind_dependencies |> List.iter (fun x ->
+        Buffer.add_string buffer " ";
+        Buffer.add_string buffer x;
+      );
+    end;
     Buffer.add_string buffer "\n";
     revise_merlin (cwd // merlin) buffer 
   end
