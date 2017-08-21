@@ -102,7 +102,7 @@ let get_otherlibs_dependencies ~ocamlfind dependency_graph file_extension =
            - Ben May 4th 2017
      **)
     (* |> String_set.add ("threads" ^ file_extension) *)
-    (* |> String_set.add ("dynlink" ^ file_extension) *)
+    |> String_set.add ("dynlink")
     (* |> String_set.add ("graphics" ^ file_extension) *)
   in
   (* When we're using ocamlfind, we should link those libraries using the -package 

@@ -81,6 +81,7 @@ let link link_byte_or_native ~main_module ~batch_files ~clibs ~includes ~ocamlfi
       let list_of_args = (compiler :: "-g" 
         :: (if bs_super_errors then ["-bs-super-errors"] else [])) 
         @ "-o" :: output_file :: all_object_files in
+        (* List.iter (fun a -> print_endline a) list_of_args; *)
       Unix.execvp
         compiler
         (Array.of_list (list_of_args))
