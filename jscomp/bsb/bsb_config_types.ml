@@ -72,4 +72,5 @@ type t =
     build_script: string option;
     allowed_build_kinds: compilation_kind_t list;
     ocamlfind_dependencies: string list;
+    bin_annot: bool;
   }

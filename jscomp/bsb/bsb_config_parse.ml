@@ -148,6 +148,7 @@ let interpret_json
   let bsc_flags = ref Bsb_default.bsc_flags in  
   let warnings = ref Bsb_default.warnings in
   let ocamlfind_dependencies = ref [] in
+  let bin_annot = ref false in
   let ppx_flags = ref []in 
 
   let js_post_build_cmd = ref None in 
@@ -281,6 +282,7 @@ let interpret_json
     |? (Bsb_build_schemas.allowed_build_kinds, `Arr (fun s -> allowed_build_kinds := get_allowed_build_kinds s))
     |? (Bsb_build_schemas.ocamlfind_dependencies, `Arr (fun s -> ocamlfind_dependencies := get_list_string s))
     |? (Bsb_build_schemas.bs_super_errors, `Bool (fun b -> bs_super_errors := b))
+    |? (Bsb_build_schemas.bin_annot, `Bool (fun b -> bin_annot := b))
     |> ignore ;
     begin match String_map.find_opt Bsb_build_schemas.sources map with 
       | Some x -> 
@@ -348,6 +350,7 @@ let interpret_json
           build_script = !build_script;
           allowed_build_kinds = !allowed_build_kinds;
           ocamlfind_dependencies = !ocamlfind_dependencies;
+          bin_annot = !bin_annot;
         }
       | None -> failwith "no sources specified, please checkout the schema for more details"
     end

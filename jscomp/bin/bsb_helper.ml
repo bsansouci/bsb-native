@@ -3156,6 +3156,7 @@ let c_linker_flags = "c_linker_flags"
 let build_script = "build_script"
 let allowed_build_kinds = "allowed-build-kinds"
 let ocamlfind_dependencies = "ocamlfind-dependencies"
+let bin_annot = "bin-annot"
 
 end
 module Bs_version : sig 

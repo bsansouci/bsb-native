@@ -59,5 +59,5 @@ let ocamlc = "ocamlc"
 let ocamlopt = "ocamlopt"
 let ocamlfind = "ocamlfind"
 let ocamlfind_dependencies = "ocamlfind_dependencies"
-
+let bin_annot = "bs_bin_annot"
 let external_deps_for_linking = "external_deps_for_linking"

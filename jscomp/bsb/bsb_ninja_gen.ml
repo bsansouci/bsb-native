@@ -86,6 +86,7 @@ let output_ninja_and_namespace_map
       build_script;
       allowed_build_kinds;
       ocamlfind_dependencies;
+      bin_annot;
     } : Bsb_config_types.t)
   =
   let custom_rules = Bsb_rule.reset generators in 
@@ -165,6 +166,8 @@ let output_ninja_and_namespace_map
           Bsb_ninja_global_vars.ocamlopt, if ocamlfind_dependencies = [] then ocaml_dir // ocamlopt ^ ".opt" else ocamlopt;
           Bsb_ninja_global_vars.ocamlfind, if ocamlfind_dependencies = [] then "" else ocamlfind;
           Bsb_ninja_global_vars.ocamlfind_dependencies,  Bsb_build_util.flag_concat "-package" (external_ocamlfind_dependencies @ ocamlfind_dependencies);
+          Bsb_ninja_global_vars.bin_annot, if bin_annot then "-bin-annot" else "";
+          
           Bsb_build_schemas.bsb_dir_group, "0"  (*TODO: avoid name conflict in the future *)
         |] oc ;
     in
