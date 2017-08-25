@@ -22,7 +22,9 @@ For [example](https://github.com/bsansouci/BetterErrors/tree/bsb-support):
 
 ## Run
 
-`./node_modules/.bin/bsb` (or add an [npm script](https://docs.npmjs.com/misc/scripts) to simply run `bsb`)
+`./node_modules/.bin/bsb` (or add an [npm script](https://docs.npmjs.com/misc/scripts) to simply run `bsb`).
+
+That will pickup the first entry's `kind` and build all entries to that `kind`. e.g if you have multiple `bytecode` targets, they'll all get built but not the `js` ones nor `native` ones. If you want to build to all targets you need to run the build command multiple times with different `-backend`.
 
 ## Useful flags
 The `-make-world` flag builds all of the dependencies.
