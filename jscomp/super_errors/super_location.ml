@@ -23,7 +23,7 @@ let file_lines filePath =
      [||]
   with
   | End_of_file -> begin
-      close_in chan; 
+      close_in chan;
       List.rev (!lines) |> Array.of_list
     end
 
@@ -51,7 +51,7 @@ let print ~is_warning intro ppf loc =
   if loc.loc_start.pos_fname = "//toplevel//"
   && highlight_locations ppf [loc] then ()
   else
-    if is_warning then 
+    if is_warning then
       fprintf ppf "@[@{<info>%s@}@]@," intro
     else begin
       fprintf ppf "@[@{<error>%s@}@]@," intro
@@ -62,9 +62,9 @@ let print ~is_warning intro ppf loc =
     (* things to special-case: startchar & endchar2 both -1  *)
     if start_char == -1 || end_char == -1 then
       (* happens sometimes. Syntax error for example *)
-      fprintf ppf "Is there an error before this one? If so, it's likely a syntax error. The more relevant message should be just above!@ If it's not, please file an issue here:@ github.com/facebook/reason/issues@,"
+      fprintf ppf "Is there an error before this one? If so, it's likely a syntax error.@ The more relevant message should be just above!@ If it's not, please file an issue here:@ github.com/facebook/reason/issues@,"
     else begin
-      try 
+      try
         let lines = file_lines file in
         fprintf ppf "%a"
           (Super_misc.print_file
@@ -81,7 +81,7 @@ let print ~is_warning intro ppf loc =
     end
 ;;
 
-(* taken from https://github.com/ocaml/ocaml/blob/4.02/parsing/location.ml#L337 *)
+(* taken from https://github.com/BuckleScript/ocaml/blob/d4144647d1bf9bc7dc3aadc24c25a7efa3a67915/parsing/location.ml#L380 *)
 (* This is the error report entry point. We'll replace the default reporter with this one. *)
 let rec super_error_reporter ppf ({Location.loc; msg; sub; if_highlight} as err) =
   let highlighted =
@@ -97,27 +97,40 @@ let rec super_error_reporter ppf ({Location.loc; msg; sub; if_highlight} as err)
   if highlighted then
     Format.pp_print_string ppf if_highlight
   else begin
-    Super_misc.setup_colors ppf;
     (* open a vertical box. Everything in our message is indented 2 spaces *)
     Format.fprintf ppf "@[<v 2>@,%a@,%s@,@]" (print ~is_warning:false "We've found a bug for you!") loc msg;
     List.iter (Format.fprintf ppf "@,@[%a@]" super_error_reporter) sub;
     (* no need to flush here; location's report_exception (which uses this ultimately) flushes *)
   end
 
-(* extracted from https://github.com/ocaml/ocaml/blob/4.02/parsing/location.ml#L280 *)
+(* extracted from https://github.com/BuckleScript/ocaml/blob/d4144647d1bf9bc7dc3aadc24c25a7efa3a67915/parsing/location.ml#L299 *)
 (* This is the warning report entry point. We'll replace the default printer with this one *)
 let super_warning_printer loc ppf w =
   if Warnings.is_active w then begin
-    Super_misc.setup_colors ppf;
-    Misc.Color.setup !Clflags.color;
+    setup_colors ();
     (* open a vertical box. Everything in our message is indented 2 spaces *)
-    Format.fprintf ppf "@[<v 2>@,%a@,%a@,@]" 
-      (print ~is_warning:true ("Warning number " ^ (Super_warnings.number w |> string_of_int))) 
-      loc 
-      Super_warnings.print 
+    Format.fprintf ppf "@[<v 2>@,%a@,%a@,@]"
+      (print ~is_warning:true ("Warning number " ^ (Super_warnings.number w |> string_of_int)))
+      loc
+      Super_warnings.print
       w
   end
 ;;
+
+(* taken from https://github.com/BuckleScript/ocaml/blob/d4144647d1bf9bc7dc3aadc24c25a7efa3a67915/parsing/location.ml#L354 *)
+let print_phanton_error_prefix ppf =
+  (* modified from the original. We use only 2 indentations for error report
+    (see super_error_reporter above) *)
+  Format.pp_print_as ppf 2 ""
+
+let errorf ?(loc = none) ?(sub = []) ?(if_highlight = "") fmt =
+  Location.pp_ksprintf
+    ~before:print_phanton_error_prefix
+    (fun msg -> {loc; msg; sub; if_highlight})
+    fmt
+
+let error_of_printer loc print x =
+  errorf ~loc "%a@?" print x
 
 (* This will be called in super_main. This is how you override the default error and warning printers *)
 let setup () =

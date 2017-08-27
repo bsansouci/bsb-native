@@ -19,15 +19,16 @@ let process_implementation_file ppf name =
 
 let process_file ppf name = 
   match Ocaml_parse.check_suffix  name with 
-  | `Ml, opref ->
+  | Ml, opref ->
     Js_implementation.implementation ppf name opref 
-  | `Mli, opref -> 
+  | Mli, opref -> 
     Js_implementation.interface ppf name opref 
-  | `Mliast, opref 
+  | Mliast, opref 
     -> Js_implementation.interface_mliast ppf name opref 
-  | `Mlast, opref 
+  | Mlast, opref 
     -> Js_implementation.implementation_mlast ppf name opref
-
+  | Mlmap, opref 
+    -> Js_implementation.implementation_map ppf name opref
 
 let usage = "Usage: bsc <options> <files>\nOptions are:"
 
@@ -85,17 +86,17 @@ let define_variable s =
   
 let buckle_script_flags =
   ("-bs-super-errors",
-    Arg.Unit (fun _ -> 
+    Arg.Unit 
       (* needs to be set here instead of, say, setting a
         Js_config.better_errors flag; otherwise, when `anonymous` runs, we
         don't have time to set the custom printer before it starts outputting
         warnings *)
-      Super_main.setup ();
-    ),
+      Super_main.setup
+     ,
    " Better error message combined with other tools "
   )
   :: 
-  ("-bs-print-errors-in-reason-syntax",
+  ("-bs-re-error",
     Arg.Unit Reason_outcome_printer_main.setup,
    " Print compiler errors in Reason syntax"
   )
@@ -162,6 +163,11 @@ let buckle_script_flags =
   ("-bs-package-name", 
    Arg.String Js_packages_state.set_package_name, 
    " set package name, useful when you want to produce npm packages")
+  ::
+  ( "-bs-package-map", 
+   Arg.String Js_packages_state.set_package_map, 
+   " set package map, not only set package name but also use it as a namespace"    
+  )
   :: 
   ("-bs-no-version-header", 
    Arg.Set Js_config.no_version_header,

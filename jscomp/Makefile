@@ -219,7 +219,7 @@ EXT_SRCS = 	literals \
 	ident_hashtbl\
 	int_hashtbl\
 	ext_filename\
-	ext_package_name
+	ext_namespace
 
 EXT_CMXS=$(addprefix ext/, $(addsuffix .cmx, $(EXT_SRCS)))
 EXT_CMOS=$(addprefix ext/, $(addsuffix .cmo, $(EXT_SRCS)))
@@ -269,7 +269,9 @@ CORE_SRCS= js_runtime_modules \
 	lam\
 	lam_print lam_beta_reduce_util lam_inline_util lam_analysis\
 	lam_closure\
-	js_cmj_format js_fun_env js_call_info js_closure  js_number js_cmj_datasets\
+	js_cmj_format \
+	js_cmj_load\
+	js_fun_env js_call_info js_closure  js_number js_cmj_datasets\
 	lam_exit_code j \
 	lam_compile_util \
 	lam_id_kind \
@@ -319,7 +321,6 @@ BSB_SRCS= bsb_config\
 	bsb_depfile_gen\
 	bsb_build_util\
 	bsb_package_specs\
-	bsb_pkg_create\
 	bsb_pkg_map_gen\
 	bsb_helper_extract\
 	bsb_helper_dep_graph\
@@ -347,7 +348,7 @@ BSB_SRCS= bsb_config\
 	oCamlRes\
 	bsb_templates\
 	bsb_init
-SUPER_ERRORS_SRCS=super_misc super_warnings super_typecore super_typetexp super_location super_main
+SUPER_ERRORS_SRCS=super_reason_react super_misc super_warnings super_location super_typecore super_typemod super_typetexp super_main
 REASON_OUTCOME_PRINTER_SRCS=tweaked_reason_oprint reason_outcome_printer_main
 
 BSB_CMXS=$(addprefix bsb/, $(addsuffix .cmx, $(BSB_SRCS)))
@@ -633,6 +634,8 @@ install:
 	./runtime/js_null.ml ./runtime/js_null.cmi \
 	./runtime/js_undefined.ml ./runtime/js_undefined.cmi \
 	./runtime/js_exn.ml ./runtime/js_exn.mli ./runtime/js_exn.cmi \
+	./runtime/js_int.ml ./runtime/js_int.cmi \
+	./runtime/js_float.ml ./runtime/js_float.cmi \
 	./runtime/js_typed_array.ml ./runtime/js_typed_array.cmi   $(DEST)
 	cp ./stdlib/*.ml ./stdlib/*.mli $(DEST)
 # ./runtime/js_null_undefined.ml ./runtime/js_null_undefined.cmi

@@ -1166,6 +1166,7 @@ val suffix_mlast : string
 val suffix_mlast_simple : string
 val suffix_mliast : string
 val suffix_mliast_simple : string
+val suffix_mlmap : string
 val suffix_mll : string
 val suffix_re : string
 val suffix_rei : string 
@@ -1294,6 +1295,7 @@ let suffix_ml = ".ml"
 let suffix_mli = ".mli"
 let suffix_re = ".re"
 let suffix_rei = ".rei"
+let suffix_mlmap = ".mlmap"
 
 let suffix_cmt = ".cmt" 
 let suffix_cmti = ".cmti" 
@@ -2715,8 +2717,8 @@ let string_of_bsb_dev_include i =
 
 let reset () = dir_index := 0
 end
-module Ext_package_name : sig 
-#1 "ext_package_name.mli"
+module Ext_namespace : sig 
+#1 "ext_namespace.mli"
 (* Copyright (C) 2017- Authors of BuckleScript
  * 
  * This program is free software: you can redistribute it and/or modify
@@ -2742,20 +2744,23 @@ module Ext_package_name : sig
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
 
 
-val make : pkg:string -> string -> string 
+val make : ns:string -> string -> string 
 
-val remove_package_suffix: string -> string 
+
 
 (* Note  we have to output uncapitalized file Name, 
   or at least be consistent, since by reading cmi file on Case insensitive OS, we don't really know it is `list.cmi` or `List.cmi`, so that `require (./list.js)` or `require(./List.js)`
-  relevant issues: #1609, #913 
+  relevant issues: #1609, #913  
+  
+  #1933 when removing ns suffix, don't pass the bound
+  of basename
 *)
 val js_name_of_basename :  string -> string 
 
-val module_name_of_package_name : string -> string
+val namespace_of_package_name : string -> string
 
 end = struct
-#1 "ext_package_name.ml"
+#1 "ext_namespace.ml"
 
 (* Copyright (C) 2015-2016 Bloomberg Finance L.P.
  * 
@@ -2782,55 +2787,60 @@ end = struct
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
 
 
- (* Note the build system should check the validity of filenames
-    espeically, it should not contain '-'
- *)
- let package_sep_char = '-'
- let package_sep = "-"
+(* Note the build system should check the validity of filenames
+   espeically, it should not contain '-'
+*)
+let ns_sep_char = '-'
+let ns_sep = "-"
 
- let make ~pkg cunit  = 
-    cunit ^ package_sep ^ pkg 
-    
+let make ~ns cunit  = 
+  cunit ^ ns_sep ^ ns
 
-let rec rindex_rec s i c =
+let path_char = Filename.dir_sep.[0]
+
+let rec rindex_rec s i  =
   if i < 0 then i else
-  if String.unsafe_get s i = c then i else rindex_rec s (i - 1) c;;
-    
-let remove_package_suffix name =
-    let i = rindex_rec name (String.length name - 1) package_sep_char in 
-    if i < 0 then name 
-    else String.sub name 0 i 
+    let char = String.unsafe_get s i in
+    if char = path_char then -1 
+    else if char = ns_sep_char then i 
+    else
+      rindex_rec s (i - 1) 
+
+let remove_ns_suffix name =
+  let i = rindex_rec name (String.length name - 1)  in 
+  if i < 0 then name 
+  else String.sub name 0 i 
 
 
 let js_name_of_basename s = 
-  remove_package_suffix (String.uncapitalize s) ^ Literals.suffix_js
-  
-  
-let module_name_of_package_name (s : string) : string = 
+  remove_ns_suffix (String.uncapitalize s) ^ Literals.suffix_js
+
+
+let namespace_of_package_name (s : string) : string = 
   let len = String.length s in 
   let buf = Buffer.create len in 
   let add capital ch = 
     Buffer.add_char buf 
       (if capital then 
-        (Char.uppercase ch)
-      else ch) in    
+         (Char.uppercase ch)
+       else ch) in    
   let rec aux capital off len =     
-      if off >= len then ()
-      else 
-        let ch = String.unsafe_get s off in
-        match ch with 
-        | 'a' .. 'z' 
-        | 'A' .. 'Z' 
-        | '0' .. '9'
-          ->
-          add capital ch ; 
-          aux false (off + 1) len 
-        | '-' -> 
-          aux true (off + 1) len 
-        | _ -> aux capital (off+1) len
-         in 
-   aux true 0 len ;
-   Buffer.contents buf 
+    if off >= len then ()
+    else 
+      let ch = String.unsafe_get s off in
+      match ch with 
+      | 'a' .. 'z' 
+      | 'A' .. 'Z' 
+      | '0' .. '9'
+        ->
+        add capital ch ; 
+        aux false (off + 1) len 
+      | '-' -> 
+        aux true (off + 1) len 
+      | _ -> aux capital (off+1) len
+  in 
+  aux true 0 len ;
+  Buffer.contents buf 
 
 end
 module Bsb_depfile_gen : sig 
@@ -2935,8 +2945,8 @@ type kind = Js | Bytecode | Native
 let output_file oc source namespace = 
   match namespace with 
   | None -> output_string oc source ;
-  | Some pkg ->
-    output_string oc ( Ext_package_name.make ~pkg source)
+  | Some ns ->
+    output_string oc ( Ext_namespace.make ~ns source)
 
 (** for bucklescript artifacts 
     [lhs_suffix] is [.cmj]
@@ -3216,9 +3226,9 @@ end = struct
  * You should have received a copy of the GNU Lesser General Public License
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)    
-let version = "1.8.3"
+let version = "1.9.1"
 let header = 
-   "// Generated by BUCKLESCRIPT VERSION 1.8.3, PLEASE EDIT WITH CARE"  
+   "// Generated by BUCKLESCRIPT VERSION 1.9.1, PLEASE EDIT WITH CARE"  
 let package_name = "bs-platform"   
     
 end

@@ -43,7 +43,7 @@ let install_targets ~backend cwd (config : Bsb_config_types.t option) =
     let x = 
       match namespace with 
       | None -> x 
-      | Some pkg -> Ext_package_name.make ~pkg x in 
+      | Some ns -> Ext_namespace.make ~ns x in 
     install ~destdir (cwd // x ^  Literals.suffix_ml) ;
     install ~destdir (cwd // x ^  Literals.suffix_re) ;
     install ~destdir (cwd // x ^ Literals.suffix_mli) ;
@@ -80,10 +80,11 @@ let install_targets ~backend cwd (config : Bsb_config_types.t option) =
         if namespace then
           Some (Ext_package_name.module_name_of_package_name package_name) 
         else None in *)
-      (match namespace with
-      | None -> ()
-      | Some x -> 
-          install_filename_sans_extension destdir None nested  x);
+      begin match namespace with
+        | None -> ()
+        | Some x -> 
+          install_filename_sans_extension destdir None nested  x
+      end;
       String_hash_set.iter (install_filename_sans_extension destdir namespace nested) files_to_install;
       Format.fprintf Format.std_formatter "@{<info>Installing finished@} @.";
     end

@@ -119,7 +119,7 @@ let str = "abbcdefabh" in
 let break = ref false in
 while not !break do
   match re |> Js.Re.exec str with
-  | None -> break := false
+  | None -> break := true
   | Some result ->
     let match_ = (Js.Re.matches result).(0) in
     let next = string_of_int (Js.Re.lastIndex re) in
@@ -130,6 +130,9 @@ done
 @see <https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/RegExp/lastIndex> MDN
 *)
 external lastIndex : t -> int = "" [@@bs.get]
+
+(** sets the index at which the next match will start its search from *)
+external setLastIndex : t -> int -> unit = "lastIndex" [@@bs.set]
 
 (** returns a bool indicating whether the [multiline] flag is set *)
 external multiline : t -> bool = "" [@@bs.get]

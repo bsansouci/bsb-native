@@ -54,7 +54,7 @@ let spellcheck ppf fold env lid =
 let spellcheck ppf fold =
   spellcheck ppf (fun f -> fold (fun s _ _ x -> f s x))
 
-(* taken from https://github.com/ocaml/ocaml/blob/4.02/typing/typetexp.ml#L911 *)
+(* taken from https://github.com/BuckleScript/ocaml/blob/d4144647d1bf9bc7dc3aadc24c25a7efa3a67915/typing/typetexp.ml#L918 *)
 (* modified branches are commented *)
 let report_error env ppf = function
   | Typetexp.Unbound_type_variable name ->
@@ -80,13 +80,13 @@ let report_error env ppf = function
          anywhere so it's unclear how it should be handled *)
       fprintf ppf "Unbound row variable in #%a" longident lid
   | Type_mismatch trace ->
-      Printtyp.report_unification_error ppf Env.empty trace
+      Printtyp.super_report_unification_error ppf Env.empty trace
         (function ppf ->
            fprintf ppf "This type")
         (function ppf ->
            fprintf ppf "should be an instance of type")
   | Alias_type_mismatch trace ->
-      Printtyp.report_unification_error ppf Env.empty trace
+      Printtyp.super_report_unification_error ppf Env.empty trace
         (function ppf ->
            fprintf ppf "This alias is bound to type")
         (function ppf ->
@@ -159,7 +159,7 @@ let setup () =
   Location.register_error_of_exn
     (function
       | Typetexp.Error (loc, env, err) ->
-        Some (Location.error_of_printer loc (report_error env) err)
+        Some (Super_location.error_of_printer loc (report_error env) err)
       (* typetexp doesn't expose Error_forward  *)
       (* | Error_forward err ->
         Some err *)

@@ -376,13 +376,13 @@ let lambda_as_module
   begin 
     Js_config.set_current_file filename ;  
 #if BS_DEBUG then    
-    Js_config.set_debug_file "inner_define.ml";
+    Js_config.set_debug_file "gpr_1891_test.ml";
 #end    
     let lambda_output = compile ~filename output_prefix env sigs lam in
     let (//) = Filename.concat in 
     let basename =  
       (* #758, output_prefix is already chopped *)
-       Ext_package_name.js_name_of_basename (Filename.basename
+       Ext_namespace.js_name_of_basename (Filename.basename
          output_prefix (* -o *)
          (* filename *) (* see #757  *)
       ) in

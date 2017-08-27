@@ -1463,6 +1463,93 @@ let report_unification_error ppf env ?(unif=true)
   wrap_printing_env env (fun () -> unification_error unif tr txt1 ppf txt2)
 ;;
 
+#if undefined BS_NO_COMPILER_PATCH then
+let super_type_expansion ~tag t ppf t' =
+  if same_path t t' then begin
+    Format.pp_open_tag ppf tag;
+    type_expr ppf t;
+    Format.pp_close_tag ppf ();
+  end else begin
+    let t' = if proxy t == proxy t' then unalias t' else t' in
+    fprintf ppf "@[<2>";
+    Format.pp_open_tag ppf tag;
+    fprintf ppf "%a" type_expr t;
+    Format.pp_close_tag ppf ();
+    fprintf ppf "@ @{<dim>(defined as@}@ ";
+    Format.pp_open_tag ppf tag;
+    fprintf ppf "%a" type_expr t';
+    Format.pp_close_tag ppf ();
+    fprintf ppf "@{<dim>)@}";
+    fprintf ppf "@]";
+  end
+
+let super_trace ppf =
+  let rec super_trace first_report ppf = function
+    | (t1, t1') :: (t2, t2') :: rem ->
+      fprintf ppf 
+        "@,@,@[<v 2>";
+      if first_report then 
+        fprintf ppf "The incompatible parts:@,"
+      else begin 
+        fprintf ppf "Further expanded:@,"
+      end;
+      fprintf ppf 
+        "@[<v>\
+          @[%a@]@,\
+          vs@,\
+          @[%a@]\
+          %a\
+        @]"
+        (super_type_expansion ~tag:"error" t1) t1'
+        (super_type_expansion ~tag:"info" t2) t2'
+        (super_trace false) rem;
+      fprintf ppf "@]"
+    | _ -> ()
+  in super_trace true ppf
+
+let super_unification_error unif tr txt1 ppf txt2 = begin
+  reset ();
+  trace_same_names tr;
+  let tr = List.map (fun (t, t') -> (t, hide_variant_name t')) tr in
+  let mis = mismatch unif tr in
+  match tr with
+  | [] | _ :: [] -> assert false
+  | t1 :: t2 :: tr ->
+    try
+      let tr = filter_trace (mis = None) tr in
+      let t1, t1' = may_prepare_expansion (tr = []) t1
+      and t2, t2' = may_prepare_expansion (tr = []) t2 in
+      print_labels := not !Clflags.classic;
+      let tr = List.map prepare_expansion tr in
+      fprintf ppf
+        "@[<v 0>\
+          @[<v 2>\
+            %t@,\
+            @[<2>%a@]\
+          @]@,\
+          @[<v 2>\
+            %t@,\
+            @[<2>%a@]\
+          @]\
+          %a\
+          %t\
+        @]"
+        txt1 (super_type_expansion ~tag:"error" t1) t1'
+        txt2 (super_type_expansion ~tag:"info" t2) t2'
+        super_trace tr
+        (explanation unif mis);
+      print_labels := true
+    with exn ->
+      print_labels := true;
+      raise exn
+end
+
+let super_report_unification_error ppf env ?(unif=true)
+    tr txt1 txt2 =
+  wrap_printing_env env (fun () -> super_unification_error unif tr txt1 ppf txt2)
+;;
+#end
+
 let trace fst keep_last txt ppf tr =
   print_labels := not !Clflags.classic;
   trace_same_names tr;

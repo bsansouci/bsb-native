@@ -91,7 +91,7 @@ ext/int_hashtbl.cmx : ext/hashtbl_gen.cmx ext/ext_int.cmx \
     stubs/bs_hash_stubs.cmx ext/int_hashtbl.cmi
 ext/ext_filename.cmx : ext/literals.cmx ext/ext_string.cmx \
     ext/ext_pervasives.cmx ext/ext_filename.cmi
-ext/ext_package_name.cmx : ext/literals.cmx ext/ext_package_name.cmi
+ext/ext_namespace.cmx : ext/literals.cmx ext/ext_namespace.cmi
 ext/literals.cmi :
 ext/ext_util.cmi :
 ext/ext_int.cmi :
@@ -152,7 +152,7 @@ ext/hash_set_poly.cmi :
 ext/ident_hashtbl.cmi : ext/hashtbl_gen.cmx
 ext/int_hashtbl.cmi : ext/hashtbl_gen.cmx
 ext/ext_filename.cmi :
-ext/ext_package_name.cmi :
+ext/ext_namespace.cmi :
 common/bs_version.cmx : common/bs_version.cmi
 common/js_config.cmx : common/js_config.cmi
 common/ext_log.cmx : common/js_config.cmx common/ext_log.cmi
@@ -284,6 +284,7 @@ core/lam_analysis.cmi : core/lam.cmi
 core/lam_closure.cmi : core/lam.cmi ext/ident_set.cmi ext/ident_map.cmi
 core/js_cmj_format.cmi : ext/string_map.cmi core/lam_arity.cmi core/lam.cmi \
     core/js_packages_info.cmi
+core/js_cmj_load.cmi : core/js_cmj_format.cmi
 core/js_fun_env.cmi : ext/ident_set.cmi
 core/js_call_info.cmi :
 core/js_closure.cmi : ext/ident_set.cmi
@@ -365,7 +366,7 @@ core/ocaml_batch_compile.cmi :
 core/js_runtime_modules.cmx :
 core/config_util.cmx : core/config_util.cmi
 core/js_packages_info.cmx : core/lam_module_ident.cmx ext/ext_sys.cmx \
-    ext/ext_string.cmx ext/ext_pervasives.cmx ext/ext_package_name.cmx \
+    ext/ext_string.cmx ext/ext_pervasives.cmx ext/ext_namespace.cmx \
     ext/ext_filename.cmx core/config_util.cmx depends/bs_exception.cmx \
     core/js_packages_info.cmi
 core/js_packages_state.cmx : core/js_packages_info.cmx \
@@ -400,7 +401,9 @@ core/lam_closure.cmx : core/lam_analysis.cmx core/lam.cmx ext/ident_set.cmx \
     ext/ident_map.cmx core/lam_closure.cmi
 core/js_cmj_format.cmx : ext/string_map.cmx core/lam_arity.cmx core/lam.cmx \
     core/js_packages_info.cmx ext/ext_string.cmx ext/ext_pervasives.cmx \
-    core/config_util.cmx depends/bs_exception.cmx core/js_cmj_format.cmi
+    core/js_cmj_format.cmi
+core/js_cmj_load.cmx : core/js_cmj_format.cmx core/config_util.cmx \
+    depends/bs_exception.cmx core/js_cmj_load.cmi
 core/js_fun_env.cmx : ext/ident_set.cmx ext/ext_list.cmx core/js_fun_env.cmi
 core/js_call_info.cmx : core/js_call_info.cmi
 core/js_closure.cmx : ext/ident_set.cmx core/js_closure.cmi
@@ -490,8 +493,8 @@ core/lam_group_pass.cmx : core/lam.cmx
 core/lam_compile_env.cmx : core/type_util.cmx ext/string_map.cmx \
     ext/literals.cmx core/lam_module_ident.cmx core/lam.cmx \
     core/js_stmt_make.cmx core/js_packages_info.cmx core/js_exp_make.cmx \
-    common/js_config.cmx core/js_cmj_format.cmx ext/ext_string.cmx \
-    core/lam_compile_env.cmi
+    common/js_config.cmx core/js_cmj_load.cmx core/js_cmj_format.cmx \
+    ext/ext_string.cmx core/lam_compile_env.cmi
 core/lam_stats_util.cmx : core/lam_stats.cmx core/lam_compile_env.cmx \
     core/lam_arity.cmx core/lam.cmx ext/ident_hashtbl.cmx ext/ext_list.cmx \
     core/lam_stats_util.cmi
@@ -609,17 +612,18 @@ core/lam_compile_group.cmx : ext/literals.cmx core/lam_util.cmx \
     core/js_pass_debug.cmx core/js_packages_state.cmx core/js_output.cmx \
     core/js_fold_basic.cmx core/js_exp_make.cmx core/js_dump.cmx \
     common/js_config.cmx core/js_cmj_format.cmx core/j.cmx ext/ident_set.cmx \
-    ext/ext_string.cmx ext/ext_pervasives.cmx ext/ext_package_name.cmx \
+    ext/ext_string.cmx ext/ext_pervasives.cmx ext/ext_namespace.cmx \
     ext/ext_list.cmx ext/ext_ident.cmx ext/ext_filename.cmx \
     core/lam_compile_group.cmi
 core/js_implementation.cmx : core/ocaml_parse.cmx common/ml_binary.cmx \
     ext/literals.cmx core/lam_compile_group.cmx core/lam_compile_env.cmx \
-    common/js_config.cmx ext/ext_pervasives.cmx common/ext_log.cmx \
+    common/js_config.cmx ext/ext_string.cmx ext/ext_pervasives.cmx \
+    ext/ext_namespace.cmx common/ext_log.cmx ext/ext_io.cmx \
     syntax/bs_ast_invariant.cmx depends/binary_ast.cmx \
     core/js_implementation.cmi
 core/ocaml_batch_compile.cmx : core/ocaml_parse.cmx \
     core/js_implementation.cmx common/js_config.cmx ext/ext_ref.cmx \
-    ext/ext_pervasives.cmx ext/ext_package_name.cmx ext/ext_format.cmx \
+    ext/ext_pervasives.cmx ext/ext_namespace.cmx ext/ext_format.cmx \
     ext/ext_filename.cmx depends/bs_exception.cmx depends/ast_extract.cmx \
     core/ocaml_batch_compile.cmi
 core/bspack_main.cmi :
@@ -654,14 +658,20 @@ ounit/oUnitLogger.cmx : ounit/oUnitUtils.cmx ounit/oUnitTypes.cmx
 ounit/oUnitTypes.cmx :
 ounit/oUnitUtils.cmx : ounit/oUnitTypes.cmx
 ounit/oUnitChooser.cmx : ounit/oUnitTypes.cmx
-super_errors/super_misc.cmx : ext/ext_color.cmx super_errors/super_misc.cmi
+super_errors/super_reason_react.cmx : super_errors/super_reason_react.cmi
+super_errors/super_misc.cmx : super_errors/super_misc.cmi
 super_errors/super_warnings.cmx :
-super_errors/super_typecore.cmx : super_errors/super_misc.cmx
-super_errors/super_typetexp.cmx :
 super_errors/super_location.cmx : super_errors/super_warnings.cmx \
     super_errors/super_misc.cmx
+super_errors/super_typecore.cmx : super_errors/super_reason_react.cmx \
+    super_errors/super_location.cmx
+super_errors/super_typemod.cmx : super_errors/super_reason_react.cmx \
+    super_errors/super_location.cmx
+super_errors/super_typetexp.cmx : super_errors/super_location.cmx
 super_errors/super_main.cmx : super_errors/super_typetexp.cmx \
-    super_errors/super_typecore.cmx super_errors/super_location.cmx
+    super_errors/super_typemod.cmx super_errors/super_typecore.cmx \
+    super_errors/super_location.cmx
+super_errors/super_reason_react.cmi :
 super_errors/super_misc.cmi :
 reason_outcome_printer/tweaked_reason_oprint.cmx :
 reason_outcome_printer/reason_outcome_printer_main.cmx : \
@@ -698,7 +708,7 @@ ounit_tests/ounit_vec_test.cmx : ext/set_int.cmx ounit/oUnit.cmx \
     ext/int_vec.cmx ext/ext_json.cmx
 ounit_tests/ounit_data_random.cmx :
 ounit_tests/ounit_string_tests.cmx : ounit_tests/ounit_data_random.cmx \
-    ounit/oUnit.cmx ext/ext_string.cmx ext/ext_package_name.cmx
+    ounit/oUnit.cmx ext/ext_string.cmx ext/ext_namespace.cmx
 ounit_tests/ounit_utf8_test.cmx : ounit/oUnit.cmx ext/ext_utf8.cmx
 ounit_tests/ounit_js_regex_checker_tests.cmx : ounit/oUnit.cmx \
     ext/ext_js_regex.cmx
@@ -750,7 +760,7 @@ bsb/bsb_clean.cmx : ext/ext_filename.cmx bsb/bsb_unix.cmx bsb/bsb_config.cmx \
     bsb/bsb_build_util.cmx bsb/bsb_clean.cmi
 bsb/bsb_config.cmx : ext/ext_filename.cmx bsb/bsb_config.cmi
 bsb/bsb_config_parse.cmx : ext/string_map.cmx ext/string_hash_set.cmx \
-    ext/literals.cmx ext/ext_package_name.cmx ext/ext_json_types.cmx \
+    ext/literals.cmx ext/ext_namespace.cmx ext/ext_json_types.cmx \
     ext/ext_json_parse.cmx ext/ext_json.cmx ext/ext_filename.cmx \
     ext/ext_file_pp.cmx ext/ext_array.cmx bsb/bsb_watcher_gen.cmx \
     bsb/bsb_pkg.cmx bsb/bsb_parse_sources.cmx bsb/bsb_package_specs.cmx \
@@ -761,7 +771,7 @@ bsb/bsb_config_types.cmx : ext/string_map.cmx ext/string_hash_set.cmx \
     bsb/bsb_parse_sources.cmx bsb/bsb_package_specs.cmx
 bsb/bsb_default.cmx : bsb/bsb_config_types.cmx bsb/bsb_default.cmi
 bsb/bsb_depfile_gen.cmx : ext/string_map.cmx ext/literals.cmx \
-    ext/ext_string.cmx ext/ext_pervasives.cmx ext/ext_package_name.cmx \
+    ext/ext_string.cmx ext/ext_pervasives.cmx ext/ext_namespace.cmx \
     bsb/bsb_dir_index.cmx bsb/bsb_build_cache.cmx bsb/bsb_depfile_gen.cmi
 bsb/bsb_dir_index.cmx : bsb/bsb_dir_index.cmi
 bsb/bsb_exception.cmx : ext/ext_string.cmx ext/ext_position.cmx \
@@ -796,7 +806,7 @@ bsb/bsb_merlin_gen.cmx : ext/literals.cmx ext/ext_string.cmx \
     bsb/bsb_config.cmx bsb/bsb_merlin_gen.cmi
 bsb/bsb_ninja_file_groups.cmx : ext/string_set.cmx ext/string_map.cmx \
     ext/string_hash_set.cmx ext/literals.cmx ext/ext_string.cmx \
-    ext/ext_pervasives.cmx ext/ext_package_name.cmx ext/ext_filename.cmx \
+    ext/ext_pervasives.cmx ext/ext_namespace.cmx ext/ext_filename.cmx \
     bsb/bsb_rule.cmx bsb/bsb_parse_sources.cmx bsb/bsb_package_specs.cmx \
     bsb/bsb_ninja_util.cmx bsb/bsb_ninja_global_vars.cmx \
     bsb/bsb_dir_index.cmx bsb/bsb_config_types.cmx bsb/bsb_config.cmx \
@@ -804,11 +814,11 @@ bsb/bsb_ninja_file_groups.cmx : ext/string_set.cmx ext/string_map.cmx \
     bsb/bsb_ninja_file_groups.cmi
 bsb/bsb_ninja_gen.cmx : ext/string_map.cmx ext/literals.cmx \
     ext/ext_string.cmx ext/ext_list.cmx ext/ext_filename.cmx bsb/bsb_rule.cmx \
-    bsb/bsb_parse_sources.cmx bsb/bsb_ninja_util.cmx bsb/bsb_ninja_native.cmx \
-    bsb/bsb_ninja_global_vars.cmx bsb/bsb_ninja_file_groups.cmx \
-    bsb/bsb_dir_index.cmx bsb/bsb_config_types.cmx bsb/bsb_config.cmx \
-    bsb/bsb_build_util.cmx bsb/bsb_build_schemas.cmx bsb/bsb_build_cache.cmx \
-    bsb/bsb_ninja_gen.cmi
+    bsb/bsb_pkg_map_gen.cmx bsb/bsb_parse_sources.cmx bsb/bsb_ninja_util.cmx \
+    bsb/bsb_ninja_native.cmx bsb/bsb_ninja_global_vars.cmx \
+    bsb/bsb_ninja_file_groups.cmx bsb/bsb_dir_index.cmx \
+    bsb/bsb_config_types.cmx bsb/bsb_config.cmx bsb/bsb_build_util.cmx \
+    bsb/bsb_build_schemas.cmx bsb/bsb_build_cache.cmx bsb/bsb_ninja_gen.cmi
 bsb/bsb_ninja_global_vars.cmx :
 bsb/bsb_ninja_native.cmx : ext/string_set.cmx ext/string_map.cmx \
     ext/string_hash_set.cmx ext/literals.cmx ext/ext_string.cmx \
@@ -828,7 +838,7 @@ bsb/bsb_ninja_util.cmx : ext/ext_string.cmx bsb/bsb_rule.cmx \
     bsb/bsb_ninja_util.cmi
 bsb/bsb_os_dependent.cmx :
 bsb/bsb_package_specs.cmx : ext/string_map.cmx ext/literals.cmx \
-    ext/ext_string.cmx ext/ext_package_name.cmx ext/ext_json_types.cmx \
+    ext/ext_string.cmx ext/ext_namespace.cmx ext/ext_json_types.cmx \
     ext/ext_json.cmx ext/ext_filename.cmx bsb/bsb_exception.cmx \
     bsb/bsb_config.cmx bsb/bsb_build_schemas.cmx bsb/bsb_package_specs.cmi
 bsb/bsb_parse_sources.cmx : ext/string_vec.cmx ext/string_set.cmx \
@@ -840,10 +850,8 @@ bsb/bsb_parse_sources.cmx : ext/string_vec.cmx ext/string_set.cmx \
 bsb/bsb_pkg.cmx : ext/string_hashtbl.cmx ext/literals.cmx \
     bsb/bsb_exception.cmx bsb/bsb_pkg.cmi
 bsb/bsb_pkg_cmi_create.cmx :
-bsb/bsb_pkg_create.cmx : ext/ext_package_name.cmx bsb/bsb_pkg_create.cmi
-bsb/bsb_pkg_map_gen.cmx : ext/string_map.cmx common/ml_binary.cmx \
-    ext/literals.cmx ext/ext_filename.cmx bsb/bsb_pkg_create.cmx \
-    bsb/bsb_parse_sources.cmx bsb/bsb_pkg_map_gen.cmi
+bsb/bsb_pkg_map_gen.cmx : ext/string_map.cmx ext/literals.cmx \
+    ext/ext_filename.cmx bsb/bsb_parse_sources.cmx bsb/bsb_pkg_map_gen.cmi
 bsb/bsb_query.cmx : ext/string_map.cmx ext/ext_json_noloc.cmx \
     ext/ext_array.cmx bsb/bsb_parse_sources.cmx bsb/bsb_ninja_regen.cmx \
     bsb/bsb_config_types.cmx bsb/bsb_build_util.cmx bsb/bsb_query.cmi
@@ -856,7 +864,7 @@ bsb/bsb_watcher_gen.cmx : ext/ext_list.cmx ext/ext_json_noloc.cmx \
     ext/ext_filename.cmx ext/ext_array.cmx bsb/bsb_parse_sources.cmx \
     bsb/bsb_config.cmx bsb/bsb_watcher_gen.cmi
 bsb/bsb_world.cmx : ext/string_hash_set.cmx ext/literals.cmx \
-    ext/ext_package_name.cmx ext/ext_filename.cmx bsb/bsb_unix.cmx \
+    ext/ext_namespace.cmx ext/ext_filename.cmx bsb/bsb_unix.cmx \
     bsb/bsb_ninja_regen.cmx bsb/bsb_file.cmx bsb/bsb_config_types.cmx \
     bsb/bsb_config_parse.cmx bsb/bsb_config.cmx bsb/bsb_build_util.cmx \
     bsb/bsb_world.cmi
@@ -896,7 +904,6 @@ bsb/bsb_package_specs.cmi : ext/ext_json_types.cmx
 bsb/bsb_parse_sources.cmi : ext/string_set.cmi ext/ext_json_types.cmx \
     ext/ext_file_pp.cmi bsb/bsb_dir_index.cmi bsb/bsb_build_cache.cmi
 bsb/bsb_pkg.cmi :
-bsb/bsb_pkg_create.cmi :
 bsb/bsb_pkg_map_gen.cmi : bsb/bsb_parse_sources.cmi
 bsb/bsb_query.cmi : bsb/bsb_config_types.cmx
 bsb/bsb_regex.cmi :

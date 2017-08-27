@@ -82,6 +82,3 @@ val from_string : string -> t
 
 val to_file : string -> t -> unit
 
-
-(** return path and meta data *)
-val find_cmj : string -> string * t
