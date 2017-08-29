@@ -78,7 +78,7 @@ let link link_byte_or_native ~main_module ~batch_files ~clibs ~includes ~ocamlfi
       let bsc_dir = Bsb_build_util.get_bsc_dir cwd in
       let ocaml_dir = Bsb_build_util.get_ocaml_dir bsc_dir in
       let compiler = ocaml_dir // compiler ^ ".opt" in
-      let list_of_args = (compiler :: "-g" 
+      let list_of_args = (compiler :: "-g"
         :: (if bs_super_errors then ["-bs-super-errors"] else [])) 
         @ "-o" :: output_file :: all_object_files in
         (* List.iter (fun a -> print_endline a) list_of_args; *)

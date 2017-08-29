@@ -11803,6 +11803,7 @@ let ocamlfind = "ocamlfind"
 let ocamlfind_dependencies = "ocamlfind_dependencies"
 let bin_annot = "bs_bin_annot"
 let external_deps_for_linking = "external_deps_for_linking"
+let warnings = "warnings";
 
 end
 module Bsb_rule : sig 
@@ -13499,7 +13500,7 @@ let output_ninja_and_namespace_map
           Bsb_ninja_global_vars.ocamlfind, if ocamlfind_dependencies = [] then "" else ocamlfind;
           Bsb_ninja_global_vars.ocamlfind_dependencies,  Bsb_build_util.flag_concat "-package" (external_ocamlfind_dependencies @ ocamlfind_dependencies);
           Bsb_ninja_global_vars.bin_annot, if bin_annot then "-bin-annot" else "";
-          
+          Bsb_ninja_global_vars.warnings, "-w " ^ warnings;
           (** TODO: could be removed by adding a flag
               [-bs-ns react]
           *)
