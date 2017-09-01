@@ -9866,14 +9866,9 @@ let interpret_json
       let x = Bsb_pkg.resolve_bs_package ~cwd Bs_version.package_name  in
       (* @Hack This is used by bsc, when compiling to js, AND for the .merlin
          generation.  *)
-      let nested = begin match backend with 
-      | Bsb_config_types.Js       -> "js"
-      | Bsb_config_types.Native   -> "native"
-      | Bsb_config_types.Bytecode -> "bytecode"
-      end in
       built_in_package := Some ({
         Bsb_config_types.package_name = Bs_version.package_name;
-        package_install_path = x // Bsb_config.lib_ocaml // nested;
+        package_install_path = x // Bsb_config.lib_ocaml;
       });
     ) ;
     let package_specs =     
@@ -11632,11 +11627,11 @@ let output_merlin_namespace buffer ns=
     Buffer.add_string buffer "-open ";
     Buffer.add_string buffer x 
 
-let bsc_flg_to_merlin_ocamlc_flg bsc_flags  =
+let bsc_flg_to_merlin_ocamlc_flg ~backend bsc_flags  =
   merlin_flg ^ 
   String.concat Ext_string.single_space 
     (List.filter (fun x -> not (Ext_string.starts_with x bs_flg_prefix )) @@ 
-     Literals.dash_nostdlib::bsc_flags) 
+     if backend = Bsb_config_types.Js then Literals.dash_nostdlib::bsc_flags else bsc_flags) 
 
 
 let merlin_file_gen ~cwd ~backend
@@ -11684,15 +11679,17 @@ let merlin_file_gen ~cwd ~backend
         Buffer.add_string buffer merlin_b;
         Buffer.add_string buffer path ;
       ); 
-    (match built_in_dependency with
-     | None -> ()
-     | Some package -> 
-       let path = package.package_install_path in 
-       Buffer.add_string buffer (merlin_s ^ path );
-       Buffer.add_string buffer (merlin_b ^ path)                      
-    );
+    if backend = Bsb_config_types.Js then begin
+      (match built_in_dependency with
+       | None -> ()
+       | Some package -> 
+         let path = package.package_install_path in 
+         Buffer.add_string buffer (merlin_s ^ path );
+         Buffer.add_string buffer (merlin_b ^ path)                      
+      );
+    end;
 
-    let bsc_string_flag = bsc_flg_to_merlin_ocamlc_flg bsc_flags in 
+    let bsc_string_flag = bsc_flg_to_merlin_ocamlc_flg ~backend bsc_flags in 
     Buffer.add_string buffer bsc_string_flag ;
 
     bs_dependencies 

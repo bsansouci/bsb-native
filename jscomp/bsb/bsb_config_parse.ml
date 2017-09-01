@@ -182,14 +182,9 @@ let interpret_json
       let x = Bsb_pkg.resolve_bs_package ~cwd Bs_version.package_name  in
       (* @Hack This is used by bsc, when compiling to js, AND for the .merlin
          generation.  *)
-      let nested = begin match backend with 
-      | Bsb_config_types.Js       -> "js"
-      | Bsb_config_types.Native   -> "native"
-      | Bsb_config_types.Bytecode -> "bytecode"
-      end in
       built_in_package := Some ({
         Bsb_config_types.package_name = Bs_version.package_name;
-        package_install_path = x // Bsb_config.lib_ocaml // nested;
+        package_install_path = x // Bsb_config.lib_ocaml;
       });
     ) ;
     let package_specs =     

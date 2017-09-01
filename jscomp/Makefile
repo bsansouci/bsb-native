@@ -614,7 +614,7 @@ travis-world-test:
 	@echo "Making test finsihed"
 
 
-DEST=../lib/ocaml/js
+DEST=../lib/ocaml
 DEST_BIN=../bin
 
 # TODO: sync up with
