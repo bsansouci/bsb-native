@@ -38,17 +38,23 @@ let resolve_package backend cwd  package_name =
     package_install_path = x // Bsb_config.lib_ocaml // nested
   }
 
-let get_allowed_build_kinds arr =  
-  arr
-  |> get_list_string
-  |> List.fold_left (fun acc x ->
-    let el = match x with
-    | "js"       -> Bsb_config_types.Js
-    | "bytecode" -> Bsb_config_types.Bytecode
-    | "native"   -> Bsb_config_types.Native
-    | _ -> failwith "allowed_build_kinds can only be 'js', 'bytecode' or 'native'"
-    in el :: acc
-  ) []
+let parse_allowed_build_kinds map =
+  let open Ext_json_types in
+  match String_map.find_opt Bsb_build_schemas.allowed_build_kinds map with 
+  | Some (Arr {loc_start; content = s }) ->   
+    List.map (fun (s : string) ->
+      match s with 
+      | "js"       -> Bsb_config_types.Js
+      | "native"   -> Bsb_config_types.Native
+      | "bytecode" -> Bsb_config_types.Bytecode
+      | str -> Bsb_exception.failf ~loc:loc_start "'allowed-build-kinds' field expects one of, or an array of: 'js', 'bytecode' or 'native'. Found '%s'" str
+    ) (Bsb_build_util.get_list_string s) 
+  | Some (Str {str = "js"} )       -> [Bsb_config_types.Js]
+  | Some (Str {str = "native"} )   -> [Bsb_config_types.Native]
+  | Some (Str {str = "bytecode"} ) -> [Bsb_config_types.Bytecode]
+  | Some (Str {str; loc} ) -> Bsb_exception.failf ~loc:loc "'allowed-build-kinds' field expects one of, or an array of: 'js', 'bytecode' or 'native'. Found '%s'" str
+  | Some x -> Bsb_exception.failwith_config x "'allowed-build-kinds' field expects one of, or an array of: 'js', 'bytecode' or 'native'"
+  | None -> Bsb_default.allowed_build_kinds
 
 (* Key is the path *)
 let (|?)  m (key, cb) =
@@ -141,7 +147,6 @@ let interpret_json
   let namespace = ref false in 
   let bs_external_includes = ref [] in 
   let bs_super_errors = ref false in
-  let allowed_build_kinds = ref Bsb_default.allowed_build_kinds in
   (** we should not resolve it too early,
       since it is external configuration, no {!Bsb_build_util.convert_and_resolve_path}
   *)
@@ -193,6 +198,7 @@ let interpret_json
         Bsb_package_specs.from_json x 
       | None ->  Bsb_package_specs.default_package_specs 
     in
+    let allowed_build_kinds = parse_allowed_build_kinds map in
     map
     |? (Bsb_build_schemas.reason, `Obj begin fun m -> 
         match String_map.find_opt Bsb_build_schemas.react_jsx m with 
@@ -274,7 +280,6 @@ let interpret_json
     |? (Bsb_build_schemas.static_libraries, `Arr (fun s -> static_libraries := (List.map (fun v -> cwd // v) (get_list_string s))))
     |? (Bsb_build_schemas.c_linker_flags, `Arr (fun s -> static_libraries := (List.fold_left (fun acc v -> "-ccopt" :: v :: acc) [] (List.rev (get_list_string s))) @ !static_libraries))
     |? (Bsb_build_schemas.build_script, `Str (fun s -> build_script := Some s))
-    |? (Bsb_build_schemas.allowed_build_kinds, `Arr (fun s -> allowed_build_kinds := get_allowed_build_kinds s))
     |? (Bsb_build_schemas.ocamlfind_dependencies, `Arr (fun s -> ocamlfind_dependencies := get_list_string s))
     |? (Bsb_build_schemas.bs_super_errors, `Bool (fun b -> bs_super_errors := b))
     |? (Bsb_build_schemas.bin_annot, `Bool (fun b -> bin_annot := b))
@@ -343,7 +348,7 @@ let interpret_json
           
           static_libraries = !static_libraries;
           build_script = !build_script;
-          allowed_build_kinds = !allowed_build_kinds;
+          allowed_build_kinds = allowed_build_kinds;
           ocamlfind_dependencies = !ocamlfind_dependencies;
           bin_annot = !bin_annot;
         }
