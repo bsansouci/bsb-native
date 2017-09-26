@@ -47,7 +47,10 @@ val assert_strings :
 
 (** as a record or empty 
     it will accept 
+
     {[ [@@@bs.config ]]}
+    or 
+    {[ [@@@bs.config no_export ] ]}
     or 
     {[ [@@@bs.config { property  .. } ]]}    
     Note that we only 
@@ -59,7 +62,8 @@ val assert_strings :
       {M.flat_property}
     ]}
 *)
-val as_config_record_and_process : 
+
+val ident_or_record_as_config : 
   Location.t ->
   t -> action list 
 

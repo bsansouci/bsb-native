@@ -6,7 +6,6 @@
                 "commonjs",
                 "amdjs",
                 "amdjs-global",
-                "goog",
                 "es6",
                 "es6-global"
             ],
@@ -112,7 +111,7 @@
                     }
                 }
             },
-            "description": "(WIP) Note that we will add the directory path accordingly"
+            "description": "Note that we will add the directory path accordingly"
         },
         "sourceItem": {
             "title": "sourceItem",
@@ -194,8 +193,17 @@
                             }
                         },
                         "subdirs": {
-                            "$ref": "#/definitions/sources",
-                            "description": "More source directories"
+                            "title" : "Sub directories",
+                            "oneOf" : [
+                                {
+                                    "$ref": "#/definitions/sources",
+                                    "description": "More source directories"
+                                },
+                                {
+                                    "type" : "boolean",
+                                    "description": "true means traverse to all subdirs"
+                                }
+                            ]                                                        
                         },
                         "group": {
                             "oneOf": [
@@ -292,7 +300,7 @@
                     "items": {
                         "type": "string"
                     },
-                    "description": "Default: `[\"-no-alias-deps\", \"-w\", \"-40+6+7+27+32..39+44+45\"]`. [Here](https://github.com/bucklescript/bucklescript/blob/0db762aea73fc9f28ebd08e9eb92f1e072f44c2d/jscomp/bsb/bsb_default.ml#L26) are the meanings of the warning flags"
+                    "description": "Default: `[\"-no-alias-deps\"]`"
                 },
                 {
                     "type": "object",
@@ -363,6 +371,28 @@
             "$ref": "#/definitions/bsc-flags",
             "description": "Flags passed to bsc.exe"
         },
+        "warnings" : {
+            "type" : "object",
+            "properties": {
+                "number" : {
+                    "type" : "string",
+                    "description": "Default: -40+6+7+27+32..39+44+45 [Here](https://caml.inria.fr/pub/docs/manual-ocaml/comp.html#sec270) for the meanings of the warning flags"
+                },
+                "error" : {
+                    "oneOf" : [
+                        {
+                            "type" : "boolean",
+                            "description" : "True means warn is error(default)"
+                        },
+                        {
+                            "type" : "string",
+                            "description": "Same as warning number but different set"
+                        }
+                    ]
+                }
+            },
+            "description": "warning numbers and whether to turn it into error or not"
+        },
         "ppx-flags": {
             "$ref": "#/definitions/ppx-specs",
             "description": "PPX macros to pass to compiler. The syntax is package_name/binary, for example: `reason/reactjs_jsx_ppx.native`. Currenly searches in `node_modules`"
@@ -373,19 +403,7 @@
         },
         "package-specs": {
             "$ref": "#/definitions/package-specs",
-            "description": "BuckleScript can currently output to [Commonjs](https://en.wikipedia.org/wiki/CommonJS), [AMD](http://requirejs.org/docs/whyamd.html), [Google module](https://github.com/google/closure-library/wiki/goog.module:-an-ES6-module-like-alternative-to-goog.provide) and [ES6 modules](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/import)"
-        },
-        "ocamllex": {
-            "type": "string",
-            "description": "Path to [OCamllex](https://realworldocaml.org/v1/en/html/parsing-with-ocamllex-and-menhir.html)"
-        },
-        "ocamlyacc": {
-            "type": "string",
-            "description": "TODO path to ocamlyacc, mly"
-        },
-        "menhir": {
-            "type": "string",
-            "description": "TODO"
+            "description": "BuckleScript can currently output to [Commonjs](https://en.wikipedia.org/wiki/CommonJS), [AMD](http://requirejs.org/docs/whyamd.html),  and [ES6 modules](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/import)"
         },
         "entries": {
             "$ref": "#/definitions/entries",

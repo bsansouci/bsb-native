@@ -87,3 +87,7 @@ let build_script = "build_script"
 let allowed_build_kinds = "allowed-build-kinds"
 let ocamlfind_dependencies = "ocamlfind-dependencies"
 let bin_annot = "bin-annot"
+
+let warnings = "warnings"
+let number = "number"
+let error = "error"

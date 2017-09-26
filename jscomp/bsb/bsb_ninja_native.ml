@@ -29,7 +29,7 @@ type compile_target_t = Native | Bytecode
 
 let output_build = Bsb_ninja_util.output_build
 
-let (//) = Ext_filename.combine
+let (//) = Ext_path.combine
 
 let install_file module_info files_to_install =
   String_hash_set.add  files_to_install (Bsb_build_cache.filename_sans_suffix_of_module_info module_info)
@@ -193,14 +193,14 @@ let handle_file_group oc
       end
     in
     begin match module_info.ml with
-      | Ml_source (input, false) -> emit_build `Ml input
-      | Ml_source (input, true) -> emit_build `Re input
+      | Ml_source (input, false, _) -> emit_build `Ml input
+      | Ml_source (input, true, _) -> emit_build `Re input
       | Ml_empty -> Bsb_ninja_file_groups.zero
     end @
     begin match module_info.mli with
-      | Mli_source (mli_file, false)  ->
+      | Mli_source (mli_file, false, _)  ->
         emit_build `Mli mli_file
-      | Mli_source (rei_file, true) ->
+      | Mli_source (rei_file, true, _) ->
         emit_build `Rei rei_file
       | Mli_empty -> Bsb_ninja_file_groups.zero
     end @
@@ -258,11 +258,11 @@ let link oc ret ~entries ~file_groups ~static_libraries =
       List.fold_left (fun acc group -> 
         String_map.fold (fun _ (v : Bsb_build_cache.module_info) (all_mlast_files, all_cmo_or_cmx_files, all_cmi_files) -> 
           let mlname = match v.ml with
-            | Ml_source (input, _) -> Some (Ext_filename.chop_extension_if_any input)
+            | Ml_source (input, _, _) -> Some (Ext_path.chop_extension_if_any input)
             | Ml_empty -> None
           in
           let mliname = match v.mli with
-            | Mli_source (input, _) -> Some (Ext_filename.chop_extension_if_any input)
+            | Mli_source (input, _, _) -> Some (Ext_path.chop_extension_if_any input)
             | Mli_empty -> None in
           begin match (mlname, mliname) with
           | None, None -> failwith "Got a source file without an ml or mli file. This should not happen."
@@ -309,11 +309,11 @@ let pack oc ret ~backend ~file_groups =
     List.fold_left (fun acc group -> 
       String_map.fold (fun _ (v : Bsb_build_cache.module_info) (all_cmo_or_cmx_files, all_cmi_files) -> 
         let mlname = match v.ml with
-          | Ml_source (input, _) -> Some (Ext_filename.chop_extension_if_any input)
+          | Ml_source (input, _, _) -> Some (Ext_path.chop_extension_if_any input)
           | Ml_empty -> None
         in
         let mliname = match v.mli with
-          | Mli_source (input, _) -> Some (Ext_filename.chop_extension_if_any input)
+          | Mli_source (input, _, _) -> Some (Ext_path.chop_extension_if_any input)
           | Mli_empty -> None in
         match (mlname, mliname) with
         | None, None -> failwith "Got a source file without an ml or mli file. This should not happen."

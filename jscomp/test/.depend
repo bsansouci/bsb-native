@@ -9,8 +9,8 @@ config2_test.cmi : ../runtime/js.cmi
 const_block_test.cmi :
 demo_int_map.cmi :
 derive_projector_test.cmi :
-ext_pervasives.cmi : ../stdlib/int32.cmi ../stdlib/format.cmi
-ext_sys.cmi :
+ext_pervasives_test.cmi : ../stdlib/int32.cmi ../stdlib/format.cmi
+ext_sys_test.cmi :
 float_record.cmi :
 flow_parser_reg_test.cmi :
 gpr_405_test.cmi :
@@ -20,7 +20,7 @@ inline_map_test.cmi :
 inner_define.cmi :
 literals.cmi :
 map_test.cmi :
-mt.cmi :
+mt.cmi : ../runtime/js.cmi
 mt_global.cmi : mt.cmi
 ocaml_parsetree_test.cmi :
 ocaml_proto_test.cmi :
@@ -42,12 +42,13 @@ ui_defs.cmi :
 unsafe_this.cmi : ../runtime/js.cmi
 a.cmj : test_order.cmj ../stdlib/string.cmj ../stdlib/set.cmj \
     ../stdlib/list.cmj
-a_filename_test.cmj : mt.cmj ext_filename.cmj ../stdlib/array.cmj
-a_list_test.cmj : mt.cmj ext_list.cmj
+a_filename_test.cmj : mt.cmj ext_filename_test.cmj ../stdlib/array.cmj
+a_list_test.cmj : mt.cmj ext_list_test.cmj
 a_recursive_type.cmj : a_recursive_type.cmi
 a_scope_bug.cmj :
-a_string_test.cmj : mt.cmj ../stdlib/list.cmj ext_string.cmj
+a_string_test.cmj : mt.cmj ../stdlib/list.cmj ext_string_test.cmj
 abstract_type.cmj : abstract_type.cmi
+adt_optimize_test.cmj :
 alias_test.cmj : ../stdlib/string.cmj alias_test.cmi
 and_or_tailcall_test.cmj : mt.cmj
 app_root_finder.cmj : ../others/node.cmj ../runtime/js.cmj
@@ -137,7 +138,7 @@ derive_dyntype.cmj : ../others/bs_dyn.cmj
 derive_projector_test.cmj : derive_projector_test.cmi
 derive_type_test.cmj :
 digest_test.cmj : ../stdlib/string.cmj ../stdlib/printf.cmj mt.cmj \
-    ext_array.cmj ../stdlib/digest.cmj ../stdlib/array.cmj
+    ext_array_test.cmj ../stdlib/digest.cmj ../stdlib/array.cmj
 div_by_zero_test.cmj : mt.cmj ../stdlib/int64.cmj ../stdlib/int32.cmj
 dollar_escape_test.cmj : mt.cmj
 earger_curry_test.cmj : mt.cmj ../runtime/js.cmj ../stdlib/array.cmj
@@ -146,32 +147,36 @@ epsilon_test.cmj : mt.cmj
 equal_exception_test.cmj : ../stdlib/string.cmj mt.cmj ../stdlib/bytes.cmj
 equal_test.cmj :
 es6_module_test.cmj : mt.cmj ../stdlib/list.cmj
+escape_esmodule.cmj :
+esmodule_ref.cmj : ../runtime/js.cmj escape_esmodule.cmj
 event_ffi.cmj : ../stdlib/list.cmj ../runtime/js_unsafe.cmj \
     ../runtime/js.cmj
 exception_alias.cmj : ../stdlib/list.cmj
 exception_def.cmj : test_other_exn.cmj ../stdlib/printexc.cmj
 exception_raise_test.cmj : ../stdlib/obj.cmj mt.cmj ../runtime/js.cmj
 exception_rebind_test.cmj : exception_def.cmj
-exception_rebound_err.cmj : ../runtime/js.cmj
+exception_rebound_err_test.cmj : mt.cmj ../runtime/js.cmj
 exception_repr_test.cmj : ../stdlib/printexc.cmj mt.cmj ../stdlib/format.cmj \
     exception_def.cmj
 exception_value_test.cmj : ../runtime/js.cmj
 exn_error_pattern.cmj :
 export_keyword.cmj :
-ext_array.cmj : ../stdlib/list.cmj ../stdlib/array.cmj
-ext_bytes.cmj : ../stdlib/pervasives.cmj ../stdlib/bytes.cmj
-ext_filename.cmj : ../stdlib/sys.cmj ../stdlib/string.cmj literals.cmj \
+ext_array_test.cmj : ../stdlib/list.cmj ../stdlib/array.cmj
+ext_bytes_test.cmj : ../stdlib/pervasives.cmj ../stdlib/bytes.cmj
+ext_filename_test.cmj : ../stdlib/sys.cmj ../stdlib/string.cmj literals.cmj \
     ../stdlib/list.cmj ../stdlib/lazy.cmj ../stdlib/filename.cmj \
-    ext_string.cmj ext_pervasives.cmj
-ext_list.cmj : ../stdlib/list.cmj ext_string.cmj ../stdlib/array.cmj
-ext_log.cmj : ../stdlib/format.cmj
-ext_pervasives.cmj : ../stdlib/string.cmj ../stdlib/printf.cmj \
+    ext_string_test.cmj ext_pervasives_test.cmj
+ext_list_test.cmj : ../stdlib/list.cmj ext_string_test.cmj \
+    ../stdlib/array.cmj
+ext_log_test.cmj : ../stdlib/format.cmj
+ext_pervasives_test.cmj : ../stdlib/string.cmj ../stdlib/printf.cmj \
     ../stdlib/obj.cmj ../stdlib/list.cmj ../stdlib/int32.cmj \
     ../stdlib/format.cmj ../stdlib/char.cmj ../stdlib/array.cmj \
-    ../stdlib/arg.cmj ext_pervasives.cmi
-ext_string.cmj : ../stdlib/string.cmj ../stdlib/list.cmj ext_bytes.cmj \
-    ../stdlib/char.cmj ../stdlib/bytes.cmj ../stdlib/array.cmj
-ext_sys.cmj : ../stdlib/sys.cmj ext_sys.cmi
+    ../stdlib/arg.cmj ext_pervasives_test.cmi
+ext_string_test.cmj : ../stdlib/string.cmj ../stdlib/list.cmj \
+    ext_bytes_test.cmj ../stdlib/char.cmj ../stdlib/bytes.cmj \
+    ../stdlib/array.cmj
+ext_sys_test.cmj : ../stdlib/sys.cmj ext_sys_test.cmi
 extensible_variant_test.cmj : mt.cmj
 external_ppx.cmj :
 fail_comp.cmj :
@@ -189,7 +194,8 @@ float_of_bits_test.cmj : ../stdlib/printf.cmj mt.cmj ../stdlib/list.cmj \
     ../stdlib/int64.cmj ../stdlib/int32.cmj ../stdlib/array.cmj
 float_record.cmj : float_record.cmi
 float_test.cmj : ../stdlib/printf.cmj ../stdlib/pervasives.cmj mt_global.cmj \
-    mt.cmj ../runtime/js_float.cmj ../stdlib/int64.cmj ../stdlib/array.cmj
+    mt.cmj ../runtime/js_float.cmj ../runtime/js.cmj ../stdlib/int64.cmj \
+    ../stdlib/array.cmj
 flow_parser_reg_test.cmj : ../stdlib/sys.cmj ../stdlib/string.cmj \
     ../stdlib/set.cmj ../stdlib/queue.cmj ../stdlib/printf.cmj \
     ../stdlib/pervasives.cmj ../stdlib/obj.cmj ../others/node.cmj mt.cmj \
@@ -202,7 +208,10 @@ for_side_effect_test.cmj : mt.cmj
 format_regression.cmj :
 format_test.cmj : mt.cmj ../stdlib/format.cmj
 fs_test.cmj : ../others/node.cmj mt.cmj ../runtime/js.cmj
+functor_app_test.cmj : mt.cmj functor_inst.cmj functor_def.cmj
+functor_def.cmj : ../runtime/js.cmj
 functor_ffi.cmj : ../runtime/js.cmj
+functor_inst.cmj :
 gbk.cmj : ../runtime/js.cmj
 genlex_test.cmj : ../stdlib/stream.cmj mt.cmj ../stdlib/list.cmj \
     ../stdlib/genlex.cmj
@@ -218,6 +227,7 @@ gpr_1150.cmj :
 gpr_1154_test.cmj : mt.cmj ../stdlib/int64.cmj
 gpr_1170.cmj :
 gpr_1240_missing_unbox.cmj :
+gpr_1245_test.cmj : ../runtime/js.cmj
 gpr_1268.cmj : ../runtime/js.cmj
 gpr_1409_test.cmj : string_set.cmj mt.cmj ../runtime/js.cmj \
     ../stdlib/array.cmj
@@ -245,6 +255,8 @@ gpr_1762_test.cmj : mt.cmj
 gpr_1817_test.cmj : mt.cmj ../runtime/js.cmj
 gpr_1822_test.cmj : mt.cmj
 gpr_1891_test.cmj : ../runtime/js.cmj
+gpr_1943_test.cmj : mt.cmj
+gpr_1946_test.cmj : ../stdlib/obj.cmj ../runtime/js.cmj
 gpr_405_test.cmj : ../stdlib/hashtbl.cmj gpr_405_test.cmi
 gpr_441.cmj :
 gpr_459_test.cmj : mt.cmj
@@ -283,16 +295,16 @@ inner_unused.cmj : ../stdlib/set.cmj ../runtime/js.cmj
 installation_test.cmj : ../others/node.cmj mt.cmj ../runtime/js.cmj \
     app_root_finder.cmj
 int32_test.cmj : mt.cmj ../stdlib/int32.cmj ../stdlib/format.cmj \
-    ext_array.cmj ../stdlib/array.cmj
+    ext_array_test.cmj ../stdlib/array.cmj
 int64_mul_div_test.cmj : ../stdlib/printf.cmj mt.cmj ../stdlib/list.cmj \
     ../stdlib/int64.cmj ../stdlib/array.cmj
 int64_test.cmj : ../stdlib/pervasives.cmj ../stdlib/nativeint.cmj mt.cmj \
     ../runtime/js_int64.cmj ../stdlib/int64.cmj ../stdlib/int32.cmj \
-    ../stdlib/format.cmj ext_array.cmj ../stdlib/array.cmj
+    ../stdlib/format.cmj ext_array_test.cmj ../stdlib/array.cmj
 int_hashtbl_test.cmj : mt.cmj ../stdlib/list.cmj ../stdlib/hashtbl.cmj \
     ../stdlib/array.cmj
 int_map.cmj : ../stdlib/map.cmj
-int_overflow_test.cmj : ../stdlib/string.cmj mt.cmj ../runtime/js_float.cmj \
+int_overflow_test.cmj : ../stdlib/string.cmj mt.cmj ../runtime/js.cmj \
     ../stdlib/int32.cmj ../stdlib/char.cmj
 io_test.cmj : ../runtime/js.cmj
 js_array_test.cmj : mt.cmj ../runtime/js.cmj ../stdlib/array.cmj
@@ -353,8 +365,9 @@ mario_game.cmj : ../stdlib/random.cmj ../stdlib/printf.cmj \
 method_chain.cmj :
 method_name_test.cmj : mt.cmj
 minimal_test.cmj :
+miss_colon_test.cmj :
 mock_mt.cmj : mt.cmj ../stdlib/list.cmj ../runtime/js.cmj
-module_alias.cmj : ../stdlib/pervasives.cmj ../stdlib/list.cmj \
+module_alias_test.cmj : ../stdlib/pervasives.cmj mt.cmj ../stdlib/list.cmj \
     ../runtime/js.cmj
 module_as_class_ffi.cmj :
 module_as_function.cmj :
@@ -363,6 +376,7 @@ module_missing_conversion.cmj : ../stdlib/string.cmj \
 module_parameter_test.cmj : ../stdlib/string.cmj mt.cmj
 module_splice_test.cmj : mt.cmj ../runtime/js.cmj
 more_uncurry.cmj :
+mpr_6033_test.cmj : mt.cmj ../stdlib/lazy.cmj
 mt.cmj : ../others/node.cmj ../stdlib/list.cmj ../runtime/js.cmj \
     ../stdlib/array.cmj mt.cmi
 mt_global.cmj : mt.cmj mt_global.cmi
@@ -493,7 +507,7 @@ string_set.cmj : ../stdlib/string.cmj set_gen.cmj ../stdlib/list.cmj \
     ../stdlib/array.cmj
 string_set_test.cmj : string_set.cmj mt.cmj
 string_test.cmj : ../stdlib/string.cmj mt.cmj ../stdlib/list.cmj \
-    ext_string.cmj ../stdlib/bytes.cmj
+    ext_string_test.cmj ../stdlib/bytes.cmj
 string_unicode_test.cmj : ../runtime/js.cmj
 stringmatch_test.cmj : ../stdlib/string.cmj
 submodule.cmj : ../runtime/js.cmj

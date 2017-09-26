@@ -25,9 +25,95 @@
 
 
 
+let rec map f l =
+  match l with
+  | [] ->
+    []
+  | [x1] ->
+    let y1 = f x1 in
+    [y1]
+  | [x1; x2] ->
+    let y1 = f x1 in
+    let y2 = f x2 in
+    [y1; y2]
+  | [x1; x2; x3] ->
+    let y1 = f x1 in
+    let y2 = f x2 in
+    let y3 = f x3 in
+    [y1; y2; y3]
+  | [x1; x2; x3; x4] ->
+    let y1 = f x1 in
+    let y2 = f x2 in
+    let y3 = f x3 in
+    let y4 = f x4 in
+    [y1; y2; y3; y4]
+  | x1::x2::x3::x4::x5::tail ->
+    let y1 = f x1 in
+    let y2 = f x2 in
+    let y3 = f x3 in
+    let y4 = f x4 in
+    let y5 = f x5 in
+    y1::y2::y3::y4::y5::(map f tail)
+
+
+let rec append l1 l2 = 
+  match l1 with
+  | [] -> l2
+  | [a0] -> a0::l2
+  | [a0;a1] -> a0::a1::l2
+  | [a0;a1;a2] -> a0::a1::a2::l2
+  | [a0;a1;a2;a3] -> a0::a1::a2::a3::l2
+  | [a0;a1;a2;a3;a4] -> a0::a1::a2::a3::a4::l2
+  | a0::a1::a2::a3::a4::rest -> a0::a1::a2::a3::a4::append rest l2
+
+let rec map_append  f l1 l2 =   
+  match l1 with
+  | [] -> l2
+  | [a0] -> f a0::l2
+  | [a0;a1] -> 
+    let b0 = f a0 in 
+    let b1 = f a1 in 
+    b0::b1::l2
+  | [a0;a1;a2] -> 
+    let b0 = f a0 in 
+    let b1 = f a1 in  
+    let b2 = f a2 in 
+    b0::b1::b2::l2
+  | [a0;a1;a2;a3] -> 
+    let b0 = f a0 in 
+    let b1 = f a1 in 
+    let b2 = f a2 in 
+    let b3 = f a3 in 
+    b0::b1::b2::b3::l2
+  | [a0;a1;a2;a3;a4] -> 
+    let b0 = f a0 in 
+    let b1 = f a1 in 
+    let b2 = f a2 in 
+    let b3 = f a3 in 
+    let b4 = f a4 in 
+    b0::b1::b2::b3::b4::l2
+
+  | a0::a1::a2::a3::a4::rest ->
+    let b0 = f a0 in 
+    let b1 = f a1 in 
+    let b2 = f a2 in 
+    let b3 = f a3 in 
+    let b4 = f a4 in 
+    b0::b1::b2::b3::b4::map_append f rest l2 
 
 
 
+let rec fold_right f l acc = 
+  match l with  
+  | [] -> acc 
+  | [a0] -> f a0 acc 
+  | [a0;a1] -> f a0 (f a1 acc)
+  | [a0;a1;a2] -> f a0 (f a1 (f a2 acc))
+  | [a0;a1;a2;a3] -> f a0 (f a1 (f a2 (f a3 acc))) 
+  | [a0;a1;a2;a3;a4] -> 
+    f a0 (f a1 (f a2 (f a3 (f a4 acc))))
+  | a0::a1::a2::a3::a4::rest -> 
+    f a0 (f a1 (f a2 (f a3 (f a4 (fold_right f rest acc)))))  
 
 let rec filter_map (f: 'a -> 'b option) xs = 
   match xs with 
@@ -159,7 +245,7 @@ let rec map2_last f l1 l2 =
   | ([], []) -> []
   | [u], [v] -> [f true u v ]
   | (a1::l1, a2::l2) -> let r = f false  a1 a2 in r :: map2_last f l1 l2
-  | (_, _) -> invalid_arg "List.map2_last"
+  | (_, _) -> invalid_arg "Ext_list.map2_last"
 
 let rec map_last f l1 =
   match l1 with
@@ -168,12 +254,12 @@ let rec map_last f l1 =
   | a1::l1 -> let r = f false  a1 in r :: map_last f l1
 
 
-let rec fold_right2_last f l1 l2 accu  = 
-  match (l1, l2) with
-  | ([], []) -> accu
-  | [last1], [last2] -> f true  last1 last2 accu
-  | (a1::l1, a2::l2) -> f false a1 a2 (fold_right2_last f l1 l2 accu)
-  | (_, _) -> invalid_arg "List.fold_right2"
+(* let rec fold_right2_last f l1 l2 accu  = 
+   match (l1, l2) with
+   | ([], []) -> accu
+   | [last1], [last2] -> f true  last1 last2 accu
+   | (a1::l1, a2::l2) -> f false a1 a2 (fold_right2_last f l1 l2 accu)
+   | (_, _) -> invalid_arg "List.fold_right2" *)
 
 
 let init n f = 
@@ -186,26 +272,33 @@ let take n l =
   else (Array.to_list (Array.sub arr 0 n ), 
         Array.to_list (Array.sub arr n (arr_length - n)))
 
-let try_take n l = 
-  let arr = Array.of_list l in 
-  let arr_length =  Array.length arr in
-  if arr_length  <= n then 
+(* let try_take n l = 
+   let arr = Array.of_list l in 
+   let arr_length =  Array.length arr in
+   if arr_length  <= n then 
     l,  arr_length, []
-  else Array.to_list (Array.sub arr 0 n ), n, (Array.to_list (Array.sub arr n (arr_length - n)))
+   else Array.to_list (Array.sub arr 0 n ), n, (Array.to_list (Array.sub arr n (arr_length - n))) *)
 
 
 let rec length_compare l n = 
   if n < 0 then `Gt 
   else 
-  begin match l with 
-    | _ ::xs -> length_compare xs (n - 1)
-    | [] ->  
-      if n = 0 then `Eq 
-      else `Lt 
-  end
+    begin match l with 
+      | _ ::xs -> length_compare xs (n - 1)
+      | [] ->  
+        if n = 0 then `Eq 
+        else `Lt 
+    end
+
+let rec length_ge l n =   
+  if n > 0 then
+    match l with 
+    | _ :: tl -> length_ge tl (n - 1)
+    | [] -> false
+  else true
 (**
 
-  {[length xs = length ys + n ]}
+   {[length xs = length ys + n ]}
 *)
 let rec length_larger_than_n n xs ys =
   match xs, ys with 
@@ -213,7 +306,7 @@ let rec length_larger_than_n n xs ys =
   | _::xs, _::ys -> 
     length_larger_than_n n xs ys
   | [], _ -> false 
-  
+
 
 
 let exclude_tail (x : 'a list) = 
@@ -248,7 +341,7 @@ and aux cmp (x : 'a)  (xss : 'a list list) : 'a list list =
     else
       y :: aux cmp x ys                                 
 
-let stable_group cmp lst =  group cmp lst |> List.rev 
+let stable_group cmp lst =  group cmp lst |> List.rev  
 
 let rec drop n h = 
   if n < 0 then invalid_arg "Ext_list.drop"
@@ -264,12 +357,7 @@ let rec for_all_ret  p = function
     then for_all_ret p l
     else Some a 
 
-let rec for_all_opt  p = function
-  | [] -> None
-  | a::l -> 
-    match p a with
-    | None -> for_all_opt p l
-    | v -> v 
+
 
 let fold f l init = 
   List.fold_left (fun acc i -> f  i init) init l 
@@ -281,10 +369,7 @@ let rev_map_acc  acc f l =
   in
   rmap_f acc l
 
-let rec map_acc acc f l =   
-  match l with 
-  | [] -> acc 
-  | h::hs -> f h :: map_acc  acc  f hs 
+
 
 
 
@@ -396,32 +481,32 @@ let rec assoc_by_string def (k : string) lst =
   match lst with 
   | [] -> 
     begin match def with 
-    | None -> assert false 
-    | Some x -> x end
+      | None -> assert false 
+      | Some x -> x end
   | (k1,v1)::rest -> 
     if Ext_string.equal k1 k then v1 else 
-    assoc_by_string def k rest 
+      assoc_by_string def k rest 
 
 let rec assoc_by_int def (k : int) lst = 
   match lst with 
   | [] -> 
     begin match def with
-    | None -> assert false 
-    | Some x -> x end
+      | None -> assert false 
+      | Some x -> x end
   | (k1,v1)::rest -> 
     if k1 = k then v1 else 
-    assoc_by_int def k rest     
+      assoc_by_int def k rest     
 
 (** `modulo [1;2;3;4] [1;2;3]` => [1;2;3], Some [4] `
-  modulo [1;2;3] [1;2;3;4] => [1;2;3] None 
-  modulo [1;2;3] [1;2;3] => [1;2;3] Some []
- *)
+    modulo [1;2;3] [1;2;3;4] => [1;2;3] None 
+    modulo [1;2;3] [1;2;3] => [1;2;3] Some []
+*)
 
 
 let nth_opt l n =
   if n < 0 then None else
-  let rec nth_aux l n =
-    match l with
-    | [] -> None
-    | a::l -> if n = 0 then Some a else nth_aux l (n-1)
-  in nth_aux l n
+    let rec nth_aux l n =
+      match l with
+      | [] -> None
+      | a::l -> if n = 0 then Some a else nth_aux l (n-1)
+    in nth_aux l n

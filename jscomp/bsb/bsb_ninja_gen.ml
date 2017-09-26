@@ -22,13 +22,13 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
 
-let (//) = Ext_filename.combine
+let (//) = Ext_path.combine
 
 (* we need copy package.json into [_build] since it does affect build output
    it is a bad idea to copy package.json which requires to copy js files
 *)
 
-let merge_module_info_map acc sources =
+let merge_module_info_map acc sources : Bsb_build_cache.t =
   String_map.merge (fun modname k1 k2 ->
       match k1 , k2 with
       | None , None ->
@@ -39,7 +39,8 @@ let merge_module_info_map acc sources =
                   ^ ". File names need to be unique in a project.")
       | Some v, None  -> Some v
       | None, Some v ->  Some v
-    ) acc  sources
+    ) acc  sources 
+
 
 let bsc_exe = "bsc.exe"
 let ocamlc_exe = "ocamlc.opt"
@@ -50,10 +51,13 @@ let dash_i = "-I"
 let refmt_exe = "refmt.exe"
 let dash_ppx = "-ppx"
 
+
+
 let output_ninja_and_namespace_map
     ~external_deps_for_linking_and_clibs:(external_deps_for_linking, external_static_libraries, external_ocamlfind_dependencies)
     ~cwd
     ~bsc_dir  
+    ~no_dev           
     ~ocaml_dir         
     ~root_project_dir
     ~is_top_level
@@ -77,6 +81,7 @@ let output_ninja_and_namespace_map
       reason_react_jsx;
       generators ;
       namespace ; 
+      warning;
         
       
       (* bs_super_errors; *)
@@ -112,11 +117,11 @@ let output_ninja_and_namespace_map
   let refmt_flags = String.concat Ext_string.single_space refmt_flags in
   let bs_super_errors = if main_bs_super_errors then "-bs-super-errors" else "" in
   let bs_package_includes = 
-    Bsb_build_util.flag_concat dash_i @@ List.map 
+    Bsb_build_util.flag_concat dash_i @@ Ext_list.map 
       (fun (x : Bsb_config_types.dependency) -> x.package_install_path) bs_dependencies
   in
   let bs_package_dev_includes = 
-    Bsb_build_util.flag_concat dash_i @@ List.map 
+    Bsb_build_util.flag_concat dash_i @@ Ext_list.map 
       (fun (x : Bsb_config_types.dependency) -> x.package_install_path) bs_dev_dependencies
   in  
 
@@ -144,14 +149,15 @@ let output_ninja_and_namespace_map
         | Some  s -> 
           Ext_string.inter2 "-ppx" s 
       in 
-      
-
+      let warnings = Bsb_warning.opt_warning_to_string no_dev warning in
+        
       Bsb_ninja_util.output_kvs
         [|
           Bsb_ninja_global_vars.bs_package_flags, bs_package_flags ; 
           Bsb_ninja_global_vars.src_root_dir, cwd (* TODO: need check its integrity -- allow relocate or not? *);
           Bsb_ninja_global_vars.bsc, bsc ;
           Bsb_ninja_global_vars.bsb_helper, bsb_helper;
+          Bsb_ninja_global_vars.warnings, warnings;
           Bsb_ninja_global_vars.bsc_flags, bsc_flags ;
           Bsb_ninja_global_vars.ppx_flags, ppx_flags;
           Bsb_ninja_global_vars.bs_package_includes, bs_package_includes;
@@ -177,7 +183,6 @@ let output_ninja_and_namespace_map
           Bsb_ninja_global_vars.ocamlfind, if ocamlfind_dependencies = [] then "" else ocamlfind;
           Bsb_ninja_global_vars.ocamlfind_dependencies,  Bsb_build_util.flag_concat "-package" (external_ocamlfind_dependencies @ ocamlfind_dependencies);
           Bsb_ninja_global_vars.bin_annot, if bin_annot then "-bin-annot" else "";
-          Bsb_ninja_global_vars.warnings, "-w " ^ warnings;
           (** TODO: could be removed by adding a flag
               [-bs-ns react]
           *)
@@ -192,25 +197,29 @@ let output_ninja_and_namespace_map
            for relative path './xx', we need '../.././x' since we are in 
            [lib/bs], [build] is different from merlin though
         *)
-        Ext_list.map_acc acc 
+        Ext_list.map_append 
           (fun x -> if Filename.is_relative x then Bsb_config.rev_lib_bs_prefix  x else x) 
           external_includes
+          acc 
+
     in 
-
-
     let  static_resources =
       let number_of_dev_groups = Bsb_dir_index.get_current_number_of_dev_groups () in
       if number_of_dev_groups = 0 then
-        let bs_groups, source_dirs,static_resources  =
+        let bs_group, source_dirs,static_resources  =
           List.fold_left (fun (acc, dirs,acc_resources) ({Bsb_parse_sources.sources ; dir; resources }) ->
-              merge_module_info_map  acc  sources ,  dir::dirs , (List.map (fun x -> dir // x ) resources) @ acc_resources
+              merge_module_info_map  acc  sources ,  
+              dir::dirs , 
+              Ext_list.map_append (fun x -> dir // x ) resources  acc_resources
             ) (String_map.empty,[],[]) bs_file_groups in
+        Bsb_build_cache.sanity_check bs_group;    
         Bsb_build_cache.write_build_cache 
-          ~dir:(cwd // Bsb_config.lib_bs // nested) [|bs_groups|] ;
+          ~dir:(cwd // Bsb_config.lib_bs // nested) [|bs_group|] ;
         Bsb_ninja_util.output_kv
           Bsb_build_schemas.bsc_lib_includes 
           (Bsb_build_util.flag_concat dash_i @@ 
-           (all_includes (if namespace = None then source_dirs else Filename.current_dir_name :: source_dirs) ))  oc ;
+           (all_includes 
+              (if namespace = None then source_dirs else Filename.current_dir_name :: source_dirs) ))  oc ;
         static_resources
       else
         let bs_groups = Array.init  (number_of_dev_groups + 1 ) (fun i -> String_map.empty) in
@@ -220,16 +229,21 @@ let output_ninja_and_namespace_map
               let dir_index = (dir_index :> int) in 
               bs_groups.(dir_index) <- merge_module_info_map bs_groups.(dir_index) sources ;
               source_dirs.(dir_index) <- dir :: source_dirs.(dir_index);
-              (List.map (fun x -> dir//x) resources) @ resources
+              Ext_list.map_append (fun x -> dir//x) resources  resources
             ) [] bs_file_groups in
         (* Make sure [sources] does not have files in [lib] we have to check later *)
-        let lib = bs_groups.((Bsb_dir_index.lib_dir_index :> int)) in
+
         Bsb_ninja_util.output_kv
           Bsb_build_schemas.bsc_lib_includes 
           (Bsb_build_util.flag_concat dash_i @@
-           (all_includes (if namespace = None then source_dirs.(0) else Filename.current_dir_name::source_dirs.(0)))) oc ;
+           (all_includes 
+              (if namespace = None then source_dirs.(0) 
+               else Filename.current_dir_name::source_dirs.(0)))) oc ;
+        let lib = bs_groups.((Bsb_dir_index.lib_dir_index :> int)) in               
+        Bsb_build_cache.sanity_check lib;
         for i = 1 to number_of_dev_groups  do
           let c = bs_groups.(i) in
+          Bsb_build_cache.sanity_check c ;
           String_map.iter (fun k _ -> if String_map.mem k lib then failwith ("conflict files found:" ^ k)) c ;
           Bsb_ninja_util.output_kv (Bsb_dir_index.(string_of_bsb_dev_include (of_int i)))
             (Bsb_build_util.flag_concat "-I" @@ source_dirs.(i)) oc
@@ -319,7 +333,7 @@ let output_ninja_and_namespace_map
      We generate one simple rule that'll just call that string as a command. *)
     let _ = match build_script with
     | Some build_script when should_build ->
-      let build_script = Ext_string.ninja_escaped build_script in
+      let build_script = Ext_bytes.ninja_escaped build_script in
       let ocaml_lib = Bsb_build_util.get_ocaml_lib_dir ~is_js:(backend = Bsb_config_types.Js) cwd in
       (* TODO(sansouci): Fix this super ghetto environment variable setup... This is not cross platform! *)
       let envvars = "export OCAML_LIB=" ^ ocaml_lib ^ " && " 

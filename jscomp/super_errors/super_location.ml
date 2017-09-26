@@ -31,23 +31,36 @@ let setup_colors () =
   Misc.Color.setup !Clflags.color
 
 let print_filename ppf file =
-  Format.fprintf ppf "%s" (Location.show_filename file)
+  match file with
+  (* modified *)
+  | "_none_"
+  | "" -> Format.fprintf ppf "(No file name)"
+  | real_file -> Format.fprintf ppf "%s" (Location.show_filename real_file)
 
-let print_loc ppf loc =
+let print_loc ~normalizedRange ppf loc =
   setup_colors ();
   let (file, _, _) = Location.get_pos_info loc.loc_start in
   if file = "//toplevel//" then begin
     if highlight_locations ppf [loc] then () else
       fprintf ppf "Characters %i-%i"
               loc.loc_start.pos_cnum loc.loc_end.pos_cnum
-  end else begin
-    fprintf ppf "@{<filename>%a@}" print_filename file;
-  end
+  end else 
+    let dim_loc ppf = function
+    | None -> ()
+    | Some ((start_line, start_line_start_char), (end_line, end_line_end_char)) ->
+      if start_line = end_line then 
+        if start_line_start_char = end_line_end_char then
+          fprintf ppf " @{<dim>%i:%i@}" start_line start_line_start_char
+        else
+          fprintf ppf " @{<dim>%i:%i-%i@}" start_line start_line_start_char end_line_end_char
+      else
+        fprintf ppf " @{<dim>%i:%i-%i:%i@}" start_line start_line_start_char end_line end_line_end_char
+    in
+    fprintf ppf "@{<filename>%a@}%a" print_filename file dim_loc normalizedRange
 ;;
 
 let print ~is_warning intro ppf loc =
   setup_colors ();
-  (* TODO: handle locations such as _none_ and "" *)
   if loc.loc_start.pos_fname = "//toplevel//"
   && highlight_locations ppf [loc] then ()
   else
@@ -56,24 +69,41 @@ let print ~is_warning intro ppf loc =
     else begin
       fprintf ppf "@[@{<error>%s@}@]@," intro
     end;
-    fprintf ppf "@[%a@]@,@," print_loc loc;
+
+    (* ocaml's reported line/col numbering is horrible and super error-prone 
+      when being handled programmatically (or humanly for that matter. If you're 
+      an ocaml contributor reading this: who the heck reads the character count
+      starting from the first erroring character?) *)
     let (file, start_line, start_char) = Location.get_pos_info loc.loc_start in
     let (_, end_line, end_char) = Location.get_pos_info loc.loc_end in
-    (* things to special-case: startchar & endchar2 both -1  *)
-    if start_char == -1 || end_char == -1 then
-      (* happens sometimes. Syntax error for example *)
-      fprintf ppf "Is there an error before this one? If so, it's likely a syntax error.@ The more relevant message should be just above!@ If it's not, please file an issue here:@ github.com/facebook/reason/issues@,"
-    else begin
+    (* line is 1-indexed, column is 0-indexed. We convert all of them to 1-indexed to avoid confusion *)
+    (* start_char is inclusive, end_char is exclusive *)
+    let normalizedRange = 
+      if start_char == -1 || end_char == -1 then
+        (* happens sometimes. Syntax error for example *)
+        None
+      else if start_line = end_line && start_char >= end_char then
+        (* in some errors, starting char and ending char can be the same. But
+           since ending char was supposed to be exclusive, here it might end up 
+           smaller than the starting char if we naively did start_char + 1 to 
+           just the starting char and forget ending char *)
+        let same_char = start_char + 1 in
+        Some ((start_line, same_char), (end_line, same_char))
+      else
+        (* again: end_char is exclusive, so +1-1=0 *)
+        Some ((start_line, start_char + 1), (end_line, end_char))
+    in
+    fprintf ppf "@[%a@]@," (print_loc ~normalizedRange) loc;
+    match normalizedRange with
+    | None -> ()
+    | Some range -> begin
       try
         let lines = file_lines file in
-        fprintf ppf "%a"
-          (Super_misc.print_file
-          ~is_warning
-          ~lines
-          ~range:(
-            (start_line, start_char + 1), (* make everything 1-index based. See justifications in Super_mic.print_file *)
-            (end_line, end_char)
-          ))
+        (* we're putting the line break `@,` here rather than above, because this
+           branch might not be reached (aka no inline file content display) so 
+           we don't wanna end up with two line breaks in the the consequent *)
+        fprintf ppf "@,%a"
+          (Super_misc.print_file ~is_warning ~lines ~range)
           ()
       with
       (* this shouldn't happen, but gracefully fall back to the default reporter just in case *)
@@ -131,6 +161,9 @@ let errorf ?(loc = none) ?(sub = []) ?(if_highlight = "") fmt =
 
 let error_of_printer loc print x =
   errorf ~loc "%a@?" print x
+
+let error_of_printer_file print x =
+  error_of_printer (in_file !input_name) print x
 
 (* This will be called in super_main. This is how you override the default error and warning printers *)
 let setup () =

@@ -205,7 +205,7 @@ let handle_core_type
     let (+>) attr (typ : Parsetree.core_type) =
       {typ with ptyp_attributes = attr :: typ.ptyp_attributes} in           
     let new_methods =
-      List.fold_right (fun (label, ptyp_attrs, core_type) acc ->
+      Ext_list.fold_right (fun (label, ptyp_attrs, core_type) acc ->
           let get ty name attrs =
             let attrs, core_type =
               match Ast_attributes.process_attributes_rev attrs with
@@ -527,7 +527,7 @@ let rec unsafe_mapper : Ast_mapper.mapper =
                {ctd with
                 pcty_desc = Pcty_signature {
                     pcsig_self ;
-                    pcsig_fields = List.fold_right (handle_class_type_field self)  pcsig_fields []
+                    pcsig_fields = Ext_list.fold_right (handle_class_type_field self)  pcsig_fields []
                   };
                 pcty_attributes                    
                }                    
@@ -703,7 +703,7 @@ let rewrite_signature :
         | {psig_desc = Psig_attribute ({txt = "bs.config"; loc}, payload); _} :: rest 
           -> 
           begin 
-            Ast_payload.as_config_record_and_process loc payload 
+            Ast_payload.ident_or_record_as_config loc payload 
             |> List.iter (Ast_payload.table_dispatch signature_config_table) ; 
             unsafe_mapper.signature unsafe_mapper rest
           end
@@ -719,7 +719,7 @@ let rewrite_implementation : (Parsetree.structure -> Parsetree.structure) ref =
         | {pstr_desc = Pstr_attribute ({txt = "bs.config"; loc}, payload); _} :: rest 
           -> 
           begin 
-            Ast_payload.as_config_record_and_process loc payload 
+            Ast_payload.ident_or_record_as_config loc payload 
             |> List.iter (Ast_payload.table_dispatch structural_config_table) ; 
             let rest = unsafe_mapper.structure unsafe_mapper rest in
             if !no_export then

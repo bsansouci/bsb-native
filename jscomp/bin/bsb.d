@@ -7,7 +7,6 @@ bin/bsb.ml : ext/map_gen.ml
 bin/bsb.ml : ext/set_gen.ml
 bin/bsb.ml : ext/vec_gen.ml
 bin/bsb.ml : bsb/bsb_file.ml
-bin/bsb.ml : bsb/bsb_init.ml
 bin/bsb.ml : bsb/bsb_log.mli
 bin/bsb.ml : bsb/bsb_main.ml
 bin/bsb.ml : bsb/bsb_pkg.mli
@@ -16,12 +15,12 @@ bin/bsb.ml : bsb/bsb_unix.ml
 bin/bsb.ml : bsb/oCamlRes.ml
 bin/bsb.ml : ext/ext_json.ml
 bin/bsb.ml : ext/ext_list.ml
+bin/bsb.ml : ext/ext_path.ml
 bin/bsb.ml : ext/ext_sys.mli
 bin/bsb.ml : ext/ext_util.ml
 bin/bsb.ml : ext/literals.ml
 bin/bsb.ml : bsb/bsb_clean.ml
 bin/bsb.ml : bsb/bsb_file.mli
-bin/bsb.ml : bsb/bsb_init.mli
 bin/bsb.ml : bsb/bsb_main.mli
 bin/bsb.ml : bsb/bsb_query.ml
 bin/bsb.ml : bsb/bsb_regex.ml
@@ -33,6 +32,7 @@ bin/bsb.ml : ext/ext_bytes.ml
 bin/bsb.ml : ext/ext_color.ml
 bin/bsb.ml : ext/ext_json.mli
 bin/bsb.ml : ext/ext_list.mli
+bin/bsb.ml : ext/ext_path.mli
 bin/bsb.ml : ext/ext_util.mli
 bin/bsb.ml : ext/literals.mli
 bin/bsb.ml : bsb/bsb_bsdeps.ml
@@ -51,6 +51,7 @@ bin/bsb.ml : ext/string_vec.ml
 bin/bsb.ml : bsb/bsb_bsdeps.mli
 bin/bsb.ml : bsb/bsb_config.mli
 bin/bsb.ml : bsb/bsb_default.ml
+bin/bsb.ml : bsb/bsb_warning.ml
 bin/bsb.ml : ext/ext_file_pp.ml
 bin/bsb.ml : ext/ext_string.mli
 bin/bsb.ml : ext/hashtbl_gen.ml
@@ -58,6 +59,7 @@ bin/bsb.ml : ext/string_map.mli
 bin/bsb.ml : ext/string_set.mli
 bin/bsb.ml : ext/string_vec.mli
 bin/bsb.ml : bsb/bsb_default.mli
+bin/bsb.ml : bsb/bsb_warning.mli
 bin/bsb.ml : ext/ext_file_pp.mli
 bin/bsb.ml : ext/ext_filename.ml
 bin/bsb.ml : ext/ext_position.ml
@@ -79,10 +81,12 @@ bin/bsb.ml : bsb/bsb_merlin_gen.ml
 bin/bsb.ml : bsb/bsb_ninja_gen.mli
 bin/bsb.ml : bsb/bsb_ninja_util.ml
 bin/bsb.ml : bsb/bsb_templates.mli
+bin/bsb.ml : bsb/bsb_theme_init.ml
 bin/bsb.ml : common/bs_version.mli
 bin/bsb.ml : ext/ext_json_noloc.ml
 bin/bsb.ml : ext/ext_json_parse.ml
 bin/bsb.ml : ext/ext_json_types.ml
+bin/bsb.ml : ext/ext_modulename.ml
 bin/bsb.ml : ext/ext_namespace.mli
 bin/bsb.ml : ext/ext_pervasives.ml
 bin/bsb.ml : ext/string_hashtbl.ml
@@ -92,9 +96,11 @@ bin/bsb.ml : bsb/bsb_merlin_gen.mli
 bin/bsb.ml : bsb/bsb_ninja_regen.ml
 bin/bsb.ml : bsb/bsb_ninja_util.mli
 bin/bsb.ml : bsb/bsb_pkg_map_gen.ml
+bin/bsb.ml : bsb/bsb_theme_init.mli
 bin/bsb.ml : bsb/bsb_watcher_gen.ml
 bin/bsb.ml : ext/ext_json_noloc.mli
 bin/bsb.ml : ext/ext_json_parse.mli
+bin/bsb.ml : ext/ext_modulename.mli
 bin/bsb.ml : ext/ext_pervasives.mli
 bin/bsb.ml : ext/string_hash_set.ml
 bin/bsb.ml : ext/string_hashtbl.mli

@@ -24,7 +24,7 @@
 
 let config_file_bak = "bsconfig.json.bak"
 let get_list_string = Bsb_build_util.get_list_string
-let (//) = Ext_filename.combine
+let (//) = Ext_path.combine
 
 let resolve_package backend cwd  package_name = 
   let x =  Bsb_pkg.resolve_bs_package ~cwd package_name  in
@@ -47,13 +47,13 @@ let parse_allowed_build_kinds map =
       | "js"       -> Bsb_config_types.Js
       | "native"   -> Bsb_config_types.Native
       | "bytecode" -> Bsb_config_types.Bytecode
-      | str -> Bsb_exception.failf ~loc:loc_start "'allowed-build-kinds' field expects one of, or an array of: 'js', 'bytecode' or 'native'. Found '%s'" str
+      | str -> Bsb_exception.errorf ~loc:loc_start "'allowed-build-kinds' field expects one of, or an array of: 'js', 'bytecode' or 'native'. Found '%s'" str
     ) (Bsb_build_util.get_list_string s) 
   | Some (Str {str = "js"} )       -> [Bsb_config_types.Js]
   | Some (Str {str = "native"} )   -> [Bsb_config_types.Native]
   | Some (Str {str = "bytecode"} ) -> [Bsb_config_types.Bytecode]
-  | Some (Str {str; loc} ) -> Bsb_exception.failf ~loc:loc "'allowed-build-kinds' field expects one of, or an array of: 'js', 'bytecode' or 'native'. Found '%s'" str
-  | Some x -> Bsb_exception.failwith_config x "'allowed-build-kinds' field expects one of, or an array of: 'js', 'bytecode' or 'native'"
+  | Some (Str {str; loc} ) -> Bsb_exception.errorf ~loc:loc "'allowed-build-kinds' field expects one of, or an array of: 'js', 'bytecode' or 'native'. Found '%s'" str
+  | Some x -> Bsb_exception.config_error x "'allowed-build-kinds' field expects one of, or an array of: 'js', 'bytecode' or 'native'"
   | None -> Bsb_default.allowed_build_kinds
 
 (* Key is the path *)
@@ -214,13 +214,13 @@ let interpret_json
               reason_react_jsx := 
                 Some (Filename.quote 
                         (Filename.concat bsc_dir Literals.reactjs_jsx_ppx_2_exe) )
-            | _ -> Bsb_exception.failf ~loc "Unsupported jsx version %s" flo
+            | _ -> Bsb_exception.errorf ~loc "Unsupported jsx version %s" flo
           end
         | Some (True _) -> 
           reason_react_jsx := 
             Some (Filename.quote (Filename.concat bsc_dir Literals.reactjs_jsx_ppx_exe) 
                  )
-        | Some x -> Bsb_exception.failf ~loc:(Ext_json.loc_of x) 
+        | Some x -> Bsb_exception.errorf ~loc:(Ext_json.loc_of x) 
                       "Unexpected input for jsx"
       end)
 
@@ -240,13 +240,13 @@ let interpret_json
         |> ignore
       end)
 
-    |? (Bsb_build_schemas.bs_dependencies, `Arr (fun s -> bs_dependencies := Bsb_build_util.get_list_string s |> List.map (resolve_package backend cwd)))
+    |? (Bsb_build_schemas.bs_dependencies, `Arr (fun s -> bs_dependencies := Bsb_build_util.get_list_string s |> Ext_list.map (resolve_package backend cwd)))
     |? (Bsb_build_schemas.bs_dev_dependencies,
         `Arr (fun s ->
             if not  no_dev then 
               bs_dev_dependencies
               := Bsb_build_util.get_list_string s
-                 |> List.map (resolve_package backend cwd))
+                 |> Ext_list.map (resolve_package backend cwd))
        )
 
     (* More design *)
@@ -254,7 +254,7 @@ let interpret_json
     |? (Bsb_build_schemas.bsc_flags, `Arr (fun s -> bsc_flags := Bsb_build_util.get_list_string_acc s !bsc_flags))
     |? (Bsb_build_schemas.warnings, `Str (fun s -> warnings := !warnings ^ s))
     |? (Bsb_build_schemas.ppx_flags, `Arr (fun s -> 
-        ppx_flags := s |> get_list_string |> List.map (fun p ->
+        ppx_flags := s |> get_list_string |> Ext_list.map (fun p ->
             if p = "" then failwith "invalid ppx, empty string found"
             else Bsb_build_util.resolve_bsb_magic_file ~cwd ~desc:Bsb_build_schemas.ppx_flags p
           )
@@ -270,7 +270,7 @@ let interpret_json
                 | Some (Str {str = name}), Some ( Str {str = command}) -> 
                   String_map.add name command acc 
                 | _, _ -> 
-                  Bsb_exception.failf ~loc {| generators exepect format like { "name" : "cppo",  "command"  : "cppo $in -o $out"} |}
+                  Bsb_exception.errorf ~loc {| generators exepect format like { "name" : "cppo",  "command"  : "cppo $in -o $out"} |}
                 end
               | _ -> acc ) String_map.empty  s  ))
     |? (Bsb_build_schemas.refmt, `Str (fun s -> 
@@ -289,8 +289,12 @@ let interpret_json
         let res = Bsb_parse_sources.parse_sources 
             {no_dev; 
              dir_index =
-               Bsb_dir_index.lib_dir_index; cwd = Filename.current_dir_name; 
-             root = cwd; cut_generators = !cut_generators}  x in 
+               Bsb_dir_index.lib_dir_index; 
+             cwd = Filename.current_dir_name; 
+             root = cwd;
+             cut_generators = !cut_generators;
+             traverse = false;
+            }  x in 
         if generate_watch_metadata then
           Bsb_watcher_gen.generate_sourcedirs_meta cwd res ;     
         begin match List.sort Ext_file_pp.interval_compare  res.intervals with
@@ -309,17 +313,32 @@ let interpret_json
         end;
         let package_name =       
           match !package_name with
-          | Some name -> name
-          | None ->
-            failwith "Error: Package name is required. Please specify a `name` in `bsconfig.json`"
+          | None 
+            ->
+              Bsb_exception.config_error global_data
+              "Field name is required"
+          | Some "_" 
+            -> 
+            Bsb_exception.config_error global_data
+            "_ is a reserved package name"
+          | Some name -> 
+            name
+
         in 
         let namespace =     
           if !namespace then 
             Some (Ext_namespace.namespace_of_package_name package_name)
           else   None  in  
+        let warning : Bsb_warning.t option  = 
+          match String_map.find_opt Bsb_build_schemas.warnings map with 
+          | None -> None 
+          | Some (Obj {map }) -> Bsb_warning.from_map map 
+          | Some config -> Bsb_exception.config_error config "expect an object"
+        in 
         {
           package_name ;
           namespace ;    
+          warning = warning;
           external_includes = !bs_external_includes;
           bsc_flags = !bsc_flags ;
           warnings = !warnings;

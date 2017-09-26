@@ -159,17 +159,22 @@ let export_to_cmj
     maybe_pure
     external_ids 
     export_map
+    case
   : Js_cmj_format.t = 
   let values =  values_of_export meta export_map in
   let () =
     if !Js_config.default_gen_tds && not ( Ext_string.is_empty meta.filename) then
       Ext_pervasives.with_file_as_pp
-        (Ext_filename.chop_extension ~loc:__LOC__ meta.filename ^ ".d.ts")
+        (Ext_path.chop_extension ~loc:__LOC__ meta.filename ^ ".d.ts")
       @@ fun fmt ->
       pp fmt "@[<v>%a@]@." (dump meta) meta.exports in
   let effect = get_effect meta maybe_pure external_ids in
   {values; 
    effect ; 
    npm_package_path = Js_packages_state.get_packages_info ();
+   case ;
+    (* FIXME: make sure [-o] would not change its case 
+      add test for ns/non-ns
+    *)
   }
 

@@ -188,12 +188,12 @@ let subst_helper (subst : subst_tbl) (query : int -> int) lam =
         | None -> lam
       end
     | Lstaticraise (i,ls) ->
-      let ls = List.map simplif ls in
+      let ls = Ext_list.map simplif ls in
       begin 
         match Int_hashtbl.find_opt subst i with
         | Some (xs, handler) -> 
           let handler = to_lam handler in 
-          let ys = List.map Ident.rename xs in
+          let ys = Ext_list.map Ident.rename xs in
           let env =
             List.fold_right2
               (fun x y t -> Ident_map.add x (Lam.var y) t)
@@ -217,7 +217,7 @@ let subst_helper (subst : subst_tbl) (query : int -> int) lam =
         | 1,_ when i >= 0 -> (** Ask: Note that we have predicate i >=0 *)
           Int_hashtbl.add subst i (xs, Id (simplif l2)) ;
           simplif l1 (** l1 will inline *)
-        | j,_ ->
+        |  _ ->
 
           (** TODO: better heuristics, also if we can group same exit code [j] 
               in a very early stage -- maybe we can define our enhanced [Lambda] 
@@ -225,50 +225,57 @@ let subst_helper (subst : subst_tbl) (query : int -> int) lam =
               does not need patch from the compiler
 
               FIXME:   when inlining, need refresh local bound identifiers
+              #1438 when the action containes bounded variable 
+                to keep the invariant, everytime, we do an inlining,
+                we need refresh, just refreshing once is not enough
+            *)
+          let l2 = simplif l2 in 
+          (** We need to decide whether inline or not based on post-simplification
+            code, since when we do the substitution 
+            we use the post-simplified expression, it is more consistent
           *)
-
           let ok_to_inline = 
             i >=0 && 
             (Lam.no_bounded_variables l2) &&
             (let lam_size = Lam_analysis.size l2 in
-             (j <= 2 && lam_size < Lam_analysis.exit_inline_size   )
+             (i_occur <= 2 && lam_size < Lam_analysis.exit_inline_size   )
              || lam_size < 5)
             (*TODO: when we do the case merging on the js side, 
               the j is not very indicative                
             *)             
           in 
           if ok_to_inline (* && false *)
-             (* #1438 when the action containes bounded variable 
-                to keep the invariant, everytime, we do an inlining,
-                we need refresh, just refreshing once is not enough
-             *)
+
           then 
-            begin 
-              Int_hashtbl.add subst i (xs,  Refresh(simplif l2)) ;
-              simplif l1 (** l1 will inline *)
+            begin  
+              (* we only inline when [l2] does not contain bound variables
+                no need to refresh
+               *)
+              Int_hashtbl.add subst i (xs,  Id l2) ;
+              simplif l1 
             end
-          else Lam.staticcatch (simplif l1) (i,xs) (simplif l2)
+          else Lam.staticcatch (simplif l1) (i,xs) l2
       end
 
     | Lvar _|Lconst _  -> lam
     | Lapply {fn = l1; args =  ll;  loc; status } -> 
-      Lam.apply (simplif l1) (List.map simplif ll) loc status
+      Lam.apply (simplif l1) (Ext_list.map simplif ll) loc status
     | Lfunction {arity; function_kind; params; body =  l} -> 
       Lam.function_ ~arity ~function_kind ~params ~body:(simplif l)
     | Llet (kind, v, l1, l2) -> 
       Lam.let_ kind v (simplif l1) (simplif l2)
     | Lletrec (bindings, body) ->
       Lam.letrec
-        ( List.map (fun (v, l) -> (v, simplif l)) bindings) 
+        ( Ext_list.map (fun (v, l) -> (v, simplif l)) bindings) 
         (simplif body)
     | Lglobal_module _ -> lam 
     | Lprim {primitive; args; loc} -> 
-      let args = List.map simplif args in
+      let args = Ext_list.map simplif args in
       Lam.prim ~primitive ~args loc
     | Lswitch(l, sw) ->
       let new_l = simplif l
-      and new_consts =  List.map (fun (n, e) -> (n, simplif e)) sw.sw_consts
-      and new_blocks =  List.map (fun (n, e) -> (n, simplif e)) sw.sw_blocks
+      and new_consts =  Ext_list.map (fun (n, e) -> (n, simplif e)) sw.sw_consts
+      and new_blocks =  Ext_list.map (fun (n, e) -> (n, simplif e)) sw.sw_blocks
       and new_fail = 
         begin match sw.sw_failaction with 
           | None   -> None
@@ -282,7 +289,7 @@ let subst_helper (subst : subst_tbl) (query : int -> int) lam =
           sw_failaction = new_fail}
     | Lstringswitch(l,sw,d) ->
       Lam.stringswitch
-        (simplif l) (List.map (fun (s,l) -> s,simplif l) sw)
+        (simplif l) (Ext_list.map (fun (s,l) -> s,simplif l) sw)
         (begin match d with None -> None | Some d -> Some (simplif d) end)
     | Ltrywith (l1, v, l2) -> 
       Lam.try_ (simplif l1) v (simplif l2)
@@ -295,7 +302,7 @@ let subst_helper (subst : subst_tbl) (query : int -> int) lam =
     | Lassign (v, l) -> 
       Lam.assign v (simplif l)
     | Lsend (k, m, o, ll, loc) ->
-      Lam.send k (simplif m) (simplif o) (List.map simplif ll) loc
+      Lam.send k (simplif m) (simplif o) (Ext_list.map simplif ll) loc
     | Lifused (v, l) -> 
       Lam.ifused v (simplif l)
   in 

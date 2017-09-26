@@ -26,22 +26,26 @@ let flag_concat flag xs =
   xs 
   |> Ext_list.flat_map (fun x -> [flag ; x])
   |> String.concat Ext_string.single_space
-let (//) = Ext_filename.combine
+let (//) = Ext_path.combine
 
 
-    
+
 (* we use lazy $src_root_dir *)
 
 
 
+(* It does several conversion:
+   First, it will convert unix path to windows backward on windows platform.
+   Then if it is absolute path, it will do thing
+   Else if it is relative path, it will be rebased on project's root directory  *)
 
-let convert_and_resolve_path =
+let convert_and_resolve_path : string -> string -> string =
   if Sys.unix then (//)
   else fun cwd path ->
-  if Ext_sys.is_windows_or_cygwin then 
-    let p = Ext_string.replace_slash_backward path in
+    if Ext_sys.is_windows_or_cygwin then 
+      let p = Ext_string.replace_slash_backward path in
       cwd // p
-  else failwith ("Unknown OS :" ^ Sys.os_type)
+    else failwith ("Unknown OS :" ^ Sys.os_type)
 (* we only need convert the path in the beginning *)
 
 
@@ -74,7 +78,7 @@ let resolve_bsb_magic_file ~cwd ~desc p =
     if Sys.file_exists path then path
     else 
       begin 
-        Format.fprintf Format.err_formatter "@{<error>Could not resolve @} %s in %s" p cwd ; 
+        Bsb_log.error "@{<error>Could not resolve @} %s in %s@." p cwd ; 
         failwith (p ^ " not found when resolving " ^ desc)
       end
 
@@ -99,16 +103,21 @@ let resolve_bsb_magic_file ~cwd ~desc p =
 *)
 
 let get_bsc_dir cwd = 
-  Filename.dirname (Ext_filename.normalize_absolute_path (cwd // Sys.executable_name))
+  Filename.dirname 
+    (Ext_path.normalize_absolute_path 
+       (Ext_path.combine cwd  Sys.executable_name))
+
+
 let get_bsc_bsdep cwd = 
   let dir = get_bsc_dir cwd in    
-  dir // "bsc.exe", dir // "bsb_helper.exe"
+  Filename.concat dir  "bsc.exe", 
+  Filename.concat dir  "bsb_helper.exe"
 
 (** 
-{[
-mkp "a/b/c/d";;
-mkp "/a/b/c/d"
-]}
+   {[
+     mkp "a/b/c/d";;
+     mkp "/a/b/c/d"
+   ]}
 *)
 let rec mkp dir = 
   if not (Sys.file_exists dir) then 
@@ -145,7 +154,7 @@ type package_context = {
 }
 
 (**
-  TODO: check duplicate package name
+   TODO: check duplicate package name
    ?use path as identity?
 
    Basic requirements
@@ -166,20 +175,20 @@ let rec walk_all_deps_aux visited paths top dir cb =
       match String_map.find_opt Bsb_build_schemas.name map  with 
       | Some (Str {str }) -> str
       | Some _ 
-      | None -> Bsb_exception.failf ~loc "package name missing in %s/bsconfig.json" dir 
+      | None -> Bsb_exception.errorf ~loc "package name missing in %s/bsconfig.json" dir 
     in 
     let package_stacks = cur_package_name :: paths in 
     let () = 
-      Format.fprintf Format.std_formatter "@{<info>Package stack:@} %a @." pp_packages_rev
+      Bsb_log.info "@{<info>Package stack:@} %a @." pp_packages_rev
         package_stacks 
     in 
     if List.mem cur_package_name paths then
       begin
-        Format.fprintf Format.err_formatter "@{<error>Cyclc dependencies in package stack@}@.";
+        Bsb_log.error "@{<error>Cyclc dependencies in package stack@}@.";
         exit 2 
       end;
     if String_hashtbl.mem visited cur_package_name then 
-      Format.fprintf Format.std_formatter
+      Bsb_log.info
         "@{<info>Visited before@} %s@." cur_package_name
     else 
       begin 
@@ -195,9 +204,9 @@ let rec walk_all_deps_aux visited paths top dir cb =
                        Bsb_pkg.resolve_bs_package ~cwd:dir new_package in 
                      walk_all_deps_aux visited package_stacks  false package_dir cb  ;
                    | _ -> 
-                     Bsb_exception.(failf ~loc 
-                                      "%s expect an array"
-                                      Bsb_build_schemas.bs_dependencies)
+                     Bsb_exception.errorf ~loc 
+                       "%s expect an array"
+                       Bsb_build_schemas.bs_dependencies
                  end
                )))
         |> ignore ;
@@ -208,16 +217,16 @@ let rec walk_all_deps_aux visited paths top dir cb =
            `Arr (fun (new_packages : Ext_json_types.t array) ->
                new_packages
                |> Array.iter (fun (js : Ext_json_types.t) ->
-                   begin match js with
-                     | Str {str = new_package} ->
-                       let package_dir = 
-                         Bsb_pkg.resolve_bs_package ~cwd:dir new_package in 
-                       walk_all_deps_aux visited package_stacks  false package_dir cb  ;
-                     | _ -> 
-                       Bsb_exception.(failf ~loc 
-                                        "%s expect an array"
-                                        Bsb_build_schemas.bs_dev_dependencies)
-                   end
+                   match js with
+                   | Str {str = new_package} ->
+                     let package_dir = 
+                       Bsb_pkg.resolve_bs_package ~cwd:dir new_package in 
+                     walk_all_deps_aux visited package_stacks  false package_dir cb  ;
+                   | _ -> 
+                     Bsb_exception.errorf ~loc 
+                       "%s expect an array"
+                       Bsb_build_schemas.bs_dev_dependencies
+
                  )))
           |> ignore ;
         end
@@ -226,8 +235,10 @@ let rec walk_all_deps_aux visited paths top dir cb =
         String_hashtbl.add visited cur_package_name dir;
       end
   | _ -> ()
-  | exception _ -> failwith ( "failed to parse" ^ bsconfig_json ^ " properly")
+  | exception _ -> 
+    Bsb_exception.invalid_json bsconfig_json
     
+
 let walk_all_deps dir cb = 
   let visited = String_hashtbl.create 0 in 
   walk_all_deps_aux visited [] true dir cb 

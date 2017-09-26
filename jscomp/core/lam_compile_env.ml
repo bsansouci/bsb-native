@@ -100,7 +100,7 @@ let reset () =
 
 let create_js_module (hint_name : string) : Ident.t = 
   let hint_name = 
-    String.concat "" @@ List.map (String.capitalize ) @@ 
+    String.concat "" @@ Ext_list.map (Ext_string.capitalize_ascii ) @@ 
     Ext_string.split hint_name '-' in
   Ident.create hint_name
 
@@ -283,7 +283,7 @@ let is_pure_module id  =
 
 let get_package_path_from_cmj 
     ( id : Lam_module_ident.t) 
-  : (path * Js_packages_info.t) option = 
+  : _ option = 
   query_and_add_if_not_exist id No_env
     ~not_found:(fun _ ->
       None
@@ -294,7 +294,7 @@ let get_package_path_from_cmj
         ) 
     ~found:(fun (cmj_path,x) -> 
         Some (cmj_path, 
-        x.npm_package_path)
+        x.npm_package_path, x.case )
         )
 
     

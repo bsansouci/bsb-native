@@ -45,7 +45,7 @@ let () =
   Clflags.unsafe_string := false;
   Clflags.record_event_when_debug := false
 
-let implementation impl ppf  str  =
+let implementation prefix impl ppf  str  =
   let modulename = "Test" in
   (* let env = !Toploop.toplevel_env in *)
   (* Compmisc.init_path false; *)
@@ -56,7 +56,8 @@ let implementation impl ppf  str  =
   let finalenv = ref Env.empty in
   let types_signature = ref [] in
   try 
-  impl (Lexing.from_string str )
+  impl (Lexing.from_string 
+    (if prefix then "[@@@bs.config{no_export}]\n#1 \"repl.ml\"\n"  ^ str else str ))
   |> !Ppx_entry.rewrite_implementation
   |> (fun x -> 
       let (a,b,c,signature) = Typemod.type_implementation_more modulename modulename modulename env x in
@@ -67,12 +68,12 @@ let implementation impl ppf  str  =
   |>  Translmod.transl_implementation modulename
   |> (* Printlambda.lambda ppf *) (fun lam -> 
       let buffer = Buffer.create 1000 in 
-      let () = Js_dump.(pp_deps_program
+      let () = Js_dump_program.pp_deps_program
                           ~output_prefix:"" (* does not matter here *)
                           NodeJS
-                          (Lam_compile_group.compile ~filename:"" "" 
+                          (Lam_compile_main.compile ~filename:"" "" 
                              !finalenv !types_signature lam)
-                          (Ext_pp.from_buffer buffer)) in
+                          (Ext_pp.from_buffer buffer) in
       let v = Buffer.contents buffer in 
       Format.fprintf ppf {| { "js_code" : %S }|} v )
   with 
@@ -107,9 +108,10 @@ let string_of_fmt (f : Format.formatter -> 'a -> unit) v =
     Format.pp_print_flush fmt () in
   Buffer.contents buf 
 
-let compile  impl : string -> string = string_of_fmt (implementation  impl )
+let compile  impl : string -> string = string_of_fmt (implementation  false impl )
 (** TODO: add `[@@bs.config{no_export}]\n# 1 "repl.ml"`*)
-let shake_compile impl : string -> string = string_of_fmt (implementation impl )
+let shake_compile impl : string -> string = 
+  string_of_fmt (implementation true impl )
 
 
 (** *)

@@ -108,7 +108,6 @@ val suffix_cmti : string
 
 val commonjs : string 
 val amdjs : string 
-val goog : string 
 val es6 : string 
 val es6_global : string
 val amdjs_global : string 
@@ -125,3 +124,7 @@ val unescaped_js_delimiter : string
 val native : string
 val bytecode : string
 val js : string
+
+val node_sep : string 
+val node_parent : string 
+val node_current : string 

@@ -176,12 +176,12 @@ EXT_SRCS = 	literals \
 	ext_file_pp ext_format \
 	hashtbl_gen \
 	ext_string \
-	ext_color \
 	ext_utf8\
 	ext_js_regex\
 	string_hashtbl\
-	ext_list \
-	ext_map \
+	ext_list\
+	ext_color\
+	ext_map\
 	ext_marshal ext_option \
 	ext_pervasives ext_pp ext_ref  ext_sys \
 	hash_set_gen hash_set \
@@ -218,7 +218,9 @@ EXT_SRCS = 	literals \
 	hash_set_poly\
 	ident_hashtbl\
 	int_hashtbl\
+	ext_path\
 	ext_filename\
+	ext_modulename\
 	ext_namespace
 
 EXT_CMXS=$(addprefix ext/, $(addsuffix .cmx, $(EXT_SRCS)))
@@ -288,7 +290,14 @@ CORE_SRCS= js_runtime_modules \
 	js_stmt_make js_pass_flatten\
 	js_pass_tailcall_inline js_of_lam_variant js_pass_flatten_and_mark_dead js_ast_util lam_dce lam_group_pass lam_compile_env lam_stats_util\
 	lam_stats_export lam_pass_alpha_conversion lam_pass_collect\
-	js_dump js_pass_debug\
+	js_dump_lit\
+	js_dump_string\
+	js_dump_property\
+	js_dump_import_export\
+	js_dump \
+	js_name_of_module_id\
+	js_dump_program \
+	js_pass_debug\
 	js_of_lam_option js_output lam_compile_global \
 	lam_dispatch_primitive \
 	lam_bounded_vars\
@@ -301,7 +310,7 @@ CORE_SRCS= js_runtime_modules \
 	lam_pass_lets_dce \
 	lam_pass_remove_alias \
 	lam_coercion \
-	lam_compile_group\
+	lam_compile_main\
 	js_implementation ocaml_batch_compile
 CORE_CMXS=$(addprefix core/, $(addsuffix .cmx, $(CORE_SRCS)))
 
@@ -332,6 +341,7 @@ BSB_SRCS= bsb_config\
 	bsb_parse_sources\
 	bsb_default\
 	bsb_watcher_gen\
+	bsb_warning\
 	bsb_config_parse\
 	bsb_ninja_util \
 	bsb_ninja_file_groups\
@@ -347,8 +357,8 @@ BSB_SRCS= bsb_config\
 	bsb_world\
 	oCamlRes\
 	bsb_templates\
-	bsb_init
-SUPER_ERRORS_SRCS=super_reason_react super_misc super_warnings super_location super_typecore super_typemod super_typetexp super_main
+	bsb_theme_init
+SUPER_ERRORS_SRCS=super_reason_react super_misc super_warnings super_location super_env super_pparse super_typecore super_typemod super_typetexp super_main
 REASON_OUTCOME_PRINTER_SRCS=tweaked_reason_oprint reason_outcome_printer_main
 
 BSB_CMXS=$(addprefix bsb/, $(addsuffix .cmx, $(BSB_SRCS)))

@@ -26,7 +26,7 @@ type public =
   | Export_all 
   | Export_set of String_set.t 
   | Export_none
-    
+
 
 
 type build_generator = 
@@ -52,7 +52,7 @@ type  file_group =
 
 type t = 
   { files :  file_group list ;
-   (* flattened list of directories *)
+    (* flattened list of directories *)
     intervals :  Ext_file_pp.interval list ;
     globbed_dirs : string list ; 
 
@@ -67,10 +67,31 @@ type cxt = {
   dir_index : Bsb_dir_index.t ; 
   cwd : string ;
   root : string ;
-  cut_generators : bool
+  cut_generators : bool;
+  traverse : bool
 }
 
-  
+
+val parsing_simple_dir : 
+  cxt -> 
+  string -> 
+  t
+
+val parsing_source_dir_map :
+  cxt ->
+  Ext_json_types.t String_map.t -> 
+  t
+
+val parsing_source : 
+  cxt -> 
+  Ext_json_types.t ->     
+  t 
+
+val parsing_arr_sources :  
+  cxt ->
+  Ext_json_types.t array ->
+  t
+
 (** entry is to the 
     [sources] in the schema
 
@@ -82,4 +103,4 @@ val parse_sources :
   cxt ->
   Ext_json_types.t  ->
   t 
-  
+

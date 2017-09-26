@@ -23,11 +23,13 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
 
 
+val map : ('a -> 'b) -> 'a list -> 'b list 
 
+val append : 'a list -> 'a list -> 'a list 
 
+val map_append :  ('b -> 'a) -> 'b list -> 'a list -> 'a list
 
-
-
+val fold_right : ('a -> 'b -> 'b) -> 'a list -> 'b -> 'b
 
 (** Extension to the standard library [List] module *)
     
@@ -36,20 +38,25 @@
 val filter_map : ('a -> 'b option) -> 'a list -> 'b list 
 
 val excludes : ('a -> bool) -> 'a list -> bool * 'a list
+
 val exclude_with_fact : ('a -> bool) -> 'a list -> 'a option * 'a list
+
 val exclude_with_fact2 : 
   ('a -> bool) -> ('a -> bool) -> 'a list -> 'a option * 'a option * 'a list
+
 val same_length : 'a list -> 'b list -> bool
 
 val init : int -> (int -> 'a) -> 'a list
 
 val take : int -> 'a list -> 'a list * 'a list
-val try_take : int -> 'a list -> 'a list * int * 'a list 
+
+(* val try_take : int -> 'a list -> 'a list * int * 'a list  *)
 
 val exclude_tail : 'a list -> 'a * 'a list
 
 val length_compare : 'a list -> int -> [`Gt | `Eq | `Lt ]
 
+val length_ge : 'a list -> int -> bool
 (**
 
   {[length xs = length ys + n ]}
@@ -74,37 +81,43 @@ val flat_map : ('a -> 'b list) -> 'a list -> 'b list
 
 (** for the last element the first element will be passed [true] *)
 
-val fold_right2_last : (bool -> 'a -> 'b -> 'c -> 'c) -> 'a list -> 'b list -> 'c -> 'c
+(* val fold_right2_last : (bool -> 'a -> 'b -> 'c -> 'c) -> 'a list -> 'b list -> 'c -> 'c *)
 
 val map_last : (bool -> 'a -> 'b) -> 'a list -> 'b list
 
-val stable_group : ('a -> 'a -> bool) -> 'a list -> 'a list list
+val stable_group : ('a -> 'a -> bool) -> 'a list -> 'a list list 
 
 val drop : int -> 'a list -> 'a list 
 
-val for_all_ret : ('a -> bool) -> 'a list -> 'a option
+(** [for_all_ret p lst ]
+    if all elements in [lst] pass, return [None] 
+    otherwise return the first element [e] as [Some e] which
+    fails the predicate
+*)
+val for_all_ret : ('a -> bool) -> 'a list -> 'a option 
 
-val for_all_opt : ('a -> 'b option) -> 'a list -> 'b option
-(** [for_all_opt f l] returns [None] if all return [None],  
+(** [find_opt f l] returns [None] if all return [None],  
     otherwise returns the first one. 
  *)
 
-val fold : ('a -> 'b -> 'b) -> 'a list -> 'b -> 'b
-(** same as [List.fold_left]. 
+val find_opt : ('a -> 'b option) -> 'a list -> 'b option
+
+(** same as [List.fold_left] except the argument order
     Provide an api so that list can be easily swapped by other containers  
  *)
+val fold : ('a -> 'b -> 'b) -> 'a list -> 'b -> 'b
 
 val rev_map_append : ('a -> 'b) -> 'a list -> 'b list -> 'b list
 
 val rev_map_acc : 'a list -> ('b -> 'a) -> 'b list -> 'a list
 
-val map_acc : 'a list -> ('b -> 'a) -> 'b list -> 'a list
+
 
 val rev_iter : ('a -> unit) -> 'a list -> unit
 
 val for_all2_no_exn : ('a -> 'b -> bool) -> 'a list -> 'b list -> bool
 
-val find_opt : ('a -> 'b option) -> 'a list -> 'b option
+
 
 (** [f] is applied follow the list order *)
 val split_map : ('a -> 'b * 'c) -> 'a list -> 'b list * 'c list       
@@ -136,11 +149,13 @@ val sort_via_array :
 val last : 'a list -> 'a
 
 
-(** When [key] is not found unbox the default, 
-  if it is found return that, otherwise [assert false ]
+(** [assoc_by_string default key lst]
+  if  [key] is found in the list  return that val,
+  other unbox the [default], 
+  otherwise [assert false ]
  *)
-val assoc_by_string : 
-  'a  option -> string -> (string * 'a) list -> 'a 
+ val assoc_by_string : 
+  'a  option -> string -> (string * 'a) list -> 'a  
 
 val assoc_by_int : 
   'a  option -> int -> (int * 'a) list -> 'a   

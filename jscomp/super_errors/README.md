@@ -6,13 +6,15 @@ Feel free to submit new ones or tweak existing messages in these files! They als
 
 Here's the fastest way to iterate & test these error messages. The setup is currently a bit contrived; if something's not working, please file an issue or ping us in [Discord](discord.gg/reasonml)!
 
+#### Build
+
 Assuming you're at the root of this repo:
 
 ```
 # Use the correct opam switch for working on BuckleScript
 opam update
 opam switch 4.02.3+buckle-master
-opam switch reinstall 4.02.3+buckle-master # do this if you get errors related to `ast_utf8_string.ml`
+opam switch reinstall 4.02.3+buckle-master # do this if you get errors even from a clean compilation
 opam install camlp4
 eval `opam config env`
 
@@ -27,8 +29,19 @@ cd ../../jscomp
 make world
 
 # install this local bs globally
+cd ..
 npm -g install .
 ```
+
+##### Troubleshooting
+
+Did you do "eval `opam config env`" In your CLI/bashrc/zshrc?
+
+If you've contributed to this part, but pulled in new changes and are now having problems building, it might mean that your artifacts are stale after that pull. In this case, do `git clean -xdf` at the root of the project. **Careful**, this will kill clean all your unsaved changes! Afterward, redo the above build process (skip the `opam` part. That part's likely not changed).
+
+**If these fail too**, make sure you do have the correct `ocamlopt` in your environment: `which ocamlcopt` should show an `opam` path, not `reason-cli` path. If you see the latter, this means it overrode the global `ocamlopt` BuckleScript needed. In this case, either temporarily uninstall reason-cli or make sure your opam PATH overrides the reason-cli PATH (and not the other way around) in your bashrc/zshrc.
+
+#### Test
 
 Now, for testing super_errors on a dummy project. Go somewhere else and do this:
 

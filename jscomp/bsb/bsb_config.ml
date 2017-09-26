@@ -21,12 +21,11 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
-let (//) = Ext_filename.combine 
+let (//) = Ext_path.combine 
 
 let lib_lit = "lib"
 let lib_js = lib_lit //"js"
 let lib_amd = lib_lit //"amdjs"
-let lib_goog = lib_lit // "goog"
 let lib_ocaml = lib_lit // "ocaml"
 let lib_bs = lib_lit // "bs"
 let lib_es6 = lib_lit // "es6"
@@ -35,7 +34,6 @@ let lib_amd_global = lib_lit // "amdjs_global"
 let all_lib_artifacts = 
   [ lib_js ; 
     lib_amd ;
-    lib_goog ; 
     lib_ocaml;
     lib_bs ; 
     lib_es6 ; 

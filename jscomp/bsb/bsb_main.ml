@@ -27,7 +27,7 @@
 let cwd = Sys.getcwd ()
 let bsc_dir = Bsb_build_util.get_bsc_dir cwd 
 let () =  Bsb_log.setup () 
-let (//) = Ext_filename.combine
+let (//) = Ext_path.combine
 let force_regenerate = ref false
 let exec = ref false
 let node_lit = "node"
@@ -65,26 +65,6 @@ let get_string_backend = function
   | Bsb_config_types.Native   -> "native"
   | Bsb_config_types.Bytecode -> "bytecode"
 
-let watch_exit () =
-  print_endline "\nStart Watching now ";
-  (* @Incomplete windows support here. We need to pass those args to the nodejs file. 
-     Didn't bother for now.
-          Ben - July 23rd 2017 
-   *)
-  let backend = "-backend" in
-  let backend_kind = get_string_backend (get_backend ()) in
-  let bsb_watcher =
-    Bsb_build_util.get_bsc_dir cwd // "bsb_watcher.js" in
-  if Ext_sys.is_windows_or_cygwin then
-    exit (Sys.command (Ext_string.concat3 node_lit Ext_string.single_space (Filename.quote bsb_watcher)))
-  else
-    Unix.execvp node_lit
-      [| node_lit ;
-         bsb_watcher;
-         backend;
-         backend_kind;
-      |]
-
 
 let regen = "-regen"
 let separator = "--"
@@ -93,7 +73,6 @@ let separator = "--"
 let watch_mode = ref false
 let make_world = ref false 
 let set_make_world () = make_world := true
-  
 
 (* Takes a cleanFunc and calls it on the right folder. *)
 let clean cleanFunc =
@@ -101,15 +80,26 @@ let clean cleanFunc =
     let nested = get_string_backend (get_backend ()) in
     cleanFunc ~nested bsc_dir cwd
   else begin
-    Format.fprintf Format.std_formatter 
-      "@{<warning>Cleaning all artifacts because -backend wasn't set before '-clean' or '-clean-world'.@}@.";
     cleanFunc ~nested:"js" bsc_dir cwd;
     cleanFunc ~nested:"bytecode" bsc_dir cwd;
     cleanFunc ~nested:"native" bsc_dir cwd;
   end
 
+let bs_version_string = Bs_version.version
+
+let print_version_string () = 
+  print_string bs_version_string;
+  print_newline (); 
+  exit 0 
+
 let bsb_main_flags : (string * Arg.spec * string) list=
   [
+    "-v", Arg.Unit print_version_string, 
+    " Print version and exit";
+    "-version", Arg.Unit print_version_string, 
+    " Print version and exit";
+    "-verbose", Arg.Unit Bsb_log.verbose,
+    " Set the output(from bsb) to be verbose";
     "-color", Arg.Set Bsb_log.color_enabled,
     " forced color output";
     "-no-color", Arg.Clear Bsb_log.color_enabled,
@@ -117,10 +107,11 @@ let bsb_main_flags : (string * Arg.spec * string) list=
     "-w", Arg.Set watch_mode,
     " Watch mode" ;     
     regen, Arg.Set force_regenerate,
-    " (internal) Always regenerate build.ninja no matter bsconfig.json is changed or not (for debugging purpose)";
+    " (internal) Always regenerate build.ninja no matter bsconfig.json is changed or not (for debugging purpose)"
+    ;
     "-clean-world", Arg.Unit (fun _ -> clean Bsb_clean.clean_bs_deps),
     " Clean all bs dependencies";
-    "-clean", Arg.Unit (fun _ ->  clean Bsb_clean.clean_self),
+    "-clean", Arg.Unit (fun _ -> clean Bsb_clean.clean_self),
     " Clean only current project";
     "-make-world", Arg.Unit set_make_world,
     " Build all dependencies and itself ";
@@ -130,10 +121,10 @@ let bsb_main_flags : (string * Arg.spec * string) list=
     " The theme for project initialization, default is basic(https://github.com/bucklescript/bucklescript/tree/master/jscomp/bsb/templates)";
     "-query", Arg.String (fun s -> Bsb_query.query ~cwd ~bsc_dir ~backend:(get_backend ()) s ),
     " (internal)Query metadata about the build";
-    "-themes", Arg.Unit Bsb_init.list_themes,
+    "-themes", Arg.Unit Bsb_theme_init.list_themes,
     " List all available themes";
     "-where",
-       Arg.Unit (fun _ -> 
+    Arg.Unit (fun _ -> 
         print_endline (Filename.dirname Sys.executable_name)),
     " Show where bsb.exe is located";
     
@@ -153,7 +144,7 @@ let bsb_main_flags : (string * Arg.spec * string) list=
 
 (**  Invariant: it has to be the last command of [bsb] *)
 let exec_command_then_exit  command =
-  Format.fprintf Format.std_formatter "@{<info>CMD:@} %s@." command;
+  Bsb_log.info "@{<info>CMD:@} %s@." command;
   exit (Sys.command command ) 
 
 (* Execute the underlying ninja build call, then exit (as opposed to keep watching) *)
@@ -176,7 +167,7 @@ let ninja_command_exit  vendor_ninja ninja_args nested =
     let args = 
       if ninja_args_len = 0 then ninja_common_args else 
         Array.append ninja_common_args ninja_args in 
-    Bsb_log.print_string_args args ;      
+    Bsb_log.info_args args ;      
     Unix.execvp vendor_ninja args      
 
 
@@ -198,8 +189,41 @@ let usage = "Usage : bsb.exe <bsb-options> -- <ninja_options>\n\
 let handle_anonymous_arg arg =
   raise (Arg.Bad ("Unknown arg \"" ^ arg ^ "\""))
 
+let watch_exit () =
+  Bsb_log.info "@{<info>Watching@}... @.";
+  let bsb_watcher =
+    Bsb_build_util.get_bsc_dir cwd // "bsb_watcher.js" in
+  if Ext_sys.is_windows_or_cygwin then
+    exit (Sys.command (Ext_string.concat3 node_lit Ext_string.single_space (Filename.quote bsb_watcher)))
+  else
+    Unix.execvp node_lit
+      [| node_lit ;
+         bsb_watcher
+      |]
 
+let watch_exit () =
+  print_endline "\nStart Watching now ";
+  (* @Incomplete windows support here. We need to pass those args to the nodejs file. 
+     Didn't bother for now.
+          Ben - July 23rd 2017 
+   *)
+  let backend = "-backend" in
+  let backend_kind = get_string_backend (get_backend ()) in
+  let bsb_watcher =
+    Bsb_build_util.get_bsc_dir cwd // "bsb_watcher.js" in
+  if Ext_sys.is_windows_or_cygwin then
+    exit (Sys.command (Ext_string.concat3 node_lit Ext_string.single_space (Filename.quote bsb_watcher)))
+  else
+    Unix.execvp node_lit
+      [| node_lit ;
+         bsb_watcher;
+         backend;
+         backend_kind;
+      |]
+
+(* see discussion #929, if we catch the exception, we don't have stacktrace... *)
 let () =
+  try begin
   let bsc_dir = Bsb_build_util.get_bsc_dir cwd in
   let ocaml_dir = Bsb_build_util.get_ocaml_dir bsc_dir in
   let vendor_ninja = bsc_dir // "ninja.exe" in
@@ -236,7 +260,7 @@ let () =
           
           (* first, check whether we're in boilerplate generation mode, aka -init foo -theme bar *)
           match !generate_theme_with_path with
-          | Some path -> Bsb_init.init_sample_project ~cwd ~theme:!current_theme path
+          | Some path -> Bsb_theme_init.init_sample_project ~cwd ~theme:!current_theme path
           | None -> 
             let backend = get_backend () in
             (* [-make-world] should never be combined with [-package-specs] *)
@@ -271,10 +295,10 @@ let () =
                 if !watch_mode then begin
                   watch_exit ()
                   (* ninja is not triggered in this case
-                     There are several cases we wish ninja will not be triggered.
-                     [bsb -clean-world]
-                     [bsb -regen ]
-                  *)
+                    There are several cases we wish ninja will not be triggered.
+                       [bsb -clean-world]
+                       [bsb -regen ]
+                    *)
                 end else begin
                   let nested = get_string_backend backend in
                   ninja_command_exit vendor_ninja [||] nested
@@ -309,3 +333,94 @@ let () =
           end
         end
     end
+  end
+  with 
+    | Bsb_exception.Error e ->
+      Bsb_exception.print Format.err_formatter e ;
+      Format.pp_print_newline Format.err_formatter ();
+      exit 2 
+    | e -> Ext_pervasives.reraise e 
+
+
+(* see discussion #929, if we catch the exception, we don't have stacktrace... *)
+(* let () =
+
+  let vendor_ninja = bsc_dir // "ninja.exe" in  
+  try begin 
+    match Sys.argv with 
+    | [| _ |] ->  (* specialize this path [bsb.exe] which is used in watcher *)
+      begin
+        let _config_opt =  
+          Bsb_ninja_regen.regenerate_ninja ~override_package_specs:None ~no_dev:false 
+            ~generate_watch_metadata:true
+            ~forced:false 
+            cwd bsc_dir 
+        in 
+        ninja_command_exit  vendor_ninja [||] 
+      end
+    | argv -> 
+      begin
+        match Ext_array.find_and_split argv Ext_string.equal separator with
+        | `No_split
+          ->
+          begin
+            Arg.parse bsb_main_flags handle_anonymous_arg usage;
+            (* first, check whether we're in boilerplate generation mode, aka -init foo -theme bar *)
+            match !generate_theme_with_path with
+            | Some path -> Bsb_theme_init.init_sample_project ~cwd ~theme:!current_theme path
+            | None -> 
+              (* [-make-world] should never be combined with [-package-specs] *)
+              let make_world = !make_world in 
+              begin match make_world, !force_regenerate with
+                | false, false -> 
+                  (* [regenerate_ninja] is not triggered in this case
+>>>>>>> e7bdff222e57ba1d9a3d430a83cf11c63984930e
+                     There are several cases we wish ninja will not be triggered.
+                     [bsb -clean-world]
+                     [bsb -regen ]
+                  *)
+<<<<<<< HEAD
+                
+=======
+                  if !watch_mode then begin
+                    watch_exit ()
+                  end 
+                | make_world, force_regenerate ->
+                  let config_opt = Bsb_ninja_regen.regenerate_ninja ~generate_watch_metadata:true ~override_package_specs:None ~no_dev:false ~forced:force_regenerate cwd bsc_dir  in
+                  if make_world then begin
+                    Bsb_world.make_world_deps cwd config_opt
+                  end;
+                  if !watch_mode then begin
+                    watch_exit ()
+                    (* ninja is not triggered in this case
+                       There are several cases we wish ninja will not be triggered.
+                       [bsb -clean-world]
+                       [bsb -regen ]
+                    *)
+                  end else if make_world then begin
+                    ninja_command_exit  vendor_ninja [||] 
+                  end
+              end;
+          end
+        | `Split (bsb_args,ninja_args)
+          -> (* -make-world all dependencies fall into this category *)
+          begin
+            Arg.parse_argv bsb_args bsb_main_flags handle_anonymous_arg usage ;
+            let config_opt = Bsb_ninja_regen.regenerate_ninja ~generate_watch_metadata:true ~override_package_specs:None ~no_dev:false cwd bsc_dir ~forced:!force_regenerate in
+            (* [-make-world] should never be combined with [-package-specs] *)
+            if !make_world then
+              Bsb_world.make_world_deps cwd config_opt ;
+            if !watch_mode then watch_exit ()
+            else ninja_command_exit  vendor_ninja ninja_args 
+          end
+      end
+  end
+  with 
+    | Bsb_exception.Error e ->
+      Bsb_exception.print Format.err_formatter e ;
+      Format.pp_print_newline Format.err_formatter ();
+      exit 2 
+    | e -> Ext_pervasives.reraise e 
+    
+>>>>>>> e7bdff222e57ba1d9a3d430a83cf11c63984930e
+ *)

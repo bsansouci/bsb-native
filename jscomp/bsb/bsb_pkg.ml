@@ -33,9 +33,9 @@ let (//) = Filename.concat
 *)
 let  resolve_bs_package  
     ~cwd
-    name = 
+    pkg = 
   let marker = Literals.bsconfig_json in 
-  let sub_path = name // marker  in
+  let sub_path = pkg // marker  in
   let rec aux  cwd  = 
     let abs_marker =  cwd // Literals.node_modules // sub_path in 
     if Sys.file_exists abs_marker then (* Some *) (Filename.dirname abs_marker)
@@ -53,16 +53,16 @@ let  resolve_bs_package
             Filename.dirname abs_marker
           else
             begin 
-              Format.fprintf Format.err_formatter 
-                "@{<error>Package not found: resolving package %s in %s  @}@." name cwd ;             
-              Bsb_exception.error (Package_not_found (name, None))
+              Bsb_log.error
+                "@{<error>Package not found: resolving package %s in %s  @}@." pkg cwd ;             
+              Bsb_exception.package_not_found ~pkg ~json:None
             end
         with 
           Not_found -> 
           begin 
-            Format.fprintf Format.err_formatter 
-              "@{<error>Package not found: resolving package %s in %s  @}@." name cwd ;             
-            Bsb_exception.error (Package_not_found (name,None))
+            Bsb_log.error
+              "@{<error>Package not found: resolving package %s in %s  @}@." pkg cwd ;             
+            Bsb_exception.package_not_found ~pkg ~json:None
           end
   in
   aux cwd 
@@ -75,7 +75,7 @@ let resolve_bs_package ~cwd package =
   match String_hashtbl.find_opt cache package with 
   | None -> 
     let result = resolve_bs_package ~cwd package in 
-    Format.fprintf Format.std_formatter "@{<info>Package@} %s -> %s@." package result ; 
+    Bsb_log.info "@{<info>Package@} %s -> %s@." package result ; 
     String_hashtbl.add cache package result ;
     result 
   | Some x 
@@ -83,7 +83,7 @@ let resolve_bs_package ~cwd package =
     let result = resolve_bs_package ~cwd package in 
     if result <> x then 
       begin 
-        Format.fprintf Format.err_formatter  
+        Bsb_log.warn
           "@{<warning>Duplicated package:@} %s %s (chosen) vs %s in %s @." package x result cwd;
       end;
     x

@@ -79,7 +79,7 @@ let js_module_table : Ident.t String_hashtbl.t = String_hashtbl.create 31
 *)
 let create_js_module (name : string) : Ident.t = 
   let name = 
-    String.concat "" @@ List.map (String.capitalize ) @@ 
+    String.concat "" @@ Ext_list.map (Ext_string.capitalize_ascii ) @@ 
     Ext_string.split name '-' in
   (* TODO: if we do such transformation, we should avoid       collision for example:
       react-dom 
@@ -199,7 +199,8 @@ let reserved_words =
     "setInterval";
     "setTimeout";
     "__dirname";
-    "__filename"
+    "__filename";
+    "__esModule"
   |]
 
 let reserved_map = 
@@ -248,6 +249,7 @@ let name_mangle name =
       | '%' -> Buffer.add_string buffer "$percent"
       | '~' -> Buffer.add_string buffer "$tilde"
       | '#' -> Buffer.add_string buffer "$hash"
+      | ':' -> Buffer.add_string buffer "$colon"
       | 'a'..'z' | 'A'..'Z'| '_' 
       | '$'
       | '0'..'9'-> Buffer.add_char buffer  c
@@ -276,6 +278,7 @@ let name_mangle name =
        | '%' -> Buffer.add_string buffer "$percent"
        | '~' -> Buffer.add_string buffer "$tilde"
        | '#' -> Buffer.add_string buffer "$hash"
+       | ':' -> Buffer.add_string buffer "$colon"
        | '$' -> Buffer.add_string buffer "$dollar"
        | 'a'..'z' | 'A'..'Z'| '_'        
        | '0'..'9'-> Buffer.add_char buffer  c
@@ -296,8 +299,6 @@ let convert (name : string) =
   else name_mangle name 
 
 (** keyword could be used in property *)
-let property_no_need_convert s = 
-  s == name_mangle s 
 
 (* It is currently made a persistent ident to avoid fresh ids 
     which would result in different signature files

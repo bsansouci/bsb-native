@@ -28,16 +28,16 @@ let core_type_of_type_declaration (tdcl : Parsetree.type_declaration) =
   match tdcl with 
   | {ptype_name = {txt ; loc};
      ptype_params ;
-    } -> Typ.constr {txt = Lident txt ; loc} (List.map fst ptype_params)
+    } -> Typ.constr {txt = Lident txt ; loc} (Ext_list.map fst ptype_params)
 
 let lift_string_list_to_array (labels : string list) = 
   Exp.array
-    (List.map (fun s -> Exp.constant (Const_string (s, None)))
+    (Ext_list.map (fun s -> Exp.constant (Const_string (s, None)))
        labels)
 
 let lift_int i = Exp.constant (Const_int i)
 let lift_int_list_to_array (labels : int list) = 
-  Exp.array (List.map lift_int labels)
+  Exp.array (Ext_list.map lift_int labels)
 
 
 let mk_fun ~loc (typ : Parsetree.core_type) 
@@ -53,7 +53,7 @@ let destruct_label_declarations ~loc
     (labels : Parsetree.label_declaration list) : 
   (Parsetree.core_type * Parsetree.expression) list * string list 
   =
-  List.fold_right
+  Ext_list.fold_right
     (fun   ({pld_name = {txt}; pld_type} : Parsetree.label_declaration) 
       (core_type_exps, labels) -> 
       ((pld_type, 

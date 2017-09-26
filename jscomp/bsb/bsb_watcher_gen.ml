@@ -23,7 +23,7 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
 
 
-let (//) = Ext_filename.combine
+let (//) = Ext_path.combine
 
 let sourcedirs_meta = ".sourcedirs.json"
 
@@ -38,7 +38,7 @@ let generate_sourcedirs_meta cwd (res : Bsb_parse_sources.t) =
       ) res.files ) ;
       "generated" ,
       arr @@ Array.of_list @@ List.fold_left (fun acc (x : Bsb_parse_sources.file_group) -> 
-      Ext_list.flat_map_acc (fun x -> List.map str x.Bsb_parse_sources.output) acc  x.generators 
+      Ext_list.flat_map_acc (fun x -> Ext_list.map str x.Bsb_parse_sources.output) acc  x.generators 
       )  [] res.files 
       ]
      ) in 

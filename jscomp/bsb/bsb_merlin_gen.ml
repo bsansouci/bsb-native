@@ -27,7 +27,7 @@ let merlin = ".merlin"
 let merlin_header = "####{BSB GENERATED: NO EDIT"
 let merlin_trailer = "####BSB GENERATED: NO EDIT}"
 let merlin_trailer_length = String.length merlin_trailer
-let (//) = Ext_filename.combine
+let (//) = Ext_path.combine
 
 (** [new_content] should start end finish with newline *)
 let revise_merlin merlin new_content =
@@ -95,6 +95,15 @@ let bsc_flg_to_merlin_ocamlc_flg ~backend bsc_flags  =
     (List.filter (fun x -> not (Ext_string.starts_with x bs_flg_prefix )) @@ 
      if backend = Bsb_config_types.Js then Literals.dash_nostdlib::bsc_flags else bsc_flags) 
 
+(* No need for [-warn-error] in merlin  *)     
+let warning_to_merlin_flg (warning: Bsb_warning.t option) : string= 
+    merlin_flg ^ 
+    ( match warning with 
+    | None  
+    | Some {number = None}
+      -> Bsb_warning.default_warning_flag
+    | Some {number = Some x } -> "-w " ^ x)
+
 
 let merlin_file_gen ~cwd ~backend
     built_in_ppx
@@ -109,7 +118,8 @@ let merlin_file_gen ~cwd ~backend
       reason_react_jsx ; 
       ocamlfind_dependencies;
       namespace;
-      package_name
+      package_name;
+      warning; 
      } : Bsb_config_types.t)
   =
   if generate_merlin then begin
@@ -153,7 +163,7 @@ let merlin_file_gen ~cwd ~backend
 
     let bsc_string_flag = bsc_flg_to_merlin_ocamlc_flg ~backend bsc_flags in 
     Buffer.add_string buffer bsc_string_flag ;
-
+    Buffer.add_string buffer (warning_to_merlin_flg  warning); 
     bs_dependencies 
     |> List.iter (fun package ->
         let path = package.Bsb_config_types.package_install_path in

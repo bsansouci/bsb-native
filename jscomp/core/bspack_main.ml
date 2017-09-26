@@ -84,7 +84,7 @@ and read_lines (cwd : string) (file : string) : string list =
   |> List.fold_left (fun acc f ->
       let filedir  =   Filename.dirname file in
       let extras = process_line  cwd filedir f in
-      extras  @ acc
+      Ext_list.append extras   acc
     ) []
 
 let implementation sourcefile =
@@ -131,31 +131,46 @@ let emit out_chan name =
   output_string out_chan (Filename.basename name) ;
   output_string out_chan "\"\n"
 
-let decorate_module out_chan base mli_name ml_name mli_content ml_content =
-  let base = String.capitalize base in
-  output_string out_chan "module ";
-  output_string out_chan base ;
-  output_string out_chan " : sig \n";
+let decorate_module 
+    ?(module_bound=true)
+    out_chan base mli_name ml_name mli_content ml_content =
+  if module_bound then begin 
+    let base = Ext_string.capitalize_ascii base in
+    output_string out_chan "module ";
+    output_string out_chan base ;
+    output_string out_chan " : sig \n";
+    emit out_chan mli_name ;
+    preprocess_string mli_name mli_content out_chan;
+    output_string out_chan "\nend = struct\n";
+    emit out_chan  ml_name ;
+    preprocess_string ml_name ml_content out_chan;
+    output_string out_chan "\nend\n"
+  end
+  else
+    begin 
+      output_string out_chan "include (struct\n";
+      emit out_chan  ml_name ;
+      preprocess_string ml_name ml_content out_chan;
+      output_string out_chan "\nend : sig \n";
+      emit out_chan mli_name ;
+      preprocess_string mli_name mli_content out_chan;
+      output_string out_chan "\nend)";
+    end
 
-  emit out_chan mli_name ;
-  preprocess_string mli_name mli_content out_chan;
-  (* output_string out_chan mli_content; *)
-
-  output_string out_chan "\nend = struct\n";
-  emit out_chan  ml_name ;
-  preprocess_string ml_name ml_content out_chan;
-  (* output_string out_chan ml_content; *)
-  output_string out_chan "\nend\n"
-
-let decorate_module_only out_chan base ml_name ml_content =
-  let base = String.capitalize base in
-  output_string out_chan "module ";
-  output_string out_chan base ;
-  output_string out_chan "\n= struct\n";
+let decorate_module_only 
+    ?(module_bound=true) 
+    out_chan base ml_name ml_content =
+  if module_bound then begin 
+    let base = Ext_string.capitalize_ascii base in
+    output_string out_chan "module ";
+    output_string out_chan base ;
+    output_string out_chan "\n= struct\n"
+  end;
   emit out_chan  ml_name;
   preprocess_string ml_name ml_content out_chan ; 
   (* output_string out_chan ml_content; *)
-  output_string out_chan "\nend\n"
+  if module_bound then 
+    output_string out_chan "\nend\n"
 
 (** recursive module is not good for performance, here module type only 
     has to be pure types otherwise it would not compile any way
@@ -175,13 +190,17 @@ let collect_file name =
 let output_file = ref None
 let set_output file = output_file := Some file
 let header_option = ref false
+
+type main_module = { modulename : string ; export : bool }
+
 (** set bs-main*)
-let main_module = ref None
+let main_module : main_module option ref = ref None
 
 let set_main_module modulename = 
-  main_module := Some modulename
+  main_module := Some {modulename; export = false }
 
-
+let set_main_export modulename = 
+  main_module := Some {modulename; export = true }
 
 let set_mllib_file = ref false     
 
@@ -209,7 +228,7 @@ let set_prelude_str f = prelude_str := Some f
 let cwd = Sys.getcwd ()
 
 let normalize s = 
-  Ext_filename.normalize_absolute_path (Ext_filename.combine cwd s )
+  Ext_path.normalize_absolute_path (Ext_path.combine cwd s )
 
 let process_include s : Ast_extract.dir_spec = 
   let i = Ext_string.rindex_neg s '?'   in 
@@ -283,7 +302,7 @@ let define_symbol (s : string) =
     if not @@ Lexer.define_key_value key v  then 
       raise (Arg.Bad ("illegal definition: " ^ s))
   | _ -> raise (Arg.Bad ("illegal definition: " ^ s))
- 
+
 let specs : (string * Arg.spec * string) list =
   [ 
     "-bs-no-implicit-include", (Arg.Set no_implicit_include),
@@ -307,6 +326,8 @@ let specs : (string * Arg.spec * string) list =
     ;
     "-bs-main", (Arg.String set_main_module),
     " set the main entry module";
+    "-main-export", (Arg.String set_main_export),
+    " Set the main module and respect its exports";
     "-I",  (Arg.String add_include),
     " add dir to search path";
     "-U", Arg.String undefine_symbol,
@@ -352,18 +373,18 @@ let () =
      let close_out_chan out_chan = 
        (if  out_chan != stdout then close_out out_chan) in
      let files =
-       (match mllib with
+       Ext_list.append (match mllib with
         | Some s
           -> read_lines (Sys.getcwd ()) s
-        | None -> []) @ command_files in
+        | None -> []) command_files in
 
      match !main_module, files with
-     | Some _, _ :: _
+     | Some _ , _ :: _
        -> 
        Ext_pervasives.failwithf ~loc:__LOC__ 
          "-bs-main conflicts with other flags [ %s ]"
          (String.concat ", " files)
-     | Some main_module ,  []
+     | Some {modulename  = main_module ; export },  []
        ->
        let excludes =
          match !exclude_modules with
@@ -390,52 +411,66 @@ let () =
        let out_chan = Lazy.force out_chan in
        let collect_modules  = !set_mllib_file in 
        let collection_modules = Queue.create () in
+       let count = ref 0 in 
+       let task_length = Queue.length tasks in 
        emit_header out_chan ;
-       Ast_extract.handle_queue Format.err_formatter tasks ast_table
-         (fun base ml_name (lazy(_, ml_content)) -> 
-            if collect_modules then 
-              Queue.add ml_name collection_modules; 
-            decorate_module_only  out_chan base ml_name ml_content;
-            let aliased = (String.capitalize base) in 
-            String_hashtbl.find_all alias_map_rev aliased
-            |> List.iter 
-              (fun s -> output_string out_chan (Printf.sprintf "module %s = %s \n"  s aliased))
+       begin 
+         Ast_extract.handle_queue Format.err_formatter tasks ast_table
+           (fun base ml_name (lazy(_, ml_content)) -> 
+              incr count ;  
+              if collect_modules then 
+                Queue.add ml_name collection_modules; 
+              let module_bound = not  export || task_length > !count  in 
+              decorate_module_only ~module_bound out_chan base ml_name ml_content;
+              let aliased = Ext_string.capitalize_ascii base in 
+              String_hashtbl.find_all alias_map_rev aliased
+              |> List.iter 
+                (fun s -> output_string out_chan (Printf.sprintf "module %s = %s \n"  s aliased))
 
-         )
-         (fun base mli_name (lazy (_, mli_content))  -> 
-            if collect_modules then 
-              Queue.add mli_name collection_modules; 
-            decorate_interface_only out_chan base mli_name mli_content;
-            let aliased = (String.capitalize base) in 
-            String_hashtbl.find_all alias_map_rev aliased
-            |> List.iter 
-              (fun s -> output_string out_chan (Printf.sprintf "module %s = %s \n"  s aliased))
+           )
+           (fun base mli_name (lazy (_, mli_content))  -> 
+              incr count ;                  
+              if collect_modules then 
+                Queue.add mli_name collection_modules;                 
 
-         )
-         (fun base mli_name ml_name (lazy (_, mli_content)) (lazy (_, ml_content))
-           -> 
-             (*TODO: assume mli_name, ml_name are in the same dir,
-               Needs to be addressed 
-             *)
-             if collect_modules then 
-               begin 
-                 Queue.add ml_name collection_modules;
-                 Queue.add mli_name collection_modules
-               end; 
-             decorate_module out_chan base mli_name ml_name mli_content ml_content;
-             let aliased = (String.capitalize base) in 
-             String_hashtbl.find_all alias_map_rev aliased
-             |> List.iter 
-               (fun s -> output_string out_chan (Printf.sprintf "module %s = %s \n"  s aliased))
+              decorate_interface_only out_chan base mli_name mli_content;
+              let aliased = Ext_string.capitalize_ascii base in 
+              String_hashtbl.find_all alias_map_rev aliased
+              |> List.iter 
+                (fun s -> output_string out_chan (Printf.sprintf "module %s = %s \n"  s aliased))
 
-         );
+           )
+           (fun base mli_name ml_name (lazy (_, mli_content)) (lazy (_, ml_content))
+             -> 
+               incr count;  
+               (*TODO: assume mli_name, ml_name are in the same dir,
+                 Needs to be addressed 
+               *)
+               if collect_modules then 
+                 begin 
+                   Queue.add ml_name collection_modules;
+                   Queue.add mli_name collection_modules
+                 end; 
+               (** if export 
+                   print it as 
+                   {[inclue (struct end : sig end)]}
+               *)   
+               let module_bound = not export || task_length > !count in 
+               decorate_module ~module_bound out_chan base mli_name ml_name mli_content ml_content;
+               let aliased = (Ext_string.capitalize_ascii base) in 
+               String_hashtbl.find_all alias_map_rev aliased
+               |> List.iter 
+                 (fun s -> output_string out_chan (Printf.sprintf "module %s = %s \n"  s aliased))
+
+           )
+       end;
        close_out_chan out_chan;
        begin 
          if !set_mllib_file then
            match !output_file with
            | None -> ()
            | Some file ->
-             let output = (Ext_filename.chop_extension_if_any file ^ ".d") in
+             let output = (Ext_path.chop_extension_if_any file ^ ".d") in
              let sorted_queue = 
                Queue.fold (fun acc x -> String_set.add x acc) String_set.empty  collection_modules in 
              Ext_io.write_file 
@@ -450,8 +485,8 @@ let () =
                         The relative path should be also be normalized..
                       *)
                       Filename.concat 
-                        (Ext_filename.rel_normalized_absolute_path
-                           cwd 
+                        (Ext_path.rel_normalized_absolute_path
+                           ~from:cwd 
                            (Filename.dirname a)
                         ) (Filename.basename a)
 

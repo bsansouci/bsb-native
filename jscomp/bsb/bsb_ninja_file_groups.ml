@@ -22,7 +22,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
 
-let (//) = Ext_filename.combine
+let (//) = Ext_path.combine
 
 type info =
   string list   
@@ -50,8 +50,8 @@ let handle_generators oc
           begin match output, input with
             | output::outputs, input::inputs -> 
               Bsb_ninja_util.output_build oc 
-                ~outputs:(List.map map_to_source_dir  outputs)
-                ~inputs:(List.map map_to_source_dir inputs) 
+                ~outputs:(Ext_list.map map_to_source_dir  outputs)
+                ~inputs:(Ext_list.map map_to_source_dir inputs) 
                 ~output:(map_to_source_dir output)
                 ~input:(map_to_source_dir input)
                 ~rule
@@ -91,7 +91,7 @@ let make_common_shadows
   in 
   if is_re then 
     { key = Bsb_ninja_global_vars.bsc_flags; 
-      op = Append("-bs-re-error")
+      op = AppendList ["-bs-re-error"; "-bs-super-errors"]
     } :: shadows
   else shadows
 
@@ -229,8 +229,8 @@ let handle_module_info
     namespace
   : info =
   match module_info.ml, module_info.mli with
-  | Ml_source (input_impl,impl_is_re), 
-    Mli_source(input_intf, intf_is_re) ->
+  | Ml_source (input_impl,impl_is_re,_), 
+    Mli_source(input_intf, intf_is_re,_) ->
     emit_impl_build 
       package_specs
       group_dir_index
@@ -247,7 +247,7 @@ let handle_module_info
       ~is_re:intf_is_re
       namespace
       input_intf 
-  | Ml_source(input,is_re), Mli_empty ->
+  | Ml_source(input,is_re,_), Mli_empty ->
     emit_impl_build 
       package_specs
       group_dir_index
@@ -257,7 +257,7 @@ let handle_module_info
       ~is_re
       namespace
       input 
-  | Ml_empty, Mli_source(input,is_re) ->    
+  | Ml_empty, Mli_source(input,is_re,_) ->    
     emit_intf_build 
       package_specs
       group_dir_index

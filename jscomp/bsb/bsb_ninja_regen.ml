@@ -26,7 +26,7 @@ let bsdeps = ".bsdeps"
 
 let bsppx_exe = "bsppx.exe"
 
-let (//) = Ext_filename.combine
+let (//) = Ext_path.combine
 
 (** Regenerate ninja file by need based on [.bsdeps]
     return None if we dont need regenerate
@@ -45,12 +45,12 @@ let regenerate_ninja
   cwd bsc_dir ocaml_dir 
   : _ option =
   let output_deps = cwd // Bsb_config.lib_bs // bsdeps in
-  let reason : Bsb_bsdeps.check_result =
+  let check_result : Bsb_bsdeps.check_result =
     Bsb_bsdeps.check ~cwd  ~forced ~file:output_deps backend in
   let () = 
-    Format.fprintf Format.std_formatter  
-      "@{<info>BSB check@} build spec : %a @." Bsb_bsdeps.pp_check_result reason in 
-  begin match reason  with 
+    Bsb_log.info
+      "@{<info>BSB check@} build spec : %a @." Bsb_bsdeps.pp_check_result check_result in 
+  begin match check_result  with 
     | Good ->
       None  (* Fast path, no need regenerate ninja *)
     | Bsb_forced 
@@ -64,7 +64,7 @@ let regenerate_ninja
         | Bsb_config_types.Native   -> "native"
         | Bsb_config_types.Bytecode -> "bytecode"
       end in
-      if reason = Bsb_bsc_version_mismatch then begin 
+      if check_result = Bsb_bsc_version_mismatch then begin 
         print_endline "Also clean current repo due to we have detected a different compiler";
         Bsb_clean.clean_self ~nested bsc_dir cwd; 
       end ; 
@@ -167,6 +167,7 @@ let regenerate_ninja
           ~external_deps_for_linking_and_clibs 
           ~cwd 
           ~bsc_dir 
+          ~no_dev
           ~ocaml_dir 
           ~root_project_dir 
           ~is_top_level 
@@ -174,7 +175,7 @@ let regenerate_ninja
           ~main_bs_super_errors
           config;
         Literals.bsconfig_json :: config.globbed_dirs
-        |> List.map
+        |> Ext_list.map
           (fun x ->
              { Bsb_bsdeps.dir_or_file = x ;
                stamp = (Unix.stat (cwd // x)).st_mtime

@@ -20,17 +20,6 @@
 *)
 (* Authors: Jérôme Vouillon, Hongbo Zhang  *)
 
-let string_of_module_id 
-    ~hint_output_dir 
-    module_system
-    id
-  = 
-  Js_packages_info.string_of_module_id
-    ~hint_output_dir  module_system
-    (Js_packages_state.get_packages_info ())
-    Lam_compile_env.get_package_path_from_cmj
-    id
-
 (*
   http://stackoverflow.com/questions/2846283/what-are-the-rules-for-javascripts-automatic-semicolon-insertion-asi
   ASI catch up
@@ -59,77 +48,12 @@ let string_of_module_id
 
 *)
 
-(* module P = Ext_format *)
+
 module P = Ext_pp
 module E = Js_exp_make 
 module S = Js_stmt_make 
 
-module L = struct
-  let function_ = "function"
-  let var = "var" (* should be able to switch to [let] easily*)
-  let return = "return"
-  let eq = "="
-  let require = "require"
-  let import = "import"
-  let from = "from"
-  let as_ = "as"
-  let export = "export"
-  let star = "*"
-  let goog_require = "goog.require" 
-  let goog_module = "goog.module"
-  let lparen = "("
-  let rparen = ")"
-  let exports = "exports"
-  let dot = "."
-  let comma = ","
-  let colon = Ext_string.single_colon
-  let throw = "throw"
-  let default = "default"
-  let length = "length"
-  let char_code_at = "charCodeAt"
-  let new_ = "new"
-  let array = "Array"
-  let question = "?"      
-  let plusplus = "++"
-  let minusminus = "--"
-  let semi = ";"
-  let else_ = "else"
-  let if_ = "if"
-  let this = "this"
-  let while_ = "while"
-  let empty_block = "empty_block"
-  let start_block = "start_block"
-  let end_block = "end_block"
-  let json = "JSON"
-  let stringify = "stringify"
-  let console = "console"
-  let define = "define"
-  let break = "break"
-  let continue = "continue"
-  let switch = "switch"
-  let strict_directive = "'use strict';"
-  let true_ = "true"
-  let false_ = "false"
-  let app = Literals.app (* curry arbitrary args *)
-  let app_array = Literals.app_array
-  let debugger = "debugger"
-  let tag = "tag"
-  let bind = "bind"
-  let math = "Math"
-  let apply = "apply"
-  let null = "null"
-  let string_cap = "String"
-  let fromCharcode = "fromCharCode"
-  let eq = "="
-  let le = "<="
-  let ge = ">="
-  let plus_plus = "++" 
-  (*  FIXME: use (i = i + 1 | 0) instead  *)
-  let minus_minus = "--"
-  let caml_block = "Block"
-  let caml_block_create = "__"
-  let case = "case" 
-end
+module L = Js_dump_lit
 let return_indent = (String.length L.return / Ext_pp.indent_length) 
 
 let throw_indent = (String.length L.throw / Ext_pp.indent_length) 
@@ -139,113 +63,6 @@ let semi f = P.string f L.semi
 
 let op_prec, op_str  =
   Js_op_util.(op_prec, op_str)
-
-let best_string_quote s =
-  let simple = ref 0 in
-  let double = ref 0 in
-  for i = 0 to String.length s - 1 do
-    match s.[i] with
-    | '\'' -> incr simple
-    | '"' -> incr double
-    | _ -> ()
-  done;
-  if !simple < !double
-  then '\''
-  else '"'
-
-
-
-
-
-
-(** Avoid to allocate single char string too many times*)
-let array_str1 =
-  Array.init 256 (fun i -> String.make 1 (Char.chr i)) 
-
-(** For conveting 
-
-*)
-let array_conv =
-  [|"0"; "1"; "2"; "3"; "4"; "5"; "6"; "7"; "8"; "9"; "a"; "b"; "c"; "d";
-    "e"; "f"|]
-
-
-
-(* https://mathiasbynens.be/notes/javascript-escapes *)
-let pp_string f  (* ?(utf=false)*) s =
-  let pp_raw_string f (* ?(utf=false)*) s = 
-    let l = String.length s in
-    for i = 0 to l - 1 do
-      let c = String.unsafe_get s i in
-      match c with
-      | '\b' -> P.string f "\\b"
-      | '\012' -> P.string f "\\f"
-      | '\n' -> P.string f "\\n"
-      | '\r' -> P.string f "\\r"
-      | '\t' -> P.string f "\\t"
-      (* This escape sequence is not supported by IE < 9
-               | '\011' -> "\\v"
-         IE < 9 treats '\v' as 'v' instead of a vertical tab ('\x0B'). 
-         If cross-browser compatibility is a concern, use \x0B instead of \v.
-
-         Another thing to note is that the \v and \0 escapes are not allowed in JSON strings.
-      *)
-      | '\000' when i = l - 1 || (let next = String.unsafe_get s (i + 1) in (next < '0' || next > '9'))
-        -> P.string f "\\0"
-
-      | '\\' (* when not utf*) -> P.string f "\\\\"
-
-
-      | '\000' .. '\031'  | '\127'->
-        let c = Char.code c in
-        P.string f "\\x";
-        P.string f (Array.unsafe_get array_conv (c lsr 4));
-        P.string f (Array.unsafe_get array_conv (c land 0xf))
-      | '\128' .. '\255' (* when not utf*) ->
-        let c = Char.code c in
-        P.string f "\\x";
-        P.string f (Array.unsafe_get array_conv (c lsr 4));
-        P.string f (Array.unsafe_get array_conv (c land 0xf))
-      | '\"' -> P.string f "\\\"" (* quote*)
-      | _ ->
-        P.string f (Array.unsafe_get array_str1 (Char.code c))
-    done
-  in
-  P.string f "\"";
-  pp_raw_string f (*~utf*) s ;
-  P.string f "\""
-;;
-
-(** used in printing keys 
-    {[
-      {"x" : x};;
-      {x : x }
-    ]}
-*)
-let property_string f s = 
-  if Ext_ident.property_no_need_convert s  then 
-    P.string f s
-  else 
-    pp_string f s
-
-(** used in property access 
-    {[
-      f.x ;;
-      f["x"];;
-    ]}
-*)
-let property_access f s = 
-  if Ext_ident.property_no_need_convert s  then
-    begin 
-      P.string f L.dot;
-      P.string f s; 
-    end
-  else
-    begin 
-      P.bracket_group f 1 @@ fun _ ->
-      pp_string f s
-    end
-
 
 
 let rec comma_idents  cxt f (ls : Ident.t list)  =
@@ -540,7 +357,7 @@ and  pp_function method_
     since it can be either [int] or [string]
 *)
 and output_one : 'a . 
-                   _ -> P.t -> (P.t -> 'a -> unit) -> 'a J.case_clause -> _
+  _ -> P.t -> (P.t -> 'a -> unit) -> 'a J.case_clause -> _
   = fun cxt f  pp_cond
     ({case = e; body = (sl,break)} : _ J.case_clause) -> 
     let cxt = 
@@ -593,7 +410,7 @@ and vident cxt f  (v : J.vident) =
       cxt
     | Qualified (id, External _, Some name) ->
       let cxt = Ext_pp_scope.ident cxt f id in
-      property_access f name ;
+      Js_dump_property.property_access f name ;
       cxt
 
   end
@@ -627,7 +444,7 @@ and
      It seems the optimizer already did work to make sure
      {[
        Call (Raw_js_code (s, Exp i), el, {Full})
-       when List.length el = i
+       when Ext_list.length_equal el i
      ]}
   *)
 
@@ -781,7 +598,7 @@ and
     (*TODO --
        when utf8-> it will not escape '\\' which is definitely not we want
     *)
-    pp_string f  s;
+    Js_dump_string.pp_string f  s;
     cxt 
 
   | Raw_js_code (s,info) -> 
@@ -1094,7 +911,7 @@ and
   | Dot (e, s,normal) ->
     let action () = 
       let cxt = expression 15 cxt f e in
-      property_access f s ;
+      Js_dump_property.property_access f s ;
       (* See [ .obj_of_exports] 
          maybe in the ast level we should have 
          refer and export
@@ -1153,16 +970,27 @@ and
       match lst with 
       | [] -> P.string f "{ }" ; cxt 
       | _ -> 
-        P.brace_vgroup f 1 @@ fun _ -> 
-        property_name_and_value_list cxt f lst
+        let action () = 
+          P.brace_vgroup f 1 @@ fun _ -> 
+          property_name_and_value_list cxt f lst in 
+        if l > 1 then  
+          (* #1946 object literal is easy to be 
+            interpreted as block statement
+            here we avoid parens in such case
+            {[
+              var f = { x : 2 , y : 2}
+            ]}
+          *)
+          P.paren_group f 1 action
+        else action ()
+
     end
 
 and property_name cxt f (s : J.property_name) : unit =
   match s with
   | Tag -> P.string f L.tag
   | Length -> P.string f L.length
-  | Key s -> 
-    property_string  f s 
+  | Key s -> Js_dump_property.property_key f s 
   | Int_key i -> P.string f (string_of_int i)
 
 and property_name_and_value_list cxt f l : Ext_pp_scope.t =
@@ -1275,14 +1103,6 @@ and statement_desc top cxt f (s : J.statement_desc) : Ext_pp_scope.t =
   | Exp {expression_desc = Var _;}
     -> (* Does it make sense to optimize here? *)
     semi f; cxt 
-
-  | Block b -> (* No braces needed here *)
-    ipp_comment f L.start_block;
-    let cxt = statement_list top cxt  f b in
-    ipp_comment f  L.end_block;
-    cxt
-  | Variable l ->
-    variable_declaration top cxt  f l
   | Exp e ->
     (* Parentheses are required when the expression
        starts syntactically with "{" or "function" 
@@ -1351,6 +1171,14 @@ and statement_desc top cxt f (s : J.statement_desc) : Ext_pp_scope.t =
       ) (fun _ -> expression 0 cxt f e ) in
     semi f;
     cxt 
+
+  | Block b -> (* No braces needed here *)
+    ipp_comment f L.start_block;
+    let cxt = statement_list top cxt  f b in
+    ipp_comment f  L.end_block;
+    cxt
+  | Variable l ->
+    variable_declaration top cxt  f l
 
   | If (e, s1,  s2) -> (* TODO: always brace those statements *)
     P.string f L.if_;
@@ -1583,7 +1411,7 @@ and statement_desc top cxt f (s : J.statement_desc) : Ext_pp_scope.t =
     in
     P.space f;
     P.brace_vgroup f 1 @@ fun _ -> 
-    let cxt = loop cxt f (fun f i -> pp_string f i ) cc in
+    let cxt = loop cxt f (fun f i -> Js_dump_string.pp_string f i ) cc in
     (match def with
      | None -> cxt
      | Some def ->
@@ -1642,125 +1470,6 @@ and block cxt f b =
   (* This one is for '{' *)
   P.brace_vgroup f 1 (fun _ -> statement_list false cxt   f b )
 
-let default_export = "default"
-
-(** Exports printer *)
-(** Print exports in Google module format, CommonJS format *)
-let exports cxt f (idents : Ident.t list) = 
-  let outer_cxt, reversed_list, margin = 
-    List.fold_left (fun (cxt, acc, len ) (id : Ident.t) -> 
-        let id_name = id.name in 
-        let s = Ext_ident.convert id_name in        
-        let str,cxt  = Ext_pp_scope.str_of_ident cxt id in         
-        cxt, ( 
-          if id_name = default_export then 
-            (default_export, str) :: (s,str)::acc 
-          else (s,str) :: acc ) , max len (String.length s)   )
-      (cxt, [], 0)  idents in    
-  P.newline f ;
-  Ext_list.rev_iter (fun (s,export) -> 
-      P.group f 0 @@ (fun _ ->  
-          P.string f L.exports;
-          P.string f L.dot;
-          P.string f s; 
-          P.nspace f (margin - String.length s +  1) ;
-          P.string f L.eq;
-          P.space f;
-          P.string f export;          
-          semi f;);
-      P.newline f;
-    ) reversed_list;
-  outer_cxt  
-
-(** Print module in ES6 format, it is ES6, trailing comma is valid ES6 code *)
-let es6_export cxt f (idents : Ident.t list) = 
-  let outer_cxt, reversed_list, margin = 
-    List.fold_left (fun (cxt, acc, len ) (id : Ident.t) -> 
-        let id_name = id.name in 
-        let s = Ext_ident.convert id_name in        
-        let str,cxt  = Ext_pp_scope.str_of_ident cxt id in         
-        cxt, ( 
-          if id_name = default_export then 
-            (default_export,str)::(s,str)::acc
-          else 
-            (s,str) :: acc ) , max len (String.length s)   )
-      (cxt, [], 0)  idents in    
-  P.newline f ;
-  P.string f L.export ; 
-  P.space f ; 
-  P.brace_vgroup f 1 begin fun _ -> 
-    Ext_list.rev_iter (fun (s,export) -> 
-        P.group f 0 @@ (fun _ ->  
-            P.string f export;          
-            P.nspace f (margin - String.length s +  1) ;
-            if not @@ Ext_string.equal export s then begin 
-              P.string f L.as_ ;
-              P.space f;
-              P.string f s
-            end ;             
-            P.string f L.comma ;);
-        P.newline f;
-      ) reversed_list;
-  end;
-  outer_cxt  
-
-
-(** Node or Google module style imports *)
-let requires require_lit cxt f (modules : (Ident.t * string) list ) =
-  P.newline f ; 
-  (* the context used to print the following program *)  
-  let outer_cxt, reversed_list, margin  =
-    List.fold_left
-      (fun (cxt, acc, len) (id,s) ->
-         let str, cxt = Ext_pp_scope.str_of_ident cxt id  in
-         cxt, ((str,s) :: acc), (max len (String.length str))
-      )
-      (cxt, [], 0)  modules in
-  P.force_newline f ;    
-  Ext_list.rev_iter (fun (s,file) ->
-      P.string f L.var;
-      P.space f ;
-      P.string f s ;
-      P.nspace f (margin - String.length s + 1) ;
-      P.string f L.eq;
-      P.space f;
-      P.string f require_lit;
-      P.paren_group f 0 @@ (fun _ ->
-          pp_string f file  );
-      semi f ;
-      P.newline f ;
-    ) reversed_list;
-  outer_cxt
-(** ES6 module style imports *)
-let imports  cxt f (modules : (Ident.t * string) list ) =
-  P.newline f ; 
-  (* the context used to print the following program *)  
-  let outer_cxt, reversed_list, margin  =
-    List.fold_left
-      (fun (cxt, acc, len) (id,s) ->
-         let str, cxt = Ext_pp_scope.str_of_ident cxt id  in
-         cxt, ((str,s) :: acc), (max len (String.length str))
-      )
-      (cxt, [], 0)  modules in
-  P.force_newline f ;    
-  Ext_list.rev_iter (fun (s,file) ->
-
-      P.string f L.import;
-      P.space f ;
-      P.string f L.star ;
-      P.space f ; (* import * as xx \t from 'xx*) 
-      P.string f L.as_ ; 
-      P.space f ; 
-      P.string f s ; 
-      P.nspace f (margin - String.length s + 1) ;      
-      P.string f L.from;
-      P.space f;
-      pp_string f file ;
-      semi f ;
-      P.newline f ;
-    ) reversed_list;
-  outer_cxt
-
 
 
 
@@ -1768,167 +1477,10 @@ let program f cxt   ( x : J.program ) =
   let () = P.force_newline f in
   let cxt =  statement_list true cxt f x.block  in
   let () = P.force_newline f in
-  exports cxt f x.exports
-
-let goog_program ~output_prefix f goog_package (x : J.deps_program)  = 
-  P.newline f ;
-  P.string f L.goog_module;
-  P.string f "(";
-  P.string f (Printf.sprintf "%S" goog_package);
-  P.string f ")";
-  semi f ;
-  let cxt = 
-    requires
-      L.goog_require
-      Ext_pp_scope.empty
-      f 
-      (List.map 
-         (fun x -> 
-            Lam_module_ident.id x,
-            string_of_module_id
-              ~hint_output_dir:(Filename.dirname output_prefix) 
-              Goog 
-              x)
-
-         x.modules) 
-  in
-  program f cxt x.program  
-
-let node_program ~output_prefix f ( x : J.deps_program) = 
-  let cxt = 
-    requires 
-      L.require
-      Ext_pp_scope.empty
-      f
-      (List.map 
-         (fun x -> 
-            Lam_module_ident.id x,
-            string_of_module_id
-              ~hint_output_dir:(Filename.dirname output_prefix)
-              NodeJS 
-              x)
-         x.modules)
-  in
-  program f cxt x.program  
-
-
-let amd_program ~output_prefix kind f (  x : J.deps_program) = 
-  P.newline f ; 
-  let cxt = Ext_pp_scope.empty in
-  P.vgroup f 1 @@ fun _ -> 
-  P.string f L.define;
-  P.string f "([";
-  P.string f (Printf.sprintf "%S" L.exports);
-
-  List.iter (fun x ->
-      let s : string = 
-        string_of_module_id
-          ~hint_output_dir:(Filename.dirname output_prefix) 
-          kind 
-          x in
-      P.string f L.comma ;
-      P.space f; 
-      pp_string f  s;
-    ) x.modules ;
-  P.string f "]";
-  P.string f L.comma;
-  P.newline f;
-  P.string f L.function_;
-  P.string f "(";
-  P.string f L.exports;
-
-  let cxt = 
-    List.fold_left (fun cxt x ->         
-        let id = Lam_module_ident.id x in
-        P.string f L.comma;
-        P.space f ; 
-        Ext_pp_scope.ident cxt f id
-      ) cxt x.modules     
-  in
-  P.string f ")";
-  let v = P.brace_vgroup f 1 @@ (fun _ -> 
-      let () = P.string f L.strict_directive in 
-      program f cxt x.program
-    ) in
-  P.string f ")";
-  v
-
-
-let es6_program  ~output_prefix fmt f (  x : J.deps_program) = 
-  let cxt = 
-    imports
-      Ext_pp_scope.empty
-      f
-      (List.map 
-         (fun x -> 
-            Lam_module_ident.id x,
-            string_of_module_id
-              ~hint_output_dir:(Filename.dirname output_prefix)
-              fmt 
-              x)
-         x.modules)
-  in
-  let () = P.force_newline f in 
-  let cxt = statement_list true cxt f x.program.block in 
-  let () = P.force_newline f in 
-  es6_export cxt f x.program.exports
-
-
-
-(** Make sure github linguist happy
-    {[
-      require('Linguist')
-        Linguist::FileBlob.new('jscomp/test/test_u.js').generated?
-    ]}
-*)
-
-let pp_deps_program
-    ~output_prefix
-    (kind : Js_packages_info.module_system )
-    (program  : J.deps_program) (f : Ext_pp.t) = 
-  begin
-    if not !Js_config.no_version_header then 
-      begin 
-        P.string f Bs_version.header;
-        P.newline f
-      end ; 
-    P.string f L.strict_directive; 
-    P.newline f ;    
-    ignore (match kind with 
-        | Es6 | Es6_global -> 
-          es6_program ~output_prefix kind f program
-        | AmdJS | AmdJS_global -> 
-          amd_program ~output_prefix kind f program
-        | NodeJS -> 
-          node_program ~output_prefix f program
-        | Goog  -> 
-          let goog_package = 
-            let v = Js_config.get_module_name () in
-            match Js_packages_state.get_package_name () with 
-            | None 
-              -> v 
-            | Some x -> x ^ "." ^ v 
-          in 
-          goog_program ~output_prefix f goog_package  program
-      ) ;
-    P.newline f ;
-    P.string f (
-      match program.side_effect with
-      | None -> "/* No side effect */"
-      | Some v -> Printf.sprintf "/* %s Not a pure module */" v );
-    P.newline f;
-    P.flush f ()
-  end
+  Js_dump_import_export.exports cxt f x.exports
 
 let dump_program (x : J.program) oc = 
   ignore (program (P.from_channel oc)  Ext_pp_scope.empty  x )
-
-let dump_deps_program
-    ~output_prefix
-    kind
-    x 
-    (oc : out_channel) = 
-  pp_deps_program ~output_prefix  kind x (P.from_channel oc)
 
 let string_of_block  block  
   = 
@@ -1948,6 +1500,4 @@ let string_of_expression e =
     let _scope =  expression 0  Ext_pp_scope.empty  f e in
     P.flush  f ();
     Buffer.contents buffer     
-  end
-
-
+  end  

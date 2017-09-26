@@ -23,14 +23,18 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
 
-
 (** Store a file called [.bsbuild] that can be communicated 
-  between [bsb.exe] and [bsb_helper.exe]. 
-  [bsb.exe] stores such data which would be retrieved by 
-  [bsb_helper.exe]
+    between [bsb.exe] and [bsb_helper.exe]. 
+    [bsb.exe] stores such data which would be retrieved by 
+    [bsb_helper.exe]. It is currently used to combine with 
+    ocamldep to figure out which module->file it depends on
 *) 
+
+type case = bool 
+
+
 type ml_kind =
-  | Ml_source of string * bool 
+  | Ml_source of string * bool  * bool
      (* No extension stored
       Ml_source(name,is_re)
       [is_re] default to false
@@ -38,7 +42,7 @@ type ml_kind =
   
   | Ml_empty
 type mli_kind = 
-  | Mli_source of string  * bool
+  | Mli_source of string  * bool * bool
   | Mli_empty
 
 type module_info = 
@@ -48,6 +52,8 @@ type module_info =
   }
 
 type t = module_info String_map.t 
+
+type ts = t array 
 
 (** store  the meta data indexed by {!Bsb_dir_index}
   {[
@@ -63,9 +69,12 @@ val dir_of_module_info : module_info -> string
 
 val filename_sans_suffix_of_module_info : module_info -> string 
 
-val write_build_cache : dir:string -> t array -> unit
 
-val read_build_cache : dir:string -> t array
+
+
+val write_build_cache : dir:string -> ts -> unit
+
+val read_build_cache : dir:string -> ts
 
 
 
@@ -79,3 +88,5 @@ val read_build_cache : dir:string -> t array
 *)
 val map_update : 
   dir:string -> t ->  string -> t
+
+val sanity_check : t -> unit   

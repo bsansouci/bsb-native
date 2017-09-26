@@ -23,11 +23,10 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
 
 
-let (//) = Ext_filename.combine 
+let (//) = Ext_path.combine 
 
 let common_js_prefix p  =  Bsb_config.lib_js  // p
 let amd_js_prefix p = Bsb_config.lib_amd // p 
-let goog_prefix p = Bsb_config.lib_goog // p  
 let es6_prefix p = Bsb_config.lib_es6 // p 
 let es6_global_prefix p =  Bsb_config.lib_es6_global // p
 let amdjs_global_prefix p = Bsb_config.lib_amd_global // p 
@@ -48,17 +47,15 @@ type t = Spec_set.t
 let supported_format x = 
   x = Literals.amdjs ||
   x = Literals.commonjs ||
-  x = Literals.goog ||
   x = Literals.es6 ||
   x = Literals.es6_global ||
   x = Literals.amdjs_global
 
 let bad_module_format_message_exn ~loc format =
-  Bsb_exception.failf ~loc "package-specs: `%s` isn't a valid output module format. It has to be one of: %s, %s, %s, %s, %s or %s"
+  Bsb_exception.errorf ~loc "package-specs: `%s` isn't a valid output module format. It has to be one of: %s, %s, %s, %s or %s"
     format
     Literals.amdjs
     Literals.commonjs
-    Literals.goog
     Literals.es6
     Literals.es6_global
     Literals.amdjs_global
@@ -75,7 +72,7 @@ let rec from_array (arr : Ext_json_types.t array) : Spec_set.t =
           if not !has_in_source then
             has_in_source:= true
           else 
-            Bsb_exception.failf 
+            Bsb_exception.errorf 
               ~loc:(Ext_json.loc_of x) 
               "package-specs: we've detected two module formats that are both configured to be in-source." 
         );
@@ -105,16 +102,16 @@ and from_json_single (x : Ext_json_types.t) : spec =
         else
           bad_module_format_message_exn ~loc format
       | Arr _ ->
-        Bsb_exception.failf ~loc
+        Bsb_exception.errorf ~loc
           "package-specs: when the configuration is an object, `module` field should be a string, not an array. If you want to pass multiple module specs, try turning package-specs into an array of objects (or strings) instead."
       | _ ->
-        Bsb_exception.failf ~loc
+        Bsb_exception.errorf ~loc
           "package-specs: the `module` field of the configuration object should be a string."
       | exception _ ->
-        Bsb_exception.failf ~loc
+        Bsb_exception.errorf ~loc
           "package-specs: when the configuration is an object, the `module` field is mandatory."
     end
-  | _ -> Bsb_exception.failf ~loc:(Ext_json.loc_of x)
+  | _ -> Bsb_exception.errorf ~loc:(Ext_json.loc_of x)
            "package-specs: we expect either a string or an object."
 
 let  from_json (x : Ext_json_types.t) : Spec_set.t =
@@ -145,7 +142,7 @@ let package_flag ({format; in_source } : spec) dir =
              es6_global_prefix dir   
            else if format = Literals.amdjs_global then 
              amdjs_global_prefix dir 
-           else goog_prefix dir))
+           else assert false))
     )
 
 let package_flag_of_package_specs (package_specs : t) 
@@ -174,7 +171,7 @@ let package_output ({format; in_source } : spec) output=
          es6_global_prefix  
        else  if format = Literals.amdjs_global then 
          amdjs_global_prefix
-       else goog_prefix)
+       else assert false)
   in
   (Bsb_config.proj_rel @@ prefix output )
 

@@ -128,9 +128,9 @@ let check_suffix  name  =
   if Filename.check_suffix name ".ml"
   || Filename.check_suffix name ".mlt" then 
     `Ml,
-    Ext_filename.chop_extension_if_any  name 
+    Ext_path.chop_extension_if_any  name 
   else if Filename.check_suffix name !Config.interface_suffix then 
-    `Mli,   Ext_filename.chop_extension_if_any  name 
+    `Mli,   Ext_path.chop_extension_if_any  name 
   else 
     raise(Arg.Bad("don't know what to do with " ^ name))
 
@@ -141,7 +141,7 @@ let collect_ast_map ppf files parse_implementation parse_interface  =
       source_file ->
       match check_suffix source_file with
       | `Ml, opref ->
-        let module_name = Ext_filename.module_name_of_file source_file in
+        let module_name = Ext_modulename.module_name_of_file source_file in
         begin match String_map.find_exn module_name acc with
           | exception Not_found ->
             String_map.add module_name
@@ -168,7 +168,7 @@ let collect_ast_map ppf files parse_implementation parse_interface  =
                module_name} acc
         end
       | `Mli, opref ->
-        let module_name = Ext_filename.module_name_of_file source_file in
+        let module_name = Ext_modulename.module_name_of_file source_file in
         begin match String_map.find_exn module_name acc with
           | exception Not_found ->
             String_map.add module_name
@@ -219,9 +219,9 @@ let collect_from_main
             (*   dirname, excludes *)
             (* | `Dir_with_excludes (dirname, dir_excludes) -> *)
             dirname,
-            Ext_list.flat_map 
+            Ext_list.append (Ext_list.flat_map 
               (fun x -> [x ^ ".ml" ; x ^ ".mli" ])
-              dir_excludes @ excludes
+              dir_excludes)  excludes
         in 
         Array.fold_left (fun acc source_file -> 
             if (Ext_string.ends_with source_file ".ml" ||
@@ -297,7 +297,12 @@ let build_queue ppf queue
     )
 
 
-let handle_queue ppf queue ast_table decorate_module_only decorate_interface_only decorate_module = 
+let handle_queue 
+  ppf 
+  queue ast_table 
+  decorate_module_only 
+  decorate_interface_only 
+  decorate_module = 
   queue 
   |> Queue.iter
     (fun base ->

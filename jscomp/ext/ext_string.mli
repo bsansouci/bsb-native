@@ -66,9 +66,7 @@ val ends_with_then_chop : string -> string -> string option
 
 val escaped : string -> string
 
-val ninja_escaped : string -> string
-
-(** the range is [start, finish) 
+(** the range is [start, finish]
 *)
 val for_all_range : 
   string -> start:int -> finish:int -> (char -> bool) -> bool 
@@ -156,3 +154,8 @@ val single_colon : string
 
 val parent_dir_lit : string
 val current_dir_lit : string
+
+val capitalize_ascii : string -> string
+
+(** return [Some xx] means the original *)
+(* val capitalize_ascii_opt : string -> string option *)
