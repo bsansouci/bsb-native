@@ -127,13 +127,14 @@ let output_ninja_and_namespace_map
 
   begin
     let () =
-      let bs_package_flags , namespace_flag = 
+      let bs_package_flags , namespace_flag, open_flag = 
         match namespace with
         | None -> 
-          Ext_string.inter2 "-bs-package-name" package_name, Ext_string.empty
+          Ext_string.inter2 "-bs-package-name" package_name, Ext_string.empty, Ext_string.empty
         | Some s -> 
           Ext_string.inter2 "-bs-package-map" package_name ,
-          Ext_string.inter2 "-ns" s  
+          Ext_string.inter2 "-ns" s,
+          Ext_string.inter2 "-open" s
       in  
       let bsc_flags = 
         Ext_string.inter2  Literals.dash_nostdlib @@
@@ -183,6 +184,14 @@ let output_ninja_and_namespace_map
           Bsb_ninja_global_vars.ocamlfind, if ocamlfind_dependencies = [] then "" else ocamlfind;
           Bsb_ninja_global_vars.ocamlfind_dependencies,  Bsb_build_util.flag_concat "-package" (external_ocamlfind_dependencies @ ocamlfind_dependencies);
           Bsb_ninja_global_vars.bin_annot, if bin_annot then "-bin-annot" else "";
+          (* @HACK 
+              This might cause stale artifacts. This makes everything implicitly depend on the namespace file... 
+              
+              
+                     Ben - September 28th 2017
+          *)
+          Bsb_ninja_global_vars.open_flag, open_flag;
+          
           (** TODO: could be removed by adding a flag
               [-bs-ns react]
           *)
@@ -309,19 +318,37 @@ let output_ninja_and_namespace_map
         (* let dir = 
            Bsb_parse_sources.find_first_lib_dir bs_file_groups in   *)
         let namespace_dir =     
-          cwd // Bsb_config.lib_bs  in
+          cwd // Bsb_config.lib_bs // nested in
         (* Bsb_build_util.mkp namespace_dir ;    *)
         Bsb_pkg_map_gen.output ~dir:namespace_dir ns
           bs_file_groups
         ; 
+        let (rule, output) = begin match backend with
+        | Bsb_config_types.Js       -> (Bsb_rule.build_package, ns ^ Literals.suffix_cmi)
+        | Bsb_config_types.Native
+        | Bsb_config_types.Bytecode -> (Bsb_rule.build_package_gen_mlast_simple, ns ^ Literals.suffix_mlast_simple)
+        end in 
         Bsb_ninja_util.output_build oc 
           (* This is what is actually needed 
              We may fix that issue when compiling a package 
              ns.ml explicitly does not need that package
           *)
-          ~output:(ns ^ Literals.suffix_cmi)
+          ~output
           ~input:(ns ^ Literals.suffix_mlmap)
-          ~rule:Bsb_rule.build_package;
+          ~rule;
+          (* When building with ocamlc/ocamlopt we need to use bsc to generate an `.mlast_simple` file 
+             and then we compile it normally to generate a cmi file. *)
+        if backend = Bsb_config_types.Bytecode then begin
+          Bsb_ninja_util.output_build oc 
+            ~output:(ns ^ Literals.suffix_cmi)
+            ~input:(ns ^ Literals.suffix_mlast_simple)
+            ~rule:Bsb_rule.build_package_build_cmi_bytecode;
+        end else if backend = Bsb_config_types.Native then begin
+          Bsb_ninja_util.output_build oc 
+            ~output:(ns ^ Literals.suffix_cmi)
+            ~input:(ns ^ Literals.suffix_mlast_simple)
+            ~rule:Bsb_rule.build_package_build_cmi_native;
+        end;
         (ns ^ Literals.suffix_cmi) :: all_info
     in
     let () =

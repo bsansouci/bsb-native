@@ -26,7 +26,7 @@ type link_t = LinkBytecode of string | LinkNative of string
 
 let (//) = Ext_path.combine
 
-let link link_byte_or_native ~main_module ~batch_files ~clibs ~includes ~ocamlfind_packages ~bs_super_errors ~cwd =
+let link link_byte_or_native ~main_module ~batch_files ~clibs ~includes ~ocamlfind_packages ~bs_super_errors ~namespace cwd =
   let suffix_object_files, suffix_library_files, compiler, add_custom, output_file = begin match link_byte_or_native with
   | LinkBytecode output_file -> Literals.suffix_cmo, Literals.suffix_cma , "ocamlc"  , true, output_file
   | LinkNative output_file   -> Literals.suffix_cmx, Literals.suffix_cmxa, "ocamlopt", false, output_file
@@ -49,9 +49,13 @@ let link link_byte_or_native ~main_module ~batch_files ~clibs ~includes ~ocamlfi
     String_map.empty
     batch_files in
   let tasks = Bsb_helper_dep_graph.simple_collect_from_main dependency_graph main_module in
+  let namespace = match namespace with 
+    | None -> ""
+    | Some namespace -> "-" ^ namespace
+  in
   let list_of_object_files = Queue.fold
     (fun acc v -> match String_map.find_opt v module_to_filepath with
-      | Some file -> (file ^ suffix_object_files) :: acc
+      | Some file -> (file ^ namespace ^ suffix_object_files) :: acc
       | None -> failwith @@ "build.ninja is missing the file '" ^ v ^ "' that was used in the project. Try force-regenerating but this shouldn't happen."
       )
     []

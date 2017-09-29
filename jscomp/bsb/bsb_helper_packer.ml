@@ -26,7 +26,16 @@ type pack_t = PackBytecode | PackNative
 
 let (//) = Ext_path.combine
 
-let pack pack_byte_or_native ~batch_files ~includes ~ocamlfind_packages ~bs_super_errors ~cwd =
+(* Ok this is a bit weird but the packer is called with object files (.cmo / .cmx) which will be namespaced
+   and we're using those names to read-in the mlast files which are not namespaced. So we strip the 
+   namespace before reading them in. *)
+let module_of_filename filename = 
+  let str = Ext_path.chop_extension filename in
+  match (String.rindex str '-') with 
+  | exception Not_found -> str
+  | len -> String.sub str 0 len
+
+let pack pack_byte_or_native ~batch_files ~includes ~ocamlfind_packages ~bs_super_errors ~namespace cwd =
   let suffix_object_files, suffix_library_files, compiler, custom_flag = begin match pack_byte_or_native with
   | PackBytecode -> Literals.suffix_cmo, Literals.suffix_cma , "ocamlc", true
   | PackNative   -> Literals.suffix_cmx, Literals.suffix_cmxa, "ocamlopt", false
@@ -34,7 +43,7 @@ let pack pack_byte_or_native ~batch_files ~includes ~ocamlfind_packages ~bs_supe
   let module_to_filepath = List.fold_left
     (fun m v ->
       String_map.add
-      (Ext_modulename.module_name_of_file_if_any v)
+      (Ext_modulename.module_name_of_file_if_any (module_of_filename v))
       (Ext_path.chop_extension_if_any v)
       m)
     String_map.empty
@@ -42,8 +51,8 @@ let pack pack_byte_or_native ~batch_files ~includes ~ocamlfind_packages ~bs_supe
   let dependency_graph = List.fold_left
     (fun m file ->
       String_map.add
-        (Ext_modulename.module_name_of_file_if_any file)
-        (Bsb_helper_extract.read_dependency_graph_from_mlast_file ((Ext_path.chop_extension file) ^ Literals.suffix_mlast))
+        (Ext_modulename.module_name_of_file_if_any (module_of_filename file))
+        (Bsb_helper_extract.read_dependency_graph_from_mlast_file ((module_of_filename file) ^ Literals.suffix_mlast))
         m)
     String_map.empty
     batch_files in
@@ -59,6 +68,10 @@ let pack pack_byte_or_native ~batch_files ~includes ~ocamlfind_packages ~bs_supe
       )
     []
     sorted_tasks) in
+  let all_object_files = match namespace with
+    | None -> all_object_files
+    | Some namespace -> all_object_files @ [namespace ^ suffix_object_files] 
+  in
   if all_object_files <> [] then
     let includes = List.fold_left (fun acc dir -> "-I" :: dir :: acc) [] includes in
     (* If there are no ocamlfind packages then let's not use ocamlfind, let's use the opt compiler instead.

@@ -48,10 +48,11 @@ let handle_file_group oc
   ~compile_target
   ~package_specs
   ~js_post_build_cmd
+  ~namespace
   (files_to_install : String_hash_set.t)
   acc
   (group: Bsb_parse_sources.file_group) : Bsb_ninja_file_groups.info =
-  let handle_module_info  oc  module_name
+  let handle_module_info  oc  namespace module_name
       ( module_info : Bsb_build_cache.module_info)
       info  =
     let installable =
@@ -66,22 +67,27 @@ let handle_file_group oc
       | `Re  -> filename_sans_extension ^ Literals.suffix_re
       | `Rei -> filename_sans_extension ^ Literals.suffix_rei
       ) in
-      let output_file_sans_extension = filename_sans_extension in
-      (* let output_ml = output_file_sans_extension ^ Literals.suffix_ml in *)
-      let output_mlast = output_file_sans_extension  ^ Literals.suffix_mlast in
-      let output_mlastd = output_file_sans_extension ^ Literals.suffix_mlastd in
-      let output_mliast = output_file_sans_extension ^ Literals.suffix_mliast in
-      let output_mliastd = output_file_sans_extension ^ Literals.suffix_mliastd in
-      let output_cmi = output_file_sans_extension ^ Literals.suffix_cmi in
-      let output_cmj_or_cmo =
+      let output_mlastd = filename_sans_extension ^ Literals.suffix_mlastd in
+      let output_mliastd = filename_sans_extension ^ Literals.suffix_mliastd in
+      let output_mlast = filename_sans_extension  ^ Literals.suffix_mlast in
+      let output_mliast = filename_sans_extension ^ Literals.suffix_mliast in
+      let output_filename_sans_extension = 
+        match namespace with 
+          | None -> 
+            filename_sans_extension 
+          | Some ns -> 
+            Ext_namespace.make ~ns filename_sans_extension
+        in
+      let output_cmi = output_filename_sans_extension ^ Literals.suffix_cmi in
+      let output_cmx_or_cmo =
         match compile_target with
-        | Bytecode -> output_file_sans_extension ^ Literals.suffix_cmo
-        | Native   -> output_file_sans_extension ^ Literals.suffix_cmx
+        | Bytecode -> output_filename_sans_extension ^ Literals.suffix_cmo
+        | Native   -> output_filename_sans_extension ^ Literals.suffix_cmx
       in
       let output_js =
-        Bsb_package_specs.get_list_of_output_js package_specs output_file_sans_extension in 
-      (* let output_mldeps = output_file_sans_extension ^ Literals.suffix_mldeps in  *)
-      (* let output_mlideps = output_file_sans_extension ^ Literals.suffix_mlideps in  *)
+        Bsb_package_specs.get_list_of_output_js package_specs output_filename_sans_extension in 
+      (* let output_mldeps = output_filename_sans_extension ^ Literals.suffix_mldeps in  *)
+      (* let output_mlideps = output_filename_sans_extension ^ Literals.suffix_mlideps in  *)
       let shadows =
         {Bsb_ninja_util.key = Bsb_ninja_global_vars.bs_package_flags;
           op = Bsb_ninja_util.Append
@@ -141,6 +147,10 @@ let handle_file_group oc
               else    
                 [], [output_cmi]
             in
+            let deps = match namespace with 
+              | None -> deps
+              | Some ns -> (ns ^ Literals.suffix_cmi) :: deps
+            in
             let shadows =
               match js_post_build_cmd with
               | None -> shadows
@@ -150,7 +160,7 @@ let handle_file_group oc
                   :: shadows
             in
             output_build oc
-              ~output:output_cmj_or_cmo
+              ~output:output_cmx_or_cmo
               ~shadows
               ~implicit_outputs:cm_outputs
               ~input:output_mlast
@@ -181,10 +191,15 @@ let handle_file_group oc
             | Bytecode -> Rules.build_cmi_bytecode
             | Native   -> Rules.build_cmi_native
             end in
+          let deps = match namespace with 
+              | None -> []
+              | Some ns -> [ns ^ Literals.suffix_cmi]
+            in
           output_build oc
             ~shadows
             ~output:output_cmi
             ~input:output_mliast
+            ~implicit_deps:deps
             (* ~implicit_deps:[output_mliastd] *)
             ~rule;
           if installable then begin install_file module_info files_to_install end ;
@@ -241,10 +256,10 @@ let handle_file_group oc
   ]}
   *)
   String_map.fold (fun  k v  acc ->
-      handle_module_info  oc k v acc
+      handle_module_info  oc namespace k v acc
     ) group.sources  acc
 
-let link oc ret ~entries ~file_groups ~static_libraries =
+let link oc ret ~entries ~file_groups ~static_libraries ~namespace =
   List.fold_left (fun acc project_entry ->
     let output, rule_name, suffix_cmo_or_cmx, main_module_name =
       begin match project_entry with
@@ -258,26 +273,37 @@ let link oc ret ~entries ~file_groups ~static_libraries =
       List.fold_left (fun acc group -> 
         String_map.fold (fun _ (v : Bsb_build_cache.module_info) (all_mlast_files, all_cmo_or_cmx_files, all_cmi_files) -> 
           let mlname = match v.ml with
-            | Ml_source (input, _, _) -> Some (Ext_path.chop_extension_if_any input)
+            | Ml_source (input, _, _) ->
+            let input = (Ext_path.chop_extension_if_any input)  in
+            begin match namespace with 
+              | None    -> Some (input, input)
+              | Some ns -> Some (input, (Ext_namespace.make ~ns input))
+            end
             | Ml_empty -> None
           in
           let mliname = match v.mli with
-            | Mli_source (input, _, _) -> Some (Ext_path.chop_extension_if_any input)
-            | Mli_empty -> None in
+            | Mli_source (input, _, _) ->
+            let input = (Ext_path.chop_extension_if_any input)  in
+            begin match namespace with 
+              | None    -> Some (input, input)
+              | Some ns -> Some (input, (Ext_namespace.make ~ns input))
+            end
+            | Mli_empty -> None 
+          in
           begin match (mlname, mliname) with
           | None, None -> failwith "Got a source file without an ml or mli file. This should not happen."
-          | Some name, Some _ ->
+          | Some (name, namespacedName), Some _ ->
             ((name ^ Literals.suffix_mlast) :: all_mlast_files,
-             (name ^ suffix_cmo_or_cmx)     :: all_cmo_or_cmx_files,
-             (name ^ Literals.suffix_cmi)   :: all_cmi_files)
-          | Some name, None ->
+             (namespacedName ^ suffix_cmo_or_cmx)     :: all_cmo_or_cmx_files,
+             (namespacedName ^ Literals.suffix_cmi)   :: all_cmi_files)
+          | Some (name, namespacedName), None ->
             ((name ^ Literals.suffix_mlast) :: all_mlast_files,
-             (name ^ suffix_cmo_or_cmx)     :: all_cmo_or_cmx_files,
-             (name ^ Literals.suffix_cmi)   :: all_cmi_files)
-          | None, Some name ->
+             (namespacedName ^ suffix_cmo_or_cmx)     :: all_cmo_or_cmx_files,
+             (namespacedName ^ Literals.suffix_cmi)   :: all_cmi_files)
+          | None, Some (_, namespacedName) ->
             (all_mlast_files,
              all_cmo_or_cmx_files,
-             (name ^ Literals.suffix_cmi)   :: all_cmi_files)
+             (namespacedName ^ Literals.suffix_cmi)   :: all_cmi_files)
           end    
         ) group.Bsb_parse_sources.sources acc) 
       ([], [], [])
@@ -295,7 +321,7 @@ let link oc ret ~entries ~file_groups ~static_libraries =
     acc
   ) ret entries
     
-let pack oc ret ~backend ~file_groups =
+let pack oc ret ~backend ~file_groups ~namespace =
   let output_cma_or_cmxa, rule_name, suffix_cmo_or_cmx =
     begin match backend with
     (* These cases could benefit from a better error message. *)
@@ -309,22 +335,35 @@ let pack oc ret ~backend ~file_groups =
     List.fold_left (fun acc group -> 
       String_map.fold (fun _ (v : Bsb_build_cache.module_info) (all_cmo_or_cmx_files, all_cmi_files) -> 
         let mlname = match v.ml with
-          | Ml_source (input, _, _) -> Some (Ext_path.chop_extension_if_any input)
-          | Ml_empty -> None
-        in
-        let mliname = match v.mli with
-          | Mli_source (input, _, _) -> Some (Ext_path.chop_extension_if_any input)
-          | Mli_empty -> None in
-        match (mlname, mliname) with
-        | None, None -> failwith "Got a source file without an ml or mli file. This should not happen."
-        | Some name, Some _ ->
-          ((name ^ suffix_cmo_or_cmx  ) :: all_cmo_or_cmx_files,
-           (name ^ Literals.suffix_cmi) :: all_cmi_files)
-        | Some name , None ->
-          ((name ^ suffix_cmo_or_cmx  ) :: all_cmo_or_cmx_files,
-           (name ^ Literals.suffix_cmi) :: all_cmi_files)
-        | None, Some name ->
-          (all_cmo_or_cmx_files, (name ^ Literals.suffix_cmi) :: all_cmi_files)
+            | Ml_source (input, _, _) ->
+            let input = (Ext_path.chop_extension_if_any input)  in
+            begin match namespace with 
+              | None    -> Some (input)
+              | Some ns -> Some ((Ext_namespace.make ~ns input))
+            end
+            | Ml_empty -> None
+          in
+          let mliname = match v.mli with
+            | Mli_source (input, _, _) ->
+            let input = (Ext_path.chop_extension_if_any input)  in
+            begin match namespace with 
+              | None    -> Some (input)
+              | Some ns -> Some ((Ext_namespace.make ~ns input))
+            end
+            | Mli_empty -> None 
+          in
+          begin match (mlname, mliname) with
+          | None, None -> failwith "Got a source file without an ml or mli file. This should not happen."
+          | Some name, Some _ ->
+            ((name ^ suffix_cmo_or_cmx)     :: all_cmo_or_cmx_files,
+             (name ^ Literals.suffix_cmi)   :: all_cmi_files)
+          | Some name, None ->
+            ((name ^ suffix_cmo_or_cmx)     :: all_cmo_or_cmx_files,
+             (name ^ Literals.suffix_cmi)   :: all_cmi_files)
+          | None, Some name ->
+            (all_cmo_or_cmx_files,
+             (name ^ Literals.suffix_cmi)   :: all_cmi_files)
+          end    
     ) group.Bsb_parse_sources.sources acc) 
     ([], [])
     file_groups in
@@ -362,9 +401,10 @@ let handle_file_groups oc
       ~compile_target
       ~package_specs
       ~js_post_build_cmd 
+      ~namespace
       files_to_install
   ) st file_groups in
   if is_top_level then
-    link oc ret ~entries ~file_groups ~static_libraries
+    link oc ret ~entries ~file_groups ~static_libraries ~namespace
   else
-    pack oc ret ~backend ~file_groups
+    pack oc ret ~backend ~file_groups ~namespace

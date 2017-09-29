@@ -55,6 +55,9 @@ val build_cma_library : t
 val build_cmxa_library : t
 
 val build_package : t 
+val build_package_gen_mlast_simple : t
+val build_package_build_cmi_bytecode : t
+val build_package_build_cmi_native : t
 
 (** rules are generally composed of built-in rules and customized rules, there are two design choices:
     1. respect custom rules with the same name, then we need adjust our built-in 
