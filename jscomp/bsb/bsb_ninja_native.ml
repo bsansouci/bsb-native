@@ -259,15 +259,15 @@ let handle_file_group oc
       handle_module_info  oc namespace k v acc
     ) group.sources  acc
 
-let link oc ret ~entries ~file_groups ~static_libraries ~namespace =
+let link oc ret ~entries ~file_groups ~static_libraries ~namespace ~external_deps_for_linking =
   List.fold_left (fun acc project_entry ->
-    let output, rule_name, suffix_cmo_or_cmx, main_module_name =
+    let output, rule_name, library_file_name, suffix_cmo_or_cmx, main_module_name =
       begin match project_entry with
       | Bsb_config_types.JsTarget main_module_name       -> assert false
       | Bsb_config_types.BytecodeTarget main_module_name -> 
-        (String.lowercase main_module_name) ^ ".byte"  , Rules.linking_bytecode, Literals.suffix_cmo, main_module_name
+        (String.lowercase main_module_name) ^ ".byte"  , Rules.linking_bytecode, "lib" ^ Literals.suffix_cma, Literals.suffix_cmo, main_module_name
       | Bsb_config_types.NativeTarget main_module_name   -> 
-        (String.lowercase main_module_name) ^ ".native", Rules.linking_native  , Literals.suffix_cmx, main_module_name
+        (String.lowercase main_module_name) ^ ".native", Rules.linking_native  , "lib" ^ Literals.suffix_cmxa, Literals.suffix_cmx, main_module_name
       end in
     let (all_mlast_files, all_cmo_or_cmx_files, all_cmi_files) =
       List.fold_left (fun acc group -> 
@@ -315,7 +315,7 @@ let link oc ret ~entries ~file_groups ~static_libraries ~namespace =
       ~output
       ~input:""
       ~inputs:all_mlast_files
-      ~implicit_deps:(all_cmi_files @ all_cmo_or_cmx_files)
+      ~implicit_deps:((List.map (fun dep -> dep // library_file_name) external_deps_for_linking) @ all_cmi_files @ all_cmo_or_cmx_files)
       ~shadows
       ~rule:rule_name;
     acc
@@ -388,6 +388,7 @@ let handle_file_groups oc
   ~js_post_build_cmd
   ~files_to_install
   ~static_libraries
+  ~external_deps_for_linking
   (file_groups  :  Bsb_parse_sources.file_group list) namespace st =
   let file_groups = List.filter (fun group ->
     match backend with 
@@ -405,6 +406,6 @@ let handle_file_groups oc
       files_to_install
   ) st file_groups in
   if is_top_level then
-    link oc ret ~entries ~file_groups ~static_libraries ~namespace
+    link oc ret ~entries ~file_groups ~static_libraries ~namespace ~external_deps_for_linking
   else
     pack oc ret ~backend ~file_groups ~namespace

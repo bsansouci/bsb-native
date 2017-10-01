@@ -36,6 +36,7 @@ val handle_file_groups : out_channel ->
   js_post_build_cmd:string option -> 
   files_to_install:String_hash_set.t ->  
   static_libraries:string list ->
+  external_deps_for_linking:string list ->
   Bsb_parse_sources.file_group list ->
   string option ->
   Bsb_ninja_file_groups.info -> 

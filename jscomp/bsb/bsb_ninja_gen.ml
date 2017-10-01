@@ -288,6 +288,7 @@ let output_ninja_and_namespace_map
           ~js_post_build_cmd
           ~files_to_install
           ~static_libraries:(external_static_libraries @ static_libraries)
+          ~external_deps_for_linking
           bs_file_groups
           namespace
           Bsb_ninja_file_groups.zero,
@@ -305,6 +306,7 @@ let output_ninja_and_namespace_map
           ~js_post_build_cmd
           ~files_to_install
           ~static_libraries:(external_static_libraries @ static_libraries)
+          ~external_deps_for_linking
           bs_file_groups
           namespace
           Bsb_ninja_file_groups.zero,
