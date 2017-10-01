@@ -8214,7 +8214,7 @@ let pack pack_byte_or_native ~batch_files ~includes ~ocamlfind_packages ~bs_supe
     sorted_tasks) in
   let all_object_files = match namespace with
     | None -> all_object_files
-    | Some namespace -> all_object_files @ [namespace ^ suffix_object_files] 
+    | Some namespace -> (namespace ^ suffix_object_files) :: all_object_files 
   in
   if all_object_files <> [] then
     let includes = List.fold_left (fun acc dir -> "-I" :: dir :: acc) [] includes in
