@@ -6,7 +6,7 @@ homepage: "https://github.com/bucklescript/bucklescript#readme"
 bug-reports: "https://github.com/bucklescript/bucklescript/issues"
 dev-repo: "git+https://github.com/bucklescript/bucklescript.git"
 authors: [ "Hongbo Zhang <>" ]
-maintainer: "Hongbo Zhang <>"
+maintainer: "hongbo_zhang <bobzhang1988@gmail.com>"
 tags: [ "ocaml" "bucklescript" "stdlib" "functional programming" ]
 build: [
   [ "node" "scripts/install.js"  ]
