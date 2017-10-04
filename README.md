@@ -6,7 +6,7 @@ Bsb-native is like [bsb](http://bucklescript.github.io/bucklescript/Manual.html#
 ## Install
 
 1) Add `"bsb-native": "bsansouci/bsb-native"` as a devDependency to your `package.json`
-2) Add a `bsconfig.json` like you would for bsb. Bsb-native uses the same schema, located [here](http://bucklescript.github.io/bucklescript/docson/#build-schema.json)
+2) Add a `bsconfig.json` like you would for bsb. Bsb-native uses the same schema, located [here](http://bucklescript.github.io/bucklescript/docson/#build-schema.json) with small additions like `entries`.
 
 For [example](https://github.com/bsansouci/BetterErrors/tree/bsb-support):
 ```json
@@ -33,6 +33,46 @@ The `-w` enabled the watch mode which will rebuild on any source file change.
 The `-backend [js|bytecode|native]` flag tells `bsb-native` to build all entries in the `bsconfig.json` to either `js`, `bytecode` or `native`.
 
 The build artifacts are put into the folder `lib/bs`. The bytecode executable would be at `lib/bs/bytecode/index.byte` and the native one at `lib/bs/native/index.native`.
+
+## Opam packages
+Yes `bsb-native` supports opam packages (see [ocamlfind example](https://github.com/bsansouci/bsb-native-example/tree/ocamlfind-trial))
+```js
+{
+  "name" : "NameOfLibrary",
+  "sources" : "src",
+  "ocamlfind-dependencies": ["lwt.unix", "lwt.ppx"],
+  "entries": [{
+    "kind": "bytecode",
+    "main": "Index"
+  }]
+}
+```
+
+## bsconfig.json schema
+```js
+{
+    // All of the bsb fields will work as expected. Here's just the added features
+    // Entries is an array of targets to be built.
+    // When running `bsb -backend bytecode`, bsb will filter this array for 
+    // all the entries compiling to bytecode and compile _all_ of those.
+    "entries": [{
+      "kind": "bytecode", // can be "bytecode" (ocamlc), "js" (bsc) or "native" (ocamlopt),
+      "main": "MainModule",
+    }],
+    
+    // Array of opam dependencies.
+    "ocamlfind-dependencies": ["lwt.unix"],
+    
+    // This allows you to write JS specific packages (for example) and depend 
+    // on them without bsb choking on them when building to another platform.
+    // If you have `MyLibJs` which exposes a module `Bla`, and `MyLibNative` 
+    // which also exposes `Bla`, the compiler will use the native `Bla` when
+    // compiling to native and the JS `Bla` when compiling to JS thanks to this
+    // flag.
+    "allowed-build-kinds": "js" // Can be a string or an array, with the same values as "entries".
+}
+```
+
 
 ## Multi-target
 `bsb-native` actually supports building Reason/OCaml to JS as well as to native/bytecode. What that enables is code that is truly cross platform, that depends on a JS implementation of a library or a native implementation, and bsb-native will build the right implementation depending on what you target.
