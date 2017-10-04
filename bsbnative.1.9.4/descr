@@ -1,3 +1,3 @@
-BuckleScript's bsb but for building to bytecode and native
+bsb-native is BuckleScript's bsb but for ocamlc and ocamlopt
 
-This is just a set of patches on top of bsb (https://bucklescript.github.io/bucklescript/Manual.html#_build_system_support) to run ocamlc or ocamlopt to build projects to bytecode or native.
+bsb-native is BuckleScript's bsb but for ocamlc and ocamlopt
