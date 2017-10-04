@@ -1,0 +1,9 @@
+# bsbnative
+
+bin: [
+  "./bin/bsb.exe" {"bsb.exe"}
+  "./bin/bsc.exe" {"bsc.exe"}
+  "./bin/bspack.exe" {"bspack.exe"} ]
+lib: [
+  "./META" {"META"}
+  "./opam" {"opam"} ]

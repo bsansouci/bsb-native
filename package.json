@@ -64,5 +64,16 @@
   "bugs": {
     "url": "https://github.com/bucklescript/bucklescript/issues"
   },
-  "homepage": "https://github.com/bucklescript/bucklescript#readme"
+  "homepage": "https://github.com/bucklescript/bucklescript#readme",
+  "opam": {
+    "type": "binary",
+    "installPath": "bin",
+    "libraryName": "bsbnative",
+    "ocamlVersion": "ocaml-version = \"4.02.3\"",
+    "binaries": {
+      "./bin/bsc.exe": "bsc.exe",
+      "./bin/bsb.exe": "bsb.exe",
+      "./bin/bspack.exe": "bspack.exe"
+    }
+  }
 }
