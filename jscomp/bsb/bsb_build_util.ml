@@ -244,35 +244,9 @@ let walk_all_deps dir cb =
   walk_all_deps_aux visited [] true dir cb 
 
 let get_ocaml_dir cwd =
-  if Ext_sys.is_windows_or_cygwin then begin
-    Format.fprintf Format.err_formatter "@{<warning>Windows not supported.@}";
-    (Filename.dirname (get_bsc_dir cwd)) // "vendor" // "ocaml"
-  end else begin
-    let ocamlc = Bsb_unix.run_command_capture_stdout "which ocamlc" in
-    (* TODO(sansouci): Probably pretty brittle. If there is no output to stdout
-       it's likely there was an error on stderr of the kind "ocamlc not found".
-       We just assume that it's bad either way and we simply fallback to the
-       local `ocamlc`. *)
-    if ocamlc = "" then
-      (Filename.dirname (get_bsc_dir cwd)) // "vendor" // "ocaml"
-    else Filename.dirname ocamlc
-  end
+  (Filename.dirname (get_bsc_dir cwd)) // "vendor" // "ocaml"
 
 let get_ocaml_lib_dir ~is_js cwd =
-  if Ext_sys.is_windows_or_cygwin then begin
-    Format.fprintf Format.err_formatter "@{<warning>Windows not supported.@}";
-    (Filename.dirname (get_bsc_dir cwd)) // "lib" // "ocaml"
-  end else begin
-    let basedirname = (Filename.dirname (get_bsc_dir cwd)) in 
-    if is_js then basedirname // "lib" // "ocaml"
-    else begin 
-      let ocaml_lib = Bsb_unix.run_command_capture_stdout "ocamlc -where" in
-      (* TODO(sansouci): Probably pretty brittle. If there is no output to stdout
-         it's likely there was an error on stderr of the kind "ocamlc not found".
-         We just assume that it's bad either way and we simply fallback to the
-         local `ocamlc`. *)
-      if ocaml_lib = "" then
-        basedirname // "vendor" // "ocaml" // "lib" // "ocaml"
-      else (String.sub ocaml_lib 0 (String.length ocaml_lib - 1))
-    end
-  end
+  (Filename.dirname (get_bsc_dir cwd)) // "lib" // "ocaml"
+
+let get_findlib_path cwd = cwd // Bsb_config.lib_bs // Bsb_config.findlib_conf

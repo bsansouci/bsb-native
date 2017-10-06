@@ -336,6 +336,7 @@ BSB_SRCS= bsb_config\
 	bsb_helper_linker\
 	bsb_helper_packer\
 	bsb_helper_extract\
+	bsb_helper_findlib\
 	bsb_rule\
 	bsb_config_types\
 	bsb_parse_sources\

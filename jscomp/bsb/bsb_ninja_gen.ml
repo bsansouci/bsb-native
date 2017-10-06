@@ -51,8 +51,6 @@ let dash_i = "-I"
 let refmt_exe = "refmt.exe"
 let dash_ppx = "-ppx"
 
-
-
 let output_ninja_and_namespace_map
     ~external_deps_for_linking_and_clibs:(external_deps_for_linking, external_static_libraries, external_ocamlfind_dependencies)
     ~cwd
@@ -124,7 +122,8 @@ let output_ninja_and_namespace_map
     Bsb_build_util.flag_concat dash_i @@ Ext_list.map 
       (fun (x : Bsb_config_types.dependency) -> x.package_install_path) bs_dev_dependencies
   in  
-
+  let findlib_conf_path = Bsb_build_util.get_findlib_path cwd in
+  
   begin
     let () =
       let bs_package_flags , namespace_flag, open_flag = 
@@ -151,7 +150,7 @@ let output_ninja_and_namespace_map
           Ext_string.inter2 "-ppx" s 
       in 
       let warnings = Bsb_warning.opt_warning_to_string no_dev warning in
-        
+
       Bsb_ninja_util.output_kvs
         [|
           Bsb_ninja_global_vars.bs_package_flags, bs_package_flags ; 
@@ -169,13 +168,13 @@ let output_ninja_and_namespace_map
           Bsb_ninja_global_vars.refmt_flags, refmt_flags;
           Bsb_ninja_global_vars.namespace , namespace_flag ; 
           
-          (* Bsb_ninja_global_vars.bs_super_errors_ocamlfind,  *)
+          Bsb_ninja_global_vars.bs_super_errors_ocamlfind, 
           (* Jumping through hoops. When ocamlfind is used we need to pass the argument 
              to the underlying compiler and not ocamlfind, so we use -passopt. Otherwise we don't.
              For bsb_helper we also don't. *)
-            (* if ocamlfind_dependencies <> [] && String.length bs_super_errors > 0 
+            if ocamlfind_dependencies <> [] && String.length bs_super_errors > 0 
               then "-passopt " ^ bs_super_errors 
-              else bs_super_errors; *)
+              else bs_super_errors;
           Bsb_ninja_global_vars.bs_super_errors, bs_super_errors;
           
           Bsb_ninja_global_vars.external_deps_for_linking, Bsb_build_util.flag_concat dash_i external_deps_for_linking;
@@ -191,6 +190,9 @@ let output_ninja_and_namespace_map
                      Ben - September 28th 2017
           *)
           Bsb_ninja_global_vars.open_flag, open_flag;
+          
+          Bsb_ninja_global_vars.findlib_conf_path, findlib_conf_path;
+          Bsb_ninja_global_vars.findlib_conf_env_var, if ocamlfind_dependencies = [] then "" else "OCAMLFIND_CONF=" ^ findlib_conf_path;
           
           (** TODO: could be removed by adding a flag
               [-bs-ns react]
@@ -353,6 +355,15 @@ let output_ninja_and_namespace_map
         end;
         (ns ^ Literals.suffix_cmi) :: all_info
     in
+    (* Add rule to generate the findlib.conf file only if we need it. *)
+    let all_info = if ocamlfind_dependencies <> [] then begin
+      print_endline @@ "findlib_conf_path: " ^ findlib_conf_path;
+      Bsb_ninja_util.output_build oc
+        ~output:(findlib_conf_path)
+        ~input:""
+        ~rule:Bsb_rule.generate_findlib_conf;
+      findlib_conf_path :: all_info
+    end else all_info in
     let () =
       List.iter (fun x -> Bsb_ninja_util.output_build oc
                     ~output:x
@@ -362,19 +373,24 @@ let output_ninja_and_namespace_map
      We generate one simple rule that'll just call that string as a command. *)
     let _ = match build_script with
     | Some build_script when should_build ->
-      let build_script = Ext_bytes.ninja_escaped build_script in
-      let ocaml_lib = Bsb_build_util.get_ocaml_lib_dir ~is_js:(backend = Bsb_config_types.Js) cwd in
-      (* TODO(sansouci): Fix this super ghetto environment variable setup... This is not cross platform! *)
-      let envvars = "export OCAML_LIB=" ^ ocaml_lib ^ " && " 
-                  ^ "export OCAML_SYSTHREADS=" ^ (ocaml_dir // "otherlibs" // "systhreads") ^ " && " 
-                  ^ "export PATH=$$PATH:" ^ (root_project_dir // "node_modules" // ".bin") ^ ":" ^ ocaml_dir ^ ":" ^ (root_project_dir // "node_modules" // "bs-platform" // "bin") ^ " && " in
-      (* We move out of lib/bs/XYZ so that the command is ran from the root project. *)
-      let rule = Bsb_rule.define ~command:("cd ../../.. && " ^ envvars ^ build_script) "build_script" in
-      Bsb_ninja_util.output_build oc
-        ~order_only_deps:(static_resources @ all_info)
-        ~input:""
-        ~output:Literals.build_ninja
-        ~rule;
+      if Ext_sys.is_windows_or_cygwin then 
+        Bsb_log.error "`build-script` field not supported on windows yet. Coming soon (poke bsansouci on discord so he prioritize it)."
+      else begin 
+        let build_script = Ext_bytes.ninja_escaped build_script in
+        let ocaml_lib = Bsb_build_util.get_ocaml_lib_dir ~is_js:(backend = Bsb_config_types.Js) cwd in
+        
+        (* @Todo @CrossPlatform Fix this super ghetto environment variable setup... This is not cross platform! *)
+        let envvars = "export OCAML_LIB=" ^ ocaml_lib ^ " && " 
+                    ^ "export OCAML_SYSTHREADS=" ^ (ocaml_dir // "otherlibs" // "systhreads") ^ " && " 
+                    ^ "export PATH=$$PATH:" ^ (root_project_dir // "node_modules" // ".bin") ^ ":" ^ ocaml_dir ^ ":" ^ (root_project_dir // "node_modules" // "bs-platform" // "bin") ^ " && " in
+        (* We move out of lib/bs/XYZ so that the command is ran from the root project. *)
+        let rule = Bsb_rule.define ~command:("cd ../../.. && " ^ envvars ^ build_script) "build_script" in
+        Bsb_ninja_util.output_build oc
+          ~order_only_deps:(static_resources @ all_info)
+          ~input:""
+          ~output:Literals.build_ninja
+          ~rule;
+      end
     | _ ->
       Bsb_ninja_util.phony oc ~order_only_deps:(static_resources @ all_info)
         ~inputs:[]

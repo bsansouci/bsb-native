@@ -75,7 +75,10 @@ COMP=bytecomp/lambda.cmo bytecomp/printlambda.cmo \
 
 # @Hack We hardcode `super_packed` here. It's generated with the following
 # command:
-# ../../jscomp/bin/bspack.exe -bs-no-implicit-include -bs-main Super_main -I ../../jscomp/super_errors/ -I ../../jscomp/ext/ -o super_packed.ml
+# ../../jscomp/bin/bspack.exe -bs-no-implicit-include -bs-main Super_main -I ../../jscomp/super_errors/ -I ../../jscomp/ext/ -I driver -o super_packed.ml
+#
+# I commented out `caml_string_length_based_compare` because I couldn't figure out how to build 
+# the C code and link it inside ocaml.
 #
 # We probably should fix the makefile up to point to some rules which allow
 # building super_errors in a better way.

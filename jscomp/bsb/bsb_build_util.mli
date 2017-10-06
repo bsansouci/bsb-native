@@ -73,3 +73,5 @@ val walk_all_deps : string -> (package_context -> unit) -> unit
 val get_ocaml_dir: string -> string
 
 val get_ocaml_lib_dir : is_js:bool -> string -> string
+
+val get_findlib_path : string -> string

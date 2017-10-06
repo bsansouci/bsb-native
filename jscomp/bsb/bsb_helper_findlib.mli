@@ -1,5 +1,5 @@
 (* Copyright (C) 2015-2016 Bloomberg Finance L.P.
- * 
+ *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
@@ -17,26 +17,9 @@
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU Lesser General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU Lesser General Public License
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
 
-
-val ocaml_bin_install_prefix : string -> string
-val proj_rel : string -> string
-
-val lib_js : string 
-val lib_amd : string 
-val lib_bs : string
-val lib_es6 : string 
-val lib_es6_global : string 
-val lib_amd_global : string 
-val lib_ocaml : string
-val all_lib_artifacts : string list 
-(* we need generate path relative to [lib/bs] directory in the opposite direction *)
-val rev_lib_bs_prefix : string -> string
-val findlib_conf : string
-
-(** default not install, only when -make-world, its dependencies will be installed  *)
-
+val gen_findlib_conf : string -> string -> unit

@@ -90,14 +90,23 @@ let link link_byte_or_native ~main_module ~batch_files ~clibs ~includes ~ocamlfi
         compiler
         (Array.of_list (list_of_args))
     else begin
+      (* @CrossPlatform This might work on windows since we're using the Unix module which claims to
+         have a windows implementation... We should double check this. *)
+      let environment = Unix.environment () in
+      (* @Hack we assume we're inside lib/bs/nested here, this might change in the future, breaking this 
+            Ben - October 6th 2017
+      *)
+      let dir = Filename.dirname @@ Filename.dirname @@ Filename.dirname @@ cwd in
+      let findlib_env_var = "OCAMLFIND_CONF=" ^ Bsb_build_util.get_findlib_path dir in
       let list_of_args = ("ocamlfind" :: compiler :: []) 
         @ (if bs_super_errors then ["-passopt"; "-bs-super-errors"] else []) 
         @ ("-linkpkg" :: ocamlfind_packages)
         @ ("-g" :: "-o" :: output_file :: all_object_files) in
       (* List.iter (fun a -> print_endline a) list_of_args; *)
-      Unix.execvp
+      Unix.execvpe
         "ocamlfind"
         (Array.of_list (list_of_args))
+        (Array.append [| findlib_env_var |] environment)
     end
   end else
     failwith @@ "No " ^ suffix_object_files ^ " to link. Hint: is the entry point module '" ^ main_module ^ "' right?"

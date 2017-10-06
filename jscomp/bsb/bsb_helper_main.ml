@@ -167,5 +167,11 @@ let () =
     " Better error message combined with other tools ";
     
     "-add-clib", (Arg.String add_clib),
-    " adds a .a library file to be linked into the final executable"
+    " adds a .a library file to be linked into the final executable";
+    
+    
+    "-gen-findlib", (Arg.String (fun dir ->
+      Bsb_helper_findlib.gen_findlib_conf dir (Sys.getcwd ())
+    )),
+    " Generates a findlib.conf file replacing ocamlc/ocamlopt with the local compilers."
     ] anonymous usage

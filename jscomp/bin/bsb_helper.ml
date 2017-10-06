@@ -3915,6 +3915,118 @@ let number = "number"
 let error = "error"
 
 end
+module Bsb_config : sig 
+#1 "bsb_config.mli"
+(* Copyright (C) 2015-2016 Bloomberg Finance L.P.
+ * 
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * In addition to the permissions granted to you by the LGPL, you may combine
+ * or link a "work that uses the Library" with a publicly distributed version
+ * of this file to produce a combined library or application, then distribute
+ * that combined work under the terms of your choosing, with no requirement
+ * to comply with the obligations normally placed on you by section 4 of the
+ * LGPL version 3 (or the corresponding section of a later version of the LGPL
+ * should you choose to use a later version).
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ * 
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
+
+
+val ocaml_bin_install_prefix : string -> string
+val proj_rel : string -> string
+
+val lib_js : string 
+val lib_amd : string 
+val lib_bs : string
+val lib_es6 : string 
+val lib_es6_global : string 
+val lib_amd_global : string 
+val lib_ocaml : string
+val all_lib_artifacts : string list 
+(* we need generate path relative to [lib/bs] directory in the opposite direction *)
+val rev_lib_bs_prefix : string -> string
+val findlib_conf : string
+
+(** default not install, only when -make-world, its dependencies will be installed  *)
+
+
+end = struct
+#1 "bsb_config.ml"
+(* Copyright (C) 2015-2016 Bloomberg Finance L.P.
+ * 
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * In addition to the permissions granted to you by the LGPL, you may combine
+ * or link a "work that uses the Library" with a publicly distributed version
+ * of this file to produce a combined library or application, then distribute
+ * that combined work under the terms of your choosing, with no requirement
+ * to comply with the obligations normally placed on you by section 4 of the
+ * LGPL version 3 (or the corresponding section of a later version of the LGPL
+ * should you choose to use a later version).
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ * 
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
+let (//) = Ext_path.combine 
+
+let lib_lit = "lib"
+let lib_js = lib_lit //"js"
+let lib_amd = lib_lit //"amdjs"
+let lib_ocaml = lib_lit // "ocaml"
+let lib_bs = lib_lit // "bs"
+let lib_es6 = lib_lit // "es6"
+let lib_es6_global = lib_lit // "es6_global"
+let lib_amd_global = lib_lit // "amdjs_global"
+let all_lib_artifacts = 
+  [ lib_js ; 
+    lib_amd ;
+    lib_ocaml;
+    lib_bs ; 
+    lib_es6 ; 
+    lib_es6_global;
+    lib_amd_global
+  ]
+let rev_lib_bs = ".."// ".."
+let findlib_conf = "findlib.conf"
+
+let rev_lib_bs_prefix p = rev_lib_bs // p 
+
+let ocaml_bin_install_prefix p = lib_ocaml // p
+
+let lazy_src_root_dir = "$src_root_dir" 
+let proj_rel path = lazy_src_root_dir // path
+
+(** it may not be a bad idea to hard code the binary path 
+    of bsb in configuration time
+*)
+
+
+
+
+
+
+let cmd_package_specs = ref None 
+
+
+end
 module Bs_version : sig 
 #1 "bs_version.mli"
 (* Copyright (C) 2015-2016 Bloomberg Finance L.P.
@@ -5672,236 +5784,6 @@ let resolve_bs_package ~cwd package =
 (*   aux cwd  *)
 
 end
-module Ext_sys : sig 
-#1 "ext_sys.mli"
-(* Copyright (C) 2015-2016 Bloomberg Finance L.P.
- * 
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Lesser General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * In addition to the permissions granted to you by the LGPL, you may combine
- * or link a "work that uses the Library" with a publicly distributed version
- * of this file to produce a combined library or application, then distribute
- * that combined work under the terms of your choosing, with no requirement
- * to comply with the obligations normally placed on you by section 4 of the
- * LGPL version 3 (or the corresponding section of a later version of the LGPL
- * should you choose to use a later version).
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Lesser General Public License for more details.
- * 
- * You should have received a copy of the GNU Lesser General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
-
-
-(* Not used yet *)
-(* val is_directory_no_exn : string -> bool *)
-
-
-val is_windows_or_cygwin : bool 
-end = struct
-#1 "ext_sys.ml"
-(* Copyright (C) 2015-2016 Bloomberg Finance L.P.
- * 
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Lesser General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * In addition to the permissions granted to you by the LGPL, you may combine
- * or link a "work that uses the Library" with a publicly distributed version
- * of this file to produce a combined library or application, then distribute
- * that combined work under the terms of your choosing, with no requirement
- * to comply with the obligations normally placed on you by section 4 of the
- * LGPL version 3 (or the corresponding section of a later version of the LGPL
- * should you choose to use a later version).
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Lesser General Public License for more details.
- * 
- * You should have received a copy of the GNU Lesser General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
-
-(** TODO: not exported yet, wait for Windows Fix*)
-let is_directory_no_exn f = 
-  try Sys.is_directory f with _ -> false 
-
-
-let is_windows_or_cygwin = Sys.win32 || Sys.cygwin
-end
-module Bsb_unix : sig 
-#1 "bsb_unix.mli"
-(* Copyright (C) 2015-2016 Bloomberg Finance L.P.
- * 
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Lesser General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * In addition to the permissions granted to you by the LGPL, you may combine
- * or link a "work that uses the Library" with a publicly distributed version
- * of this file to produce a combined library or application, then distribute
- * that combined work under the terms of your choosing, with no requirement
- * to comply with the obligations normally placed on you by section 4 of the
- * LGPL version 3 (or the corresponding section of a later version of the LGPL
- * should you choose to use a later version).
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Lesser General Public License for more details.
- * 
- * You should have received a copy of the GNU Lesser General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
-
-type command = 
-  { 
-    cmd : string ;
-    cwd : string ; 
-    args : string array 
-  }  
-
-
-
-
-val run_command_execv :   command -> unit 
-
-
-val remove_dir_recursive : string -> unit 
-
-(*  *)
-val run_command_capture_stdout: string -> string
-
-end = struct
-#1 "bsb_unix.ml"
-(* Copyright (C) 2015-2016 Bloomberg Finance L.P.
- * 
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Lesser General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * In addition to the permissions granted to you by the LGPL, you may combine
- * or link a "work that uses the Library" with a publicly distributed version
- * of this file to produce a combined library or application, then distribute
- * that combined work under the terms of your choosing, with no requirement
- * to comply with the obligations normally placed on you by section 4 of the
- * LGPL version 3 (or the corresponding section of a later version of the LGPL
- * should you choose to use a later version).
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Lesser General Public License for more details.
- * 
- * You should have received a copy of the GNU Lesser General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
-
-
-
-type command = 
-  { 
-    cmd : string ;
-    cwd : string ; 
-    args : string array 
-  }  
-
-
-let log cmd = 
-  Bsb_log.info "@{<info>Entering@} %s @." cmd.cwd ;  
-  Bsb_log.info "@{<info>Cmd:@} " ; 
-  Bsb_log.info_args cmd.args
-  
-let fail cmd =
-  Bsb_log.error "@{<error>Failure:@} %s \n Location: %s@." cmd.cmd cmd.cwd
-
-let run_command_execv_unix  cmd =
-  match Unix.fork () with 
-  | 0 -> 
-    log cmd;
-    Unix.chdir cmd.cwd;
-    Unix.execv cmd.cmd cmd.args 
-  | pid -> 
-    match Unix.waitpid [] pid  with 
-    | pid, process_status ->       
-      match process_status with 
-      | Unix.WEXITED eid ->
-        if eid <> 0 then 
-          begin 
-            fail cmd;
-            exit eid    
-          end;
-      | Unix.WSIGNALED _ | Unix.WSTOPPED _ -> 
-        begin 
-          Bsb_log.error "@{<error>Interrupted:@} %s@." cmd.cmd;
-          exit 2 
-        end        
-
-
-(** TODO: the args are not quoted, here 
-    we are calling a very limited set of `bsb` commands, so that 
-    we are safe
-*)
-let run_command_execv_win (cmd : command) =
-  let old_cwd = Unix.getcwd () in 
-  log cmd;
-  Unix.chdir cmd.cwd;
-  let eid =
-    Sys.command 
-      (String.concat Ext_string.single_space 
-         ( Filename.quote cmd.cmd ::( List.tl  @@ Array.to_list cmd.args))) in 
-  if eid <> 0 then 
-    begin 
-      fail cmd;
-      exit eid    
-    end
-  else  begin 
-    Bsb_log.info "@{<info>Leaving@} %s => %s  @." cmd.cwd  old_cwd;
-    Unix.chdir old_cwd
-  end
-
-
-let run_command_execv = 
-  if Ext_sys.is_windows_or_cygwin then 
-    run_command_execv_win
-  else run_command_execv_unix  
-(** it assume you have permissions, so always catch it to fail 
-    gracefully
-*)
-
-let rec remove_dir_recursive dir = 
-  if Sys.is_directory dir then 
-    begin 
-      let files = Sys.readdir dir in 
-      for i = 0 to Array.length files - 1 do 
-        remove_dir_recursive (Filename.concat dir (Array.unsafe_get files i))
-      done ;
-      Unix.rmdir dir 
-    end
-  else Sys.remove dir 
-
-let run_command_capture_stdout cmd =
-  let ic, oc = Unix.open_process cmd in
-  let buf = Buffer.create 64 in
-  (try
-     while true do
-       Buffer.add_channel buf ic 1
-     done
-   with End_of_file -> ());
-  let _ = Unix.close_process (ic, oc) in
-  Buffer.contents buf
-
-end
 module Ext_json_parse : sig 
 #1 "ext_json_parse.mli"
 (* Copyright (C) 2015-2016 Bloomberg Finance L.P.
@@ -6639,6 +6521,71 @@ let parse_json_from_file s =
 # 694 "ext/ext_json_parse.ml"
 
 end
+module Ext_sys : sig 
+#1 "ext_sys.mli"
+(* Copyright (C) 2015-2016 Bloomberg Finance L.P.
+ * 
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * In addition to the permissions granted to you by the LGPL, you may combine
+ * or link a "work that uses the Library" with a publicly distributed version
+ * of this file to produce a combined library or application, then distribute
+ * that combined work under the terms of your choosing, with no requirement
+ * to comply with the obligations normally placed on you by section 4 of the
+ * LGPL version 3 (or the corresponding section of a later version of the LGPL
+ * should you choose to use a later version).
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ * 
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
+
+
+(* Not used yet *)
+(* val is_directory_no_exn : string -> bool *)
+
+
+val is_windows_or_cygwin : bool 
+end = struct
+#1 "ext_sys.ml"
+(* Copyright (C) 2015-2016 Bloomberg Finance L.P.
+ * 
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * In addition to the permissions granted to you by the LGPL, you may combine
+ * or link a "work that uses the Library" with a publicly distributed version
+ * of this file to produce a combined library or application, then distribute
+ * that combined work under the terms of your choosing, with no requirement
+ * to comply with the obligations normally placed on you by section 4 of the
+ * LGPL version 3 (or the corresponding section of a later version of the LGPL
+ * should you choose to use a later version).
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ * 
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
+
+(** TODO: not exported yet, wait for Windows Fix*)
+let is_directory_no_exn f = 
+  try Sys.is_directory f with _ -> false 
+
+
+let is_windows_or_cygwin = Sys.win32 || Sys.cygwin
+end
 module Bsb_build_util : sig 
 #1 "bsb_build_util.mli"
 (* Copyright (C) 2015-2016 Bloomberg Finance L.P.
@@ -6716,6 +6663,8 @@ val walk_all_deps : string -> (package_context -> unit) -> unit
 val get_ocaml_dir: string -> string
 
 val get_ocaml_lib_dir : is_js:bool -> string -> string
+
+val get_findlib_path : string -> string
 
 end = struct
 #1 "bsb_build_util.ml"
@@ -6965,36 +6914,241 @@ let walk_all_deps dir cb =
   walk_all_deps_aux visited [] true dir cb 
 
 let get_ocaml_dir cwd =
-  if Ext_sys.is_windows_or_cygwin then begin
-    Format.fprintf Format.err_formatter "@{<warning>Windows not supported.@}";
-    (Filename.dirname (get_bsc_dir cwd)) // "vendor" // "ocaml"
-  end else begin
-    let ocamlc = Bsb_unix.run_command_capture_stdout "which ocamlc" in
-    (* TODO(sansouci): Probably pretty brittle. If there is no output to stdout
-       it's likely there was an error on stderr of the kind "ocamlc not found".
-       We just assume that it's bad either way and we simply fallback to the
-       local `ocamlc`. *)
-    if ocamlc = "" then
-      (Filename.dirname (get_bsc_dir cwd)) // "vendor" // "ocaml"
-    else Filename.dirname ocamlc
-  end
+  (Filename.dirname (get_bsc_dir cwd)) // "vendor" // "ocaml"
 
 let get_ocaml_lib_dir ~is_js cwd =
-  if Ext_sys.is_windows_or_cygwin then begin
-    Format.fprintf Format.err_formatter "@{<warning>Windows not supported.@}";
-    (Filename.dirname (get_bsc_dir cwd)) // "lib" // "ocaml"
-  end else begin
-    let basedirname = (Filename.dirname (get_bsc_dir cwd)) in 
-    if is_js then basedirname // "lib" // "ocaml"
+  (Filename.dirname (get_bsc_dir cwd)) // "lib" // "ocaml"
+
+let get_findlib_path cwd = cwd // Bsb_config.lib_bs // Bsb_config.findlib_conf
+
+end
+module Bsb_unix : sig 
+#1 "bsb_unix.mli"
+(* Copyright (C) 2015-2016 Bloomberg Finance L.P.
+ * 
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * In addition to the permissions granted to you by the LGPL, you may combine
+ * or link a "work that uses the Library" with a publicly distributed version
+ * of this file to produce a combined library or application, then distribute
+ * that combined work under the terms of your choosing, with no requirement
+ * to comply with the obligations normally placed on you by section 4 of the
+ * LGPL version 3 (or the corresponding section of a later version of the LGPL
+ * should you choose to use a later version).
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ * 
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
+
+type command = 
+  { 
+    cmd : string ;
+    cwd : string ; 
+    args : string array 
+  }  
+
+
+
+
+val run_command_execv :   command -> unit 
+
+
+val remove_dir_recursive : string -> unit 
+
+(*  *)
+val run_command_capture_stdout: string -> string
+
+end = struct
+#1 "bsb_unix.ml"
+(* Copyright (C) 2015-2016 Bloomberg Finance L.P.
+ * 
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * In addition to the permissions granted to you by the LGPL, you may combine
+ * or link a "work that uses the Library" with a publicly distributed version
+ * of this file to produce a combined library or application, then distribute
+ * that combined work under the terms of your choosing, with no requirement
+ * to comply with the obligations normally placed on you by section 4 of the
+ * LGPL version 3 (or the corresponding section of a later version of the LGPL
+ * should you choose to use a later version).
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ * 
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
+
+
+
+type command = 
+  { 
+    cmd : string ;
+    cwd : string ; 
+    args : string array 
+  }  
+
+
+let log cmd = 
+  Bsb_log.info "@{<info>Entering@} %s @." cmd.cwd ;  
+  Bsb_log.info "@{<info>Cmd:@} " ; 
+  Bsb_log.info_args cmd.args
+  
+let fail cmd =
+  Bsb_log.error "@{<error>Failure:@} %s \n Location: %s@." cmd.cmd cmd.cwd
+
+let run_command_execv_unix  cmd =
+  match Unix.fork () with 
+  | 0 -> 
+    log cmd;
+    Unix.chdir cmd.cwd;
+    Unix.execv cmd.cmd cmd.args 
+  | pid -> 
+    match Unix.waitpid [] pid  with 
+    | pid, process_status ->       
+      match process_status with 
+      | Unix.WEXITED eid ->
+        if eid <> 0 then 
+          begin 
+            fail cmd;
+            exit eid    
+          end;
+      | Unix.WSIGNALED _ | Unix.WSTOPPED _ -> 
+        begin 
+          Bsb_log.error "@{<error>Interrupted:@} %s@." cmd.cmd;
+          exit 2 
+        end        
+
+
+(** TODO: the args are not quoted, here 
+    we are calling a very limited set of `bsb` commands, so that 
+    we are safe
+*)
+let run_command_execv_win (cmd : command) =
+  let old_cwd = Unix.getcwd () in 
+  log cmd;
+  Unix.chdir cmd.cwd;
+  let eid =
+    Sys.command 
+      (String.concat Ext_string.single_space 
+         ( Filename.quote cmd.cmd ::( List.tl  @@ Array.to_list cmd.args))) in 
+  if eid <> 0 then 
+    begin 
+      fail cmd;
+      exit eid    
+    end
+  else  begin 
+    Bsb_log.info "@{<info>Leaving@} %s => %s  @." cmd.cwd  old_cwd;
+    Unix.chdir old_cwd
+  end
+
+
+let run_command_execv = 
+  if Ext_sys.is_windows_or_cygwin then 
+    run_command_execv_win
+  else run_command_execv_unix  
+(** it assume you have permissions, so always catch it to fail 
+    gracefully
+*)
+
+let rec remove_dir_recursive dir = 
+  if Sys.is_directory dir then 
+    begin 
+      let files = Sys.readdir dir in 
+      for i = 0 to Array.length files - 1 do 
+        remove_dir_recursive (Filename.concat dir (Array.unsafe_get files i))
+      done ;
+      Unix.rmdir dir 
+    end
+  else Sys.remove dir 
+
+let run_command_capture_stdout cmd =
+  let ic, oc = Unix.open_process cmd in
+  let buf = Buffer.create 64 in
+  (try
+     while true do
+       Buffer.add_channel buf ic 1
+     done
+   with End_of_file -> ());
+  let _ = Unix.close_process (ic, oc) in
+  Buffer.contents buf
+
+end
+module Bsb_helper_findlib : sig 
+#1 "bsb_helper_findlib.mli"
+(* Copyright (C) 2015-2016 Bloomberg Finance L.P.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * In addition to the permissions granted to you by the LGPL, you may combine
+ * or link a "work that uses the Library" with a publicly distributed version
+ * of this file to produce a combined library or application, then distribute
+ * that combined work under the terms of your choosing, with no requirement
+ * to comply with the obligations normally placed on you by section 4 of the
+ * LGPL version 3 (or the corresponding section of a later version of the LGPL
+ * should you choose to use a later version).
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
+
+val gen_findlib_conf : string -> string -> unit
+
+end = struct
+#1 "bsb_helper_findlib.ml"
+let (//) = Ext_path.combine
+
+let gen_findlib_conf output_dir cwd =
+  let destdir = Bsb_unix.run_command_capture_stdout "ocamlfind printconf destdir" in
+  (* TODO(sansouci): Probably pretty brittle. If there is no output to stdout
+     it's likely there was an error on stderr of the kind "ocamlfind not found".
+     We just assume that it's bad either way.*)
+  if destdir = "" then
+    Bsb_log.error "Error running `ocamlfind printconf destdir` to generate the findlib.conf. Hint: do you have `ocamlfind` installed?"
+  else begin 
+    let path = Bsb_unix.run_command_capture_stdout "ocamlfind printconf path" in
+    if path = "" then
+      Bsb_log.error "Error running `ocamlfind printconf destdir` to generate the findlib.conf. Hint: do you have `ocamlfind` installed?"
     else begin 
-      let ocaml_lib = Bsb_unix.run_command_capture_stdout "ocamlc -where" in
-      (* TODO(sansouci): Probably pretty brittle. If there is no output to stdout
-         it's likely there was an error on stderr of the kind "ocamlc not found".
-         We just assume that it's bad either way and we simply fallback to the
-         local `ocamlc`. *)
-      if ocaml_lib = "" then
-        basedirname // "vendor" // "ocaml" // "lib" // "ocaml"
-      else (String.sub ocaml_lib 0 (String.length ocaml_lib - 1))
+      let destdirTrimmed = (String.sub destdir 0 (String.length destdir - 1)) in
+      let pathTrimmed = (String.sub path 0 (String.length path - 1)) in
+      let ocaml_dir = Bsb_build_util.get_ocaml_dir cwd in
+      (* Sigh multi-line string adds all sorts of unwanted indentation and doesn't look that much better :(  *)
+      let findlibconf = Printf.sprintf "\
+          destdir=\"%s\"\n\
+          path=\"%s\"\n\
+          ocamlc=\"%s\"\n\
+          ocamlopt=\"%s\"\
+        "
+        destdirTrimmed
+        pathTrimmed
+        (ocaml_dir // "ocamlc.opt")
+        (ocaml_dir // "ocamlopt.opt") in
+      
+      let oc = open_out_bin output_dir in 
+      output_string oc findlibconf; 
+      close_out oc
     end
   end
 
@@ -8090,14 +8244,23 @@ let link link_byte_or_native ~main_module ~batch_files ~clibs ~includes ~ocamlfi
         compiler
         (Array.of_list (list_of_args))
     else begin
+      (* @CrossPlatform This might work on windows since we're using the Unix module which claims to
+         have a windows implementation... We should double check this. *)
+      let environment = Unix.environment () in
+      (* @Hack we assume we're inside lib/bs/nested here, this might change in the future, breaking this 
+            Ben - October 6th 2017
+      *)
+      let dir = Filename.dirname @@ Filename.dirname @@ Filename.dirname @@ cwd in
+      let findlib_env_var = "OCAMLFIND_CONF=" ^ Bsb_build_util.get_findlib_path dir in
       let list_of_args = ("ocamlfind" :: compiler :: []) 
         @ (if bs_super_errors then ["-passopt"; "-bs-super-errors"] else []) 
         @ ("-linkpkg" :: ocamlfind_packages)
         @ ("-g" :: "-o" :: output_file :: all_object_files) in
       (* List.iter (fun a -> print_endline a) list_of_args; *)
-      Unix.execvp
+      Unix.execvpe
         "ocamlfind"
         (Array.of_list (list_of_args))
+        (Array.append [| findlib_env_var |] environment)
     end
   end else
     failwith @@ "No " ^ suffix_object_files ^ " to link. Hint: is the entry point module '" ^ main_module ^ "' right?"
@@ -8231,12 +8394,20 @@ let pack pack_byte_or_native ~batch_files ~includes ~ocamlfind_packages ~bs_supe
           (Array.of_list ((compiler :: "-a" :: "-g" :: (if bs_super_errors then ["-bs-super-errors"] else []) )
             @ "-o" :: (Literals.library_file ^ suffix_library_files) :: includes @ all_object_files))
     else begin
+      (* @CrossPlatform This might work on windows since we're using the Unix module which claims to
+         have a windows implementation... We should double check this. *)
+      (* @Hack we assume we're inside lib/bs/nested here, this might change in the future, breaking this 
+            Ben - October 6th 2017
+      *)
+      let dir = Filename.dirname @@ Filename.dirname @@ Filename.dirname @@ cwd in
+      let findlib_env_var = "OCAMLFIND_CONF=" ^ Bsb_build_util.get_findlib_path dir in
       let list_of_args = ("ocamlfind" :: compiler :: "-a" :: "-g" :: ocamlfind_packages) 
       @ ((if bs_super_errors then ["-passopt"; "-bs-super-errors"] else []))
       @  ("-o" :: (Literals.library_file ^ suffix_library_files) :: includes @ all_object_files) in
-      Unix.execvp
+      Unix.execvpe
         "ocamlfind"
           (Array.of_list list_of_args)
+          [| findlib_env_var |]
     end
   else
     failwith @@ "No " ^ suffix_object_files ^ " to pack into a lib."
@@ -8451,7 +8622,13 @@ let () =
     " Better error message combined with other tools ";
     
     "-add-clib", (Arg.String add_clib),
-    " adds a .a library file to be linked into the final executable"
+    " adds a .a library file to be linked into the final executable";
+    
+    
+    "-gen-findlib", (Arg.String (fun dir ->
+      Bsb_helper_findlib.gen_findlib_conf dir (Sys.getcwd ())
+    )),
+    " Generates a findlib.conf file replacing ocamlc/ocamlopt with the local compilers."
     ] anonymous usage
 
 end
