@@ -649,6 +649,7 @@ install:
 	./runtime/js_float.ml ./runtime/js_float.cmi \
 	./runtime/js_typed_array.ml ./runtime/js_typed_array.cmi   $(DEST)
 	cp ./stdlib/*.ml ./stdlib/*.mli $(DEST)
+	cp -r ../vendor/ocaml/lib/ocaml/caml $(DEST)
 # ./runtime/js_null_undefined.ml ./runtime/js_null_undefined.cmi
 include all.depend
 -include $(SNAPSHOT_DEPS)
