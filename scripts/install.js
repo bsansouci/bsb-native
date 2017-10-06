@@ -85,24 +85,24 @@ process.env.PATH = path.join(__dirname, '..', 'vendor', 'ocaml', 'bin') + path.d
 var make = is_bsd ? 'gmake' : 'make';
 
 function non_windows_npm_release() {
-    var hasGlobalOcaml = true;
-    try {
-        child_process.execSync('node ../scripts/config_compiler.js', working_config)
-    } catch (e) {
+    // var hasGlobalOcaml = true;
+    // try {
+    //     child_process.execSync('node ../scripts/config_compiler.js', working_config)
+    // } catch (e) {
         console.log('Build a local version of OCaml compiler, it may take a couple of minutes')
         child_process.execSync(path.join(__dirname, 'buildocaml.sh')) // TODO: sh -c ? this will be wrong if we have white space in the path
         console.log('configure again with local ocaml installed')
         child_process.execSync('node ../scripts/config_compiler.js', working_config)
         console.log("config finished")        
-        hasGlobalOcaml = false;
-    }
+        // hasGlobalOcaml = false;
+    // }
     console.log("Build the compiler and runtime .. ")
     child_process.execSync(make + " world", working_config)
     console.log("Installing")
     child_process.execSync(make + ' VERBOSE=true install', working_config);
-    if (!hasGlobalOcaml) {
-        child_process.execSync(make + ' install', {cwd: path.join(__dirname, "..", "vendor", "ocaml"), stdio:[0, 1, 2]});
-    }
+    // if (!hasGlobalOcaml) {
+    // child_process.execSync(make + ' install', {cwd: path.join(__dirname, "..", "vendor", "ocaml"), stdio:[0, 1, 2]});
+    // }
 }
 
 if (is_windows) {
