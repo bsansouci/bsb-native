@@ -3903,9 +3903,9 @@ let in_source = "in-source"
 
 let bs_super_errors = "bs-super-errors"
 
-let static_libraries = "static_libraries"
-let c_linker_flags = "c_linker_flags"
-let build_script = "build_script"
+let static_libraries = "static-libraries"
+let c_linker_flags = "c-linker-flags"
+let build_script = "build-script"
 let allowed_build_kinds = "allowed-build-kinds"
 let ocamlfind_dependencies = "ocamlfind-dependencies"
 let bin_annot = "bin-annot"
