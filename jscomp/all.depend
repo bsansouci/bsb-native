@@ -821,10 +821,10 @@ bsb/bsb_helper_dep_graph.cmx : ext/string_set.cmx ext/string_map.cmx \
 bsb/bsb_helper_extract.cmx : ext/string_set.cmx ext/ext_string.cmx \
     bsb/bsb_helper_extract.cmi
 bsb/bsb_helper_findlib.cmx : ext/ext_path.cmx bsb/bsb_unix.cmx \
-    bsb/bsb_log.cmx bsb/bsb_build_util.cmx
+    bsb/bsb_log.cmx bsb/bsb_build_util.cmx bsb/bsb_helper_findlib.cmi
 bsb/bsb_helper_linker.cmx : ext/string_map.cmx ext/literals.cmx \
     ext/ext_path.cmx ext/ext_modulename.cmx bsb/bsb_helper_extract.cmx \
-    bsb/bsb_helper_dep_graph.cmx bsb/bsb_build_util.cmx \
+    bsb/bsb_helper_dep_graph.cmx bsb/bsb_default.cmx bsb/bsb_build_util.cmx \
     bsb/bsb_helper_linker.cmi
 bsb/bsb_helper_main.cmx : ext/ext_path.cmx bsb/bsb_helper_packer.cmx \
     bsb/bsb_helper_linker.cmx bsb/bsb_helper_findlib.cmx \
@@ -832,7 +832,7 @@ bsb/bsb_helper_main.cmx : ext/ext_path.cmx bsb/bsb_helper_packer.cmx \
 bsb/bsb_helper_packer.cmx : ext/string_set.cmx ext/string_map.cmx \
     ext/literals.cmx ext/ext_path.cmx ext/ext_modulename.cmx \
     bsb/bsb_helper_extract.cmx bsb/bsb_helper_dep_graph.cmx \
-    bsb/bsb_build_util.cmx bsb/bsb_helper_packer.cmi
+    bsb/bsb_default.cmx bsb/bsb_build_util.cmx bsb/bsb_helper_packer.cmi
 bsb/bsb_log.cmx : ext/ext_string.cmx ext/ext_color.cmx bsb/bsb_log.cmi
 bsb/bsb_main.cmx : ext/ext_sys.cmx ext/ext_string.cmx ext/ext_pervasives.cmx \
     ext/ext_path.cmx ext/ext_array.cmx bsb/bsb_world.cmx \
@@ -856,9 +856,9 @@ bsb/bsb_ninja_gen.cmx : ext/string_map.cmx ext/literals.cmx ext/ext_sys.cmx \
     bsb/bsb_warning.cmx bsb/bsb_rule.cmx bsb/bsb_pkg_map_gen.cmx \
     bsb/bsb_parse_sources.cmx bsb/bsb_ninja_util.cmx bsb/bsb_ninja_native.cmx \
     bsb/bsb_ninja_global_vars.cmx bsb/bsb_ninja_file_groups.cmx \
-    bsb/bsb_log.cmx bsb/bsb_dir_index.cmx bsb/bsb_config_types.cmx \
-    bsb/bsb_config.cmx bsb/bsb_build_util.cmx bsb/bsb_build_schemas.cmx \
-    bsb/bsb_build_cache.cmx bsb/bsb_ninja_gen.cmi
+    bsb/bsb_log.cmx bsb/bsb_dir_index.cmx bsb/bsb_default.cmx \
+    bsb/bsb_config_types.cmx bsb/bsb_config.cmx bsb/bsb_build_util.cmx \
+    bsb/bsb_build_schemas.cmx bsb/bsb_build_cache.cmx bsb/bsb_ninja_gen.cmi
 bsb/bsb_ninja_global_vars.cmx :
 bsb/bsb_ninja_native.cmx : ext/string_set.cmx ext/string_map.cmx \
     ext/string_hash_set.cmx ext/literals.cmx ext/ext_string.cmx \
@@ -931,6 +931,7 @@ bsb/bsb_file.cmi :
 bsb/bsb_helper_dep_graph.cmi : ext/string_set.cmi ext/string_map.cmi \
     ext/string_hashtbl.cmi
 bsb/bsb_helper_extract.cmi : ext/string_set.cmi
+bsb/bsb_helper_findlib.cmi :
 bsb/bsb_helper_linker.cmi :
 bsb/bsb_helper_main.cmi :
 bsb/bsb_helper_packer.cmi :

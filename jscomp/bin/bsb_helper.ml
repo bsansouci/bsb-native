@@ -7153,6 +7153,1257 @@ let gen_findlib_conf output_dir cwd =
   end
 
 end
+module Bsb_package_specs : sig 
+#1 "bsb_package_specs.mli"
+(* Copyright (C) 2017 Authors of BuckleScript
+ * 
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * In addition to the permissions granted to you by the LGPL, you may combine
+ * or link a "work that uses the Library" with a publicly distributed version
+ * of this file to produce a combined library or application, then distribute
+ * that combined work under the terms of your choosing, with no requirement
+ * to comply with the obligations normally placed on you by section 4 of the
+ * LGPL version 3 (or the corresponding section of a later version of the LGPL
+ * should you choose to use a later version).
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ * 
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
+
+type t
+
+(* val package_flag: t -> string -> string *)
+
+(* val package_output: t -> string -> string *)
+
+val supported_format : string -> bool
+
+val default_package_specs : t
+
+val from_json:
+  Ext_json_types.t -> t 
+
+val get_list_of_output_js : 
+  t -> string -> string list
+
+(**
+  Sample output: {[ -bs-package-output commonjs:lib/js/jscomp/test]}
+*)
+val package_flag_of_package_specs : 
+  t -> string -> string
+
+(* val get_package_specs_from_array : 
+  Ext_json_types.t array -> t *)
+
+end = struct
+#1 "bsb_package_specs.ml"
+(* Copyright (C) 2017 Authors of BuckleScript
+ * 
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * In addition to the permissions granted to you by the LGPL, you may combine
+ * or link a "work that uses the Library" with a publicly distributed version
+ * of this file to produce a combined library or application, then distribute
+ * that combined work under the terms of your choosing, with no requirement
+ * to comply with the obligations normally placed on you by section 4 of the
+ * LGPL version 3 (or the corresponding section of a later version of the LGPL
+ * should you choose to use a later version).
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ * 
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
+
+
+let (//) = Ext_path.combine 
+
+let common_js_prefix p  =  Bsb_config.lib_js  // p
+let amd_js_prefix p = Bsb_config.lib_amd // p 
+let es6_prefix p = Bsb_config.lib_es6 // p 
+let es6_global_prefix p =  Bsb_config.lib_es6_global // p
+let amdjs_global_prefix p = Bsb_config.lib_amd_global // p 
+
+type spec = {
+  format : string;
+  in_source : bool 
+}
+
+module Spec_set = Set.Make( struct type t = spec 
+    let compare = Pervasives.compare 
+  end)
+
+type t = Spec_set.t 
+
+
+
+let supported_format x = 
+  x = Literals.amdjs ||
+  x = Literals.commonjs ||
+  x = Literals.es6 ||
+  x = Literals.es6_global ||
+  x = Literals.amdjs_global
+
+let bad_module_format_message_exn ~loc format =
+  Bsb_exception.errorf ~loc "package-specs: `%s` isn't a valid output module format. It has to be one of: %s, %s, %s, %s or %s"
+    format
+    Literals.amdjs
+    Literals.commonjs
+    Literals.es6
+    Literals.es6_global
+    Literals.amdjs_global
+
+let rec from_array (arr : Ext_json_types.t array) : Spec_set.t =
+  let spec = ref Spec_set.empty in
+  let has_in_source = ref false in
+  arr
+  |> Array.iter (fun (x : Ext_json_types.t) ->
+
+      let result = from_json_single x  in
+      if result.in_source then 
+        (
+          if not !has_in_source then
+            has_in_source:= true
+          else 
+            Bsb_exception.errorf 
+              ~loc:(Ext_json.loc_of x) 
+              "package-specs: we've detected two module formats that are both configured to be in-source." 
+        );
+      spec := Spec_set.add result !spec
+    );
+  !spec
+
+(* TODO: FIXME: better API without mutating *)
+and from_json_single (x : Ext_json_types.t) : spec =
+  match x with
+  | Str {str = format; loc } ->
+    if supported_format format then
+      {format ; in_source = false }
+    else
+      (bad_module_format_message_exn ~loc format)
+  | Obj {map; loc} ->
+    begin match String_map.find_exn "module" map with
+      | Str {str = format} ->
+        let in_source = 
+          match String_map.find_opt Bsb_build_schemas.in_source map with
+          | Some (True _) -> true
+          | Some _
+          | None -> false
+        in
+        if supported_format format then
+          {format ; in_source  }
+        else
+          bad_module_format_message_exn ~loc format
+      | Arr _ ->
+        Bsb_exception.errorf ~loc
+          "package-specs: when the configuration is an object, `module` field should be a string, not an array. If you want to pass multiple module specs, try turning package-specs into an array of objects (or strings) instead."
+      | _ ->
+        Bsb_exception.errorf ~loc
+          "package-specs: the `module` field of the configuration object should be a string."
+      | exception _ ->
+        Bsb_exception.errorf ~loc
+          "package-specs: when the configuration is an object, the `module` field is mandatory."
+    end
+  | _ -> Bsb_exception.errorf ~loc:(Ext_json.loc_of x)
+           "package-specs: we expect either a string or an object."
+
+let  from_json (x : Ext_json_types.t) : Spec_set.t =
+  match x with
+  | Arr {content ; _} -> from_array content
+  | _ -> Spec_set.singleton (from_json_single x )
+
+
+let bs_package_output = "-bs-package-output"
+
+(** Assume input is valid 
+    {[ -bs-package-output commonjs:lib/js/jscomp/test ]}
+*)
+let package_flag ({format; in_source } : spec) dir =
+  Ext_string.inter2
+    bs_package_output 
+    (Ext_string.concat3
+       format
+       Ext_string.single_colon
+       (if in_source then dir else
+          (if format = Literals.amdjs then 
+             amd_js_prefix dir 
+           else if format = Literals.commonjs then 
+             common_js_prefix dir 
+           else if format = Literals.es6 then 
+             es6_prefix dir 
+           else if format = Literals.es6_global then 
+             es6_global_prefix dir   
+           else if format = Literals.amdjs_global then 
+             amdjs_global_prefix dir 
+           else assert false))
+    )
+
+let package_flag_of_package_specs (package_specs : t) 
+    (dirname : string ) = 
+  (Spec_set.fold (fun format acc ->
+       Ext_string.inter2 acc (package_flag format dirname )
+
+     ) package_specs Ext_string.empty)
+
+let default_package_specs = 
+  Spec_set.singleton 
+    { format = Literals.commonjs ; in_source = false }
+(** js output for each package *)
+let package_output ({format; in_source } : spec) output=
+
+  let prefix  =
+    if in_source then fun x -> x 
+    else
+      (if format = Literals.commonjs then
+         common_js_prefix
+       else if format = Literals.amdjs then
+         amd_js_prefix
+       else if format = Literals.es6 then 
+         es6_prefix   
+       else if format = Literals.es6_global then 
+         es6_global_prefix  
+       else  if format = Literals.amdjs_global then 
+         amdjs_global_prefix
+       else assert false)
+  in
+  (Bsb_config.proj_rel @@ prefix output )
+
+(**
+    [get_list_of_output_js specs "src/hi/hello"]
+
+*)
+let get_list_of_output_js 
+    package_specs output_file_sans_extension = 
+  Spec_set.fold (fun format acc ->
+      package_output format 
+        ( Ext_namespace.js_name_of_basename output_file_sans_extension)
+      :: acc
+    ) package_specs []
+
+end
+module Vec_gen
+= struct
+#1 "vec_gen.ml"
+(* Copyright (C) 2015-2016 Bloomberg Finance L.P.
+ * 
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * In addition to the permissions granted to you by the LGPL, you may combine
+ * or link a "work that uses the Library" with a publicly distributed version
+ * of this file to produce a combined library or application, then distribute
+ * that combined work under the terms of your choosing, with no requirement
+ * to comply with the obligations normally placed on you by section 4 of the
+ * LGPL version 3 (or the corresponding section of a later version of the LGPL
+ * should you choose to use a later version).
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ * 
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
+
+
+module type ResizeType = 
+sig 
+  type t 
+  val null : t (* used to populate new allocated array checkout {!Obj.new_block} for more performance *)
+end
+
+module type S = 
+sig 
+  type elt 
+  type t
+  val length : t -> int 
+  val compact : t -> unit
+  val singleton : elt -> t 
+  val empty : unit -> t 
+  val make : int -> t 
+  val init : int -> (int -> elt) -> t
+  val is_empty : t -> bool
+  val of_array : elt array -> t
+  val of_sub_array : elt array -> int -> int -> t
+
+  (** Exposed for some APIs which only take array as input, 
+      when exposed   
+  *)
+  val unsafe_internal_array : t -> elt array
+  val reserve : t -> int -> unit
+  val push :  elt -> t -> unit
+  val delete : t -> int -> unit 
+  val pop : t -> unit
+  val get_last_and_pop : t -> elt
+  val delete_range : t -> int -> int -> unit 
+  val get_and_delete_range : t -> int -> int -> t
+  val clear : t -> unit 
+  val reset : t -> unit 
+  val to_list : t -> elt list 
+  val of_list : elt list -> t
+  val to_array : t -> elt array 
+  val of_array : elt array -> t
+  val copy : t -> t 
+  val reverse_in_place : t -> unit
+  val iter : (elt -> unit) -> t -> unit 
+  val iteri : (int -> elt -> unit ) -> t -> unit 
+  val iter_range : from:int -> to_:int -> (elt -> unit) -> t -> unit 
+  val iteri_range : from:int -> to_:int -> (int -> elt -> unit) -> t -> unit
+  val map : (elt -> elt) -> t ->  t
+  val mapi : (int -> elt -> elt) -> t -> t
+  val map_into_array : (elt -> 'f) -> t -> 'f array
+  val map_into_list : (elt -> 'f) -> t -> 'f list 
+  val fold_left : ('f -> elt -> 'f) -> 'f -> t -> 'f
+  val fold_right : (elt -> 'g -> 'g) -> t -> 'g -> 'g
+  val filter : (elt -> bool) -> t -> t
+  val inplace_filter : (elt -> bool) -> t -> unit
+  val inplace_filter_with : (elt -> bool) -> cb_no:(elt -> 'a -> 'a) -> 'a -> t -> 'a 
+  val inplace_filter_from : int -> (elt -> bool) -> t -> unit 
+  val equal : (elt -> elt -> bool) -> t -> t -> bool 
+  val get : t -> int -> elt
+  val unsafe_get : t -> int -> elt
+  val last : t -> elt
+  val capacity : t -> int
+  val exists : (elt -> bool) -> t -> bool
+  val sub : t -> int -> int  -> t 
+end
+
+
+end
+module Resize_array : sig 
+#1 "resize_array.mli"
+(* Copyright (C) 2015-2016 Bloomberg Finance L.P.
+ * 
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * In addition to the permissions granted to you by the LGPL, you may combine
+ * or link a "work that uses the Library" with a publicly distributed version
+ * of this file to produce a combined library or application, then distribute
+ * that combined work under the terms of your choosing, with no requirement
+ * to comply with the obligations normally placed on you by section 4 of the
+ * LGPL version 3 (or the corresponding section of a later version of the LGPL
+ * should you choose to use a later version).
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ * 
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
+
+module Make ( Resize : Vec_gen.ResizeType) : Vec_gen.S with type elt = Resize.t 
+
+
+
+end = struct
+#1 "resize_array.ml"
+# 1 "ext/vec.cppo.ml"
+(* Copyright (C) 2015-2016 Bloomberg Finance L.P.
+ * 
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * In addition to the permissions granted to you by the LGPL, you may combine
+ * or link a "work that uses the Library" with a publicly distributed version
+ * of this file to produce a combined library or application, then distribute
+ * that combined work under the terms of your choosing, with no requirement
+ * to comply with the obligations normally placed on you by section 4 of the
+ * LGPL version 3 (or the corresponding section of a later version of the LGPL
+ * should you choose to use a later version).
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ * 
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
+# 25
+external unsafe_blit : 
+    'a array -> int -> 'a array -> int -> int -> unit = "caml_array_blit"
+module Make ( Resize :  Vec_gen.ResizeType) = struct
+  type elt = Resize.t 
+
+  let null = Resize.null 
+  
+
+# 41
+external unsafe_sub : 'a array -> int -> int -> 'a array = "caml_array_sub"
+
+type  t = {
+  mutable arr : elt array ;
+  mutable len : int ;  
+}
+
+let length d = d.len
+
+let compact d =
+  let d_arr = d.arr in 
+  if d.len <> Array.length d_arr then 
+    begin
+      let newarr = unsafe_sub d_arr 0 d.len in 
+      d.arr <- newarr
+    end
+let singleton v = 
+  {
+    len = 1 ; 
+    arr = [|v|]
+  }
+
+let empty () =
+  {
+    len = 0;
+    arr = [||];
+  }
+
+let is_empty d =
+  d.len = 0
+
+let reset d = 
+  d.len <- 0; 
+  d.arr <- [||]
+
+
+(* For [to_*] operations, we should be careful to call {!Array.*} function 
+   in case we operate on the whole array
+*)
+let to_list d =
+  let rec loop (d_arr : elt array) idx accum =
+    if idx < 0 then accum else loop d_arr (idx - 1) (Array.unsafe_get d_arr idx :: accum)
+  in
+  loop d.arr (d.len - 1) []
+
+
+let of_list lst =
+  let arr = Array.of_list lst in 
+  { arr ; len = Array.length arr}
+
+
+let to_array d = 
+  unsafe_sub d.arr 0 d.len
+
+let of_array src =
+  {
+    len = Array.length src;
+    arr = Array.copy src;
+    (* okay to call {!Array.copy}*)
+  }
+let of_sub_array arr off len = 
+  { 
+    len = len ; 
+    arr = Array.sub arr off len  
+  }  
+let unsafe_internal_array v = v.arr  
+(* we can not call {!Array.copy} *)
+let copy src =
+  let len = src.len in
+  {
+    len ;
+    arr = unsafe_sub src.arr 0 len ;
+  }
+
+(* FIXME *)
+let reverse_in_place src = 
+  Ext_array.reverse_range src.arr 0 src.len 
+
+
+
+
+(* {!Array.sub} is not enough for error checking, it 
+   may contain some garbage
+ *)
+let sub (src : t) start len =
+  let src_len = src.len in 
+  if len < 0 || start > src_len - len then invalid_arg "Vec.sub"
+  else 
+  { len ; 
+    arr = unsafe_sub src.arr start len }
+
+let iter f d = 
+  let arr = d.arr in 
+  for i = 0 to d.len - 1 do
+    f (Array.unsafe_get arr i)
+  done
+
+let iteri f d =
+  let arr = d.arr in
+  for i = 0 to d.len - 1 do
+    f i (Array.unsafe_get arr i)
+  done
+
+let iter_range ~from ~to_ f d =
+  if from < 0 || to_ >= d.len then invalid_arg "Resize_array.iter_range"
+  else 
+    let d_arr = d.arr in 
+    for i = from to to_ do 
+      f  (Array.unsafe_get d_arr i)
+    done
+
+let iteri_range ~from ~to_ f d =
+  if from < 0 || to_ >= d.len then invalid_arg "Resize_array.iteri_range"
+  else 
+    let d_arr = d.arr in 
+    for i = from to to_ do 
+      f i (Array.unsafe_get d_arr i)
+    done
+
+let map_into_array f src =
+  let src_len = src.len in 
+  let src_arr = src.arr in 
+  if src_len = 0 then [||]
+  else 
+    let first_one = f (Array.unsafe_get src_arr 0) in 
+    let arr = Array.make  src_len  first_one in
+    for i = 1 to src_len - 1 do
+      Array.unsafe_set arr i (f (Array.unsafe_get src_arr i))
+    done;
+    arr 
+let map_into_list f src = 
+  let src_len = src.len in 
+  let src_arr = src.arr in 
+  if src_len = 0 then []
+  else 
+    let acc = ref [] in         
+    for i =  src_len - 1 downto 0 do
+      acc := f (Array.unsafe_get src_arr i) :: !acc
+    done;
+    !acc
+
+let mapi f src =
+  let len = src.len in 
+  if len = 0 then { len ; arr = [| |] }
+  else 
+    let src_arr = src.arr in 
+    let arr = Array.make len (Array.unsafe_get src_arr 0) in
+    for i = 1 to len - 1 do
+      Array.unsafe_set arr i (f i (Array.unsafe_get src_arr i))
+    done;
+    {
+      len ;
+      arr ;
+    }
+
+let fold_left f x a =
+  let rec loop a_len (a_arr : elt array) idx x =
+    if idx >= a_len then x else 
+      loop a_len a_arr (idx + 1) (f x (Array.unsafe_get a_arr idx))
+  in
+  loop a.len a.arr 0 x
+
+let fold_right f a x =
+  let rec loop (a_arr : elt array) idx x =
+    if idx < 0 then x
+    else loop a_arr (idx - 1) (f (Array.unsafe_get a_arr idx) x)
+  in
+  loop a.arr (a.len - 1) x
+
+(**  
+   [filter] and [inplace_filter]
+*)
+let filter f d =
+  let new_d = copy d in 
+  let new_d_arr = new_d.arr in 
+  let d_arr = d.arr in
+  let p = ref 0 in
+  for i = 0 to d.len  - 1 do
+    let x = Array.unsafe_get d_arr i in
+    (* TODO: can be optimized for segments blit *)
+    if f x  then
+      begin
+        Array.unsafe_set new_d_arr !p x;
+        incr p;
+      end;
+  done;
+  new_d.len <- !p;
+  new_d 
+
+let equal eq x y : bool = 
+  if x.len <> y.len then false 
+  else 
+    let rec aux x_arr y_arr i =
+      if i < 0 then true else  
+      if eq (Array.unsafe_get x_arr i) (Array.unsafe_get y_arr i) then 
+        aux x_arr y_arr (i - 1)
+      else false in 
+    aux x.arr y.arr (x.len - 1)
+
+let get d i = 
+  if i < 0 || i >= d.len then invalid_arg "Resize_array.get"
+  else Array.unsafe_get d.arr i
+let unsafe_get d i = Array.unsafe_get d.arr i 
+let last d = 
+  if d.len <= 0 then invalid_arg   "Resize_array.last"
+  else Array.unsafe_get d.arr (d.len - 1)
+
+let capacity d = Array.length d.arr
+
+(* Attention can not use {!Array.exists} since the bound is not the same *)  
+let exists p d = 
+  let a = d.arr in 
+  let n = d.len in   
+  let rec loop i =
+    if i = n then false
+    else if p (Array.unsafe_get a i) then true
+    else loop (succ i) in
+  loop 0
+
+let map f src =
+  let src_len = src.len in 
+  if src_len = 0 then { len = 0 ; arr = [||]}
+  (* TODO: we may share the empty array 
+     but sharing mutable state is very challenging, 
+     the tricky part is to avoid mutating the immutable array,
+     here it looks fine -- 
+     invariant: whenever [.arr] mutated, make sure  it is not an empty array
+     Actually no: since starting from an empty array 
+     {[
+       push v (* the address of v should not be changed *)
+     ]}
+  *)
+  else 
+    let src_arr = src.arr in 
+    let first = f (Array.unsafe_get src_arr 0 ) in 
+    let arr = Array.make  src_len first in
+    for i = 1 to src_len - 1 do
+      Array.unsafe_set arr i (f (Array.unsafe_get src_arr i))
+    done;
+    {
+      len = src_len;
+      arr = arr;
+    }
+
+let init len f =
+  if len < 0 then invalid_arg  "Resize_array.init"
+  else if len = 0 then { len = 0 ; arr = [||] }
+  else 
+    let first = f 0 in 
+    let arr = Array.make len first in
+    for i = 1 to len - 1 do
+      Array.unsafe_set arr i (f i)
+    done;
+    {
+
+      len ;
+      arr 
+    }
+
+
+
+  let make initsize : t =
+    if initsize < 0 then invalid_arg  "Resize_array.make" ;
+    {
+
+      len = 0;
+      arr = Array.make  initsize null ;
+    }
+
+
+
+  let reserve (d : t ) s = 
+    let d_len = d.len in 
+    let d_arr = d.arr in 
+    if s < d_len || s < Array.length d_arr then ()
+    else 
+      let new_capacity = min Sys.max_array_length s in 
+      let new_d_arr = Array.make new_capacity null in 
+       unsafe_blit d_arr 0 new_d_arr 0 d_len;
+      d.arr <- new_d_arr 
+
+  let push v (d : t) =
+    let d_len = d.len in
+    let d_arr = d.arr in 
+    let d_arr_len = Array.length d_arr in
+    if d_arr_len = 0 then
+      begin 
+        d.len <- 1 ;
+        d.arr <- [| v |]
+      end
+    else  
+      begin 
+        if d_len = d_arr_len then 
+          begin
+            if d_len >= Sys.max_array_length then 
+              failwith "exceeds max_array_length";
+            let new_capacity = min Sys.max_array_length d_len * 2 
+            (* [d_len] can not be zero, so [*2] will enlarge   *)
+            in
+            let new_d_arr = Array.make new_capacity null in 
+            d.arr <- new_d_arr;
+             unsafe_blit d_arr 0 new_d_arr 0 d_len ;
+          end;
+        d.len <- d_len + 1;
+        Array.unsafe_set d.arr d_len v
+      end
+
+(** delete element at offset [idx], will raise exception when have invalid input *)
+  let delete (d : t) idx =
+    let d_len = d.len in 
+    if idx < 0 || idx >= d_len then invalid_arg "Resize_array.delete" ;
+    let arr = d.arr in 
+     unsafe_blit arr (idx + 1) arr idx  (d_len - idx - 1);
+    let idx = d_len - 1 in 
+    d.len <- idx
+    
+# 358
+    ;
+    Array.unsafe_set arr idx  null
+    
+# 362
+(** pop the last element, a specialized version of [delete] *)
+  let pop (d : t) = 
+    let idx  = d.len - 1  in
+    if idx < 0 then invalid_arg "Resize_array.pop";
+    d.len <- idx
+    
+# 369
+    ;    
+    Array.unsafe_set d.arr idx null
+  
+# 373
+(** pop and return the last element *)  
+  let get_last_and_pop (d : t) = 
+    let idx  = d.len - 1  in
+    if idx < 0 then invalid_arg "Resize_array.get_last_and_pop";
+    let last = Array.unsafe_get d.arr idx in 
+    d.len <- idx 
+    
+# 381
+    ;
+    Array.unsafe_set d.arr idx null
+    
+# 384
+    ;
+    last 
+
+(** delete elements start from [idx] with length [len] *)
+  let delete_range (d : t) idx len =
+    let d_len = d.len in 
+    if len < 0 || idx < 0 || idx + len > d_len then invalid_arg  "Resize_array.delete_range"  ;
+    let arr = d.arr in 
+     unsafe_blit arr (idx + len) arr idx (d_len  - idx - len);
+    d.len <- d_len - len
+    
+# 396
+    ;
+    for i = d_len - len to d_len - 1 do
+      Array.unsafe_set arr i null
+    done
+
+# 402
+(** delete elements from [idx] with length [len] return the deleted elements as a new vec*)
+  let get_and_delete_range (d : t) idx len : t = 
+    let d_len = d.len in 
+    if len < 0 || idx < 0 || idx + len > d_len then invalid_arg  "Resize_array.get_and_delete_range"  ;
+    let arr = d.arr in 
+    let value =  unsafe_sub arr idx len in
+     unsafe_blit arr (idx + len) arr idx (d_len  - idx - len);
+    d.len <- d_len - len; 
+    
+# 412
+    for i = d_len - len to d_len - 1 do
+      Array.unsafe_set arr i null
+    done;
+    
+# 416
+    {len = len ; arr = value}
+
+
+  (** Below are simple wrapper around normal Array operations *)  
+
+  let clear (d : t ) =
+    
+# 424
+    for i = 0 to d.len - 1 do 
+      Array.unsafe_set d.arr i null
+    done;
+    
+# 428
+    d.len <- 0
+
+
+
+  let inplace_filter f (d : t) : unit = 
+    let d_arr = d.arr in     
+    let d_len = d.len in
+    let p = ref 0 in
+    for i = 0 to d_len - 1 do 
+      let x = Array.unsafe_get d_arr i in 
+      if f x then 
+        begin 
+          let curr_p = !p in 
+          (if curr_p <> i then 
+             Array.unsafe_set d_arr curr_p x) ;
+          incr p
+        end
+    done ;
+    let last = !p  in 
+    
+# 451
+    delete_range d last  (d_len - last)
+
+  
+# 454
+  let inplace_filter_from start f (d : t) : unit = 
+    if start < 0 then invalid_arg "Vec.inplace_filter_from"; 
+    let d_arr = d.arr in     
+    let d_len = d.len in
+    let p = ref start in    
+    for i = start to d_len - 1 do 
+      let x = Array.unsafe_get d_arr i in 
+      if f x then 
+        begin 
+          let curr_p = !p in 
+          (if curr_p <> i then 
+             Array.unsafe_set d_arr curr_p x) ;
+          incr p
+        end
+    done ;
+    let last = !p  in 
+    
+# 473
+    delete_range d last  (d_len - last)
+
+
+# 477
+(** inplace filter the elements and accumulate the non-filtered elements *)
+  let inplace_filter_with  f ~cb_no acc (d : t)  = 
+    let d_arr = d.arr in     
+    let p = ref 0 in
+    let d_len = d.len in
+    let acc = ref acc in 
+    for i = 0 to d_len - 1 do 
+      let x = Array.unsafe_get d_arr i in 
+      if f x then 
+        begin 
+          let curr_p = !p in 
+          (if curr_p <> i then 
+             Array.unsafe_set d_arr curr_p x) ;
+          incr p
+        end
+      else 
+        acc := cb_no  x  !acc
+    done ;
+    let last = !p  in 
+    
+# 500
+    delete_range d last  (d_len - last)
+    
+# 502
+    ; !acc 
+
+
+
+# 507
+end
+
+end
+module String_vec : sig 
+#1 "string_vec.mli"
+(* Copyright (C) 2015-2016 Bloomberg Finance L.P.
+ * 
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * In addition to the permissions granted to you by the LGPL, you may combine
+ * or link a "work that uses the Library" with a publicly distributed version
+ * of this file to produce a combined library or application, then distribute
+ * that combined work under the terms of your choosing, with no requirement
+ * to comply with the obligations normally placed on you by section 4 of the
+ * LGPL version 3 (or the corresponding section of a later version of the LGPL
+ * should you choose to use a later version).
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ * 
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
+
+include Vec_gen.S with type elt = string
+
+end = struct
+#1 "string_vec.ml"
+
+(* Copyright (C) 2015-2016 Bloomberg Finance L.P.
+ * 
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * In addition to the permissions granted to you by the LGPL, you may combine
+ * or link a "work that uses the Library" with a publicly distributed version
+ * of this file to produce a combined library or application, then distribute
+ * that combined work under the terms of your choosing, with no requirement
+ * to comply with the obligations normally placed on you by section 4 of the
+ * LGPL version 3 (or the corresponding section of a later version of the LGPL
+ * should you choose to use a later version).
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ * 
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
+
+
+include Resize_array.Make(struct type t = string let null = "" end)
+end
+module Ext_file_pp : sig 
+#1 "ext_file_pp.mli"
+(* Copyright (C) 2015-2016 Bloomberg Finance L.P.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * In addition to the permissions granted to you by the LGPL, you may combine
+ * or link a "work that uses the Library" with a publicly distributed version
+ * of this file to produce a combined library or application, then distribute
+ * that combined work under the terms of your choosing, with no requirement
+ * to comply with the obligations normally placed on you by section 4 of the
+ * LGPL version 3 (or the corresponding section of a later version of the LGPL
+ * should you choose to use a later version).
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
+
+
+
+
+type interval = {
+  loc_start : Lexing.position ; 
+  loc_end : Lexing.position ; 
+  action : out_channel -> int -> unit 
+}
+
+val process_wholes : 
+  interval list ->
+  int -> ?line_directive:string -> in_channel -> out_channel -> unit
+
+(** Assume that there is no overlapp *)
+val interval_compare : 
+  interval -> interval -> int
+
+val patch_action:
+  String_vec.t -> 
+  Lexing.position -> 
+  Lexing.position -> 
+  interval
+(*
+val cpp_process_file : 
+  string -> (Lexing.position * Lexing.position) list -> out_channel -> unit*)
+
+
+
+end = struct
+#1 "ext_file_pp.ml"
+(* Copyright (C) 2015-2016 Bloomberg Finance L.P.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * In addition to the permissions granted to you by the LGPL, you may combine
+ * or link a "work that uses the Library" with a publicly distributed version
+ * of this file to produce a combined library or application, then distribute
+ * that combined work under the terms of your choosing, with no requirement
+ * to comply with the obligations normally placed on you by section 4 of the
+ * LGPL version 3 (or the corresponding section of a later version of the LGPL
+ * should you choose to use a later version).
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
+
+type action = 
+  (out_channel -> int -> unit)
+
+  
+
+
+type interval = {
+  loc_start : Lexing.position ; 
+  loc_end : Lexing.position ; 
+  action : action 
+}
+
+let interval_compare x y = 
+  Pervasives.compare (x.loc_start.pos_cnum : int) y.loc_start.pos_cnum
+
+(*
+  It tries to copy io stream from [ic] into [oc]
+  except it will skip those wholes, for each 
+  whole a callback can be attached
+  When come across a whole, 
+  it will print 
+  - line directive (based on previous info)
+  - all content before
+*)
+let process_wholes 
+    (whole_intervals : interval list ) 
+    file_size
+    ?line_directive ic oc 
+  = 
+  let buf = Buffer.create 4096 in 
+  let rec aux (cur, line, offset)  wholes = 
+    seek_in ic cur ;
+    begin match line_directive with 
+      | Some fname -> 
+        output_string oc "# ";
+        output_string oc  (string_of_int line);
+        output_string oc " \"";
+        output_string oc fname; (* TOOD escape ? *)
+        output_string oc "\"\n";
+      | None -> ()
+    end;
+    if offset <> 0 then 
+      begin 
+        output_string oc (String.make offset ' ')
+      end; 
+    let print next = 
+      Buffer.add_channel buf ic (next - cur) ;
+      Buffer.output_buffer oc buf ; 
+      Buffer.clear buf 
+    in 
+    match wholes with 
+    | [] -> print file_size
+    | {
+      loc_start = 
+        {Lexing.pos_cnum = start   };
+      loc_end  = {Lexing.pos_cnum = stop; pos_bol ; pos_lnum} ;
+      action 
+    } :: xs  -> 
+      let offset = stop - pos_bol in
+      print start ;
+      action oc offset ;
+      aux (stop, pos_lnum, offset) xs 
+  in 
+    aux (0, 1, 0) whole_intervals
+
+
+let print_arrays file_array oc offset  =
+  let indent = String.make offset ' ' in 
+  let p_str s = 
+    output_string oc indent ; 
+    output_string oc s ;
+    output_string oc "\n"
+  in
+  let len = String_vec.length file_array in 
+  match len with 
+  | 0
+    -> output_string oc "[ ]\n"
+  | 1 
+    -> output_string oc ("[ \"" ^ String_vec.get file_array 0  ^ "\" ]\n")
+  | _ (* first::(_::_ as rest) *)
+    -> 
+    output_string oc "[ \n";
+    String_vec.iter_range ~from:0 ~to_:(len - 2 ) 
+      (fun s -> p_str @@ "\"" ^ s ^ "\",") file_array;
+    p_str @@ "\"" ^ (String_vec.last file_array) ^ "\"";
+
+    p_str "]"
+
+let patch_action file_array 
+  loc_start loc_end  =
+  {loc_start ; loc_end ; 
+  action = print_arrays file_array 
+  }   
+
+
+(* TODO: in the future, support [bspp.exe]
+  with line directive as well
+ *)
+(*let cpp_process_file fname 
+  (whole_intervals : (Lexing.position * Lexing.position) list)
+  oc = 
+  let ic = open_in_bin fname in
+  let file_size = in_channel_length ic in 
+  process_wholes ~line_directive:fname 
+    (Ext_list.map (fun (x,y) -> {loc_start = x ; loc_end = y; action = Skip}) whole_intervals)
+    file_size   ic oc ;
+  close_in ic *)
+
+end
+module Ext_filename : sig 
+#1 "ext_filename.mli"
+(* Copyright (C) 2015-2016 Bloomberg Finance L.P.
+ * 
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * In addition to the permissions granted to you by the LGPL, you may combine
+ * or link a "work that uses the Library" with a publicly distributed version
+ * of this file to produce a combined library or application, then distribute
+ * that combined work under the terms of your choosing, with no requirement
+ * to comply with the obligations normally placed on you by section 4 of the
+ * LGPL version 3 (or the corresponding section of a later version of the LGPL
+ * should you choose to use a later version).
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ * 
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
+
+
+
+
+
+(* TODO:
+   Change the module name, this code is not really an extension of the standard 
+    library but rather specific to JS Module name convention. 
+*)
+
+
+
+
+
+(** An extension module to calculate relative path follow node/npm style. 
+    TODO : this short name will have to change upon renaming the file.
+*)
+
+(** Js_output is node style, which means 
+    separator is only '/'
+
+    if the path contains 'node_modules', 
+    [node_relative_path] will discard its prefix and 
+    just treat it as a library instead
+*)
+
+val cwd : string Lazy.t
+
+(* It is lazy so that it will not hit errors when in script mode *)
+val package_dir : string Lazy.t
+
+
+val simple_convert_node_path_to_os_path : string -> string
+
+
+end = struct
+#1 "ext_filename.ml"
+(* Copyright (C) 2015-2016 Bloomberg Finance L.P.
+ * 
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * In addition to the permissions granted to you by the LGPL, you may combine
+ * or link a "work that uses the Library" with a publicly distributed version
+ * of this file to produce a combined library or application, then distribute
+ * that combined work under the terms of your choosing, with no requirement
+ * to comply with the obligations normally placed on you by section 4 of the
+ * LGPL version 3 (or the corresponding section of a later version of the LGPL
+ * should you choose to use a later version).
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ * 
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
+
+
+
+
+
+
+
+
+type t = Ext_path.t
+
+let cwd = lazy (Sys.getcwd ())
+
+
+
+
+(* Input must be absolute directory *)
+let rec find_root_filename ~cwd filename   = 
+  if Sys.file_exists ( Filename.concat cwd  filename) then cwd
+  else 
+    let cwd' = Filename.dirname cwd in 
+    if String.length cwd' < String.length cwd then  
+      find_root_filename ~cwd:cwd'  filename 
+    else 
+      Ext_pervasives.failwithf 
+        ~loc:__LOC__
+        "%s not found from %s" filename cwd
+
+
+let find_package_json_dir cwd  = 
+  find_root_filename ~cwd  Literals.bsconfig_json
+
+let package_dir = lazy (find_package_json_dir (Lazy.force cwd))
+
+
+
+
+
+
+
+
+let simple_convert_node_path_to_os_path =
+  if Sys.unix then fun x -> x 
+  else if Sys.win32 || Sys.cygwin then 
+    Ext_string.replace_slash_backward 
+  else failwith ("Unknown OS : " ^ Sys.os_type)
+
+
+
+end
 module Set_gen
 = struct
 #1 "set_gen.ml"
@@ -7878,6 +9129,1211 @@ let invariant t =
 
 
 end
+module Bsb_parse_sources : sig 
+#1 "bsb_parse_sources.mli"
+(* Copyright (C) 2015-2016 Bloomberg Finance L.P.
+ * 
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * In addition to the permissions granted to you by the LGPL, you may combine
+ * or link a "work that uses the Library" with a publicly distributed version
+ * of this file to produce a combined library or application, then distribute
+ * that combined work under the terms of your choosing, with no requirement
+ * to comply with the obligations normally placed on you by section 4 of the
+ * LGPL version 3 (or the corresponding section of a later version of the LGPL
+ * should you choose to use a later version).
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ * 
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
+
+type public = 
+  | Export_all 
+  | Export_set of String_set.t 
+  | Export_none
+
+
+
+type build_generator = 
+  { input : string list ;
+    output : string list;
+    command : string}
+
+type compilation_kind_t = Js | Bytecode | Native
+
+type  file_group = 
+  { dir : string ; 
+    (* currently relative path expected for ninja file generation *)
+    sources : Bsb_build_cache.t ; 
+    resources : string list ; 
+    (* relative path *)
+    public : public;
+    dir_index : Bsb_dir_index.t; 
+    generators : build_generator list;
+    kind: compilation_kind_t list;
+  } 
+
+
+
+type t = 
+  { files :  file_group list ;
+    (* flattened list of directories *)
+    intervals :  Ext_file_pp.interval list ;
+    globbed_dirs : string list ; 
+
+  }
+
+
+
+
+
+type cxt = {
+  no_dev : bool ;
+  dir_index : Bsb_dir_index.t ; 
+  cwd : string ;
+  root : string ;
+  cut_generators : bool;
+  traverse : bool
+}
+
+
+val parsing_simple_dir : 
+  cxt -> 
+  string -> 
+  t
+
+val parsing_source_dir_map :
+  cxt ->
+  Ext_json_types.t String_map.t -> 
+  t
+
+val parsing_source : 
+  cxt -> 
+  Ext_json_types.t ->     
+  t 
+
+val parsing_arr_sources :  
+  cxt ->
+  Ext_json_types.t array ->
+  t
+
+(** entry is to the 
+    [sources] in the schema
+
+    [parse_sources cxt json]
+    given a root, return an object which is
+    all relative paths, this function will do the IO
+*)
+val parse_sources : 
+  cxt ->
+  Ext_json_types.t  ->
+  t 
+
+
+end = struct
+#1 "bsb_parse_sources.ml"
+(* Copyright (C) 2015-2016 Bloomberg Finance L.P.
+ * 
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * In addition to the permissions granted to you by the LGPL, you may combine
+ * or link a "work that uses the Library" with a publicly distributed version
+ * of this file to produce a combined library or application, then distribute
+ * that combined work under the terms of your choosing, with no requirement
+ * to comply with the obligations normally placed on you by section 4 of the
+ * LGPL version 3 (or the corresponding section of a later version of the LGPL
+ * should you choose to use a later version).
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ * 
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
+
+let dir_cache = 
+  String_hashtbl.create 32 
+
+(** Only cached in the life-time of a single process *)  
+let readdir path = 
+  match String_hashtbl.find_opt dir_cache path with
+  | None -> 
+    let result = Sys.readdir path  in 
+    String_hashtbl.add dir_cache path result ; 
+    result 
+  | Some result -> result 
+
+
+type public = 
+  | Export_all 
+  | Export_set of String_set.t 
+  | Export_none
+
+
+type build_generator = 
+  { input : string list ;
+    output : string list;
+    command : string}
+
+type compilation_kind_t = Js | Bytecode | Native
+
+let is_input_or_output(xs : build_generator list) (x : string)  = 
+  List.exists 
+    (fun  ({input; output} : build_generator) -> 
+       let it_is = (fun y -> y = x ) in
+       List.exists it_is input ||
+       List.exists it_is output
+    ) xs 
+
+type  file_group = 
+  { dir : string ;
+    sources : Bsb_build_cache.t; 
+    resources : string list ;
+    public : public ;
+    dir_index : Bsb_dir_index.t  ;
+    generators : build_generator list ; 
+    kind: compilation_kind_t list;
+    (* output of [generators] should be added to [sources],
+       if it is [.ml,.mli,.re,.rei]
+    *)
+  } 
+
+(**
+    [intervals] are used for side effect so we can patch `bsconfig.json` to add new files 
+     we need add a new line in the end,
+     otherwise it will be idented twice
+*)
+
+type t =   
+  { files :  file_group list ; 
+    intervals :  Ext_file_pp.interval list ;    
+    globbed_dirs : string list ; 
+  }
+
+let (//) = Ext_path.combine
+
+let (|?)  m (key, cb) =
+  m  |> Ext_json.test key cb 
+
+
+let warning_unused_file : _ format = 
+  "@{<warning>IGNORED@}: file %s under %s is ignored because it can't be turned into a valid module name. The build system transforms a file name into a module name by upper-casing the first letter@."
+
+type cxt = {
+  no_dev : bool ;
+  dir_index : Bsb_dir_index.t ; 
+  cwd : string ;
+  root : string;
+  cut_generators : bool;
+  traverse : bool
+}
+
+let collect_pub_modules 
+    (xs : Ext_json_types.t array)
+    (cache : Bsb_build_cache.t) : String_set.t = 
+  let set = ref String_set.empty in 
+  for i = 0 to Array.length xs - 1 do 
+    let v = Array.unsafe_get xs i in 
+    match v with 
+    | Str { str ; loc }
+      -> 
+      if String_map.mem str cache then 
+        set := String_set.add str !set
+      else 
+        begin 
+          Bsb_log.warn
+            "@{<warning>IGNORED@} %S in public is ignored since it is not\
+             an existing module@." str
+        end  
+    | _ -> 
+      Bsb_exception.errorf 
+        ~loc:(Ext_json.loc_of v)
+        "public excpect a list of strings"
+  done  ;
+  !set
+(* String_set.of_list (Bsb_build_util.get_list_string xs) *)
+
+let  handle_list_files acc
+    ({ cwd = dir ; root} : cxt)  
+    loc_start loc_end 
+    is_input_or_output
+  : Ext_file_pp.interval list * _ =    
+  (** detect files to be populated later  *)
+  let files_array = readdir (Filename.concat root dir)  in 
+  let dyn_file_array = String_vec.make (Array.length files_array) in 
+  let files  =
+    Array.fold_left (fun acc name -> 
+        if is_input_or_output name then acc 
+        else
+          match Ext_string.is_valid_source_name name with 
+          | Good ->   begin 
+              let new_acc = Bsb_build_cache.map_update ~dir acc name  in 
+              String_vec.push name dyn_file_array ;
+              new_acc 
+            end 
+          | Invalid_module_name ->
+            Bsb_log.warn
+              warning_unused_file name dir ;
+            acc 
+          | Suffix_mismatch -> acc 
+      ) acc files_array in 
+  [ Ext_file_pp.patch_action dyn_file_array 
+      loc_start loc_end
+  ],
+  files
+
+
+
+
+
+let empty = { files = []; intervals  = []; globbed_dirs = [];  }
+
+
+
+let (++) (u : t)  (v : t)  = 
+  if u == empty then v 
+  else if v == empty then u 
+  else 
+    {
+      files = Ext_list.append u.files  v.files ; 
+      intervals = Ext_list.append u.intervals  v.intervals ; 
+      globbed_dirs = Ext_list.append u.globbed_dirs  v.globbed_dirs ; 
+    }
+
+let get_input_output 
+    loc_start 
+    (content : Ext_json_types.t array) : string list * string list = 
+  let error () = 
+    Bsb_exception.errorf ~loc:loc_start {| invalid edge format, expect  ["output" , ":", "input" ]|}
+  in  
+  match Ext_array.find_and_split content 
+          (fun x () -> match x with Str { str =":"} -> true | _ -> false )
+          () with 
+  | `No_split -> error ()
+  | `Split (  output, input) -> 
+    Ext_array.to_list_map (fun (x : Ext_json_types.t) -> 
+        match x with
+        | Str {str = ":"} -> 
+          error ()
+        | Str {str } ->           
+          Some str 
+        | _ -> None) output ,
+    Ext_array.to_list_map (fun (x : Ext_json_types.t) -> 
+        match x with
+        | Str {str = ":"} -> 
+          error () 
+        | Str {str} -> 
+          Some str (* More rigirous error checking: It would trigger a ninja syntax error *)
+        | _ -> None) input
+
+
+
+(** [dir_index] can be inherited  *)
+let rec 
+  parsing_simple_dir ({no_dev; dir_index;  cwd} as cxt ) dir : t =
+  if no_dev && not (Bsb_dir_index.is_lib_dir dir_index)  then empty 
+  else 
+    parsing_source_dir_map 
+      {cxt with
+       cwd = cwd // Ext_filename.simple_convert_node_path_to_os_path dir
+      }
+      String_map.empty
+
+
+
+(** 
+   { dir : xx, files : ... } [dir] is already extracted 
+   major work done in this function      
+*)
+and parsing_source_dir_map 
+    ({ cwd =  dir; no_dev; cut_generators ; 
+       traverse = cxt_traverse ;
+     } as cxt )
+    (input : Ext_json_types.t String_map.t) : t     
+  = 
+  let cur_sources : Bsb_build_cache.module_info String_map.t ref = ref String_map.empty in
+  let resources = ref [] in 
+  let public = ref Export_all in (* TODO: move to {!Bsb_default} later*)
+  let cur_update_queue = ref [] in 
+  let cur_globbed_dirs = ref [] in 
+  let kind = ref [Js; Bytecode; Native] in
+  let generators : build_generator list ref  = ref [] in
+  begin match String_map.find_opt Bsb_build_schemas.generators input with
+    | Some (Arr { content ; loc_start}) ->
+      (* Need check is dev build or not *)
+      content 
+      |> Array.iter (fun (x : Ext_json_types.t) ->
+          match x with
+          | Obj { map = generator; loc} ->
+            begin match String_map.find_opt Bsb_build_schemas.name generator,
+                        String_map.find_opt Bsb_build_schemas.edge generator
+              with
+              | Some (Str{str = command}), Some (Arr {content })->
+
+                let output, input = get_input_output loc_start content in 
+                if not cut_generators && not no_dev then begin 
+                  generators := {input ; output ; command } :: !generators
+                end;
+                (* ATTENTION: Now adding source files, 
+                   it may be re-added again later when scanning files (not explicit files input)
+                *)
+                output |> List.iter begin fun  output -> 
+                  begin match Ext_string.is_valid_source_name output with
+                    | Good ->
+                      cur_sources := Bsb_build_cache.map_update ~dir !cur_sources output
+                    | Invalid_module_name ->                  
+                      Bsb_log.warn warning_unused_file output dir 
+                    | Suffix_mismatch -> ()
+                  end
+                end
+              | _ ->
+                Bsb_exception.errorf ~loc "Invalid generator format"
+            end
+          | _ -> Bsb_exception.errorf ~loc:(Ext_json.loc_of x) "Invalid generator format"
+        )
+    | Some x  -> Bsb_exception.errorf ~loc:(Ext_json.loc_of x ) "Invalid generators format"
+    | None -> ()
+  end
+  ;
+  let generators = !generators in 
+  let sub_dirs_field = String_map.find_opt Bsb_build_schemas.subdirs input in 
+  begin 
+    match String_map.find_opt Bsb_build_schemas.files input with 
+    | None ->  (* No setting on [!files]*)
+      let file_array = readdir (Filename.concat cxt.root dir) in 
+      (** We should avoid temporary files *)
+      cur_sources := 
+        Array.fold_left (fun acc name -> 
+            if is_input_or_output generators name then 
+              acc 
+            else 
+              match Ext_string.is_valid_source_name name with 
+              | Good -> 
+                Bsb_build_cache.map_update  ~dir acc name 
+              | Invalid_module_name ->
+                Bsb_log.warn
+                  warning_unused_file
+                  name dir 
+                ; 
+                acc 
+              | Suffix_mismatch ->  acc
+          ) !cur_sources file_array;
+      cur_globbed_dirs :=  [dir]  
+    | Some (Arr {loc_start;loc_end; content = [||] }) -> 
+      (* [ ] populatd by scanning the dir (just once) *) 
+      let tasks, files =  
+        handle_list_files !cur_sources cxt 
+          loc_start loc_end (is_input_or_output  generators) in
+      cur_update_queue := tasks ;
+      cur_sources := files
+
+    | Some (Arr {loc_start;loc_end; content = s }) -> 
+      (* [ a,b ] populated by users themselves 
+         TODO: still need check?
+      *)      
+      cur_sources := 
+        Array.fold_left (fun acc (s : Ext_json_types.t) ->
+            match s with 
+            | Str {str = s} -> 
+              Bsb_build_cache.map_update ~dir acc s
+            | _ -> acc
+          ) !cur_sources s    
+    | Some (Obj {map = m; loc} ) -> (* { excludes : [], slow_re : "" }*)
+      let excludes = 
+        match String_map.find_opt Bsb_build_schemas.excludes m with 
+        | None -> []   
+        | Some (Arr {content = arr}) -> Bsb_build_util.get_list_string arr 
+        | Some x -> Bsb_exception.config_error x  "excludes expect array "in 
+      let slow_re = String_map.find_opt Bsb_build_schemas.slow_re m in 
+      let predicate = 
+        match slow_re, excludes with 
+        | Some (Str {str = s}), [] -> 
+          let re = Str.regexp s  in 
+          fun name -> Str.string_match re name 0 
+        | Some (Str {str = s}) , _::_ -> 
+          let re = Str.regexp s in   
+          fun name -> Str.string_match re name 0 && not (List.mem name excludes)
+        | Some x, _ -> Bsb_exception.errorf ~loc "slow-re expect a string literal"
+        | None , _ -> Bsb_exception.errorf ~loc  "missing field: slow-re"  in 
+      let file_array = readdir (Filename.concat cxt.root dir) in 
+      cur_sources := Array.fold_left (fun acc name -> 
+          if is_input_or_output generators name || not (predicate name) then acc 
+          else 
+            Bsb_build_cache.map_update  ~dir acc name 
+        ) !cur_sources file_array;
+      cur_globbed_dirs := [dir]              
+
+    | Some x -> Bsb_exception.config_error x "files field expect array or object "
+
+  end;
+  (* kind matching *)
+  begin match String_map.find_opt Bsb_build_schemas.kind input with 
+    | Some (Arr {loc_start; content = s }) -> (* [ a,b ] *)      
+      kind := List.map (fun (s : string) ->
+        match s with 
+        | "js"       -> Js
+        | "native"   -> Native
+        | "bytecode" -> Bytecode
+        | str -> Bsb_exception.errorf ~loc:loc_start "'kind' field expects one of: 'js', 'bytecode' or 'native'. Found '%s'" str
+      ) (Bsb_build_util.get_list_string s) 
+    | Some (Str {str = "js"} )       -> kind := [Js]
+    | Some (Str {str = "native"} )   -> kind := [Native]
+    | Some (Str {str = "bytecode"} ) -> kind := [Bytecode]
+    | Some x -> Bsb_exception.config_error x "'kind' field expects one of: 'js', 'bytecode' or 'native'"
+    | None -> ()
+  end;
+  
+  let cur_sources = !cur_sources in 
+  input   
+  |?  (Bsb_build_schemas.resources ,
+       `Arr (fun s  ->
+           resources := Bsb_build_util.get_list_string s 
+         ))
+  |? (Bsb_build_schemas.public, `Str_loc (fun s loc -> 
+      if s = Bsb_build_schemas.export_all then public := Export_all else 
+      if s = Bsb_build_schemas.export_none then public := Export_none else 
+        Bsb_exception.errorf ~loc "invalid str for %s "  s 
+    ))
+  |? (Bsb_build_schemas.public, `Arr (fun s -> 
+      public := Export_set (collect_pub_modules s cur_sources)
+    ) )
+  |> ignore ;
+  let cur_file = 
+    {dir = dir; 
+     sources = cur_sources; 
+     resources = !resources;
+     public = !public;
+     dir_index = cxt.dir_index ;
+     generators ; 
+     kind = !kind;
+    } in 
+  let children, children_update_queue, children_globbed_dirs =     
+    match sub_dirs_field, 
+          cxt_traverse with 
+    | None , true
+    | Some (True _), _ -> 
+      let root = cxt.root in 
+      let parent = Filename.concat root dir in
+      let res =
+        readdir parent (* avoiding scanning twice *)
+        |> Array.fold_left (fun origin x -> 
+            if Sys.is_directory (Filename.concat parent x) then 
+              parsing_simple_dir 
+                (if cxt_traverse then cxt else {cxt with traverse = true})  x ++ origin 
+            else origin  
+          ) empty in 
+      res.files, res.intervals, res.globbed_dirs 
+    | None, false  
+    | Some (False _), _  -> [], [], []
+
+    | Some s, _  -> 
+      let res  = parse_sources cxt s in 
+      res.files ,
+      res.intervals,
+      res.globbed_dirs
+
+  in 
+
+  {
+    files =  cur_file :: children;
+    intervals = !cur_update_queue @ children_update_queue ;
+    globbed_dirs = !cur_globbed_dirs @ children_globbed_dirs;
+  } 
+
+(* and parsing_simple_dir dir_index cwd  dir  : t = 
+   parsing_source dir_index cwd (String_map.singleton Bsb_build_schemas.dir dir)
+*)
+
+and parsing_source ({no_dev; dir_index ; cwd} as cxt ) (x : Ext_json_types.t )
+  : t  =
+  match x with 
+  | Str  { str = dir }  -> 
+    parsing_simple_dir cxt dir   
+  | Obj {map} ->
+    let current_dir_index = 
+      match String_map.find_opt Bsb_build_schemas.type_ map with 
+      | Some (Str {str="dev"}) -> Bsb_dir_index.get_dev_index ()
+      | Some _ -> Bsb_exception.config_error x {|type field expect "dev" literal |}
+      | None -> dir_index in 
+    if no_dev && not (Bsb_dir_index.is_lib_dir current_dir_index) then empty 
+    else 
+      let dir = 
+        match String_map.find_opt Bsb_build_schemas.dir map with 
+        | Some (Str{str}) -> 
+          Ext_filename.simple_convert_node_path_to_os_path str 
+        | Some x -> Bsb_exception.config_error x "dir expected to be a string"
+        | None -> 
+          Bsb_exception.config_error x
+            (
+            "required field :" ^ Bsb_build_schemas.dir ^ " missing" )
+            
+      in
+      parsing_source_dir_map {cxt with dir_index = current_dir_index; cwd= cwd // dir} map
+  | _ -> empty 
+and  parsing_arr_sources cxt (file_groups : Ext_json_types.t array)  = 
+  Array.fold_left (fun  origin x ->
+      parsing_source cxt x ++ origin 
+    ) empty  file_groups 
+
+and  parse_sources ( cxt : cxt) (sources : Ext_json_types.t )  = 
+  match sources with   
+  | Arr file_groups -> 
+    parsing_arr_sources cxt file_groups.content
+  | _ -> parsing_source cxt sources
+
+
+
+
+end
+module Bsb_warning : sig 
+#1 "bsb_warning.mli"
+(* Copyright (C) 2017 Authors of BuckleScript
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * In addition to the permissions granted to you by the LGPL, you may combine
+ * or link a "work that uses the Library" with a publicly distributed version
+ * of this file to produce a combined library or application, then distribute
+ * that combined work under the terms of your choosing, with no requirement
+ * to comply with the obligations normally placed on you by section 4 of the
+ * LGPL version 3 (or the corresponding section of a later version of the LGPL
+ * should you choose to use a later version).
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
+
+
+(* type warning_error = private
+  | Warn_error_false 
+  (* default [false] to make our changes non-intrusive *)
+  | Warn_error_true
+  | Warn_error_number of string  *)
+type warning_error 
+
+type t = private {
+  number : string option;
+  error : warning_error
+}
+
+val default_warning_flag : string
+
+val opt_warning_to_string : bool -> t option -> string 
+
+val from_map : Ext_json_types.t String_map.t -> t option
+end = struct
+#1 "bsb_warning.ml"
+(* Copyright (C) 2017 Authors of BuckleScript
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * In addition to the permissions granted to you by the LGPL, you may combine
+ * or link a "work that uses the Library" with a publicly distributed version
+ * of this file to produce a combined library or application, then distribute
+ * that combined work under the terms of your choosing, with no requirement
+ * to comply with the obligations normally placed on you by section 4 of the
+ * LGPL version 3 (or the corresponding section of a later version of the LGPL
+ * should you choose to use a later version).
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
+
+
+type warning_error = 
+  | Warn_error_false 
+  (* default [false] to make our changes non-intrusive *)
+  | Warn_error_true
+  | Warn_error_number of string 
+
+type t = {
+  number : string option;
+  error : warning_error
+}
+
+
+
+let warning_number =  "-40+6+7+27+32..39+44+45"
+
+let default_warning_flag = 
+  "-w -40+6+7+27+32..39+44+45"
+
+let warn_error = " -warn-error A"
+let warning_to_string no_dev 
+    (warning ) : string = 
+  if no_dev then 
+    match warning.number with 
+    | None ->
+      default_warning_flag      
+    | Some x -> 
+      "-w " ^ x 
+  else 
+    match warning.number with 
+    | None -> 
+      (match warning.error with 
+       | Warn_error_true -> default_warning_flag ^ warn_error
+       | Warn_error_number x -> 
+         default_warning_flag ^ " -warn-error " ^ x
+       | Warn_error_false -> default_warning_flag
+      )
+    | Some x -> 
+      "-w " ^ x ^
+      (match warning.error with 
+       | Warn_error_true -> 
+         warn_error
+       | Warn_error_false -> 
+         Ext_string.empty
+       | Warn_error_number y -> 
+         " -warn-error " ^ y
+      )
+
+let opt_warning_to_string no_dev warning =       
+  match warning with 
+  | None -> default_warning_flag
+  | Some w -> warning_to_string no_dev w 
+
+let from_map (m : Ext_json_types.t String_map.t) = 
+  let number_opt = String_map.find_opt Bsb_build_schemas.number m  in 
+  let error_opt = String_map.find_opt Bsb_build_schemas.error m  in 
+  match number_opt, error_opt  with 
+  | None, None -> None
+  | _, _ -> 
+    let error  = 
+      match error_opt with 
+      | Some (True _) -> Warn_error_true
+      | Some (False _) -> Warn_error_false
+      | Some (Str {str ; }) 
+        -> Warn_error_number str 
+      | Some x -> Bsb_exception.config_error x "expect true/false or string"
+      | None -> Warn_error_false
+      (** To make it less intrusive : warning error has to be enabled*)  
+    in
+    let number = 
+      match number_opt with   
+      | Some (Str { str = number}) -> Some number
+      | None -> None 
+      | Some x -> Bsb_exception.config_error x "expect a string" 
+    in 
+    Some {number; error }
+end
+module Hash_set_gen
+= struct
+#1 "hash_set_gen.ml"
+(* Copyright (C) 2015-2016 Bloomberg Finance L.P.
+ * 
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * In addition to the permissions granted to you by the LGPL, you may combine
+ * or link a "work that uses the Library" with a publicly distributed version
+ * of this file to produce a combined library or application, then distribute
+ * that combined work under the terms of your choosing, with no requirement
+ * to comply with the obligations normally placed on you by section 4 of the
+ * LGPL version 3 (or the corresponding section of a later version of the LGPL
+ * should you choose to use a later version).
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ * 
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
+
+
+(* We do dynamic hashing, and resize the table and rehash the elements
+   when buckets become too long. *)
+
+type 'a t =
+  { mutable size: int;                        (* number of entries *)
+    mutable data: 'a list array;  (* the buckets *)
+    initial_size: int;                        (* initial array size *)
+  }
+
+
+
+
+let create  initial_size =
+  let s = Ext_util.power_2_above 16 initial_size in
+  { initial_size = s; size = 0; data = Array.make s [] }
+
+let clear h =
+  h.size <- 0;
+  let len = Array.length h.data in
+  for i = 0 to len - 1 do
+    Array.unsafe_set h.data i  []
+  done
+
+let reset h =
+  h.size <- 0;
+  h.data <- Array.make h.initial_size [ ]
+
+
+let copy h = { h with data = Array.copy h.data }
+
+let length h = h.size
+
+let iter f h =
+  let rec do_bucket = function
+    | [ ] ->
+      ()
+    | k ::  rest ->
+      f k ; do_bucket rest in
+  let d = h.data in
+  for i = 0 to Array.length d - 1 do
+    do_bucket (Array.unsafe_get d i)
+  done
+
+let fold f h init =
+  let rec do_bucket b accu =
+    match b with
+      [ ] ->
+      accu
+    | k ::  rest ->
+      do_bucket rest (f k  accu) in
+  let d = h.data in
+  let accu = ref init in
+  for i = 0 to Array.length d - 1 do
+    accu := do_bucket (Array.unsafe_get d i) !accu
+  done;
+  !accu
+
+let resize indexfun h =
+  let odata = h.data in
+  let osize = Array.length odata in
+  let nsize = osize * 2 in
+  if nsize < Sys.max_array_length then begin
+    let ndata = Array.make nsize [ ] in
+    h.data <- ndata;          (* so that indexfun sees the new bucket count *)
+    let rec insert_bucket = function
+        [ ] -> ()
+      | key :: rest ->
+        let nidx = indexfun h key in
+        ndata.(nidx) <- key :: ndata.(nidx);
+        insert_bucket rest
+    in
+    for i = 0 to osize - 1 do
+      insert_bucket (Array.unsafe_get odata i)
+    done
+  end
+
+let elements set = 
+  fold  (fun k  acc ->  k :: acc) set []
+
+
+
+
+let stats h =
+  let mbl =
+    Array.fold_left (fun m b -> max m (List.length b)) 0 h.data in
+  let histo = Array.make (mbl + 1) 0 in
+  Array.iter
+    (fun b ->
+       let l = List.length b in
+       histo.(l) <- histo.(l) + 1)
+    h.data;
+  {Hashtbl.num_bindings = h.size;
+   num_buckets = Array.length h.data;
+   max_bucket_length = mbl;
+   bucket_histogram = histo }
+
+let rec small_bucket_mem eq_key key lst =
+  match lst with 
+  | [] -> false 
+  | key1::rest -> 
+    eq_key key   key1 ||
+    match rest with 
+    | [] -> false 
+    | key2 :: rest -> 
+      eq_key key   key2 ||
+      match rest with 
+      | [] -> false 
+      | key3 :: rest -> 
+        eq_key key   key3 ||
+        small_bucket_mem eq_key key rest 
+
+let rec remove_bucket eq_key key (h : _ t) buckets = 
+  match buckets with 
+  | [ ] ->
+    [ ]
+  | k :: next ->
+    if  eq_key k   key
+    then begin h.size <- h.size - 1; next end
+    else k :: remove_bucket eq_key key h next    
+
+module type S =
+sig
+  type key
+  type t
+  val create: int ->  t
+  val clear : t -> unit
+  val reset : t -> unit
+  val copy: t -> t
+  val remove:  t -> key -> unit
+  val add :  t -> key -> unit
+  val of_array : key array -> t 
+  val check_add : t -> key -> bool
+  val mem :  t -> key -> bool
+  val iter: (key -> unit) ->  t -> unit
+  val fold: (key -> 'b -> 'b) ->  t -> 'b -> 'b
+  val length:  t -> int
+  val stats:  t -> Hashtbl.statistics
+  val elements : t -> key list 
+end
+
+end
+module String_hash_set : sig 
+#1 "string_hash_set.mli"
+(* Copyright (C) 2015-2016 Bloomberg Finance L.P.
+ * 
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * In addition to the permissions granted to you by the LGPL, you may combine
+ * or link a "work that uses the Library" with a publicly distributed version
+ * of this file to produce a combined library or application, then distribute
+ * that combined work under the terms of your choosing, with no requirement
+ * to comply with the obligations normally placed on you by section 4 of the
+ * LGPL version 3 (or the corresponding section of a later version of the LGPL
+ * should you choose to use a later version).
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ * 
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
+
+
+include Hash_set_gen.S with type key = string
+
+end = struct
+#1 "string_hash_set.ml"
+# 1 "ext/hash_set.cppo.ml"
+(* Copyright (C) 2015-2016 Bloomberg Finance L.P.
+ * 
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * In addition to the permissions granted to you by the LGPL, you may combine
+ * or link a "work that uses the Library" with a publicly distributed version
+ * of this file to produce a combined library or application, then distribute
+ * that combined work under the terms of your choosing, with no requirement
+ * to comply with the obligations normally placed on you by section 4 of the
+ * LGPL version 3 (or the corresponding section of a later version of the LGPL
+ * should you choose to use a later version).
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ * 
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
+# 31
+type key = string 
+let key_index (h :  _ Hash_set_gen.t ) (key : key) =
+  (Bs_hash_stubs.hash_string  key) land (Array.length h.data - 1)
+let eq_key = Ext_string.equal 
+type  t = key  Hash_set_gen.t 
+
+
+# 62
+let create = Hash_set_gen.create
+let clear = Hash_set_gen.clear
+let reset = Hash_set_gen.reset
+let copy = Hash_set_gen.copy
+let iter = Hash_set_gen.iter
+let fold = Hash_set_gen.fold
+let length = Hash_set_gen.length
+let stats = Hash_set_gen.stats
+let elements = Hash_set_gen.elements
+
+
+
+let remove (h : _ Hash_set_gen.t) key =  
+  let i = key_index h key in
+  let h_data = h.data in
+  let old_h_size = h.size in 
+  let new_bucket = Hash_set_gen.remove_bucket eq_key key h (Array.unsafe_get h_data i) in
+  if old_h_size <> h.size then  
+    Array.unsafe_set h_data i new_bucket
+
+
+
+let add (h : _ Hash_set_gen.t) key =
+  let i = key_index h key  in 
+  let h_data = h.data in 
+  let old_bucket = (Array.unsafe_get h_data i) in
+  if not (Hash_set_gen.small_bucket_mem eq_key key old_bucket) then 
+    begin 
+      Array.unsafe_set h_data i (key :: old_bucket);
+      h.size <- h.size + 1 ;
+      if h.size > Array.length h_data lsl 1 then Hash_set_gen.resize key_index h
+    end
+
+let of_array arr = 
+  let len = Array.length arr in 
+  let tbl = create len in 
+  for i = 0 to len - 1  do
+    add tbl (Array.unsafe_get arr i);
+  done ;
+  tbl 
+  
+    
+let check_add (h : _ Hash_set_gen.t) key =
+  let i = key_index h key  in 
+  let h_data = h.data in  
+  let old_bucket = (Array.unsafe_get h_data i) in
+  if not (Hash_set_gen.small_bucket_mem eq_key key old_bucket) then 
+    begin 
+      Array.unsafe_set h_data i  (key :: old_bucket);
+      h.size <- h.size + 1 ;
+      if h.size > Array.length h_data lsl 1 then Hash_set_gen.resize key_index h;
+      true 
+    end
+  else false 
+
+
+let mem (h :  _ Hash_set_gen.t) key =
+  Hash_set_gen.small_bucket_mem eq_key key (Array.unsafe_get h.data (key_index h key)) 
+
+  
+
+end
+module Bsb_config_types
+= struct
+#1 "bsb_config_types.ml"
+(* Copyright (C) 2015-2016 Bloomberg Finance L.P.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * In addition to the permissions granted to you by the LGPL, you may combine
+ * or link a "work that uses the Library" with a publicly distributed version
+ * of this file to produce a combined library or application, then distribute
+ * that combined work under the terms of your choosing, with no requirement
+ * to comply with the obligations normally placed on you by section 4 of the
+ * LGPL version 3 (or the corresponding section of a later version of the LGPL
+ * should you choose to use a later version).
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
+
+
+type dependency = 
+  {
+    package_name : string ; 
+    package_install_path : string ; 
+  }
+type dependencies = dependency list 
+
+(* `string` is a path to the entrypoint *)
+type entries_t = JsTarget of string | NativeTarget of string | BytecodeTarget of string
+
+type reason_react_jsx = string option 
+
+type compilation_kind_t = Js | Bytecode | Native
+
+type t = 
+  {
+    package_name : string ; 
+
+    (* [captial-package] *)
+    namespace : string option; 
+    (* CapitalPackage *)
+    external_includes : string list ; 
+    warnings : string ;
+    bsc_flags : string list ;
+    ppx_flags : string list ;
+    bs_dependencies : dependencies;
+    bs_dev_dependencies : dependencies;
+    built_in_dependency : dependency option; 
+    warning : Bsb_warning.t option;
+    (*TODO: maybe we should always resolve bs-platform 
+      so that we can calculate correct relative path in 
+      [.merlin]
+    *)
+    refmt : string option;
+    refmt_flags : string list;
+    js_post_build_cmd : string option;
+    package_specs : Bsb_package_specs.t ; 
+    globbed_dirs : string list;
+    bs_file_groups : Bsb_parse_sources.file_group list ;
+    files_to_install : String_hash_set.t ;
+    generate_merlin : bool ; 
+    reason_react_jsx : reason_react_jsx ; (* whether apply PPX transform or not*)
+    entries : entries_t list ;
+    generators : string String_map.t ; 
+    cut_generators : bool; (* note when used as a dev mode, we will always ignore it *)
+    
+    
+    bs_super_errors : bool;
+    
+    static_libraries: string list;
+    build_script: string option;
+    allowed_build_kinds: compilation_kind_t list;
+    ocamlfind_dependencies: string list;
+    bin_annot: bool;
+  }
+
+end
+module Bsb_default : sig 
+#1 "bsb_default.mli"
+(* Copyright (C) 2015-2016 Bloomberg Finance L.P.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * In addition to the permissions granted to you by the LGPL, you may combine
+ * or link a "work that uses the Library" with a publicly distributed version
+ * of this file to produce a combined library or application, then distribute
+ * that combined work under the terms of your choosing, with no requirement
+ * to comply with the obligations normally placed on you by section 4 of the
+ * LGPL version 3 (or the corresponding section of a later version of the LGPL
+ * should you choose to use a later version).
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
+
+
+
+val warnings : string 
+
+val bsc_flags : string list 
+
+val ocaml_flags : string list 
+
+val refmt_flags : string list  
+
+
+
+val main_entries : Bsb_config_types.entries_t list
+
+val allowed_build_kinds : Bsb_config_types.compilation_kind_t list
+
+end = struct
+#1 "bsb_default.ml"
+(* Copyright (C) 2015-2016 Bloomberg Finance L.P.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * In addition to the permissions granted to you by the LGPL, you may combine
+ * or link a "work that uses the Library" with a publicly distributed version
+ * of this file to produce a combined library or application, then distribute
+ * that combined work under the terms of your choosing, with no requirement
+ * to comply with the obligations normally placed on you by section 4 of the
+ * LGPL version 3 (or the corresponding section of a later version of the LGPL
+ * should you choose to use a later version).
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
+
+
+(**
+   - 6
+   Label omitted in function application.
+   - 7
+   Method overridden.
+   - 9
+   Missing fields in a record pattern. (*Not always desired, in some cases need [@@@warning "+9"] *)      
+   - 27
+   Innocuous unused variable: unused variable that is not bound with let nor as, and doesn’t start with an underscore (_) character.      
+   - 29
+   Unescaped end-of-line in a string constant (non-portable code).
+   - 32 .. 39 Unused  blabla
+   - 44
+   Open statement shadows an already defined identifier.
+   - 45
+   Open statement shadows an already defined label or constructor.
+   - 48
+   Implicit elimination of optional arguments.
+   https://caml.inria.fr/mantis/view.php?id=6352
+
+*)  
+let warnings = "-40+6+7+27+32..39+44+45"
+
+let bsc_flags = 
+  [
+    "-no-alias-deps";
+    "-color"; "always" 
+  ]
+
+let ocaml_flags = bsc_flags
+
+let refmt_flags = ["--print"; "binary"]
+
+
+
+let main_entries = [Bsb_config_types.JsTarget "Index"]
+
+let allowed_build_kinds = [Bsb_config_types.Js; Bsb_config_types.Bytecode; Bsb_config_types.Native]
+
+end
 module Bsb_helper_dep_graph : sig 
 #1 "bsb_helper_dep_graph.mli"
 (* Copyright (C) 2015-2016 Bloomberg Finance L.P.
@@ -8238,6 +10694,7 @@ let link link_byte_or_native ~main_module ~batch_files ~clibs ~includes ~ocamlfi
       let compiler = ocaml_dir // compiler ^ ".opt" in
       let list_of_args = (compiler :: "-g"
         :: (if bs_super_errors then ["-bs-super-errors"] else [])) 
+        @ Bsb_default.ocaml_flags
         @ "-o" :: output_file :: all_object_files in
         (* List.iter (fun a -> print_endline a) list_of_args; *)
       Unix.execvp
@@ -8254,6 +10711,7 @@ let link link_byte_or_native ~main_module ~batch_files ~clibs ~includes ~ocamlfi
       let findlib_env_var = "OCAMLFIND_CONF=" ^ Bsb_build_util.get_findlib_path dir in
       let list_of_args = ("ocamlfind" :: compiler :: []) 
         @ (if bs_super_errors then ["-passopt"; "-bs-super-errors"] else []) 
+        @ Bsb_default.ocaml_flags
         @ ("-linkpkg" :: ocamlfind_packages)
         @ ("-g" :: "-o" :: output_file :: all_object_files) in
       (* List.iter (fun a -> print_endline a) list_of_args; *)
@@ -8392,7 +10850,7 @@ let pack pack_byte_or_native ~batch_files ~includes ~ocamlfind_packages ~bs_supe
       Unix.execvp
         compiler
           (Array.of_list ((compiler :: "-a" :: "-g" :: (if bs_super_errors then ["-bs-super-errors"] else []) )
-            @ "-o" :: (Literals.library_file ^ suffix_library_files) :: includes @ all_object_files))
+            @ Bsb_default.ocaml_flags @ "-o" :: (Literals.library_file ^ suffix_library_files) :: includes @ all_object_files))
     else begin
       (* @CrossPlatform This might work on windows since we're using the Unix module which claims to
          have a windows implementation... We should double check this. *)
@@ -8403,6 +10861,7 @@ let pack pack_byte_or_native ~batch_files ~includes ~ocamlfind_packages ~bs_supe
       let findlib_env_var = "OCAMLFIND_CONF=" ^ Bsb_build_util.get_findlib_path dir in
       let list_of_args = ("ocamlfind" :: compiler :: "-a" :: "-g" :: ocamlfind_packages) 
       @ ((if bs_super_errors then ["-passopt"; "-bs-super-errors"] else []))
+      @ Bsb_default.ocaml_flags
       @  ("-o" :: (Literals.library_file ^ suffix_library_files) :: includes @ all_object_files) in
       Unix.execvpe
         "ocamlfind"

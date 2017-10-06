@@ -52,6 +52,7 @@ let bsc_flags =
     "-color"; "always" 
   ]
 
+let ocaml_flags = bsc_flags
 
 let refmt_flags = ["--print"; "binary"]
 

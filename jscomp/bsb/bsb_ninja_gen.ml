@@ -112,6 +112,9 @@ let output_ninja_and_namespace_map
   let ocamlopt = "ocamlopt" in
   let ppx_flags = Bsb_build_util.flag_concat dash_ppx ppx_flags in
   let bsc_flags =  String.concat Ext_string.single_space bsc_flags in
+  
+  (* @Incomplete Not allowed to tweak ocaml_flags yet. *)
+  let ocaml_flags =  String.concat Ext_string.single_space Bsb_default.ocaml_flags in
   let refmt_flags = String.concat Ext_string.single_space refmt_flags in
   let bs_super_errors = if main_bs_super_errors then "-bs-super-errors" else "" in
   let bs_package_includes = 
@@ -159,6 +162,7 @@ let output_ninja_and_namespace_map
           Bsb_ninja_global_vars.bsb_helper, bsb_helper;
           Bsb_ninja_global_vars.warnings, warnings;
           Bsb_ninja_global_vars.bsc_flags, bsc_flags ;
+          
           Bsb_ninja_global_vars.ppx_flags, ppx_flags;
           Bsb_ninja_global_vars.bs_package_includes, bs_package_includes;
           Bsb_ninja_global_vars.bs_package_dev_includes, bs_package_dev_includes;  
@@ -167,6 +171,9 @@ let output_ninja_and_namespace_map
           ; (* make it configurable in the future *)
           Bsb_ninja_global_vars.refmt_flags, refmt_flags;
           Bsb_ninja_global_vars.namespace , namespace_flag ; 
+          
+          
+          Bsb_ninja_global_vars.ocaml_flags, ocaml_flags ;
           
           Bsb_ninja_global_vars.bs_super_errors_ocamlfind, 
           (* Jumping through hoops. When ocamlfind is used we need to pass the argument 
