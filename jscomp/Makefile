@@ -331,7 +331,6 @@ BSB_SRCS= bsb_config\
 	bsb_build_util\
 	bsb_package_specs\
 	bsb_pkg_map_gen\
-	bsb_helper_extract\
 	bsb_helper_dep_graph\
 	bsb_helper_linker\
 	bsb_helper_packer\
