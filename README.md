@@ -21,18 +21,18 @@ For [example](https://github.com/bsansouci/BetterErrors/tree/bsb-support):
 ```
 
 ## Run
-`./node_modules/.bin/bsb` (or add an [npm script](https://docs.npmjs.com/misc/scripts) to simply run `bsb`).
+`./node_modules/.bin/bsb -make-world` (or add an [npm script](https://docs.npmjs.com/misc/scripts) to simply run `bsb -make-world`).
 
 That will pickup the first entry's `kind` and build all entries to that `kind`. e.g if you have multiple `bytecode` targets, they'll all get built but not the `js` ones nor `native` ones. If you want to build to all targets you need to run the build command multiple times with different `-backend`.
 
 ## Useful flags
-The `-make-world` flag builds all of the dependencies.
+The `-make-world` flag builds all of the dependencies and the project.
 
 The `-w` enabled the watch mode which will rebuild on any source file change.
 
-The `-backend [js|bytecode|native]` flag tells `bsb-native` to build all entries in the `bsconfig.json` to either `js`, `bytecode` or `native`.
+The `-backend [js|bytecode|native]` flag tells `bsb-native` to build all entries in the `bsconfig.json` which match the kind `js`, `bytecode` or `native`.
 
-The build artifacts are put into the folder `lib/bs`. The bytecode executable would be at `lib/bs/bytecode/index.byte` and the native one at `lib/bs/native/index.native`.
+The build artifacts are put into the folder `lib/bs`. The bytecode executable would be at `lib/bs/bytecode/index.byte` and the native one at `lib/bs/native/index.native` for example.
 
 ## Opam packages
 Yes `bsb-native` supports opam packages (see [ocamlfind example](https://github.com/bsansouci/bsb-native-example/tree/ocamlfind-trial))
@@ -51,7 +51,9 @@ Yes `bsb-native` supports opam packages (see [ocamlfind example](https://github.
 ## bsconfig.json schema
 ```js
 {
-    // All of the bsb fields will work as expected. Here's just the added features
+    // All of the bsb fields will work as expected. Here are just the added 
+    // features.
+
     // Entries is an array of targets to be built.
     // When running `bsb -backend bytecode`, bsb will filter this array for 
     // all the entries compiling to bytecode and compile _all_ of those.
@@ -59,7 +61,7 @@ Yes `bsb-native` supports opam packages (see [ocamlfind example](https://github.
       "kind": "bytecode", // can be "bytecode" (ocamlc), "js" (bsc) or "native" (ocamlopt),
       "main": "MainModule",
     }],
-    
+
     // Array of opam dependencies.
     "ocamlfind-dependencies": ["lwt.unix"],
     
@@ -88,8 +90,10 @@ Yes `bsb-native` supports opam packages (see [ocamlfind example](https://github.
 
 
 ## Multi-target
-`bsb-native` actually supports building Reason/OCaml to JS as well as to native/bytecode. What that enables is code that is truly cross platform, that depends on a JS implementation of a library or a native implementation, and bsb-native will build the right implementation depending on what you target.
+`bsb-native` actually supports building Reason/OCaml to JS as well as to native/bytecode. What that enables is cross platform code that depends only on an interface, and bsb-native will choose the right implementation depending on what you target.
 
 For example, you can write code that depends on the module Reasongl, and bsb-native will use `ReasonglNative` as the implementation for Reasongl when building to native/bytecode or it'll use `ReasonglWeb` when building to JS.
 
 Currently the way this works is to have each platform specific dependency expose a module with the same name and rely on the field `allowed-build-kinds` in the `bsconfig.json` to tell bsb-native which one of platform specific dep you want to build, given that you want to build the whole project to a specific target. Say you target JS, then ReasonglWeb will get built which exposes its own [Reasongl](https://github.com/bsansouci/reasongl-web/blob/bsb-support-new/src/reasongl.re) module.
+
+This is _not_ the best way. We're working on improving this by allowing conditional compilation within a project using a PPX.
