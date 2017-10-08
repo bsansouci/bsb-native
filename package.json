@@ -70,6 +70,7 @@
     "installPath": "bin",
     "libraryName": "bsbnative",
     "ocamlVersion": "ocaml-version = \"4.02.3\"",
+    "buildCommand": "./scripts/opam_install.sh",
     "binaries": {
       "./bin/bsc.exe": "bsc.exe",
       "./bin/bsb.exe": "bsb.exe",
