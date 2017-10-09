@@ -66,7 +66,7 @@ $root_dir/scripts/buildocaml.sh
 echo "configure again with local ocaml installed"
 OCAML_VERSION=`ocamlc.opt -version`
 VERSION_WE_WANT="4.02.3"
-if [ ${OCAML_VERSION/$VERSION_WE_WANT} == $OCAML_VERSION ]; then
+if [ "${OCAML_VERSION/$VERSION_WE_WANT}" == "$OCAML_VERSION" ]; then
     RED='\033[0;31m'
     BLUE='\033[0;36m'
     GREEN='\033[0;32m'
