@@ -1,6 +1,6 @@
 opam-version: "1.2"
 name: "bsbnative"
-version: "1.9.4.0004"
+version: "1.9.4"
 license: "SEE LICENSE IN LICENSE"
 homepage: "https://github.com/bucklescript/bucklescript#readme"
 bug-reports: "https://github.com/bucklescript/bucklescript/issues"
