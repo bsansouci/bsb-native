@@ -510,8 +510,10 @@ themes:
 snapshotml:./bin/bspack.exe $(SNAPSHOT_SRCS)
 
 force-snapshotml:
-	rm -f $(SNAPSHOT_DEPS) $(SNAPSHOT_SRCS)
+	rm -f $(SNAPSHOT_DEPS) $(SNAPSHOT_SRCS) ../scripts/opam_config_compiler_packed.ml
 	make snapshotml
+	echo "bundling opam_config_compiler_packed.ml"
+	./bin/bspack.exe -I ext -I ../scripts -bs-main Opam_config_compiler -o ../scripts/opam_config_compiler_packed.ml
 
 
 bin/bsppx.ml:./bin/bspack.exe
