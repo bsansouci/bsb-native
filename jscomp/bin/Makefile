@@ -35,8 +35,15 @@ reactjs_jsx_ppx.exe:reactjs_ppx.mli reactjs_ppx.ml
 reactjs_jsx_ppx_2.exe:reactjs_ppx_2.mli reactjs_ppx_2.ml
 	$(NATIVE) -no-alias-deps -I +compiler-libs ocamlcommon.cmxa $^ -o $@
 
+ifdef WIN32
 config_whole_compiler.ml:config_whole_compiler.mlp ../../scripts/config_compiler.js
 	node ../../scripts/config_compiler.js
+endif
+ifndef WIN32
+config_whole_compiler.ml:config_whole_compiler.mlp ../../scripts/opam_config_compiler.ml ../ext/ext_string.cmo
+	../../vendor/ocaml/ocamlc.opt -g -o ../../scripts/opam_config_compiler.exe -I ../ext/ ../ext/ext_bytes.cmo  ../ext/ext_string.cmo ../../vendor/ocaml/otherlibs/unix/unix.cma ../../scripts/opam_config_compiler.ml
+	../../scripts/opam_config_compiler.exe
+endif
 bsc.exe: config_whole_compiler.mli config_whole_compiler.ml  whole_compiler.mli whole_compiler.ml
 	$(NATIVE) $(OCAMLOPT_FLAGS) $^  -o $@
 
