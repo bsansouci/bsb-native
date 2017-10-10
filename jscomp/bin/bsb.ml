@@ -6160,6 +6160,8 @@ val remove_dir_recursive : string -> unit
 (*  *)
 val run_command_capture_stdout: string -> string
 
+val run_command_with_env: string -> string array -> string
+
 end = struct
 #1 "bsb_unix.ml"
 (* Copyright (C) 2015-2016 Bloomberg Finance L.P.
@@ -6278,6 +6280,17 @@ let run_command_capture_stdout cmd =
      done
    with End_of_file -> ());
   let _ = Unix.close_process (ic, oc) in
+  Buffer.contents buf
+
+let run_command_with_env cmd env =
+  let ic, oc, err = Unix.open_process_full cmd env in
+  let buf = Buffer.create 64 in
+  (try
+     while true do
+       Buffer.add_channel buf ic 1
+     done
+   with End_of_file -> ());
+  let _ = Unix.close_process_full (ic, oc, err) in
   Buffer.contents buf
 
 end
@@ -13079,7 +13092,7 @@ let output_ninja_and_namespace_map
   let bsc_flags =  String.concat Ext_string.single_space bsc_flags in
   
   (* @Incomplete Not allowed to tweak ocaml_flags yet. *)
-  let ocaml_flags =  String.concat Ext_string.single_space Bsb_default.ocaml_flags in
+  let ocaml_flags = Bsb_build_util.flag_concat (if ocamlfind_dependencies = [] then Ext_string.single_space else "-passopt") Bsb_default.ocaml_flags in
   let refmt_flags = String.concat Ext_string.single_space refmt_flags in
   let bs_super_errors = if main_bs_super_errors then "-bs-super-errors" else "" in
   let bs_package_includes = 
@@ -13138,7 +13151,7 @@ let output_ninja_and_namespace_map
           Bsb_ninja_global_vars.namespace , namespace_flag ; 
           
           
-          Bsb_ninja_global_vars.ocaml_flags, ocaml_flags ;
+          Bsb_ninja_global_vars.ocaml_flags, ocaml_flags;
           
           Bsb_ninja_global_vars.bs_super_errors_ocamlfind, 
           (* Jumping through hoops. When ocamlfind is used we need to pass the argument 

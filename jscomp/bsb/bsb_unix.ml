@@ -115,3 +115,14 @@ let run_command_capture_stdout cmd =
    with End_of_file -> ());
   let _ = Unix.close_process (ic, oc) in
   Buffer.contents buf
+
+let run_command_with_env cmd env =
+  let ic, oc, err = Unix.open_process_full cmd env in
+  let buf = Buffer.create 64 in
+  (try
+     while true do
+       Buffer.add_channel buf ic 1
+     done
+   with End_of_file -> ());
+  let _ = Unix.close_process_full (ic, oc, err) in
+  Buffer.contents buf

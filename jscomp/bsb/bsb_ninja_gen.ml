@@ -114,7 +114,7 @@ let output_ninja_and_namespace_map
   let bsc_flags =  String.concat Ext_string.single_space bsc_flags in
   
   (* @Incomplete Not allowed to tweak ocaml_flags yet. *)
-  let ocaml_flags =  String.concat Ext_string.single_space Bsb_default.ocaml_flags in
+  let ocaml_flags = Bsb_build_util.flag_concat (if ocamlfind_dependencies = [] then Ext_string.single_space else "-passopt") Bsb_default.ocaml_flags in
   let refmt_flags = String.concat Ext_string.single_space refmt_flags in
   let bs_super_errors = if main_bs_super_errors then "-bs-super-errors" else "" in
   let bs_package_includes = 
@@ -173,7 +173,7 @@ let output_ninja_and_namespace_map
           Bsb_ninja_global_vars.namespace , namespace_flag ; 
           
           
-          Bsb_ninja_global_vars.ocaml_flags, ocaml_flags ;
+          Bsb_ninja_global_vars.ocaml_flags, ocaml_flags;
           
           Bsb_ninja_global_vars.bs_super_errors_ocamlfind, 
           (* Jumping through hoops. When ocamlfind is used we need to pass the argument 

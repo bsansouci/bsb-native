@@ -6966,6 +6966,8 @@ val remove_dir_recursive : string -> unit
 (*  *)
 val run_command_capture_stdout: string -> string
 
+val run_command_with_env: string -> string array -> string
+
 end = struct
 #1 "bsb_unix.ml"
 (* Copyright (C) 2015-2016 Bloomberg Finance L.P.
@@ -7086,6 +7088,17 @@ let run_command_capture_stdout cmd =
   let _ = Unix.close_process (ic, oc) in
   Buffer.contents buf
 
+let run_command_with_env cmd env =
+  let ic, oc, err = Unix.open_process_full cmd env in
+  let buf = Buffer.create 64 in
+  (try
+     while true do
+       Buffer.add_channel buf ic 1
+     done
+   with End_of_file -> ());
+  let _ = Unix.close_process_full (ic, oc, err) in
+  Buffer.contents buf
+
 end
 module Bsb_helper_findlib : sig 
 #1 "bsb_helper_findlib.mli"
@@ -7120,14 +7133,27 @@ end = struct
 let (//) = Ext_path.combine
 
 let gen_findlib_conf output_dir cwd =
-  let destdir = Bsb_unix.run_command_capture_stdout "ocamlfind printconf destdir" in
+  let env = Unix.environment () in
+  let destdir = Bsb_unix.run_command_with_env "ocamlfind printconf destdir" env in
   (* TODO(sansouci): Probably pretty brittle. If there is no output to stdout
      it's likely there was an error on stderr of the kind "ocamlfind not found".
      We just assume that it's bad either way.*)
+  let env = if destdir = "" then
+    (* We have to remove this because it might be wrong and will wrongly influence our conf *)
+    let var_to_remove = "OCAMLFIND_CONF" in 
+    env
+      |> Array.to_list 
+      |> List.filter (fun v -> (if String.length v >= (String.length var_to_remove + 1)
+          then String.sub v 0 (String.length var_to_remove + 1) <> "OCAMLFIND_CONF=" 
+          else true))
+      |> Array.of_list 
+  else env in 
+  (* Try it again with new env. *)
+  let destdir = Bsb_unix.run_command_with_env "ocamlfind printconf destdir" env in
   if destdir = "" then
     Bsb_log.error "Error running `ocamlfind printconf destdir` to generate the findlib.conf. Hint: do you have `ocamlfind` installed?"
   else begin 
-    let path = Bsb_unix.run_command_capture_stdout "ocamlfind printconf path" in
+    let path = Bsb_unix.run_command_with_env "ocamlfind printconf path" env in
     if path = "" then
       Bsb_log.error "Error running `ocamlfind printconf destdir` to generate the findlib.conf. Hint: do you have `ocamlfind` installed?"
     else begin 

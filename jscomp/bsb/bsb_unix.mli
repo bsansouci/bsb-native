@@ -39,3 +39,5 @@ val remove_dir_recursive : string -> unit
 
 (*  *)
 val run_command_capture_stdout: string -> string
+
+val run_command_with_env: string -> string array -> string
