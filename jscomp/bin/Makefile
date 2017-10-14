@@ -20,10 +20,10 @@ bspp.exe:   bspp.mli bspp.ml
 bsdep.exe: bsdep.mli bsdep.ml
 	$(NATIVE) $(OCAMLOPT_FLAGS) $^ -o $@
 
-bsb.exe:  bsb.mli bsb.ml
+bsb.exe:  bsb_default_paths.mli bsb_default_paths.ml bsb.mli bsb.ml
 	$(NATIVE) $(OCAMLOPT_FLAGS) unix.cmxa str.cmxa $^ -o $@
 
-bsb_helper.exe:  bsb_helper.mli bsb_helper.ml
+bsb_helper.exe:  bsb_default_paths.mli bsb_default_paths.ml  bsb_helper.mli bsb_helper.ml
 	$(NATIVE) $(OCAMLOPT_FLAGS) unix.cmxa str.cmxa -w -a $^ -o $@
 
 refmt.exe: refmt_main.mli refmt_main.ml
@@ -34,6 +34,12 @@ reactjs_jsx_ppx.exe:reactjs_ppx.mli reactjs_ppx.ml
 
 reactjs_jsx_ppx_2.exe:reactjs_ppx_2.mli reactjs_ppx_2.ml
 	$(NATIVE) -no-alias-deps -I +compiler-libs ocamlcommon.cmxa $^ -o $@
+
+bsb_default_paths.ml:
+	cp ../bsb/bsb_default_paths.ml ./bsb_default_paths.ml
+
+bsb_default_paths.mli:
+	cp ../bsb/bsb_default_paths.mli ./bsb_default_paths.mli
 
 ifdef WIN32
 config_whole_compiler.ml:config_whole_compiler.mlp ../../scripts/config_compiler.js

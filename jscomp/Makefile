@@ -318,6 +318,17 @@ OTHER_CORE_SRCS= bsppx_main bspack_main jsoo_main  bspp_main js_cmi_datasets \
 		 js_main cmjdump_main astdump_main
 
 OTHER_CORE_CMXS= $(addprefix core/, $(addsuffix .cmx, $(OTHER_CORE_SRCS)))
+
+bsb/bsb_default_paths.ml:../scripts/opam_config_compiler_packed.ml
+	../vendor/ocaml/ocamlc.opt -g -o ../scripts/opam_config_compiler.exe ../vendor/ocaml/otherlibs/unix/unix.cma ../scripts/opam_config_compiler_packed.ml
+	../scripts/opam_config_compiler.exe
+	
+bsb/bsb_default_paths.cmi: bsb/bsb_default_paths.mli
+	$(NATIVE) $(INCLUDES) $(COMPFLAGS) -c $<
+
+bsb/bsb_default_paths.cmx: bsb/bsb_default_paths.ml
+	$(NATIVE) $(INCLUDES) $(COMPFLAGS) -c $<
+	
 BSB_SRCS= bsb_config\
 	bsb_build_cache\
 	bsb_exception\
@@ -332,10 +343,6 @@ BSB_SRCS= bsb_config\
 	bsb_package_specs\
 	bsb_pkg_map_gen\
 	bsb_helper_dep_graph\
-	bsb_helper_linker\
-	bsb_helper_packer\
-	bsb_helper_extract\
-	bsb_helper_findlib\
 	bsb_rule\
 	bsb_config_types\
 	bsb_parse_sources\
@@ -358,6 +365,15 @@ BSB_SRCS= bsb_config\
 	oCamlRes\
 	bsb_templates\
 	bsb_theme_init
+
+BSB_HELPER_SRCS=bsb_helper_linker\
+	bsb_helper_packer\
+	bsb_helper_extract\
+	bsb_helper_findlib
+
+BSB_HELPER_CMXS=$(addprefix bsb/, $(addsuffix .cmx, $(BSB_HELPER_SRCS)))
+BSB_HELPER_CMOS=$(addprefix bsb/, $(addsuffix .cmo, $(BSB_HELPER_SRCS)))
+
 SUPER_ERRORS_SRCS=super_reason_react super_misc super_warnings super_location super_env super_pparse super_typecore super_typemod super_typetexp super_main
 REASON_OUTCOME_PRINTER_SRCS=tweaked_reason_oprint reason_outcome_printer_main
 
@@ -367,7 +383,6 @@ SUPER_ERRORS_CMXS=$(addprefix super_errors/, $(addsuffix .cmx, $(SUPER_ERRORS_SR
 REASON_OUTCOME_PRINTER_CMXS=$(addprefix reason_outcome_printer/, $(addsuffix .cmx, $(REASON_OUTCOME_PRINTER_SRCS)))
 MAIN_SRCS= jsgen_main jscmj_main bsb/bsb_main bsb/bsb_helper_main
 MAIN_CMXS=$(addsuffix .cmx, $(MAIN_SRCS))
-
 
 ounit.cmxa: $(OUNIT_CMXS)
 	ocamlopt.opt -a $^ -o $@
@@ -387,6 +402,10 @@ bsb.cmxa:$(BSB_CMXS)
 	ocamlopt.opt -a $^ -o $@
 bsb.cma:$(BSB_CMOS)
 	ocamlc.opt -a $^ -o $@
+bsb_helper.cmxa:$(BSB_HELPER_CMXS)
+	ocamlopt.opt -a $^ -o $@
+bsb_helper.cma:$(BSB_HELPER_CMOS)
+	ocamlc.opt -a $^ -o $@
 super.cmxa:$(SUPER_ERRORS_CMXS)
 	ocamlopt.opt -a $^ -o $@
 super.cma:$(SUPER_ERRORS_CMOS)
@@ -398,10 +417,10 @@ reason_outcome_printer.cma:$(REASON_OUTCOME_PRINTER_CMOS)
 
 check: $(EXT_CMXS) $(COMMON_CMXS) $(SYNTAX_CMXS) $(DEPENDS_CMXS) $(CORE_CMXS) $(BSB_CMXS) $(OTHER_CORE_CMXS) $(MAIN_CMXS) $(SUPER_ERRORS_CMXS) $(REASON_OUTCOME_PRINTER_CMXS) $(OUNIT_CMXS) $(OUNIT_TESTS_CMXS)
 
-bin/bsb.exe: bs_hash.cmxa ext.cmxa common.cmxa  bsb.cmxa bsb/bsb_main.cmx
+bin/bsb.exe: bsb/bsb_default_paths.cmx bs_hash.cmxa ext.cmxa common.cmxa  bsb.cmxa bsb/bsb_main.cmx
 	$(NATIVE) -I +compiler-libs -g  ocamlcommon.cmxa unix.cmxa str.cmxa $^ -o $@
 
-bin/bsb_helper.exe: bs_hash.cmxa ext.cmxa common.cmxa  bsb.cmxa bsb/bsb_helper_main.cmx
+bin/bsb_helper.exe: bsb/bsb_default_paths.cmx bs_hash.cmxa ext.cmxa common.cmxa bsb_helper.cmxa
 	$(NATIVE) -I +compiler-libs -g  ocamlcommon.cmxa unix.cmxa str.cmxa $^ -o $@
 
 # bin/bsc:  ext.cmxa common.cmxa  depends.cmxa syntax.cmxa core.cmxa
@@ -526,10 +545,10 @@ bin/bsdep.ml:./bin/bspack.exe
 	$< -D BS_OCAMLDEP=true  -U BS_DEBUG -bs-MD  -module-alias Config=ConfigDummy -I bin  -I $(OCAML_SRC_UTILS) -I $(OCAML_SRC_PARSING) -I $(OCAML_SRC_DRIVER) -I $(OCAML_SRC_TOOLS) -I common -I ext -I syntax -I depends -I core -I stubs -bs-main Ocamldep -o $@
 
 bin/bsb_helper.ml:./bin/bspack.exe
-	 $< -bs-MD -U BS_DEBUG   -I stubs -I common -I ext -I syntax -I depends -I bsb  -bs-main Bsb_helper_main -o $@
+	 $< -bs-MD -bs-exclude-I bsb_default_paths -U BS_DEBUG   -I stubs -I common -I ext -I syntax -I depends -I bsb  -bs-main Bsb_helper_main -o $@
 
 bin/bsb.ml:./bin/bspack.exe
-	 $<  -D BS_MIN_LEX_DEPS=true -bs-MD -U BS_DEBUG -I $(OCAML_SRC_UTILS) -I $(OCAML_SRC_PARSING) -I stubs -I common -I ext -I syntax -I depends -I bsb -I ext  -bs-main Bsb_main -o $@
+	 $<  -D BS_MIN_LEX_DEPS=true -bs-MD -bs-exclude-I bsb_default_paths -U BS_DEBUG -I $(OCAML_SRC_UTILS) -I $(OCAML_SRC_PARSING) -I stubs -I common -I ext -I syntax -I depends -I bsb -I ext  -bs-main Bsb_main -o $@
 
 bin/bspp.ml:./bin/bspack.exe
 	  $< -D BS_MIN_LEX_DEPS=true -U BS_DEBUG -bs-MD -module-alias Config=ConfigDummy   -I $(OCAML_SRC_UTILS) -I $(OCAML_SRC_PARSING)?parser  -I bin -I common -I ext -I syntax -I depends -I bspp -I core -bs-main Bspp_main -o $@

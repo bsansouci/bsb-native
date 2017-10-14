@@ -79,8 +79,7 @@ let link link_byte_or_native ~main_module ~batch_files ~clibs ~includes ~ocamlfi
        to install ocamlfind. 
      *)
     if ocamlfind_packages = [] then
-      let bsc_dir = Bsb_build_util.get_bsc_dir cwd in
-      let ocaml_dir = Bsb_build_util.get_ocaml_dir bsc_dir in
+      let ocaml_dir = Bsb_default_paths.ocaml_dir in
       let compiler = ocaml_dir // compiler ^ ".opt" in
       let list_of_args = (compiler :: "-g"
         :: (if bs_super_errors then ["-bs-super-errors"] else [])) 

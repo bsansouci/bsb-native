@@ -90,6 +90,7 @@ let output_ninja_and_namespace_map
       allowed_build_kinds;
       ocamlfind_dependencies;
       bin_annot;
+      global_ocaml_compiler;
     } : Bsb_config_types.t)
   =
   let custom_rules = Bsb_rule.reset generators in 
@@ -185,8 +186,10 @@ let output_ninja_and_namespace_map
           Bsb_ninja_global_vars.bs_super_errors, bs_super_errors;
           
           Bsb_ninja_global_vars.external_deps_for_linking, Bsb_build_util.flag_concat dash_i external_deps_for_linking;
-          Bsb_ninja_global_vars.ocamlc, if ocamlfind_dependencies = [] then ocaml_dir // ocamlc ^ ".opt" else ocamlc;
-          Bsb_ninja_global_vars.ocamlopt, if ocamlfind_dependencies = [] then ocaml_dir // ocamlopt ^ ".opt" else ocamlopt;
+          Bsb_ninja_global_vars.ocamlc, if ocamlfind_dependencies = [] then 
+            (if global_ocaml_compiler then ocamlc ^ ".opt" else ocaml_dir // ocamlc ^ ".opt") else ocamlc;
+          Bsb_ninja_global_vars.ocamlopt, if ocamlfind_dependencies = [] then 
+            (if global_ocaml_compiler then ocamlopt ^ ".opt" else ocaml_dir // ocamlopt ^ ".opt") else ocamlopt;
           Bsb_ninja_global_vars.ocamlfind, if ocamlfind_dependencies = [] then "" else ocamlfind;
           Bsb_ninja_global_vars.ocamlfind_dependencies,  Bsb_build_util.flag_concat "-package" (external_ocamlfind_dependencies @ ocamlfind_dependencies);
           Bsb_ninja_global_vars.bin_annot, if bin_annot then "-bin-annot" else "";
@@ -199,7 +202,10 @@ let output_ninja_and_namespace_map
           Bsb_ninja_global_vars.open_flag, open_flag;
           
           Bsb_ninja_global_vars.findlib_conf_path, findlib_conf_path;
-          Bsb_ninja_global_vars.findlib_conf_env_var, if ocamlfind_dependencies = [] then "" else "OCAMLFIND_CONF=" ^ findlib_conf_path;
+          Bsb_ninja_global_vars.findlib_conf_env_var, 
+            if ocamlfind_dependencies = [] 
+              then ""
+              else (if global_ocaml_compiler then "" else "OCAMLFIND_CONF=" ^ findlib_conf_path);
           
           (** TODO: could be removed by adding a flag
               [-bs-ns react]
@@ -363,8 +369,7 @@ let output_ninja_and_namespace_map
         (ns ^ Literals.suffix_cmi) :: all_info
     in
     (* Add rule to generate the findlib.conf file only if we need it. *)
-    let all_info = if ocamlfind_dependencies <> [] then begin
-      print_endline @@ "findlib_conf_path: " ^ findlib_conf_path;
+    let all_info = if ocamlfind_dependencies <> [] && not global_ocaml_compiler then begin
       Bsb_ninja_util.output_build oc
         ~output:(findlib_conf_path)
         ~input:""

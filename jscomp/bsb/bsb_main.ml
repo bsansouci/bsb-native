@@ -25,7 +25,7 @@
 
 
 let cwd = Sys.getcwd ()
-let bsc_dir = Bsb_build_util.get_bsc_dir cwd 
+let bsc_dir = Bsb_default_paths.bin_dir 
 let () =  Bsb_log.setup () 
 let (//) = Ext_path.combine
 let force_regenerate = ref false
@@ -192,7 +192,7 @@ let handle_anonymous_arg arg =
 let watch_exit () =
   Bsb_log.info "@{<info>Watching@}... @.";
   let bsb_watcher =
-    Bsb_build_util.get_bsc_dir cwd // "bsb_watcher.js" in
+    Bsb_default_paths.bin_dir // "bsb_watcher.js" in
   if Ext_sys.is_windows_or_cygwin then
     exit (Sys.command (Ext_string.concat3 node_lit Ext_string.single_space (Filename.quote bsb_watcher)))
   else
@@ -210,7 +210,7 @@ let watch_exit () =
   let backend = "-backend" in
   let backend_kind = get_string_backend (get_backend ()) in
   let bsb_watcher =
-    Bsb_build_util.get_bsc_dir cwd // "bsb_watcher.js" in
+    Bsb_default_paths.bin_dir // "bsb_watcher.js" in
   if Ext_sys.is_windows_or_cygwin then
     exit (Sys.command (Ext_string.concat3 node_lit Ext_string.single_space (Filename.quote bsb_watcher)))
   else
@@ -224,8 +224,7 @@ let watch_exit () =
 (* see discussion #929, if we catch the exception, we don't have stacktrace... *)
 let () =
   try begin
-  let bsc_dir = Bsb_build_util.get_bsc_dir cwd in
-  let ocaml_dir = Bsb_build_util.get_ocaml_dir bsc_dir in
+  let ocaml_dir = Bsb_default_paths.ocaml_dir in
   let vendor_ninja = bsc_dir // "ninja.exe" in
   match Sys.argv with 
   (* Both of those are equivalent and the watcher will always pass in the `-backend` flag. *)

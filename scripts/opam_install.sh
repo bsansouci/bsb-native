@@ -72,7 +72,18 @@ if [ "${OCAML_VERSION/$VERSION_WE_WANT}" == "$OCAML_VERSION" ]; then
     GREEN='\033[0;32m'
     NOCOLOR='\033[0m'
     echo "${RED}ERROR${NOCOLOR}: Global ocaml has version ${RED}${OCAML_VERSION}${NOCOLOR} while bsb-native only supports ${GREEN}${VERSION_WE_WANT}${NOCOLOR}. Please run '${BLUE}opam switch 4.02.3${NOCOLOR}' to get a compatible compiler and stdlib."
+    exit 1
 else 
+    # Run opam_config_compiler here with the path given by opam so that we generate a good
+    # bsb_default_paths.ml
+    # For local dev, we'll rely on the makefile's rules to generate this correctly
+    # 
+    # Packing command:
+    # ./bin/bspack.exe -I ext -I ../scripts -bs-main Opam_config_compiler -o ../scripts/opam_config_compiler_packed.ml
+    BIN_DIR=${!1}
+    ../vendor/ocaml/ocamlc.opt -g -o ./opam_config_compiler.exe ../vendor/ocaml/otherlibs/unix/unix.cma ./opam_config_compiler_packed.ml
+    ./opam_config_compiler.exe $BIN_DIR
+    
     echo "config finished"
 
     cd "$root_dir/jscomp"
