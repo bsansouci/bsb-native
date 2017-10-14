@@ -1,9 +1,16 @@
 # bsbnative
 
 bin: [
-  "./bin/bsb.exe" {"bsb.exe"}
-  "./bin/bsc.exe" {"bsc.exe"}
-  "./bin/bspack.exe" {"bspack.exe"} ]
+  "./bin/bsb.exe" {"bsb"} ]
 lib: [
   "./META" {"META"}
   "./opam" {"opam"} ]
+sbin: [
+  "./bin/bsb_helper.exe" {"bsb_helper.exe"}
+  "./bin/bsc.exe" {"bsc.exe"}
+  "./bin/bsdep.exe" {"bsdep.exe"}
+  "./bin/bspack.exe" {"bspack"}
+  "./bin/ninja.exe" {"ninja.exe"}
+  "./bin/refmt.exe" {"refmt.exe"}
+  "./vendor/ocaml/ocamlc.opt" {"ocamlc.opt"}
+  "./vendor/ocaml/ocamlopt.opt" {"ocamlopt.opt"} ]

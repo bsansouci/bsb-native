@@ -326,7 +326,7 @@ bsb/bsb_default_paths.ml:../scripts/opam_config_compiler_packed.ml
 bsb/bsb_default_paths.cmi: bsb/bsb_default_paths.mli
 	$(NATIVE) $(INCLUDES) $(COMPFLAGS) -c $<
 
-bsb/bsb_default_paths.cmx: bsb/bsb_default_paths.cmi bsb/bsb_default_paths.ml
+bsb/bsb_default_paths.cmx: bsb/bsb_default_paths.cmi
 	$(NATIVE) $(INCLUDES) $(COMPFLAGS) -c bsb/bsb_default_paths.ml
 	
 BSB_SRCS= bsb_config\
@@ -530,7 +530,7 @@ themes:
 snapshotml:./bin/bspack.exe $(SNAPSHOT_SRCS)
 
 force-snapshotml:
-	rm -f $(SNAPSHOT_DEPS) $(SNAPSHOT_SRCS) ../scripts/opam_config_compiler_packed.ml
+	rm -f $(SNAPSHOT_DEPS) $(SNAPSHOT_SRCS) ../scripts/opam_config_compiler_packed.ml 
 	make snapshotml
 	echo "bundling opam_config_compiler_packed.ml"
 	./bin/bspack.exe -I ext -I ../scripts -bs-main Opam_config_compiler -o ../scripts/opam_config_compiler_packed.ml
@@ -678,7 +678,7 @@ include all.depend
 clean:
 	rm -f bsb/bs_json.ml ext/sexp_lexer.ml core/js_fold.ml core/js_map.ml
 	rm -f common/bs_version.ml
-	rm -rf bin/config_whole_compiler.ml
+	rm -rf bin/config_whole_compiler.ml bin/bsb_default_paths.ml
 	git clean -dfx stubs ext common syntax depends core bsb
 
 DOCS_SOURCES+=$(shell ls runtime/*.ml*)

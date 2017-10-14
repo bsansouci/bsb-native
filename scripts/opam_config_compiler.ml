@@ -47,9 +47,10 @@ let get_matching_name = function
 
 let sp = Printf.sprintf
 
+let print = Printf.printf
+
 let gen_bsb_default_paths ~jscomp_dir ~bin_dir ~ocaml_dir =
   let bsb_default_paths = jscomp_dir // "bsb" // "bsb_default_paths.mlp" in
-  let bsb_default_paths_output = jscomp_dir // "bsb" // "bsb_default_paths.ml" in
   let ic = open_in bsb_default_paths in
   let buf = Buffer.create 64 in
   (try
@@ -78,7 +79,11 @@ let gen_bsb_default_paths ~jscomp_dir ~bin_dir ~ocaml_dir =
       end
      done
    with End_of_file -> ());
-  let contents = Buffer.contents buf in
+  let bsb_default_paths_output = jscomp_dir // "bsb" // "bsb_default_paths.ml" in
+  let oc = open_out bsb_default_paths_output in
+  Buffer.output_buffer oc buf;
+  close_out oc;
+  let bsb_default_paths_output = jscomp_dir // "bin" // "bsb_default_paths.ml" in
   let oc = open_out bsb_default_paths_output in
   Buffer.output_buffer oc buf;
   close_out oc
@@ -119,7 +124,6 @@ let patch_config jscomp_dir config_map =
       end
      done
    with End_of_file -> ());
-  let contents = Buffer.contents buf in
   let oc = open_out whole_compiler_config_output in
   Buffer.output_buffer oc buf;
   close_out oc
@@ -143,12 +147,17 @@ let run_command_capture_stdout cmd env =
 
 let () =
   let working_dir = Filename.dirname Sys.argv.(0) in
-  let allComponents = Ext_string.split_by (fun c -> c = Filename.dir_sep.[0]) working_dir in
-  let working_dir = List.fold_left (fun working_dir dir -> 
-    if dir = ".." then Filename.dirname working_dir 
-    else if dir = "." then working_dir 
-    else working_dir // dir) (Sys.getcwd ()) allComponents in
+  let working_dir = if working_dir.[0] = Filename.dir_sep.[0] then working_dir
+  else begin
+    let allComponents = Ext_string.split_by (fun c -> c = Filename.dir_sep.[0]) working_dir in
+    List.fold_left (fun working_dir dir -> 
+      if dir = ".." then Filename.dirname working_dir 
+      else if dir = "." then working_dir  
+      else working_dir // dir) (Sys.getcwd ()) allComponents
+  end in
   let main_bucklescript_dir = Filename.dirname working_dir in
+  print "main_bucklescript_dir: %s\n" main_bucklescript_dir;
+  
   let env = Unix.environment () |> Array.to_list |> List.filter (fun v -> (if String.length v >= 11 then String.sub v 0 11 <> "OCAMLPARAM=" else true)) in
   let env = Array.of_list @@ "OCAMLRUNPARAM=b" :: env in
 
@@ -184,7 +193,8 @@ let () =
         (main_bucklescript_dir // "jscomp")
         keyvalues
   end;
+  ignore @@ Array.map (fun i -> print "ARGGG: %s\n" i ) Sys.argv;
   let (bin_dir, ocaml_dir) = match Sys.argv with
-  | [| _; share |] -> (share, share)
+  | [| _; share |] -> print "commandline argument: %s\n" share; (share, share)
   | _ -> (main_bucklescript_dir // "bin", main_bucklescript_dir // "vendor" // "ocaml") in
   gen_bsb_default_paths ~jscomp_dir:(main_bucklescript_dir // "jscomp") ~bin_dir ~ocaml_dir

@@ -80,9 +80,9 @@ else
     # 
     # Packing command:
     # ./bin/bspack.exe -I ext -I ../scripts -bs-main Opam_config_compiler -o ../scripts/opam_config_compiler_packed.ml
-    BIN_DIR=${!1}
-    ../vendor/ocaml/ocamlc.opt -g -o ./opam_config_compiler.exe ../vendor/ocaml/otherlibs/unix/unix.cma ./opam_config_compiler_packed.ml
-    ./opam_config_compiler.exe $BIN_DIR
+    BIN_DIR=$1
+    $root_dir/vendor/ocaml/ocamlc.opt -g -o $root_dir/scripts/opam_config_compiler.exe $root_dir/vendor/ocaml/otherlibs/unix/unix.cma $root_dir/scripts/opam_config_compiler_packed.ml
+    $root_dir/scripts/opam_config_compiler.exe $BIN_DIR
     
     echo "config finished"
 

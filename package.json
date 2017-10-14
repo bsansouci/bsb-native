@@ -70,13 +70,13 @@
     "installPath": "bin",
     "libraryName": "bsbnative",
     "ocamlVersion": "ocaml-version = \"4.02.3\"",
-    "buildCommand": "./scripts/opam_install.sh %{share}%",
+    "buildCommand": "./scripts/opam_install.sh %{sbin}%",
     "localBinaries": {
       "./bin/refmt.exe": "refmt.exe",
       "./bin/ninja.exe": "ninja.exe",
       "./bin/bsb_helper.exe": "bsb_helper.exe",
       "./bin/bsdep.exe": "bsdep.exe",
-      "./bin/bsc.exe": "bsc",
+      "./bin/bsc.exe": "bsc.exe",
       "./bin/bspack.exe": "bspack",
       "./vendor/ocaml/ocamlc.opt": "ocamlc.opt",
       "./vendor/ocaml/ocamlopt.opt": "ocamlopt.opt"
