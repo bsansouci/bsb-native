@@ -26,7 +26,7 @@ type link_t = LinkBytecode of string | LinkNative of string
 
 let (//) = Ext_path.combine
 
-let link link_byte_or_native ~main_module ~batch_files ~clibs ~includes ~ocamlfind_packages ~bs_super_errors ~namespace cwd =
+let link link_byte_or_native ~main_module ~batch_files ~clibs ~includes ~ocamlfind_packages ~bs_super_errors ~namespace ~global_ocaml_compiler cwd =
   let suffix_object_files, suffix_library_files, compiler, add_custom, output_file = begin match link_byte_or_native with
   | LinkBytecode output_file -> Literals.suffix_cmo, Literals.suffix_cma , "ocamlc"  , true, output_file
   | LinkNative output_file   -> Literals.suffix_cmx, Literals.suffix_cmxa, "ocamlopt", false, output_file
@@ -80,7 +80,7 @@ let link link_byte_or_native ~main_module ~batch_files ~clibs ~includes ~ocamlfi
      *)
     if ocamlfind_packages = [] then
       let ocaml_dir = Bsb_default_paths.ocaml_dir in
-      let compiler = ocaml_dir // compiler ^ ".opt" in
+      let compiler = if global_ocaml_compiler then compiler ^ ".opt" else ocaml_dir // compiler ^ ".opt" in
       let list_of_args = (compiler :: "-g"
         :: (if bs_super_errors then ["-bs-super-errors"] else [])) 
         @ Bsb_default.ocaml_flags
@@ -97,7 +97,7 @@ let link link_byte_or_native ~main_module ~batch_files ~clibs ~includes ~ocamlfi
             Ben - October 6th 2017
       *)
       let dir = Filename.dirname @@ Filename.dirname @@ Filename.dirname @@ cwd in
-      let findlib_env_var = "OCAMLFIND_CONF=" ^ Bsb_build_util.get_findlib_path dir in
+      let findlib_env_var = if global_ocaml_compiler then "" else "OCAMLFIND_CONF=" ^ Bsb_build_util.get_findlib_path dir in
       let list_of_args = ("ocamlfind" :: compiler :: []) 
         @ (if bs_super_errors then ["-passopt"; "-bs-super-errors"] else []) 
         @ Bsb_default.ocaml_flags

@@ -35,7 +35,7 @@ let module_of_filename filename =
   | exception Not_found -> str
   | len -> String.sub str 0 len
 
-let pack pack_byte_or_native ~batch_files ~includes ~ocamlfind_packages ~bs_super_errors ~namespace cwd =
+let pack pack_byte_or_native ~batch_files ~includes ~ocamlfind_packages ~bs_super_errors ~namespace ~global_ocaml_compiler cwd =
   let suffix_object_files, suffix_library_files, compiler, custom_flag = begin match pack_byte_or_native with
   | PackBytecode -> Literals.suffix_cmo, Literals.suffix_cma , "ocamlc", true
   | PackNative   -> Literals.suffix_cmx, Literals.suffix_cmxa, "ocamlopt", false
@@ -80,7 +80,7 @@ let pack pack_byte_or_native ~batch_files ~includes ~ocamlfind_packages ~bs_supe
        to install ocamlfind. *)
     if ocamlfind_packages = [] then
       let ocaml_dir = Bsb_default_paths.ocaml_dir in
-      let compiler = ocaml_dir // compiler ^ ".opt" in
+      let compiler = if global_ocaml_compiler then compiler ^ ".opt" else ocaml_dir // compiler ^ ".opt" in
       Unix.execvp
         compiler
           (Array.of_list ((compiler :: "-a" :: "-g" :: (if bs_super_errors then ["-bs-super-errors"] else []) )
@@ -92,7 +92,7 @@ let pack pack_byte_or_native ~batch_files ~includes ~ocamlfind_packages ~bs_supe
             Ben - October 6th 2017
       *)
       let dir = Filename.dirname @@ Filename.dirname @@ Filename.dirname @@ cwd in
-      let findlib_env_var = "OCAMLFIND_CONF=" ^ Bsb_build_util.get_findlib_path dir in
+      let findlib_env_var = if global_ocaml_compiler then "" else "OCAMLFIND_CONF=" ^ Bsb_build_util.get_findlib_path dir in
       let list_of_args = ("ocamlfind" :: compiler :: "-a" :: "-g" :: ocamlfind_packages) 
       @ ((if bs_super_errors then ["-passopt"; "-bs-super-errors"] else []))
       @ Bsb_default.ocaml_flags

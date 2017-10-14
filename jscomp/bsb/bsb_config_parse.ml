@@ -154,10 +154,7 @@ let interpret_json
   let warnings = ref Bsb_default.warnings in
   let ocamlfind_dependencies = ref [] in
   let bin_annot = ref false in
-<<<<<<< HEAD
-=======
   let global_ocaml_compiler = ref false in
->>>>>>> Save my life commit...
   let ppx_flags = ref []in 
 
   let js_post_build_cmd = ref None in 
@@ -375,10 +372,7 @@ let interpret_json
           allowed_build_kinds = allowed_build_kinds;
           ocamlfind_dependencies = !ocamlfind_dependencies;
           bin_annot = !bin_annot;
-<<<<<<< HEAD
-=======
           global_ocaml_compiler = !global_ocaml_compiler;
->>>>>>> Save my life commit...
         }
       | None -> failwith "no sources specified, please checkout the schema for more details"
     end

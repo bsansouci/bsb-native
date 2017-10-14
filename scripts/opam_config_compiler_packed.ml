@@ -923,8 +923,6 @@ let get_matching_name = function
   | "SYSTHREAD_SUPPORT" -> "systhread_supported" (* boolean *)
   | _ -> ""
 
-<<<<<<< HEAD
-=======
 let sp = Printf.sprintf
 
 let gen_bsb_default_paths ~jscomp_dir ~bin_dir ~ocaml_dir =
@@ -964,7 +962,6 @@ let gen_bsb_default_paths ~jscomp_dir ~bin_dir ~ocaml_dir =
   close_out oc
 
 
->>>>>>> Save my life commit...
 let patch_config jscomp_dir config_map =
   let whole_compiler_config = jscomp_dir // "bin" // "config_whole_compiler.mlp" in
   let whole_compiler_config_output = jscomp_dir // "bin" // "config_whole_compiler.ml" in
@@ -1022,30 +1019,14 @@ let run_command_capture_stdout cmd env =
   let code = Unix.close_process_full (ic, oc, err) in
   (code, Buffer.contents buf, Buffer.contents bufError)
 
-<<<<<<< HEAD
-let sp = Printf.sprintf
-
 let () =
-  (* let dirname = match [%node __dirname] with
-    | Some a -> a
-    | None -> assert false
-  in
-  let working_dir = Process.process##cwd () in
-  Js.log ("Working dir " ^ working_dir); *)
-=======
-let () =
->>>>>>> Save my life commit...
   let working_dir = Filename.dirname Sys.argv.(0) in
   let allComponents = Ext_string.split_by (fun c -> c = Filename.dir_sep.[0]) working_dir in
   let working_dir = List.fold_left (fun working_dir dir -> 
     if dir = ".." then Filename.dirname working_dir 
     else if dir = "." then working_dir 
     else working_dir // dir) (Sys.getcwd ()) allComponents in
-<<<<<<< HEAD
-  
-=======
   let main_bucklescript_dir = Filename.dirname working_dir in
->>>>>>> Save my life commit...
   let env = Unix.environment () |> Array.to_list |> List.filter (fun v -> (if String.length v >= 11 then String.sub v 0 11 <> "OCAMLPARAM=" else true)) in
   let env = Array.of_list @@ "OCAMLRUNPARAM=b" :: env in
 
@@ -1054,11 +1035,7 @@ let () =
      delete process.env.OCAMLLIB
      delete process.env.CAMLLIB
   *)
-<<<<<<< HEAD
-  let ocamlc_path = (Filename.dirname working_dir) // "vendor" // "ocaml" // "ocamlc.opt" in
-=======
   let ocamlc_path = main_bucklescript_dir // "vendor" // "ocaml" // "ocamlc.opt" in
->>>>>>> Save my life commit...
   let cmdToRun = sp "%s -config" ocamlc_path in
   let (code, config_output, err) = run_command_capture_stdout cmdToRun env in
   match code with
@@ -1082,11 +1059,6 @@ let () =
   if should_patch then begin
     print_endline @@ "should_patch: " ^ string_of_bool should_patch;
     patch_config
-<<<<<<< HEAD
-        ((Filename.dirname working_dir) // "jscomp")
-        keyvalues
-  end else ()
-=======
         (main_bucklescript_dir // "jscomp")
         keyvalues
   end;
@@ -1094,6 +1066,5 @@ let () =
   | [| _; share |] -> (share, share)
   | _ -> (main_bucklescript_dir // "bin", main_bucklescript_dir // "vendor" // "ocaml") in
   gen_bsb_default_paths ~jscomp_dir:(main_bucklescript_dir // "jscomp") ~bin_dir ~ocaml_dir
->>>>>>> Save my life commit...
 
 end

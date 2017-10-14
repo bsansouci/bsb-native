@@ -193,6 +193,7 @@ let output_ninja_and_namespace_map
           Bsb_ninja_global_vars.ocamlfind, if ocamlfind_dependencies = [] then "" else ocamlfind;
           Bsb_ninja_global_vars.ocamlfind_dependencies,  Bsb_build_util.flag_concat "-package" (external_ocamlfind_dependencies @ ocamlfind_dependencies);
           Bsb_ninja_global_vars.bin_annot, if bin_annot then "-bin-annot" else "";
+          Bsb_ninja_global_vars.global_ocaml_compiler, if global_ocaml_compiler then "-global-ocaml-compiler" else "";
           (* @HACK 
               This might cause stale artifacts. This makes everything implicitly depend on the namespace file... 
               

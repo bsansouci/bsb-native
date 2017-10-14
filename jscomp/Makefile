@@ -326,8 +326,8 @@ bsb/bsb_default_paths.ml:../scripts/opam_config_compiler_packed.ml
 bsb/bsb_default_paths.cmi: bsb/bsb_default_paths.mli
 	$(NATIVE) $(INCLUDES) $(COMPFLAGS) -c $<
 
-bsb/bsb_default_paths.cmx: bsb/bsb_default_paths.ml
-	$(NATIVE) $(INCLUDES) $(COMPFLAGS) -c $<
+bsb/bsb_default_paths.cmx: bsb/bsb_default_paths.cmi bsb/bsb_default_paths.ml
+	$(NATIVE) $(INCLUDES) $(COMPFLAGS) -c bsb/bsb_default_paths.ml
 	
 BSB_SRCS= bsb_config\
 	bsb_build_cache\

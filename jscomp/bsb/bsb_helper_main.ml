@@ -42,6 +42,8 @@ let batch_files = ref []
 let collect_file name =
   batch_files := name :: !batch_files
 
+let global_ocaml_compiler = ref false
+
 (* let output_prefix = ref None *)
 let ocamlfind_packages = ref []
 
@@ -62,6 +64,7 @@ let link link_byte_or_native =
       ~ocamlfind_packages:!ocamlfind_packages
       ~bs_super_errors:!bs_super_errors
       ~namespace:!namespace
+      ~global_ocaml_compiler:!global_ocaml_compiler
       (Sys.getcwd ())
   end
 
@@ -147,6 +150,7 @@ let () =
         ~ocamlfind_packages:!ocamlfind_packages
         ~bs_super_errors:!bs_super_errors
         ~namespace:!namespace
+        ~global_ocaml_compiler:!global_ocaml_compiler
         (Sys.getcwd ())
     )),
     " pack native files (cmx) into a library file (cmxa)";
@@ -159,6 +163,7 @@ let () =
         ~ocamlfind_packages:!ocamlfind_packages
         ~bs_super_errors:!bs_super_errors
         ~namespace:!namespace
+        ~global_ocaml_compiler:!global_ocaml_compiler
         (Sys.getcwd ())
     )),
     " pack bytecode files (cmo) into a library file (cma)";
@@ -173,5 +178,8 @@ let () =
     "-gen-findlib", (Arg.String (fun dir ->
       Bsb_helper_findlib.gen_findlib_conf dir (Sys.getcwd ())
     )),
-    " Generates a findlib.conf file replacing ocamlc/ocamlopt with the local compilers."
+    " Generates a findlib.conf file replacing ocamlc/ocamlopt with the local compilers.";
+    
+    "-global-ocaml-compiler", (Arg.Unit (fun () -> global_ocaml_compiler := true)),
+    " Tell bsb_helper to use the globally available compiler when packing or linking."
     ] anonymous usage
