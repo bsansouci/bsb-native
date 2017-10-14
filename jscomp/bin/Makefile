@@ -36,7 +36,7 @@ reactjs_jsx_ppx_2.exe:reactjs_ppx_2.mli reactjs_ppx_2.ml
 	$(NATIVE) -no-alias-deps -I +compiler-libs ocamlcommon.cmxa $^ -o $@
 
 config_whole_compiler.ml ../bsb/bsb_default_paths.ml:
-	../../vendor/ocaml/ocamlc.opt -g -o ../../scripts/opam_config_compiler.exe ../../vendor/ocaml/otherlibs/unix/unix.cma ../scripts/opam_config_compiler_packed.ml
+	../../vendor/ocaml/ocamlc.opt -g -o ../../scripts/opam_config_compiler.exe ../../vendor/ocaml/otherlibs/unix/unix.cma ../../scripts/opam_config_compiler_packed.ml
 	../../scripts/opam_config_compiler.exe
 
 bsb_default_paths.ml: ../bsb/bsb_default_paths.ml
