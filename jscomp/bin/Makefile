@@ -35,8 +35,9 @@ reactjs_jsx_ppx.exe:reactjs_ppx.mli reactjs_ppx.ml
 reactjs_jsx_ppx_2.exe:reactjs_ppx_2.mli reactjs_ppx_2.ml
 	$(NATIVE) -no-alias-deps -I +compiler-libs ocamlcommon.cmxa $^ -o $@
 
-../bsb/bsb_default_paths.ml:
-	make -C .. bsb/bsb_default_paths.ml
+config_whole_compiler.ml ../bsb/bsb_default_paths.ml:
+	../../vendor/ocaml/ocamlc.opt -g -o ../../scripts/opam_config_compiler.exe ../../vendor/ocaml/otherlibs/unix/unix.cma ../scripts/opam_config_compiler_packed.ml
+	../../scripts/opam_config_compiler.exe
 
 bsb_default_paths.ml: ../bsb/bsb_default_paths.ml
 	cp ../bsb/bsb_default_paths.ml ./bsb_default_paths.ml
@@ -49,7 +50,7 @@ config_whole_compiler.ml:config_whole_compiler.mlp ../../scripts/config_compiler
 	node ../../scripts/config_compiler.js
 endif
 ifndef WIN32
-config_whole_compiler.ml:config_whole_compiler.mlp ../../scripts/opam_config_compiler_packed.ml
+config_whole_compiler.ml: ../bsb/bsb_default_paths.ml config_whole_compiler.mlp ../../scripts/opam_config_compiler_packed.ml
 	../../vendor/ocaml/ocamlc.opt -g -o ../../scripts/opam_config_compiler.exe ../../vendor/ocaml/otherlibs/unix/unix.cma ../../scripts/opam_config_compiler_packed.ml
 	../../scripts/opam_config_compiler.exe
 endif
