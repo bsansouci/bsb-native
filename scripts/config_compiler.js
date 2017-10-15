@@ -54,8 +54,8 @@ function gen_bsb_default_paths(jscomp_dir, bin_dir, ocaml_dir) {
     }
   };
   var generated = content.replace((/\"%%(\w+)%%\"/g), replace_values);
-  var bsb_default_paths_output = Path.join(jscomp_dir, "bsb", "bsb_default_paths.ml");
-  Fs.writeFileSync(bsb_default_paths_output, generated, "utf8");
+  var bsb_default_paths_output$1 = Path.join(jscomp_dir, "bin", "bsb_default_paths.ml");
+  Fs.writeFileSync(bsb_default_paths_output$1, generated, "utf8");
   return /* () */0;
 }
 
@@ -85,7 +85,7 @@ function patch_config(jscomp_dir, config_map, is_windows) {
               Caml_builtin_exceptions.assert_failure,
               [
                 "config_compiler.ml",
-                107,
+                110,
                 16
               ]
             ];
@@ -151,7 +151,7 @@ if (match !== undefined) {
         Caml_builtin_exceptions.assert_failure,
         [
           "config_compiler.ml",
-          147,
+          150,
           14
         ]
       ];

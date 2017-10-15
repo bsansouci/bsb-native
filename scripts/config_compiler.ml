@@ -82,7 +82,7 @@ let gen_bsb_default_paths ~jscomp_dir ~bin_dir ~ocaml_dir =
   in
   (* We also eat the quotes, because Js.Json.stringify will add them back anyway. *)
   let generated = Js.String.unsafeReplaceBy1 [%re {|/\"%%(\w+)%%\"/g|}] replace_values content in
-  let bsb_default_paths_output = Path.join [| jscomp_dir ; "bsb" ; "bsb_default_paths.ml" |] in
+  let bsb_default_paths_output = Path.join [| jscomp_dir ; "bin" ; "bsb_default_paths.ml" |] in
   Fs.writeFileAsUtf8Sync bsb_default_paths_output generated
 
 let patch_config jscomp_dir config_map is_windows =
