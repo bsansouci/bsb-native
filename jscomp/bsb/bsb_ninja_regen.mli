@@ -34,6 +34,7 @@
 val regenerate_ninja :
   ?external_deps_for_linking_and_clibs:(string list) * (string list) * (string list) ->
   ?main_bs_super_errors:bool ->
+  ?global_ocaml_compiler:bool ->
   is_top_level:bool ->
   no_dev:bool ->
   override_package_specs:Bsb_package_specs.t option ->

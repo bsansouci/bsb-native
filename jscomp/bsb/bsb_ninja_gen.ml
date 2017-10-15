@@ -59,6 +59,7 @@ let output_ninja_and_namespace_map
     ~ocaml_dir         
     ~root_project_dir
     ~is_top_level
+    ~global_ocaml_compiler
     ~backend
     ~main_bs_super_errors
     ({
@@ -90,7 +91,6 @@ let output_ninja_and_namespace_map
       allowed_build_kinds;
       ocamlfind_dependencies;
       bin_annot;
-      global_ocaml_compiler;
     } : Bsb_config_types.t)
   =
   let custom_rules = Bsb_rule.reset generators in 

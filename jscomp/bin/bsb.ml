@@ -10455,8 +10455,8 @@ module Bsb_config_parse : sig
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
 
-val package_specs_and_super_errors_from_bsconfig : 
-    unit -> (Bsb_package_specs.t * bool)
+val get_global_config_from_bsconfig : 
+    unit -> (Bsb_package_specs.t * bool * bool)
 
 val entries_from_bsconfig : unit -> Bsb_config_types.entries_t list
 
@@ -10565,7 +10565,7 @@ let parse_entries (field : Ext_json_types.t array) =
 
 
 
-let package_specs_and_super_errors_from_bsconfig () = 
+let get_global_config_from_bsconfig () = 
   let json = Ext_json_parse.parse_json_from_file Literals.bsconfig_json in
   begin match json with
     | Obj {map} ->
@@ -10577,8 +10577,12 @@ let package_specs_and_super_errors_from_bsconfig () =
           Bsb_package_specs.default_package_specs
       end in
       let bs_super_errors = ref false in
-      map |? (Bsb_build_schemas.bs_super_errors, `Bool (fun b -> bs_super_errors := b)) |> ignore;
-      (package_specs, !bs_super_errors)
+      let global_ocaml_compiler = ref false in
+      map 
+        |? (Bsb_build_schemas.bs_super_errors, `Bool (fun b -> bs_super_errors := b))
+        |? (Bsb_build_schemas.global_ocaml_compiler, `Bool (fun b -> global_ocaml_compiler := b))
+        |> ignore;
+      (package_specs, !bs_super_errors, !global_ocaml_compiler)
     | _ -> assert false
   end
 
@@ -12980,6 +12984,7 @@ val output_ninja_and_namespace_map :
   ocaml_dir:string ->
   root_project_dir:string ->
   is_top_level: bool ->
+  global_ocaml_compiler:bool ->
   backend:Bsb_config_types.compilation_kind_t ->
   main_bs_super_errors:bool ->
   Bsb_config_types.t -> unit 
@@ -13047,6 +13052,7 @@ let output_ninja_and_namespace_map
     ~ocaml_dir         
     ~root_project_dir
     ~is_top_level
+    ~global_ocaml_compiler
     ~backend
     ~main_bs_super_errors
     ({
@@ -13078,7 +13084,6 @@ let output_ninja_and_namespace_map
       allowed_build_kinds;
       ocamlfind_dependencies;
       bin_annot;
-      global_ocaml_compiler;
     } : Bsb_config_types.t)
   =
   let custom_rules = Bsb_rule.reset generators in 
@@ -13441,6 +13446,7 @@ module Bsb_ninja_regen : sig
 val regenerate_ninja :
   ?external_deps_for_linking_and_clibs:(string list) * (string list) * (string list) ->
   ?main_bs_super_errors:bool ->
+  ?global_ocaml_compiler:bool ->
   is_top_level:bool ->
   no_dev:bool ->
   override_package_specs:Bsb_package_specs.t option ->
@@ -13490,6 +13496,7 @@ let (//) = Ext_path.combine
 let regenerate_ninja
   ?external_deps_for_linking_and_clibs
   ?main_bs_super_errors
+  ?global_ocaml_compiler
   ~is_top_level
   ~no_dev
   ~override_package_specs
@@ -13618,6 +13625,10 @@ let regenerate_ninja
           | None -> config.Bsb_config_types.bs_super_errors
           | Some bs_super_errors -> bs_super_errors
         end in 
+        let global_ocaml_compiler = begin match global_ocaml_compiler with 
+          | None -> config.Bsb_config_types.global_ocaml_compiler
+          | Some global_ocaml_compiler -> global_ocaml_compiler
+        end in 
         Bsb_ninja_gen.output_ninja_and_namespace_map 
           ~external_deps_for_linking_and_clibs 
           ~cwd 
@@ -13626,6 +13637,7 @@ let regenerate_ninja
           ~ocaml_dir 
           ~root_project_dir 
           ~is_top_level 
+          ~global_ocaml_compiler
           ~backend 
           ~main_bs_super_errors
           config;
@@ -15016,7 +15028,7 @@ let install_targets ~backend cwd (config : Bsb_config_types.t option) =
 
 
 
-let build_bs_deps cwd ~root_project_dir ~backend ~main_bs_super_errors deps =
+let build_bs_deps cwd ~root_project_dir ~backend ~main_bs_super_errors ~global_ocaml_compiler deps =
   let bsc_dir = Bsb_default_paths.bin_dir in
   let vendor_ninja = bsc_dir // "ninja.exe" in
   let ocaml_dir = Bsb_default_paths.ocaml_dir in
@@ -15039,6 +15051,7 @@ let build_bs_deps cwd ~root_project_dir ~backend ~main_bs_super_errors deps =
              ~forced:true
              ~backend
              ~main_bs_super_errors
+             ~global_ocaml_compiler
              cwd bsc_dir ocaml_dir in (* set true to force regenrate ninja file so we have [config_opt]*)
            let config = begin match config_opt with 
             | None ->
@@ -15087,8 +15100,8 @@ let build_bs_deps cwd ~root_project_dir ~backend ~main_bs_super_errors deps =
 
 let make_world_deps cwd ~root_project_dir ~backend =
   Bsb_log.info "Making the dependency world!@.";
-  let (deps, main_bs_super_errors) = Bsb_config_parse.package_specs_and_super_errors_from_bsconfig () in
-  build_bs_deps cwd ~root_project_dir ~backend ~main_bs_super_errors deps
+  let (deps, main_bs_super_errors, global_ocaml_compiler) = Bsb_config_parse.get_global_config_from_bsconfig () in
+  build_bs_deps cwd ~root_project_dir ~backend ~main_bs_super_errors ~global_ocaml_compiler deps
 
 end
 module Bsb_main : sig 

@@ -91,7 +91,7 @@ let parse_entries (field : Ext_json_types.t array) =
 
 
 
-let package_specs_and_super_errors_from_bsconfig () = 
+let get_global_config_from_bsconfig () = 
   let json = Ext_json_parse.parse_json_from_file Literals.bsconfig_json in
   begin match json with
     | Obj {map} ->
@@ -103,8 +103,12 @@ let package_specs_and_super_errors_from_bsconfig () =
           Bsb_package_specs.default_package_specs
       end in
       let bs_super_errors = ref false in
-      map |? (Bsb_build_schemas.bs_super_errors, `Bool (fun b -> bs_super_errors := b)) |> ignore;
-      (package_specs, !bs_super_errors)
+      let global_ocaml_compiler = ref false in
+      map 
+        |? (Bsb_build_schemas.bs_super_errors, `Bool (fun b -> bs_super_errors := b))
+        |? (Bsb_build_schemas.global_ocaml_compiler, `Bool (fun b -> global_ocaml_compiler := b))
+        |> ignore;
+      (package_specs, !bs_super_errors, !global_ocaml_compiler)
     | _ -> assert false
   end
 

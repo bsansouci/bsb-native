@@ -33,6 +33,7 @@ val output_ninja_and_namespace_map :
   ocaml_dir:string ->
   root_project_dir:string ->
   is_top_level: bool ->
+  global_ocaml_compiler:bool ->
   backend:Bsb_config_types.compilation_kind_t ->
   main_bs_super_errors:bool ->
   Bsb_config_types.t -> unit 

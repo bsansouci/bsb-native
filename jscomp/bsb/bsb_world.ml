@@ -82,7 +82,7 @@ let install_targets ~backend cwd (config : Bsb_config_types.t option) =
 
 
 
-let build_bs_deps cwd ~root_project_dir ~backend ~main_bs_super_errors deps =
+let build_bs_deps cwd ~root_project_dir ~backend ~main_bs_super_errors ~global_ocaml_compiler deps =
   let bsc_dir = Bsb_default_paths.bin_dir in
   let vendor_ninja = bsc_dir // "ninja.exe" in
   let ocaml_dir = Bsb_default_paths.ocaml_dir in
@@ -105,6 +105,7 @@ let build_bs_deps cwd ~root_project_dir ~backend ~main_bs_super_errors deps =
              ~forced:true
              ~backend
              ~main_bs_super_errors
+             ~global_ocaml_compiler
              cwd bsc_dir ocaml_dir in (* set true to force regenrate ninja file so we have [config_opt]*)
            let config = begin match config_opt with 
             | None ->
@@ -153,5 +154,5 @@ let build_bs_deps cwd ~root_project_dir ~backend ~main_bs_super_errors deps =
 
 let make_world_deps cwd ~root_project_dir ~backend =
   Bsb_log.info "Making the dependency world!@.";
-  let (deps, main_bs_super_errors) = Bsb_config_parse.package_specs_and_super_errors_from_bsconfig () in
-  build_bs_deps cwd ~root_project_dir ~backend ~main_bs_super_errors deps
+  let (deps, main_bs_super_errors, global_ocaml_compiler) = Bsb_config_parse.get_global_config_from_bsconfig () in
+  build_bs_deps cwd ~root_project_dir ~backend ~main_bs_super_errors ~global_ocaml_compiler deps
