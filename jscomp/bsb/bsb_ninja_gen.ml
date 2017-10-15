@@ -114,8 +114,11 @@ let output_ninja_and_namespace_map
   let ppx_flags = Bsb_build_util.flag_concat dash_ppx ppx_flags in
   let bsc_flags =  String.concat Ext_string.single_space bsc_flags in
   
+  let use_ocamlfind = ocamlfind_dependencies <> [] in
+  
   (* @Incomplete Not allowed to tweak ocaml_flags yet. *)
-  let ocaml_flags = Bsb_build_util.flag_concat (if ocamlfind_dependencies = [] then Ext_string.single_space else "-passopt") Bsb_default.ocaml_flags in
+  let ocaml_flags = Bsb_build_util.flag_concat (if use_ocamlfind then "-passopt" else Ext_string.single_space) Bsb_default.ocaml_flags in
+  let ocaml_flags = if not global_ocaml_compiler then Ext_string.inter2 ocaml_flags "-color always" else ocaml_flags in
   let refmt_flags = String.concat Ext_string.single_space refmt_flags in
   let bs_super_errors = if main_bs_super_errors then "-bs-super-errors" else "" in
   let bs_package_includes = 
@@ -186,11 +189,11 @@ let output_ninja_and_namespace_map
           Bsb_ninja_global_vars.bs_super_errors, bs_super_errors;
           
           Bsb_ninja_global_vars.external_deps_for_linking, Bsb_build_util.flag_concat dash_i external_deps_for_linking;
-          Bsb_ninja_global_vars.ocamlc, if ocamlfind_dependencies = [] then 
-            (if global_ocaml_compiler then ocamlc ^ ".opt" else ocaml_dir // ocamlc ^ ".opt") else ocamlc;
-          Bsb_ninja_global_vars.ocamlopt, if ocamlfind_dependencies = [] then 
-            (if global_ocaml_compiler then ocamlopt ^ ".opt" else ocaml_dir // ocamlopt ^ ".opt") else ocamlopt;
-          Bsb_ninja_global_vars.ocamlfind, if ocamlfind_dependencies = [] then "" else ocamlfind;
+          Bsb_ninja_global_vars.ocamlc, if use_ocamlfind then ocamlc
+            else (if global_ocaml_compiler then ocamlc ^ ".opt" else ocaml_dir // ocamlc ^ ".opt");
+          Bsb_ninja_global_vars.ocamlopt, if use_ocamlfind then ocamlopt
+            else (if global_ocaml_compiler then ocamlopt ^ ".opt" else ocaml_dir // ocamlopt ^ ".opt");
+          Bsb_ninja_global_vars.ocamlfind, if use_ocamlfind then ocamlfind else "";
           Bsb_ninja_global_vars.ocamlfind_dependencies,  Bsb_build_util.flag_concat "-package" (external_ocamlfind_dependencies @ ocamlfind_dependencies);
           Bsb_ninja_global_vars.bin_annot, if bin_annot then "-bin-annot" else "";
           Bsb_ninja_global_vars.global_ocaml_compiler, if global_ocaml_compiler then "-global-ocaml-compiler" else "";
@@ -204,9 +207,8 @@ let output_ninja_and_namespace_map
           
           Bsb_ninja_global_vars.findlib_conf_path, findlib_conf_path;
           Bsb_ninja_global_vars.findlib_conf_env_var, 
-            if ocamlfind_dependencies = [] 
-              then ""
-              else (if global_ocaml_compiler then "" else "OCAMLFIND_CONF=" ^ findlib_conf_path);
+            if use_ocamlfind then (if global_ocaml_compiler then "" else "OCAMLFIND_CONF=" ^ findlib_conf_path)
+            else "";
           
           (** TODO: could be removed by adding a flag
               [-bs-ns react]
