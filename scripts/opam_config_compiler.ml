@@ -188,13 +188,13 @@ let () =
   
   let should_patch = List.fold_left (fun acc (key, v) -> acc || (key = "version" && Ext_string.contain_substring v "4.02.3")) false keyvalues in
   if should_patch then begin
-    print_endline @@ "should_patch: " ^ string_of_bool should_patch;
+    (* print_endline @@ "should_patch: " ^ string_of_bool should_patch; *)
     patch_config
         (main_bucklescript_dir // "jscomp")
         keyvalues
   end;
-  ignore @@ Array.map (fun i -> print "ARGGG: %s\n" i ) Sys.argv;
+  (* ignore @@ Array.map (fun i -> print "ARGGG: %s\n" i ) Sys.argv; *)
   let (bin_dir, ocaml_dir) = match Sys.argv with
-  | [| _; share |] -> print "commandline argument: %s\n" share; (share, share)
+  | [| _; share |] -> (share, share)
   | _ -> (main_bucklescript_dir // "bin", main_bucklescript_dir // "vendor" // "ocaml") in
   gen_bsb_default_paths ~jscomp_dir:(main_bucklescript_dir // "jscomp") ~bin_dir ~ocaml_dir
