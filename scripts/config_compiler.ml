@@ -71,6 +71,20 @@ let map = [%obj {
     does not care about those native tools
 *)
 
+let gen_bsb_default_paths ~jscomp_dir ~bin_dir ~ocaml_dir =
+  let bsb_default_paths = Path.join [| jscomp_dir ; "bsb" ; "bsb_default_paths.mlp" |] in
+  let content = Fs.readFileAsUtf8Sync bsb_default_paths in
+  let replace_values whole match_ offset s =
+    match match_ with
+    | "BIN_DIR"   ->  Js.Json.stringify (Js.Json.string bin_dir);
+    | "OCAML_DIR" ->  Js.Json.stringify (Js.Json.string ocaml_dir);
+    | _ -> match_
+  in
+  (* We also eat the quotes, because Js.Json.stringify will add them back anyway. *)
+  let generated = Js.String.unsafeReplaceBy1 [%re {|/\"%%(\w+)%%\"/g|}] replace_values content in
+  let bsb_default_paths_output = Path.join [| jscomp_dir ; "bsb" ; "bsb_default_paths.ml" |] in
+  Fs.writeFileAsUtf8Sync bsb_default_paths_output generated
+
 let patch_config jscomp_dir config_map is_windows =
   let whole_compiler_config = Path.join [| jscomp_dir; "bin"; "config_whole_compiler.mlp" |] in
   let whole_compiler_config_output = Path.join [| jscomp_dir; "bin"; "config_whole_compiler.ml" |] in
@@ -145,6 +159,12 @@ let () =
      delete process.env.CAMLLIB
   *)
   let is_windows = Process.process##platform = "win32" in
+  let main_bucklescript_dir = Path.join [| dirname; ".." |] in
+  let (bin_dir, ocaml_dir) = match Process.process##argv with
+  | [| _; _; share |] -> (share, share)
+  | _ -> (Path.join [| main_bucklescript_dir ; "bin" |], Path.join [| main_bucklescript_dir ; "vendor" ; "ocaml" |]) in
+  gen_bsb_default_paths ~jscomp_dir:(Path.join [| main_bucklescript_dir ; "jscomp" |]) ~bin_dir ~ocaml_dir;
+  
   match get_config_output is_windows with
   | Some config_map ->
     if should_patch config_map then
@@ -160,4 +180,5 @@ let () =
 
 (* local variables: *)
 (* compile-command: "bscc -c config_compiler.ml" *)
+(* Output is in bs-platform/lib/js/config_compiler.js *)
 (* end: *)

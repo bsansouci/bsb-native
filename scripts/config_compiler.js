@@ -4,7 +4,7 @@ var Fs                      = require("fs");
 var Path                    = require("path");
 var Process                 = require("process");
 var Child_process           = require("child_process");
-var Caml_builtin_exceptions = require("../lib/js/caml_builtin_exceptions.js");
+var Caml_builtin_exceptions = require("./caml_builtin_exceptions.js");
 
 var delete_env_var = (
   function(process, key) { delete process.env[key] }
@@ -40,6 +40,25 @@ var map = {
   SYSTHREAD_SUPPORT: "systhread_supported"
 };
 
+function gen_bsb_default_paths(jscomp_dir, bin_dir, ocaml_dir) {
+  var bsb_default_paths = Path.join(jscomp_dir, "bsb", "bsb_default_paths.mlp");
+  var content = Fs.readFileSync(bsb_default_paths, "utf8");
+  var replace_values = function (_, match_, _$1, _$2) {
+    switch (match_) {
+      case "BIN_DIR" : 
+          return JSON.stringify(bin_dir);
+      case "OCAML_DIR" : 
+          return JSON.stringify(ocaml_dir);
+      default:
+        return match_;
+    }
+  };
+  var generated = content.replace((/\"%%(\w+)%%\"/g), replace_values);
+  var bsb_default_paths_output = Path.join(jscomp_dir, "bsb", "bsb_default_paths.ml");
+  Fs.writeFileSync(bsb_default_paths_output, generated, "utf8");
+  return /* () */0;
+}
+
 function patch_config(jscomp_dir, config_map, is_windows) {
   var whole_compiler_config = Path.join(jscomp_dir, "bin", "config_whole_compiler.mlp");
   var whole_compiler_config_output = Path.join(jscomp_dir, "bin", "config_whole_compiler.ml");
@@ -66,7 +85,7 @@ function patch_config(jscomp_dir, config_map, is_windows) {
               Caml_builtin_exceptions.assert_failure,
               [
                 "config_compiler.ml",
-                94,
+                107,
                 16
               ]
             ];
@@ -132,7 +151,7 @@ if (match !== undefined) {
         Caml_builtin_exceptions.assert_failure,
         [
           "config_compiler.ml",
-          134,
+          147,
           14
         ]
       ];
@@ -148,10 +167,31 @@ Process.env["OCAMLRUNPARAM"] = "b";
 
 var is_windows = +(Process.platform === "win32");
 
-var match$1 = get_config_output(is_windows);
+var main_bucklescript_dir = Path.join(dirname, "..");
 
-if (match$1) {
-  var config_map = match$1[0];
+var match$1 = Process.argv;
+
+var match$2;
+
+if (match$1.length !== 3) {
+  match$2 = /* tuple */[
+    Path.join(main_bucklescript_dir, "bin"),
+    Path.join(main_bucklescript_dir, "vendor", "ocaml")
+  ];
+} else {
+  var share = match$1[2];
+  match$2 = /* tuple */[
+    share,
+    share
+  ];
+}
+
+gen_bsb_default_paths(Path.join(main_bucklescript_dir, "jscomp"), match$2[0], match$2[1]);
+
+var match$3 = get_config_output(is_windows);
+
+if (match$3) {
+  var config_map = match$3[0];
   if (should_patch(config_map)) {
     patch_config(Path.join(dirname, "..", "jscomp"), config_map, is_windows);
   } else {
