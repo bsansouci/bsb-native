@@ -6,6 +6,7 @@ lib: [
   "./META" {"META"}
   "./opam" {"opam"} ]
 sbin: [
+  "./bin/berror" {"berror"}
   "./bin/bsb_helper.exe" {"bsb_helper.exe"}
   "./bin/bsc.exe" {"bsc.exe"}
   "./bin/bsdep.exe" {"bsdep.exe"}

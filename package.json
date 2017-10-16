@@ -78,6 +78,7 @@
       "./bin/bsdep.exe": "bsdep.exe",
       "./bin/bsc.exe": "bsc.exe",
       "./bin/bspack.exe": "bspack",
+      "./bin/berror": "berror",
       "./vendor/ocaml/ocamlc.opt": "ocamlc.opt",
       "./vendor/ocaml/ocamlopt.opt": "ocamlopt.opt"
     },
