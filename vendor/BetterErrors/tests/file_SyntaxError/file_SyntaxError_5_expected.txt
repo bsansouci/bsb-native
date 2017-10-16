@@ -1,0 +1,10 @@
+[36mtests/file_SyntaxError/file_SyntaxError_5.ml:4 0-4
+[0m1 | let () = if true then
+2 |   print_endline "gosh";
+3 |   print_endline "so much functional purity"
+4 | [31;4melse[0m
+5 |   print_endline "that I cant even"
+
+[31mError[0m: The syntax is wrong.
+Did you happen to have put a semicolon on the line before else? Also, `then` accepts a single expression. If you've put many, wrap them in parentheses.
+Note: the location indicated might not be accurate.

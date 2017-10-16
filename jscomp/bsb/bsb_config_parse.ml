@@ -102,7 +102,7 @@ let get_global_config_from_bsconfig () =
         | None -> 
           Bsb_package_specs.default_package_specs
       end in
-      let bs_super_errors = ref false in
+      let bs_super_errors = ref Bsb_default.bs_super_errors in
       let global_ocaml_compiler = ref false in
       map 
         |? (Bsb_build_schemas.bs_super_errors, `Bool (fun b -> bs_super_errors := b))
@@ -150,7 +150,7 @@ let interpret_json
   let package_name = ref None in 
   let namespace = ref false in 
   let bs_external_includes = ref [] in 
-  let bs_super_errors = ref false in
+  let bs_super_errors = ref Bsb_default.bs_super_errors in
   (** we should not resolve it too early,
       since it is external configuration, no {!Bsb_build_util.convert_and_resolve_path}
   *)

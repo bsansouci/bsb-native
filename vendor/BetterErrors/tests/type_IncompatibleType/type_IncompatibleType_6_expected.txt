@@ -1,0 +1,8 @@
+[36mtests/type_IncompatibleType/type_IncompatibleType_6.ml:3 32-39
+[0m1 | let iTakeAFunction f a = f "yes" a
+2 | 
+3 | let () = ignore (iTakeAFunction [31;4m"rebel"[0m)
+
+[31mError[0m: The types don't match.
+[31;4mThis is:[0m [31mstring[0m
+[32mWanted:[0m  [32mstring -> 'a -> 'b[0m

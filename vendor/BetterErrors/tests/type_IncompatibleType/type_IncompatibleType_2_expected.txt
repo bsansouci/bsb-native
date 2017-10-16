@@ -1,0 +1,6 @@
+[36mtests/type_IncompatibleType/type_IncompatibleType_2.ml:1 4-8
+[0m1 | if ![31;4mtrue[0m then "asd" else "a"
+
+[31mError[0m: The types don't match.
+[31;4mThis is:[0m [31mbool[0m
+[32mWanted:[0m  [32m'a ref[0m

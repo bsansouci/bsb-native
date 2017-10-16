@@ -1,0 +1,4 @@
+[36mtests/type_UnboundValue/type_UnboundValue_2.ml:1 21-24
+[0m1 | let callMe perhaps = [31;4mnvm[0m 1
+
+[31mError[0m: `nvm` can't be found. Could it be a typo?

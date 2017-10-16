@@ -1,0 +1,20 @@
+[36mtests/type_IncompatibleType/type_IncompatibleType_5.ml:17 5-16
+[0m14 | end
+15 | 
+16 | let asd: PettyModule.Nested.weAreStrings =
+17 |   ([[[33;4m{nihao = 1}[0m]]: TopNotchModule.myRecordListList)
+
+[33mWarning[0m 40: this record of type TopNotchModule.myRecord contains fields that are
+not visible in the current scope: nihao.
+They will not be selected if the type becomes unknown.
+[36mtests/type_IncompatibleType/type_IncompatibleType_5.ml:17 3-18
+[0m14 | end
+15 | 
+16 | let asd: PettyModule.Nested.weAreStrings =
+17 |   ([31;4m[[{nihao = 1}]][0m: TopNotchModule.myRecordListList)
+
+[31mError[0m: The types don't match.
+[31;4mThis is:[0m [31mTopNotchModule.myRecordListList[0m
+[32mWanted:[0m  [32mPettyModule.Nested.weAreStrings[0m
+Extra info: Type TopNotchModule.myRecordList = TopNotchModule.myRecord list
+       is not compatible with type PettyModule.youAreAString = string

@@ -1,0 +1,8 @@
+[36mtests/type_UnboundRecordField/type_UnboundRecordField_2.ml:8 2-6
+[0m5 | 
+6 | let bla = {
+7 |   a = 5;
+8 |   [31;4mhelo[0m = 6;
+9 | }
+
+[31mError[0m: Field `helo` can't be found in any record type. Did you mean `hello`?

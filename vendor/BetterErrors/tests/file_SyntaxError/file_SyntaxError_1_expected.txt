@@ -1,0 +1,6 @@
+[36mtests/file_SyntaxError/file_SyntaxError_1.ml:2 11-17
+[0m1 | let () =
+2 |   I'm glad [31;4myou're[0m looking at this file =)
+
+[31mError[0m: The syntax is wrong.
+Note: the location indicated might not be accurate.

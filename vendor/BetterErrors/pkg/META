@@ -1,0 +1,6 @@
+version = "%{version}%"
+description = "Make OCaml Errors Great Again"
+
+requires = "re.pcre"
+archive(byte) = "BetterErrors.cma"
+archive(native) = "BetterErrors.cmxa"

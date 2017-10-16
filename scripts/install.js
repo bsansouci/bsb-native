@@ -91,10 +91,26 @@ function non_windows_npm_release() {
     child_process.execSync('node ../scripts/config_compiler.js', working_config)
     console.log("config finished")        
     
+    let finish1 = false;
+    let finish2 = false;
+    console.log("building berror");
+    child_process.exec(make + " build", { cwd: path.join(root_dir, 'vendor', 'BetterErrors'), stdio: [0, 1, 2] }, function() {
+        finish1 = true;
+        if (finish1 && finish2) {
+            console.log("Installing")
+            child_process.execSync(make + ' VERBOSE=true install', working_config);        
+        }
+    });
+    
     console.log("Build the compiler and runtime .. ")
-    child_process.execSync(make + " world", working_config)
-    console.log("Installing")
-    child_process.execSync(make + ' VERBOSE=true install', working_config);
+    child_process.exec(make + " world", working_config, function() {
+        finish2 = true;
+        if (finish1 && finish2) {
+            console.log("Installing")
+            child_process.execSync(make + ' VERBOSE=true install', working_config);        
+        }
+    });
+    
 }
 
 if (is_windows) {

@@ -1,0 +1,3 @@
+[36mtests/1_bad_file_name/1_bad_file_name_1.ml[0m
+
+[33mWarning[0m 24: "1_bad_file_name_1.ml" isn't a valid file name; OCaml file names are often turned into modules, which need to start with a capitalized letter.

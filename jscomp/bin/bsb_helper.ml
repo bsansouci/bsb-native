@@ -10295,6 +10295,8 @@ val main_entries : Bsb_config_types.entries_t list
 
 val allowed_build_kinds : Bsb_config_types.compilation_kind_t list
 
+val bs_super_errors : bool
+
 end = struct
 #1 "bsb_default.ml"
 (* Copyright (C) 2015-2016 Bloomberg Finance L.P.
@@ -10360,6 +10362,8 @@ let refmt_flags = ["--print"; "binary"]
 let main_entries = [Bsb_config_types.JsTarget "Index"]
 
 let allowed_build_kinds = [Bsb_config_types.Js; Bsb_config_types.Bytecode; Bsb_config_types.Native]
+
+let bs_super_errors = true
 
 end
 module Bsb_helper_dep_graph : sig 

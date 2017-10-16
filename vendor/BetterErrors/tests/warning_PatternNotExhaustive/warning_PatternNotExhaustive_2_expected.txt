@@ -1,0 +1,11 @@
+[36mtests/warning_PatternNotExhaustive/warning_PatternNotExhaustive_2.ml:8:12-9:13
+[0m5 |   | Nihao of int
+6 |   | LongAssGreetingInSomeSuperObscureLanguageIWannaHaveALineBreakHere
+7 | 
+8 | let say a = [33;4mmatch a with[0m
+9 | [33;4m| Hello -> ()[0m
+
+[33mWarning[0m 8: this pattern-matching is not exhaustive.
+Here is an example of a value that is not matched:
+(Goodbye|Hola _|Nihao _|
+LongAssGreetingInSomeSuperObscureLanguageIWannaHaveALineBreakHere)

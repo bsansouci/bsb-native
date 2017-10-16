@@ -1,0 +1,6 @@
+[36mtests/type_UnboundValue/type_UnboundValue_3.ml:3 16-17
+[0m1 | let f ~a b = 5 + a
+2 | 
+3 | let eleven = f ~[31;4ma[0m 6
+
+[31mError[0m: `a` can't be found. Could it be a typo?

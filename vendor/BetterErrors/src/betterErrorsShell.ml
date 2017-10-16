@@ -1,0 +1,1 @@
+let () = BetterErrorsMain.parseFromStdin ~customErrorParsers:[]

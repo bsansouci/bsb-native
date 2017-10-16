@@ -1,0 +1,9 @@
+[36mtests/type_UnboundModule/type_UnboundModule_1.ml:1 5-11
+[0m1 | open [31;4mCamlp4[0m;;
+
+[31mError[0m: Module `Camlp4` not found in included libraries.
+Hint: your build rules might be missing a link. If you're using: 
+ - Oasis: make sure you have `camlp4` under `BuildDepends` in your _oasis file.
+ - ocamlbuild: make sure you have `-pkgs camlp4` in your build command.
+ - ocamlc | ocamlopt: make sure you have `-I +camlp4` in your build command before the source files.
+ - ocamlfind: make sure you have `-package camlp4 -linkpkg` in your build command.

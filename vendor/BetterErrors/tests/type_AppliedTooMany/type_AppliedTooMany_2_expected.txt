@@ -1,0 +1,8 @@
+[36mtests/type_AppliedTooMany/type_AppliedTooMany_2.ml:3 21-33
+[0m1 | let longFunction a b c d e f g = a ^ b ^ c ^ d ^ e ^ f ^ g
+2 | 
+3 | let evenLongerCall = [31;4mlongFunction[0m "a" "a" "a" "a" "a" "a" "a" "a"
+
+[31mError[0m: This function has type string ->
+         string -> string -> string -> string -> string -> string -> string
+It accepts only 7 arguments. You gave more. Maybe you forgot a `;` somewhere?

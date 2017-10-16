@@ -1,0 +1,9 @@
+[36mtests/file_SyntaxError/file_SyntaxError_3.ml:1 12-13
+[0m1 | let a = (1, [31;4m2[0m
+
+[31mError[0m: The syntax is wrong: ')' expected
+Note: the location indicated might not be accurate.
+[36mtests/file_SyntaxError/file_SyntaxError_3.ml:1 8-9
+[0m1 | let a = [31;4m([0m1, 2
+
+[31mError[0m: This '(' might be unmatched

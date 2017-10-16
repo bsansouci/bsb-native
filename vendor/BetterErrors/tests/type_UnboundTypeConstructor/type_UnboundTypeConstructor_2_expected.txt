@@ -1,0 +1,9 @@
+[36mtests/type_UnboundTypeConstructor/type_UnboundTypeConstructor_2.ml:5 13-21
+[0m2 |   location: string
+3 | }
+4 | type greeting =
+5 |   | Hello of [31;4mwhereAmI[0m
+6 |   | Goodbye
+
+[31mError[0m: The type constructor whereAmI can't be found.
+Hint: did you mean `whereAm`?

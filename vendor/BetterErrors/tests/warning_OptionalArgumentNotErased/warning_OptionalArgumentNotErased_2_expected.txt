@@ -1,0 +1,8 @@
+[36mtests/warning_OptionalArgumentNotErased/warning_OptionalArgumentNotErased_2.ml:1:16-2:17
+[0m1 | let eat aNumber [33;4m?(withFork=true) =[0m
+2 | [33;4m  "Hello, world!"[0m
+3 | 
+4 | let () = print_endline (eat 1 ~withFork:false)
+
+[33mWarning[0m 16: `withFork` is an optional argument at last position; calling the function by omitting withFork might be confused with currying.
+The rule: an optional argument is erased as soon as the 1st positional (i.e. neither labeled nor optional) argument defined after it is passed in.

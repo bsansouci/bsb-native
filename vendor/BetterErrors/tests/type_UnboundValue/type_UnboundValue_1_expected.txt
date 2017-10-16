@@ -1,0 +1,4 @@
+[36mtests/type_UnboundValue/type_UnboundValue_1.ml:1 21-27
+[0m1 | let callMe perhaps = [31;4mperhap[0m 1
+
+[31mError[0m: `perhap` can't be found. Did you mean `perhaps`?

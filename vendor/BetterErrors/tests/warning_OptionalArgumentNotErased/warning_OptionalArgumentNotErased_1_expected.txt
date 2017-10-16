@@ -1,0 +1,8 @@
+[36mtests/warning_OptionalArgumentNotErased/warning_OptionalArgumentNotErased_1.ml:2 11-15
+[0m1 | (* the spacing matters here to test the regex that extracts bcD' *)
+2 | let asd a ?[33;4mbcD'[0m= "asd"
+3 | 
+4 | let () = print_endline (asd 1 ~bcD':1)
+
+[33mWarning[0m 16: `bcD'` is an optional argument at last position; calling the function by omitting bcD' might be confused with currying.
+The rule: an optional argument is erased as soon as the 1st positional (i.e. neither labeled nor optional) argument defined after it is passed in.

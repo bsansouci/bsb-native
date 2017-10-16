@@ -61,3 +61,5 @@ let refmt_flags = ["--print"; "binary"]
 let main_entries = [Bsb_config_types.JsTarget "Index"]
 
 let allowed_build_kinds = [Bsb_config_types.Js; Bsb_config_types.Bytecode; Bsb_config_types.Native]
+
+let bs_super_errors = true

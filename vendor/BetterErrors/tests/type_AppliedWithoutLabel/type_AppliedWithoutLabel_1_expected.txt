@@ -1,0 +1,8 @@
+[36mtests/type_AppliedWithoutLabel/type_AppliedWithoutLabel_1.ml:4 6-7
+[0m1 | let f ~a ~b c = ()
+2 | 
+3 | let () =
+4 |   f 1 [31;4m2[0m
+
+[31mError[0m: The function applied to this argument has type a:'a -> b:'b -> unit
+This argument cannot be applied without label

@@ -1,0 +1,50 @@
+bin: [
+  "_build/src/betterErrorsShell.native" {"huh"} ]
+doc: [
+  "_build/README.md" {"README.md"} ]
+lib: [
+  "_build/pkg/META" {"META"}
+  "_build/src/Atom.cmi" {"Atom.cmi"}
+  "_build/src/Atom.cmo" {"Atom.cmo"}
+  "?_build/src/Atom.cmt" {"Atom.cmt"}
+  "_build/src/Atom.cmx" {"Atom.cmx"}
+  "_build/src/BetterErrors.a" {"BetterErrors.a"}
+  "_build/src/BetterErrors.cma" {"BetterErrors.cma"}
+  "_build/src/BetterErrors.cmxa" {"BetterErrors.cmxa"}
+  "_build/src/BetterErrors.cmxs" {"BetterErrors.cmxs"}
+  "_build/src/NuclideReporter.cmi" {"NuclideReporter.cmi"}
+  "_build/src/NuclideReporter.cmo" {"NuclideReporter.cmo"}
+  "?_build/src/NuclideReporter.cmt" {"NuclideReporter.cmt"}
+  "_build/src/NuclideReporter.cmx" {"NuclideReporter.cmx"}
+  "_build/src/betterErrorsMain.cmi" {"betterErrorsMain.cmi"}
+  "_build/src/betterErrorsMain.cmo" {"betterErrorsMain.cmo"}
+  "?_build/src/betterErrorsMain.cmt" {"betterErrorsMain.cmt"}
+  "_build/src/betterErrorsMain.cmx" {"betterErrorsMain.cmx"}
+  "_build/src/betterErrorsParseError.cmi" {"betterErrorsParseError.cmi"}
+  "_build/src/betterErrorsParseError.cmo" {"betterErrorsParseError.cmo"}
+  "?_build/src/betterErrorsParseError.cmt" {"betterErrorsParseError.cmt"}
+  "_build/src/betterErrorsParseError.cmx" {"betterErrorsParseError.cmx"}
+  "_build/src/betterErrorsTypes.cmi" {"betterErrorsTypes.cmi"}
+  "_build/src/betterErrorsTypes.cmo" {"betterErrorsTypes.cmo"}
+  "?_build/src/betterErrorsTypes.cmt" {"betterErrorsTypes.cmt"}
+  "_build/src/betterErrorsTypes.cmx" {"betterErrorsTypes.cmx"}
+  "_build/src/helpers.cmi" {"helpers.cmi"}
+  "_build/src/helpers.cmo" {"helpers.cmo"}
+  "?_build/src/helpers.cmt" {"helpers.cmt"}
+  "_build/src/helpers.cmx" {"helpers.cmx"}
+  "_build/src/parseWarning.cmi" {"parseWarning.cmi"}
+  "_build/src/parseWarning.cmo" {"parseWarning.cmo"}
+  "?_build/src/parseWarning.cmt" {"parseWarning.cmt"}
+  "_build/src/parseWarning.cmx" {"parseWarning.cmx"}
+  "_build/src/reportError.cmi" {"reportError.cmi"}
+  "_build/src/reportError.cmo" {"reportError.cmo"}
+  "?_build/src/reportError.cmt" {"reportError.cmt"}
+  "_build/src/reportError.cmx" {"reportError.cmx"}
+  "_build/src/reportWarning.cmi" {"reportWarning.cmi"}
+  "_build/src/reportWarning.cmo" {"reportWarning.cmo"}
+  "?_build/src/reportWarning.cmt" {"reportWarning.cmt"}
+  "_build/src/reportWarning.cmx" {"reportWarning.cmx"}
+  "_build/src/terminalReporter.cmi" {"terminalReporter.cmi"}
+  "_build/src/terminalReporter.cmo" {"terminalReporter.cmo"}
+  "?_build/src/terminalReporter.cmt" {"terminalReporter.cmt"}
+  "_build/src/terminalReporter.cmx" {"terminalReporter.cmx"} ]

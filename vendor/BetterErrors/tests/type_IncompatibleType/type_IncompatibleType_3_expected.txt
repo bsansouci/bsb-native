@@ -1,0 +1,10 @@
+[36mtests/type_IncompatibleType/type_IncompatibleType_3.ml:6 8-13
+[0m3 | }
+4 | 
+5 | let takeMeAway = {
+6 |   bla = [31;4m[|1|][0m;
+7 | }
+
+[31mError[0m: The types don't match.
+[31;4mThis is:[0m [31m'a array[0m
+[32mWanted:[0m  [32mstring list[0m

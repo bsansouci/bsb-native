@@ -1,0 +1,9 @@
+[36mtests/file_SyntaxError/file_SyntaxError_4.ml:5 23-24
+[0m2 |   path: string;
+3 |   messages: message list;
+4 | }
+5 | type output = file list[31;4m;[0m
+
+[31mError[0m: The syntax is wrong.
+Semicolon is an infix symbol used *between* expressions that return `unit` (aka "nothing").
+Note: the location indicated might not be accurate.

@@ -1,0 +1,11 @@
+[36mtests/type_RecordFieldNotBelong/type_RecordFieldNotBelong_2.ml:8 2-4
+[0m 5 | }
+ 6 | 
+ 7 | let myPoint: point = {
+ 8 |   [31;4mxs[0m = 0;
+ 9 |   ys = 10;
+10 |   dogs = "hi";
+11 | };
+
+[31mError[0m: This record expression is expected to have type point
+       The field xs does not belong to type point

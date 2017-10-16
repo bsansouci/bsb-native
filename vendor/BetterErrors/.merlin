@@ -1,0 +1,7 @@
+PKG Re
+
+S src
+S tests/test.ml
+
+B _build/src
+B _build/tests/test.ml

@@ -1,0 +1,7 @@
+[36mtests/type_MismatchTypeArguments/type_MismatchTypeArguments_1.ml:4 14-21
+[0m1 | type bread =
+2 |   | Coconut of string
+3 | 
+4 | let morning = [31;4mCoconut[0m
+
+[31mError[0m: This needs to be applied to 1 argument(s), we found 0.

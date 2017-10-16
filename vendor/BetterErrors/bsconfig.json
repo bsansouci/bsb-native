@@ -1,0 +1,9 @@
+{
+  "name" : "BetterError",
+  "sources" : "src",
+  "bs-dependencies": ["re"],
+  "entries": [{
+    "kind": "bytecode",
+    "main": "BetterErrorsShell"
+  }]
+}

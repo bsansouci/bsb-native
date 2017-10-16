@@ -1,0 +1,6 @@
+[36mtests/type_UnboundTypeConstructor/type_UnboundTypeConstructor_1.ml:2 13-21
+[0m1 | type asd =
+2 |   | Hello of [31;4mwhereAmI[0m
+3 |   | Goodbye
+
+[31mError[0m: The type constructor whereAmI can't be found.

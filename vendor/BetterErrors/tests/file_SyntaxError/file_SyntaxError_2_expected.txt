@@ -1,0 +1,5 @@
+[36mtests/file_SyntaxError/file_SyntaxError_2.ml:1 20-21
+[0m1 | let a = (print_char [31;4m'[0ma)
+
+[31mError[0m: The syntax is wrong: operator expected.
+Note: the location indicated might not be accurate.

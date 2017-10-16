@@ -1,0 +1,7 @@
+[36mtests/warning_PatternUnused/warning_PatternUnused_1.ml:8 2-3
+[0m5 | let say a = match a with
+6 | | Hello -> ()
+7 | | Goodbye -> ()
+8 | | [33;4m_[0m -> ()
+
+[33mWarning[0m 11: this match case is unused.

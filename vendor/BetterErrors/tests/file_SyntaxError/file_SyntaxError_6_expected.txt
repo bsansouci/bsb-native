@@ -1,0 +1,6 @@
+[36mtests/file_SyntaxError/file_SyntaxError_6.ml:2 2-7
+[0m1 | type fruits =
+2 | | [31;4mapple[0m of string
+
+[31mError[0m: The syntax is wrong.
+Note: the location indicated might not be accurate.

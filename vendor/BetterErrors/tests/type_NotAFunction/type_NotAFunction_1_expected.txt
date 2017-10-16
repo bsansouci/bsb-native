@@ -1,0 +1,6 @@
+[36mtests/type_NotAFunction/type_NotAFunction_1.ml:2 2-23
+[0m1 | let a =
+2 |   [31;4m[[[[[[[[[[5]]]]]]]]]][0m ()
+
+[31mError[0m: This is int list list list list list list list list list list. You seem to have called it as a function.
+Careful with spaces, semicolons, parentheses, and whatever in-between!

@@ -1,0 +1,8 @@
+[36mtests/type_UnboundRecordField/type_UnboundRecordField_1.ml:7 2-3
+[0m4 | 
+5 | let bla = {
+6 |   a = 5;
+7 |   [31;4mb[0m = 6;
+8 | }
+
+[31mError[0m: Field `b` can't be found in any record type.

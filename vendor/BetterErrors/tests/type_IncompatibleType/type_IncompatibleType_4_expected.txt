@@ -1,0 +1,25 @@
+[36mtests/type_IncompatibleType/type_IncompatibleType_4.ml:14 44-55
+[0m11 |   end
+12 | end
+13 | 
+14 | let asd: TopNotchModule.jeSuisStrings = ([[[[33;4m{nihao = 1}[0m]]]: TopNotchModule.Nested.wow)
+
+[33mWarning[0m 40: this record of type TopNotchModule.myRecord contains fields that are
+not visible in the current scope: nihao.
+They will not be selected if the type becomes unknown.
+[36mtests/type_IncompatibleType/type_IncompatibleType_4.ml:14 41-58
+[0m11 |   end
+12 | end
+13 | 
+14 | let asd: TopNotchModule.jeSuisStrings = ([31;4m[[[{nihao = 1}]]][0m: TopNotchModule.Nested.wow)
+
+[31mError[0m: The types don't match.
+[31;4mThis is:[0m TopNotchModule.[31mNested.wow[0m
+[32mWanted:[0m  TopNotchModule.[32mjeSuisStrings[0m
+Extra info: Type
+         TopNotchModule.myRecordListListList =
+           TopNotchModule.myRecordListList list
+       is not compatible with type TopNotchModule.jeSuisString list 
+       Type
+         TopNotchModule.myRecordListList = TopNotchModule.myRecordList list
+       is not compatible with type TopNotchModule.jeSuisString = string

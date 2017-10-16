@@ -43,6 +43,7 @@ let merge_module_info_map acc sources : Bsb_build_cache.t =
 
 
 let bsc_exe = "bsc.exe"
+let berror_exe = "berror"
 let ocamlc_exe = "ocamlc.opt"
 let ocamlopt_exe = "ocamlopt.opt"
 let ocamlfind = "ocamlfind"
@@ -120,7 +121,7 @@ let output_ninja_and_namespace_map
   let ocaml_flags = Bsb_build_util.flag_concat (if use_ocamlfind then "-passopt" else Ext_string.single_space) Bsb_default.ocaml_flags in
   let ocaml_flags = if not global_ocaml_compiler then Ext_string.inter2 ocaml_flags "-color always" else ocaml_flags in
   let refmt_flags = String.concat Ext_string.single_space refmt_flags in
-  let bs_super_errors = if main_bs_super_errors then "-bs-super-errors" else "" in
+  let bs_super_errors = if main_bs_super_errors && not global_ocaml_compiler then "-bs-super-errors" else "" in
   let bs_package_includes = 
     Bsb_build_util.flag_concat dash_i @@ Ext_list.map 
       (fun (x : Bsb_config_types.dependency) -> x.package_install_path) bs_dependencies
@@ -197,6 +198,7 @@ let output_ninja_and_namespace_map
           Bsb_ninja_global_vars.ocamlfind_dependencies,  Bsb_build_util.flag_concat "-package" (external_ocamlfind_dependencies @ ocamlfind_dependencies);
           Bsb_ninja_global_vars.bin_annot, if bin_annot then "-bin-annot" else "";
           Bsb_ninja_global_vars.global_ocaml_compiler, if global_ocaml_compiler then "-global-ocaml-compiler" else "";
+          Bsb_ninja_global_vars.berror, if global_ocaml_compiler then Ext_string.inter2 "2>&1 |" (bsc_dir // berror_exe) else "";
           (* @HACK 
               This might cause stale artifacts. This makes everything implicitly depend on the namespace file... 
               

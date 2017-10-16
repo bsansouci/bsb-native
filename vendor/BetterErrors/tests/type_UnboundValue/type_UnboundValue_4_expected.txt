@@ -1,0 +1,11 @@
+[36mtests/type_UnboundValue/type_UnboundValue_4.ml:6 19-29
+[0m3 | let poshanissy = 3
+4 | let poshanyssy = 4
+5 | 
+6 | let () = print_int [31;4mposhanossy[0m
+
+[31mError[0m: `poshanossy` can't be found. Did you mean one of these?
+- `poshanessy`
+- `poshanyssy`
+- `poshanissy`
+- `poshanassy`

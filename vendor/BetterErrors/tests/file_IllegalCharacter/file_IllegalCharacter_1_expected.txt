@@ -1,0 +1,8 @@
+[36mtests/file_IllegalCharacter/file_IllegalCharacter_1.ml:2 2-3
+[0m1 | let () =
+2 |   [31;4m\[0mhahaha look at me
+3 |   roaming free
+4 |   this is a haiku
+5 |   kidding it's not
+
+[31mError[0m: The character `\\` is illegal. EVERY CHARACTER THAT'S NOT AMERICAN IS ILLEGAL!
