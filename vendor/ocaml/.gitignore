@@ -19,7 +19,6 @@
 /.depend
 /.depend.nt
 /.DS_Store
-/configure
 /ocamlc
 /ocamlc.opt
 /expunge
