@@ -16,8 +16,6 @@
 /program
 /*.exe
 /*.exe.manifest
-/.depend
-/.depend.nt
 /.DS_Store
 /ocamlc
 /ocamlc.opt
@@ -47,8 +45,6 @@
 /asmcomp/program
 /asmcomp/*.exe
 /asmcomp/*.exe.manifest
-/asmcomp/.depend
-/asmcomp/.depend.nt
 /asmcomp/.DS_Store
 /asmcomp/emit.ml
 /asmcomp/arch.ml
@@ -72,8 +68,6 @@
 /asmcomp/amd64/*.native
 /asmcomp/amd64/program
 /asmcomp/amd64/program.exe
-/asmcomp/amd64/.depend
-/asmcomp/amd64/.depend.nt
 /asmcomp/amd64/.DS_Store
 
 # /asmrun/
@@ -92,8 +86,6 @@
 /asmrun/*.native
 /asmrun/program
 /asmrun/*.exe
-/asmrun/.depend
-/asmrun/.depend.nt
 /asmrun/.DS_Store
 /asmrun/*.p.c
 /asmrun/*.d.c
@@ -134,7 +126,6 @@
 /asmrun/dynlink.c
 /asmrun/signals.c
 /asmrun/debugger.c
-/asmrun/.depend.nt
 
 # /boot/
 /boot/*.o
@@ -153,8 +144,6 @@
 /boot/program
 /boot/*.exe
 /boot/*.exe.manifest
-/boot/.depend
-/boot/.depend.nt
 /boot/.DS_Store
 /boot/Saved
 /boot/ocamlrun
@@ -179,8 +168,6 @@
 /bytecomp/*.native
 /bytecomp/program
 /bytecomp/*.exe
-/bytecomp/.depend
-/bytecomp/.depend.nt
 /bytecomp/.DS_Store
 /bytecomp/runtimedef.ml
 /bytecomp/opcodes.ml
@@ -198,8 +185,6 @@
 /byterun/*.native
 /byterun/program
 /byterun/program.exe
-/byterun/.depend
-/byterun/.depend.nt
 /byterun/.DS_Store
 /byterun/caml/jumptbl.h
 /byterun/primitives
@@ -238,8 +223,6 @@
 /config/program
 /config/*.exe
 /config/*.exe.manifest
-/config/.depend
-/config/.depend.nt
 /config/.DS_Store
 /config/m.h
 /config/s.h
@@ -257,8 +240,6 @@
 /config/auto-aux/*.byte
 /config/auto-aux/*.native
 /config/auto-aux/program
-/config/auto-aux/.depend
-/config/auto-aux/.depend.nt
 /config/auto-aux/.DS_Store
 /config/auto-aux/camlp4_config.ml
 
@@ -277,8 +258,6 @@
 /debugger/*.native
 /debugger/program
 /debugger/program.exe
-/debugger/.depend
-/debugger/.depend.nt
 /debugger/.DS_Store
 /debugger/lexer.ml
 /debugger/parser.ml
@@ -305,8 +284,6 @@
 /driver/program
 /driver/*.exe
 /driver/*.exe.manifest
-/driver/.depend
-/driver/.depend.nt
 /driver/.DS_Store
 
 # /emacs/
@@ -326,8 +303,6 @@
 /emacs/program
 /emacs/*.exe
 /emacs/*.exe.manifest
-/emacs/.depend
-/emacs/.depend.nt
 /emacs/.DS_Store
 /emacs/ocamltags
 /emacs/*.elc
@@ -355,8 +330,6 @@
 /lex/program
 /lex/*.exe
 /lex/*.exe.manifest
-/lex/.depend
-/lex/.depend.nt
 /lex/.DS_Store
 /lex/parser.ml
 /lex/parser.mli
@@ -398,8 +371,6 @@
 /ocamldoc/*.native
 /ocamldoc/program
 /ocamldoc/*.exe
-/ocamldoc/.depend
-/ocamldoc/.depend.nt
 /ocamldoc/.DS_Store
 /ocamldoc/ocamldoc
 /ocamldoc/ocamldoc.opt
@@ -436,13 +407,9 @@
 /ocamldoc/generators/program
 /ocamldoc/generators/*.exe
 /ocamldoc/generators/*.exe.manifest
-/ocamldoc/generators/.depend
-/ocamldoc/generators/.depend.nt
 /ocamldoc/generators/.DS_Store
 
 # /otherlibs/
-/otherlibs/.depend
-/otherlibs/configure
 /otherlibs/ocamlc
 /otherlibs/ocamlc.opt
 /otherlibs/expunge
@@ -479,8 +446,6 @@
 /otherlibs/bigarray/*.native
 /otherlibs/bigarray/program
 /otherlibs/bigarray/*.exe
-/otherlibs/bigarray/.depend
-/otherlibs/bigarray/.depend.nt
 /otherlibs/bigarray/.DS_Store
 
 # /otherlibs/dynlink/
@@ -499,8 +464,6 @@
 /otherlibs/dynlink/*.native
 /otherlibs/dynlink/program
 /otherlibs/dynlink/*.exe
-/otherlibs/dynlink/.depend
-/otherlibs/dynlink/.depend.nt
 /otherlibs/dynlink/.DS_Store
 /otherlibs/dynlink/extract_crc
 
@@ -521,8 +484,6 @@
 /otherlibs/graph/program
 /otherlibs/graph/*.exe
 /otherlibs/graph/*.exe.manifest
-/otherlibs/graph/.depend
-/otherlibs/graph/.depend.nt
 /otherlibs/graph/.DS_Store
 
 # /otherlibs/num/
@@ -541,8 +502,6 @@
 /otherlibs/num/*.native
 /otherlibs/num/program
 /otherlibs/num/*.exe
-/otherlibs/num/.depend
-/otherlibs/num/.depend.nt
 /otherlibs/num/.DS_Store
 
 # /otherlibs/str/
@@ -561,8 +520,6 @@
 /otherlibs/str/*.native
 /otherlibs/str/program
 /otherlibs/str/*.exe
-/otherlibs/str/.depend
-/otherlibs/str/.depend.nt
 /otherlibs/str/.DS_Store
 
 # /otherlibs/systhreads/
@@ -581,8 +538,6 @@
 /otherlibs/systhreads/*.native
 /otherlibs/systhreads/program
 /otherlibs/systhreads/*.exe
-/otherlibs/systhreads/.depend
-/otherlibs/systhreads/.depend.nt
 /otherlibs/systhreads/.DS_Store
 /otherlibs/systhreads/thread.ml
 
@@ -603,8 +558,6 @@
 /otherlibs/threads/program
 /otherlibs/threads/*.exe
 /otherlibs/threads/*.exe.manifest
-/otherlibs/threads/.depend
-/otherlibs/threads/.depend.nt
 /otherlibs/threads/.DS_Store
 /otherlibs/threads/marshal.mli
 /otherlibs/threads/pervasives.mli
@@ -627,8 +580,6 @@
 /otherlibs/unix/program
 /otherlibs/unix/*.exe
 /otherlibs/unix/*.exe.manifest
-/otherlibs/unix/.depend
-/otherlibs/unix/.depend.nt
 /otherlibs/unix/.DS_Store
 
 # /otherlibs/win32graph/
@@ -647,8 +598,6 @@
 /otherlibs/win32graph/*.native
 /otherlibs/win32graph/program
 /otherlibs/win32graph/*.exe
-/otherlibs/win32graph/.depend
-/otherlibs/win32graph/.depend.nt
 /otherlibs/win32graph/.DS_Store
 /otherlibs/win32graph/graphics.ml
 /otherlibs/win32graph/graphics.mli
@@ -669,8 +618,6 @@
 /otherlibs/win32unix/*.native
 /otherlibs/win32unix/program
 /otherlibs/win32unix/*.exe
-/otherlibs/win32unix/.depend
-/otherlibs/win32unix/.depend.nt
 /otherlibs/win32unix/.DS_Store
 /otherlibs/win32unix/unixLabels.ml*
 /otherlibs/win32unix/unix.mli
@@ -719,8 +666,6 @@
 /parsing/program
 /parsing/*.exe
 /parsing/*.exe.manifest
-/parsing/.depend
-/parsing/.depend.nt
 /parsing/.DS_Store
 /parsing/parser.ml
 /parsing/parser.mli
@@ -748,8 +693,6 @@
 /stdlib/*.native
 /stdlib/program
 /stdlib/*.exe
-/stdlib/.depend
-/stdlib/.depend.nt
 /stdlib/.DS_Store
 /stdlib/camlheader
 /stdlib/camlheaderd
@@ -770,8 +713,6 @@
 /testsuite/*.byte
 /testsuite/*.native
 /testsuite/program
-/testsuite/.depend
-/testsuite/.depend.nt
 /testsuite/.DS_Store
 /testsuite/_log
 
@@ -792,8 +733,6 @@
 /testsuite/external/program
 /testsuite/external/*.exe
 /testsuite/external/*.exe.manifest
-/testsuite/external/.depend
-/testsuite/external/.depend.nt
 /testsuite/external/.DS_Store
 /testsuite/external/*.tar.gz
 /testsuite/external/*.tar.bz2
@@ -1039,8 +978,6 @@
 /testsuite/lib/*.native
 /testsuite/lib/program
 /testsuite/lib/*.exe
-/testsuite/lib/.depend
-/testsuite/lib/.depend.nt
 /testsuite/lib/.DS_Store
 
 # /testsuite/makefiles/
@@ -1086,8 +1023,6 @@
 /testsuite/tests/asmcomp/program
 /testsuite/tests/asmcomp/*.exe
 /testsuite/tests/asmcomp/*.exe.manifest
-/testsuite/tests/asmcomp/.depend
-/testsuite/tests/asmcomp/.depend.nt
 /testsuite/tests/asmcomp/.DS_Store
 /testsuite/tests/asmcomp/codegen
 /testsuite/tests/asmcomp/parsecmm.ml
@@ -1114,8 +1049,6 @@
 /testsuite/tests/backtrace/program
 /testsuite/tests/backtrace/*.exe
 /testsuite/tests/backtrace/*.exe.manifest
-/testsuite/tests/backtrace/.depend
-/testsuite/tests/backtrace/.depend.nt
 /testsuite/tests/backtrace/.DS_Store
 
 # /testsuite/tests/basic/
@@ -1131,8 +1064,6 @@
 /testsuite/tests/basic/*.native
 /testsuite/tests/basic/program
 /testsuite/tests/basic/program.exe
-/testsuite/tests/basic/.depend
-/testsuite/tests/basic/.depend.nt
 /testsuite/tests/basic/.DS_Store
 
 # /testsuite/tests/basic-float/
@@ -1152,8 +1083,6 @@
 /testsuite/tests/basic-float/program
 /testsuite/tests/basic-float/*.exe
 /testsuite/tests/basic-float/*.exe.manifest
-/testsuite/tests/basic-float/.depend
-/testsuite/tests/basic-float/.depend.nt
 /testsuite/tests/basic-float/.DS_Store
 
 # /testsuite/tests/basic-io/
@@ -1173,8 +1102,6 @@
 /testsuite/tests/basic-io/program
 /testsuite/tests/basic-io/*.exe
 /testsuite/tests/basic-io/*.exe.manifest
-/testsuite/tests/basic-io/.depend
-/testsuite/tests/basic-io/.depend.nt
 /testsuite/tests/basic-io/.DS_Store
 
 # /testsuite/tests/basic-io-2/
@@ -1194,8 +1121,6 @@
 /testsuite/tests/basic-io-2/program
 /testsuite/tests/basic-io-2/*.exe
 /testsuite/tests/basic-io-2/*.exe.manifest
-/testsuite/tests/basic-io-2/.depend
-/testsuite/tests/basic-io-2/.depend.nt
 /testsuite/tests/basic-io-2/.DS_Store
 
 # /testsuite/tests/basic-manyargs/
@@ -1215,8 +1140,6 @@
 /testsuite/tests/basic-manyargs/program
 /testsuite/tests/basic-manyargs/*.exe
 /testsuite/tests/basic-manyargs/*.exe.manifest
-/testsuite/tests/basic-manyargs/.depend
-/testsuite/tests/basic-manyargs/.depend.nt
 /testsuite/tests/basic-manyargs/.DS_Store
 
 # /testsuite/tests/basic-modules/
@@ -1236,8 +1159,6 @@
 /testsuite/tests/basic-modules/program
 /testsuite/tests/basic-modules/*.exe
 /testsuite/tests/basic-modules/*.exe.manifest
-/testsuite/tests/basic-modules/.depend
-/testsuite/tests/basic-modules/.depend.nt
 /testsuite/tests/basic-modules/.DS_Store
 
 # /testsuite/tests/basic-more/
@@ -1253,8 +1174,6 @@
 /testsuite/tests/basic-more/*.native
 /testsuite/tests/basic-more/program
 /testsuite/tests/basic-more/program.exe
-/testsuite/tests/basic-more/.depend
-/testsuite/tests/basic-more/.depend.nt
 /testsuite/tests/basic-more/.DS_Store
 
 # /testsuite/tests/basic-multdef/
@@ -1274,8 +1193,6 @@
 /testsuite/tests/basic-multdef/program
 /testsuite/tests/basic-multdef/*.exe
 /testsuite/tests/basic-multdef/*.exe.manifest
-/testsuite/tests/basic-multdef/.depend
-/testsuite/tests/basic-multdef/.depend.nt
 /testsuite/tests/basic-multdef/.DS_Store
 
 # /testsuite/tests/basic-private/
@@ -1295,8 +1212,6 @@
 /testsuite/tests/basic-private/program
 /testsuite/tests/basic-private/*.exe
 /testsuite/tests/basic-private/*.exe.manifest
-/testsuite/tests/basic-private/.depend
-/testsuite/tests/basic-private/.depend.nt
 /testsuite/tests/basic-private/.DS_Store
 
 # /testsuite/tests/callback/
@@ -1312,8 +1227,6 @@
 /testsuite/tests/callback/*.native
 /testsuite/tests/callback/program
 /testsuite/tests/callback/program.exe
-/testsuite/tests/callback/.depend
-/testsuite/tests/callback/.depend.nt
 /testsuite/tests/callback/.DS_Store
 
 # /testsuite/tests/embedded/
@@ -1333,8 +1246,6 @@
 /testsuite/tests/embedded/program
 /testsuite/tests/embedded/*.exe
 /testsuite/tests/embedded/*.exe.manifest
-/testsuite/tests/embedded/.depend
-/testsuite/tests/embedded/.depend.nt
 /testsuite/tests/embedded/.DS_Store
 /testsuite/tests/embedded/caml
 
@@ -1355,8 +1266,6 @@
 /testsuite/tests/exotic-syntax/program
 /testsuite/tests/exotic-syntax/*.exe
 /testsuite/tests/exotic-syntax/*.exe.manifest
-/testsuite/tests/exotic-syntax/.depend
-/testsuite/tests/exotic-syntax/.depend.nt
 /testsuite/tests/exotic-syntax/.DS_Store
 
 # /testsuite/tests/formats-transition/
@@ -1376,8 +1285,6 @@
 /testsuite/tests/formats-transition/program
 /testsuite/tests/formats-transition/*.exe
 /testsuite/tests/formats-transition/*.exe.manifest
-/testsuite/tests/formats-transition/.depend
-/testsuite/tests/formats-transition/.depend.nt
 /testsuite/tests/formats-transition/.DS_Store
 
 # /testsuite/tests/gc-roots/
@@ -1397,8 +1304,6 @@
 /testsuite/tests/gc-roots/program
 /testsuite/tests/gc-roots/*.exe
 /testsuite/tests/gc-roots/*.exe.manifest
-/testsuite/tests/gc-roots/.depend
-/testsuite/tests/gc-roots/.depend.nt
 /testsuite/tests/gc-roots/.DS_Store
 
 # /testsuite/tests/letrec/
@@ -1414,8 +1319,6 @@
 /testsuite/tests/letrec/*.native
 /testsuite/tests/letrec/program
 /testsuite/tests/letrec/program.exe
-/testsuite/tests/letrec/.depend
-/testsuite/tests/letrec/.depend.nt
 /testsuite/tests/letrec/.DS_Store
 
 # /testsuite/tests/lib-bigarray/
@@ -1435,8 +1338,6 @@
 /testsuite/tests/lib-bigarray/program
 /testsuite/tests/lib-bigarray/*.exe
 /testsuite/tests/lib-bigarray/*.exe.manifest
-/testsuite/tests/lib-bigarray/.depend
-/testsuite/tests/lib-bigarray/.depend.nt
 /testsuite/tests/lib-bigarray/.DS_Store
 
 # /testsuite/tests/lib-bigarray-2/
@@ -1469,8 +1370,6 @@
 /testsuite/tests/lib-digest/program
 /testsuite/tests/lib-digest/*.exe
 /testsuite/tests/lib-digest/*.exe.manifest
-/testsuite/tests/lib-digest/.depend
-/testsuite/tests/lib-digest/.depend.nt
 /testsuite/tests/lib-digest/.DS_Store
 
 # /testsuite/tests/lib-dynlink-bytecode/
@@ -1490,8 +1389,6 @@
 /testsuite/tests/lib-dynlink-bytecode/program
 /testsuite/tests/lib-dynlink-bytecode/*.exe
 /testsuite/tests/lib-dynlink-bytecode/*.exe.manifest
-/testsuite/tests/lib-dynlink-bytecode/.depend
-/testsuite/tests/lib-dynlink-bytecode/.depend.nt
 /testsuite/tests/lib-dynlink-bytecode/.DS_Store
 /testsuite/tests/lib-dynlink-bytecode/main
 /testsuite/tests/lib-dynlink-bytecode/static
@@ -1517,8 +1414,6 @@
 /testsuite/tests/lib-dynlink-csharp/program
 /testsuite/tests/lib-dynlink-csharp/*.exe
 /testsuite/tests/lib-dynlink-csharp/*.exe.manifest
-/testsuite/tests/lib-dynlink-csharp/.depend
-/testsuite/tests/lib-dynlink-csharp/.depend.nt
 /testsuite/tests/lib-dynlink-csharp/.DS_Store
 
 # /testsuite/tests/lib-dynlink-native/
@@ -1538,8 +1433,6 @@
 /testsuite/tests/lib-dynlink-native/program
 /testsuite/tests/lib-dynlink-native/*.exe
 /testsuite/tests/lib-dynlink-native/*.exe.manifest
-/testsuite/tests/lib-dynlink-native/.depend
-/testsuite/tests/lib-dynlink-native/.depend.nt
 /testsuite/tests/lib-dynlink-native/.DS_Store
 /testsuite/tests/lib-dynlink-native/mypack.pack.s
 /testsuite/tests/lib-dynlink-native/mypack.pack.asm
@@ -1566,8 +1459,6 @@
 /testsuite/tests/lib-dynlink-native/sub/program
 /testsuite/tests/lib-dynlink-native/sub/*.exe
 /testsuite/tests/lib-dynlink-native/sub/*.exe.manifest
-/testsuite/tests/lib-dynlink-native/sub/.depend
-/testsuite/tests/lib-dynlink-native/sub/.depend.nt
 /testsuite/tests/lib-dynlink-native/sub/.DS_Store
 
 # /testsuite/tests/lib-format/
@@ -1587,8 +1478,6 @@
 /testsuite/tests/lib-format/program
 /testsuite/tests/lib-format/*.exe
 /testsuite/tests/lib-format/*.exe.manifest
-/testsuite/tests/lib-format/.depend
-/testsuite/tests/lib-format/.depend.nt
 /testsuite/tests/lib-format/.DS_Store
 
 # /testsuite/tests/lib-hashtbl/
@@ -1604,8 +1493,6 @@
 /testsuite/tests/lib-hashtbl/*.native
 /testsuite/tests/lib-hashtbl/program
 /testsuite/tests/lib-hashtbl/program.exe
-/testsuite/tests/lib-hashtbl/.depend
-/testsuite/tests/lib-hashtbl/.depend.nt
 /testsuite/tests/lib-hashtbl/.DS_Store
 
 # /testsuite/tests/lib-marshal/
@@ -1625,8 +1512,6 @@
 /testsuite/tests/lib-marshal/program
 /testsuite/tests/lib-marshal/*.exe
 /testsuite/tests/lib-marshal/*.exe.manifest
-/testsuite/tests/lib-marshal/.depend
-/testsuite/tests/lib-marshal/.depend.nt
 /testsuite/tests/lib-marshal/.DS_Store
 
 # /testsuite/tests/lib-num/
@@ -1646,8 +1531,6 @@
 /testsuite/tests/lib-num/program
 /testsuite/tests/lib-num/*.exe
 /testsuite/tests/lib-num/*.exe.manifest
-/testsuite/tests/lib-num/.depend
-/testsuite/tests/lib-num/.depend.nt
 /testsuite/tests/lib-num/.DS_Store
 
 # /testsuite/tests/lib-num-2/
@@ -1663,8 +1546,6 @@
 /testsuite/tests/lib-num-2/*.native
 /testsuite/tests/lib-num-2/program
 /testsuite/tests/lib-num-2/program.exe
-/testsuite/tests/lib-num-2/.depend
-/testsuite/tests/lib-num-2/.depend.nt
 /testsuite/tests/lib-num-2/.DS_Store
 
 # /testsuite/tests/lib-printf/
@@ -1684,8 +1565,6 @@
 /testsuite/tests/lib-printf/program
 /testsuite/tests/lib-printf/*.exe
 /testsuite/tests/lib-printf/*.exe.manifest
-/testsuite/tests/lib-printf/.depend
-/testsuite/tests/lib-printf/.depend.nt
 /testsuite/tests/lib-printf/.DS_Store
 
 # /testsuite/tests/lib-random/
@@ -1705,8 +1584,6 @@
 /testsuite/tests/lib-random/program
 /testsuite/tests/lib-random/*.exe
 /testsuite/tests/lib-random/*.exe.manifest
-/testsuite/tests/lib-random/.depend
-/testsuite/tests/lib-random/.depend.nt
 /testsuite/tests/lib-random/.DS_Store
 
 # /testsuite/tests/lib-scanf/
@@ -1726,8 +1603,6 @@
 /testsuite/tests/lib-scanf/program
 /testsuite/tests/lib-scanf/*.exe
 /testsuite/tests/lib-scanf/*.exe.manifest
-/testsuite/tests/lib-scanf/.depend
-/testsuite/tests/lib-scanf/.depend.nt
 /testsuite/tests/lib-scanf/.DS_Store
 /testsuite/tests/lib-scanf/tscanf_data
 
@@ -1748,8 +1623,6 @@
 /testsuite/tests/lib-scanf-2/program
 /testsuite/tests/lib-scanf-2/*.exe
 /testsuite/tests/lib-scanf-2/*.exe.manifest
-/testsuite/tests/lib-scanf-2/.depend
-/testsuite/tests/lib-scanf-2/.depend.nt
 /testsuite/tests/lib-scanf-2/.DS_Store
 
 # /testsuite/tests/lib-set/
@@ -1765,8 +1638,6 @@
 /testsuite/tests/lib-set/*.native
 /testsuite/tests/lib-set/program
 /testsuite/tests/lib-set/program.exe
-/testsuite/tests/lib-set/.depend
-/testsuite/tests/lib-set/.depend.nt
 /testsuite/tests/lib-set/.DS_Store
 
 # /testsuite/tests/lib-str/
@@ -1782,8 +1653,6 @@
 /testsuite/tests/lib-str/*.native
 /testsuite/tests/lib-str/program
 /testsuite/tests/lib-str/program.exe
-/testsuite/tests/lib-str/.depend
-/testsuite/tests/lib-str/.depend.nt
 /testsuite/tests/lib-str/.DS_Store
 
 # /testsuite/tests/lib-stream/
@@ -1799,8 +1668,6 @@
 /testsuite/tests/lib-stream/*.native
 /testsuite/tests/lib-stream/program
 /testsuite/tests/lib-stream/program.exe
-/testsuite/tests/lib-stream/.depend
-/testsuite/tests/lib-stream/.depend.nt
 /testsuite/tests/lib-stream/.DS_Store
 
 # /testsuite/tests/lib-systhreads/
@@ -1816,8 +1683,6 @@
 /testsuite/tests/lib-systhreads/*.native
 /testsuite/tests/lib-systhreads/program
 /testsuite/tests/lib-systhreads/program.exe
-/testsuite/tests/lib-systhreads/.depend
-/testsuite/tests/lib-systhreads/.depend.nt
 /testsuite/tests/lib-systhreads/.DS_Store
 
 # /testsuite/tests/lib-threads/
@@ -1833,8 +1698,6 @@
 /testsuite/tests/lib-threads/*.native
 /testsuite/tests/lib-threads/program
 /testsuite/tests/lib-threads/program.exe
-/testsuite/tests/lib-threads/.depend
-/testsuite/tests/lib-threads/.depend.nt
 /testsuite/tests/lib-threads/.DS_Store
 /testsuite/tests/lib-threads/*.byt
 
@@ -1855,8 +1718,6 @@
 /testsuite/tests/match-exception/program
 /testsuite/tests/match-exception/*.exe
 /testsuite/tests/match-exception/*.exe.manifest
-/testsuite/tests/match-exception/.depend
-/testsuite/tests/match-exception/.depend.nt
 /testsuite/tests/match-exception/.DS_Store
 
 # /testsuite/tests/match-exception-warnings/
@@ -1876,8 +1737,6 @@
 /testsuite/tests/match-exception-warnings/program
 /testsuite/tests/match-exception-warnings/*.exe
 /testsuite/tests/match-exception-warnings/*.exe.manifest
-/testsuite/tests/match-exception-warnings/.depend
-/testsuite/tests/match-exception-warnings/.depend.nt
 /testsuite/tests/match-exception-warnings/.DS_Store
 
 # /testsuite/tests/misc/
@@ -1893,8 +1752,6 @@
 /testsuite/tests/misc/*.native
 /testsuite/tests/misc/program
 /testsuite/tests/misc/program.exe
-/testsuite/tests/misc/.depend
-/testsuite/tests/misc/.depend.nt
 /testsuite/tests/misc/.DS_Store
 
 # /testsuite/tests/misc-kb/
@@ -1914,8 +1771,6 @@
 /testsuite/tests/misc-kb/program
 /testsuite/tests/misc-kb/*.exe
 /testsuite/tests/misc-kb/*.exe.manifest
-/testsuite/tests/misc-kb/.depend
-/testsuite/tests/misc-kb/.depend.nt
 /testsuite/tests/misc-kb/.DS_Store
 
 # /testsuite/tests/misc-unsafe/
@@ -1931,8 +1786,6 @@
 /testsuite/tests/misc-unsafe/*.native
 /testsuite/tests/misc-unsafe/program
 /testsuite/tests/misc-unsafe/program.exe
-/testsuite/tests/misc-unsafe/.depend
-/testsuite/tests/misc-unsafe/.depend.nt
 /testsuite/tests/misc-unsafe/.DS_Store
 
 # /testsuite/tests/prim-bigstring/
@@ -1952,8 +1805,6 @@
 /testsuite/tests/prim-bigstring/program
 /testsuite/tests/prim-bigstring/*.exe
 /testsuite/tests/prim-bigstring/*.exe.manifest
-/testsuite/tests/prim-bigstring/.depend
-/testsuite/tests/prim-bigstring/.depend.nt
 /testsuite/tests/prim-bigstring/.DS_Store
 
 # /testsuite/tests/prim-bswap/
@@ -1970,8 +1821,6 @@
 /testsuite/tests/prim-bswap/*.native
 /testsuite/tests/prim-bswap/program
 /testsuite/tests/prim-bswap/program.exe
-/testsuite/tests/prim-bswap/.depend
-/testsuite/tests/prim-bswap/.depend.nt
 /testsuite/tests/prim-bswap/.DS_Store
 
 # /testsuite/tests/prim-revapply/
@@ -1987,8 +1836,6 @@
 /testsuite/tests/prim-revapply/*.native
 /testsuite/tests/prim-revapply/program
 /testsuite/tests/prim-revapply/program.exe
-/testsuite/tests/prim-revapply/.depend
-/testsuite/tests/prim-revapply/.depend.nt
 /testsuite/tests/prim-revapply/.DS_Store
 
 # /testsuite/tests/regression/pr5080-notes/
@@ -2004,8 +1851,6 @@
 /testsuite/tests/regression/pr5080-notes/*.native
 /testsuite/tests/regression/pr5080-notes/program
 /testsuite/tests/regression/pr5080-notes/program.exe
-/testsuite/tests/regression/pr5080-notes/.depend
-/testsuite/tests/regression/pr5080-notes/.depend.nt
 /testsuite/tests/regression/pr5080-notes/.DS_Store
 
 # /testsuite/tests/regression/pr5233/
@@ -2025,8 +1870,6 @@
 /testsuite/tests/regression/pr5233/program
 /testsuite/tests/regression/pr5233/*.exe
 /testsuite/tests/regression/pr5233/*.exe.manifest
-/testsuite/tests/regression/pr5233/.depend
-/testsuite/tests/regression/pr5233/.depend.nt
 /testsuite/tests/regression/pr5233/.DS_Store
 
 # /testsuite/tests/regression/pr5757/
@@ -2046,8 +1889,6 @@
 /testsuite/tests/regression/pr5757/program
 /testsuite/tests/regression/pr5757/*.exe
 /testsuite/tests/regression/pr5757/*.exe.manifest
-/testsuite/tests/regression/pr5757/.depend
-/testsuite/tests/regression/pr5757/.depend.nt
 /testsuite/tests/regression/pr5757/.DS_Store
 
 # /testsuite/tests/regression/pr6024/
@@ -2067,8 +1908,6 @@
 /testsuite/tests/regression/pr6024/program
 /testsuite/tests/regression/pr6024/*.exe
 /testsuite/tests/regression/pr6024/*.exe.manifest
-/testsuite/tests/regression/pr6024/.depend
-/testsuite/tests/regression/pr6024/.depend.nt
 /testsuite/tests/regression/pr6024/.DS_Store
 
 # /testsuite/tests/runtime-errors/
@@ -2088,8 +1927,6 @@
 /testsuite/tests/runtime-errors/program
 /testsuite/tests/runtime-errors/*.exe
 /testsuite/tests/runtime-errors/*.exe.manifest
-/testsuite/tests/runtime-errors/.depend
-/testsuite/tests/runtime-errors/.depend.nt
 /testsuite/tests/runtime-errors/.DS_Store
 /testsuite/tests/runtime-errors/*.bytecode
 
@@ -2110,8 +1947,6 @@
 /testsuite/tests/tool-debugger/program
 /testsuite/tests/tool-debugger/*.exe
 /testsuite/tests/tool-debugger/*.exe.manifest
-/testsuite/tests/tool-debugger/.depend
-/testsuite/tests/tool-debugger/.depend.nt
 /testsuite/tests/tool-debugger/.DS_Store
 /testsuite/tests/tool-debugger/compiler-libs
 
@@ -2132,8 +1967,6 @@
 /testsuite/tests/tool-debugger/basic/program
 /testsuite/tests/tool-debugger/basic/*.exe
 /testsuite/tests/tool-debugger/basic/*.exe.manifest
-/testsuite/tests/tool-debugger/basic/.depend
-/testsuite/tests/tool-debugger/basic/.depend.nt
 /testsuite/tests/tool-debugger/basic/.DS_Store
 /testsuite/tests/tool-debugger/basic/compiler-libs
 
@@ -2154,8 +1987,6 @@
 /testsuite/tests/tool-debugger/find-artifacts/program
 /testsuite/tests/tool-debugger/find-artifacts/*.exe
 /testsuite/tests/tool-debugger/find-artifacts/*.exe.manifest
-/testsuite/tests/tool-debugger/find-artifacts/.depend
-/testsuite/tests/tool-debugger/find-artifacts/.depend.nt
 /testsuite/tests/tool-debugger/find-artifacts/.DS_Store
 /testsuite/tests/tool-debugger/find-artifacts/compiler-libs
 /testsuite/tests/tool-debugger/find-artifacts/out
@@ -2177,8 +2008,6 @@
 /testsuite/tests/tool-debugger/no_debug_event/program
 /testsuite/tests/tool-debugger/no_debug_event/*.exe
 /testsuite/tests/tool-debugger/no_debug_event/*.exe.manifest
-/testsuite/tests/tool-debugger/no_debug_event/.depend
-/testsuite/tests/tool-debugger/no_debug_event/.depend.nt
 /testsuite/tests/tool-debugger/no_debug_event/.DS_Store
 /testsuite/tests/tool-debugger/no_debug_event/compiler-libs
 /testsuite/tests/tool-debugger/no_debug_event/out
@@ -2202,8 +2031,6 @@
 /testsuite/tests/tool-lexyacc/program
 /testsuite/tests/tool-lexyacc/*.exe
 /testsuite/tests/tool-lexyacc/*.exe.manifest
-/testsuite/tests/tool-lexyacc/.depend
-/testsuite/tests/tool-lexyacc/.depend.nt
 /testsuite/tests/tool-lexyacc/.DS_Store
 /testsuite/tests/tool-lexyacc/scanner.ml
 /testsuite/tests/tool-lexyacc/grammar.mli
@@ -2234,8 +2061,6 @@
 /testsuite/tests/tool-ocamldoc/*.byte
 /testsuite/tests/tool-ocamldoc/*.native
 /testsuite/tests/tool-ocamldoc/program
-/testsuite/tests/tool-ocamldoc/.depend
-/testsuite/tests/tool-ocamldoc/.depend.nt
 /testsuite/tests/tool-ocamldoc/.DS_Store
 /testsuite/tests/tool-ocamldoc/*.html
 /testsuite/tests/tool-ocamldoc/*.sty
@@ -2259,8 +2084,6 @@
 /testsuite/tests/tool-toplevel/program
 /testsuite/tests/tool-toplevel/*.exe
 /testsuite/tests/tool-toplevel/*.exe.manifest
-/testsuite/tests/tool-toplevel/.depend
-/testsuite/tests/tool-toplevel/.depend.nt
 /testsuite/tests/tool-toplevel/.DS_Store
 
 # /testsuite/tests/typing-extensions/
@@ -2280,8 +2103,6 @@
 /testsuite/tests/typing-extensions/program
 /testsuite/tests/typing-extensions/*.exe
 /testsuite/tests/typing-extensions/*.exe.manifest
-/testsuite/tests/typing-extensions/.depend
-/testsuite/tests/typing-extensions/.depend.nt
 /testsuite/tests/typing-extensions/.DS_Store
 
 # /testsuite/tests/typing-fstclassmod/
@@ -2301,8 +2122,6 @@
 /testsuite/tests/typing-fstclassmod/program
 /testsuite/tests/typing-fstclassmod/*.exe
 /testsuite/tests/typing-fstclassmod/*.exe.manifest
-/testsuite/tests/typing-fstclassmod/.depend
-/testsuite/tests/typing-fstclassmod/.depend.nt
 /testsuite/tests/typing-fstclassmod/.DS_Store
 
 # /testsuite/tests/typing-gadts/
@@ -2317,8 +2136,6 @@
 /testsuite/tests/typing-gadts/*.byte
 /testsuite/tests/typing-gadts/*.native
 /testsuite/tests/typing-gadts/program
-/testsuite/tests/typing-gadts/.depend
-/testsuite/tests/typing-gadts/.depend.nt
 /testsuite/tests/typing-gadts/.DS_Store
 
 # /testsuite/tests/typing-implicit_unpack/
@@ -2333,8 +2150,6 @@
 /testsuite/tests/typing-implicit_unpack/*.byte
 /testsuite/tests/typing-implicit_unpack/*.native
 /testsuite/tests/typing-implicit_unpack/program
-/testsuite/tests/typing-implicit_unpack/.depend
-/testsuite/tests/typing-implicit_unpack/.depend.nt
 /testsuite/tests/typing-implicit_unpack/.DS_Store
 
 # /testsuite/tests/typing-labels/
@@ -2350,8 +2165,6 @@
 /testsuite/tests/typing-labels/*.native
 /testsuite/tests/typing-labels/program
 /testsuite/tests/typing-labels/program.exe
-/testsuite/tests/typing-labels/.depend
-/testsuite/tests/typing-labels/.depend.nt
 /testsuite/tests/typing-labels/.DS_Store
 
 # /testsuite/tests/typing-misc/
@@ -2366,8 +2179,6 @@
 /testsuite/tests/typing-misc/*.byte
 /testsuite/tests/typing-misc/*.native
 /testsuite/tests/typing-misc/program
-/testsuite/tests/typing-misc/.depend
-/testsuite/tests/typing-misc/.depend.nt
 /testsuite/tests/typing-misc/.DS_Store
 
 # /testsuite/tests/typing-modules/
@@ -2394,8 +2205,6 @@
 /testsuite/tests/typing-modules-bugs/*.native
 /testsuite/tests/typing-modules-bugs/program
 /testsuite/tests/typing-modules-bugs/program.exe
-/testsuite/tests/typing-modules-bugs/.depend
-/testsuite/tests/typing-modules-bugs/.depend.nt
 /testsuite/tests/typing-modules-bugs/.DS_Store
 
 # /testsuite/tests/typing-objects/
@@ -2410,8 +2219,6 @@
 /testsuite/tests/typing-objects/*.byte
 /testsuite/tests/typing-objects/*.native
 /testsuite/tests/typing-objects/program
-/testsuite/tests/typing-objects/.depend
-/testsuite/tests/typing-objects/.depend.nt
 /testsuite/tests/typing-objects/.DS_Store
 
 # /testsuite/tests/typing-objects-bugs/
@@ -2439,8 +2246,6 @@
 /testsuite/tests/typing-poly/*.byte
 /testsuite/tests/typing-poly/*.native
 /testsuite/tests/typing-poly/program
-/testsuite/tests/typing-poly/.depend
-/testsuite/tests/typing-poly/.depend.nt
 /testsuite/tests/typing-poly/.DS_Store
 
 # /testsuite/tests/typing-poly-bugs/
@@ -2456,8 +2261,6 @@
 /testsuite/tests/typing-poly-bugs/*.native
 /testsuite/tests/typing-poly-bugs/program
 /testsuite/tests/typing-poly-bugs/program.exe
-/testsuite/tests/typing-poly-bugs/.depend
-/testsuite/tests/typing-poly-bugs/.depend.nt
 /testsuite/tests/typing-poly-bugs/.DS_Store
 
 # /testsuite/tests/typing-polyvariants-bugs/
@@ -2498,8 +2301,6 @@
 /testsuite/tests/typing-private/*.byte
 /testsuite/tests/typing-private/*.native
 /testsuite/tests/typing-private/program
-/testsuite/tests/typing-private/.depend
-/testsuite/tests/typing-private/.depend.nt
 /testsuite/tests/typing-private/.DS_Store
 
 # /testsuite/tests/typing-private-bugs/
@@ -2542,8 +2343,6 @@
 /testsuite/tests/typing-short-paths/*.native
 /testsuite/tests/typing-short-paths/program
 /testsuite/tests/typing-short-paths/program.exe
-/testsuite/tests/typing-short-paths/.depend
-/testsuite/tests/typing-short-paths/.depend.nt
 /testsuite/tests/typing-short-paths/.DS_Store
 
 # /testsuite/tests/typing-signatures/
@@ -2558,8 +2357,6 @@
 /testsuite/tests/typing-signatures/*.byte
 /testsuite/tests/typing-signatures/*.native
 /testsuite/tests/typing-signatures/program
-/testsuite/tests/typing-signatures/.depend
-/testsuite/tests/typing-signatures/.depend.nt
 /testsuite/tests/typing-signatures/.DS_Store
 
 # /testsuite/tests/typing-sigsubst/
@@ -2574,8 +2371,6 @@
 /testsuite/tests/typing-sigsubst/*.byte
 /testsuite/tests/typing-sigsubst/*.native
 /testsuite/tests/typing-sigsubst/program
-/testsuite/tests/typing-sigsubst/.depend
-/testsuite/tests/typing-sigsubst/.depend.nt
 /testsuite/tests/typing-sigsubst/.DS_Store
 
 # /testsuite/tests/typing-typeparam/
@@ -2590,8 +2385,6 @@
 /testsuite/tests/typing-typeparam/*.byte
 /testsuite/tests/typing-typeparam/*.native
 /testsuite/tests/typing-typeparam/program
-/testsuite/tests/typing-typeparam/.depend
-/testsuite/tests/typing-typeparam/.depend.nt
 /testsuite/tests/typing-typeparam/.DS_Store
 
 # /testsuite/tests/typing-warnings/
@@ -2608,8 +2401,6 @@
 /testsuite/tests/typing-warnings/*.native
 /testsuite/tests/typing-warnings/program
 /testsuite/tests/typing-warnings/program.exe
-/testsuite/tests/typing-warnings/.depend
-/testsuite/tests/typing-warnings/.depend.nt
 /testsuite/tests/typing-warnings/.DS_Store
 
 # /testsuite/tests/utils/
@@ -2626,8 +2417,6 @@
 /testsuite/tests/utils/*.native
 /testsuite/tests/utils/program
 /testsuite/tests/utils/program.exe
-/testsuite/tests/utils/.depend
-/testsuite/tests/utils/.depend.nt
 /testsuite/tests/utils/.DS_Store
 
 # /testsuite/tests/warnings/
@@ -2647,8 +2436,6 @@
 /testsuite/tests/warnings/program
 /testsuite/tests/warnings/*.exe
 /testsuite/tests/warnings/*.exe.manifest
-/testsuite/tests/warnings/.depend
-/testsuite/tests/warnings/.depend.nt
 /testsuite/tests/warnings/.DS_Store
 
 # /tools/
@@ -2668,8 +2455,6 @@
 /tools/program
 /tools/*.exe
 /tools/*.exe.manifest
-/tools/.depend
-/tools/.depend.nt
 /tools/.DS_Store
 /tools/ocamldep
 /tools/ocamldep.opt
@@ -2700,8 +2485,6 @@
 /tools/read_cmt.opt
 
 # /toplevel/
-/toplevel/.depend
-/toplevel/configure
 /toplevel/ocamlc
 /toplevel/ocamlc.opt
 /toplevel/expunge
@@ -2737,8 +2520,6 @@
 /typing/*.native
 /typing/program
 /typing/*.exe
-/typing/.depend
-/typing/.depend.nt
 /typing/.DS_Store
 
 # /utils/
@@ -2756,8 +2537,6 @@
 /utils/*.native
 /utils/program
 /utils/*.exe
-/utils/.depend
-/utils/.depend.nt
 /utils/.DS_Store
 /utils/config.ml
 
@@ -2774,8 +2553,6 @@
 /yacc/*.native
 /yacc/program
 /yacc/program.exe
-/yacc/.depend
-/yacc/.depend.nt
 /yacc/.DS_Store
 /yacc/ocamlyacc
 /yacc/ocamlyacc.exe
