@@ -203,9 +203,6 @@
 /byterun/*.d.c
 /byterun/*.pic.c
 
-# /compilerlibs/
-/compilerlibs/*
-
 # /config/
 /config/*.o
 /config/*.a
