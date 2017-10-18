@@ -4837,6 +4837,249 @@ let () =
     )
 
 end
+module Bsb_package_specs : sig 
+#1 "bsb_package_specs.mli"
+(* Copyright (C) 2017 Authors of BuckleScript
+ * 
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * In addition to the permissions granted to you by the LGPL, you may combine
+ * or link a "work that uses the Library" with a publicly distributed version
+ * of this file to produce a combined library or application, then distribute
+ * that combined work under the terms of your choosing, with no requirement
+ * to comply with the obligations normally placed on you by section 4 of the
+ * LGPL version 3 (or the corresponding section of a later version of the LGPL
+ * should you choose to use a later version).
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ * 
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
+
+type t
+
+(* val package_flag: t -> string -> string *)
+
+(* val package_output: t -> string -> string *)
+
+val supported_format : string -> bool
+
+val default_package_specs : t
+
+val from_json:
+  Ext_json_types.t -> t 
+
+val get_list_of_output_js : 
+  t -> string -> string list
+
+(**
+  Sample output: {[ -bs-package-output commonjs:lib/js/jscomp/test]}
+*)
+val package_flag_of_package_specs : 
+  t -> string -> string
+
+(* val get_package_specs_from_array : 
+  Ext_json_types.t array -> t *)
+
+end = struct
+#1 "bsb_package_specs.ml"
+(* Copyright (C) 2017 Authors of BuckleScript
+ * 
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * In addition to the permissions granted to you by the LGPL, you may combine
+ * or link a "work that uses the Library" with a publicly distributed version
+ * of this file to produce a combined library or application, then distribute
+ * that combined work under the terms of your choosing, with no requirement
+ * to comply with the obligations normally placed on you by section 4 of the
+ * LGPL version 3 (or the corresponding section of a later version of the LGPL
+ * should you choose to use a later version).
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ * 
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
+
+
+let (//) = Ext_path.combine 
+
+let common_js_prefix p  =  Bsb_config.lib_js  // p
+let amd_js_prefix p = Bsb_config.lib_amd // p 
+let es6_prefix p = Bsb_config.lib_es6 // p 
+let es6_global_prefix p =  Bsb_config.lib_es6_global // p
+let amdjs_global_prefix p = Bsb_config.lib_amd_global // p 
+
+type spec = {
+  format : string;
+  in_source : bool 
+}
+
+module Spec_set = Set.Make( struct type t = spec 
+    let compare = Pervasives.compare 
+  end)
+
+type t = Spec_set.t 
+
+
+
+let supported_format x = 
+  x = Literals.amdjs ||
+  x = Literals.commonjs ||
+  x = Literals.es6 ||
+  x = Literals.es6_global ||
+  x = Literals.amdjs_global
+
+let bad_module_format_message_exn ~loc format =
+  Bsb_exception.errorf ~loc "package-specs: `%s` isn't a valid output module format. It has to be one of: %s, %s, %s, %s or %s"
+    format
+    Literals.amdjs
+    Literals.commonjs
+    Literals.es6
+    Literals.es6_global
+    Literals.amdjs_global
+
+let rec from_array (arr : Ext_json_types.t array) : Spec_set.t =
+  let spec = ref Spec_set.empty in
+  let has_in_source = ref false in
+  arr
+  |> Array.iter (fun (x : Ext_json_types.t) ->
+
+      let result = from_json_single x  in
+      if result.in_source then 
+        (
+          if not !has_in_source then
+            has_in_source:= true
+          else 
+            Bsb_exception.errorf 
+              ~loc:(Ext_json.loc_of x) 
+              "package-specs: we've detected two module formats that are both configured to be in-source." 
+        );
+      spec := Spec_set.add result !spec
+    );
+  !spec
+
+(* TODO: FIXME: better API without mutating *)
+and from_json_single (x : Ext_json_types.t) : spec =
+  match x with
+  | Str {str = format; loc } ->
+    if supported_format format then
+      {format ; in_source = false }
+    else
+      (bad_module_format_message_exn ~loc format)
+  | Obj {map; loc} ->
+    begin match String_map.find_exn "module" map with
+      | Str {str = format} ->
+        let in_source = 
+          match String_map.find_opt Bsb_build_schemas.in_source map with
+          | Some (True _) -> true
+          | Some _
+          | None -> false
+        in
+        if supported_format format then
+          {format ; in_source  }
+        else
+          bad_module_format_message_exn ~loc format
+      | Arr _ ->
+        Bsb_exception.errorf ~loc
+          "package-specs: when the configuration is an object, `module` field should be a string, not an array. If you want to pass multiple module specs, try turning package-specs into an array of objects (or strings) instead."
+      | _ ->
+        Bsb_exception.errorf ~loc
+          "package-specs: the `module` field of the configuration object should be a string."
+      | exception _ ->
+        Bsb_exception.errorf ~loc
+          "package-specs: when the configuration is an object, the `module` field is mandatory."
+    end
+  | _ -> Bsb_exception.errorf ~loc:(Ext_json.loc_of x)
+           "package-specs: we expect either a string or an object."
+
+let  from_json (x : Ext_json_types.t) : Spec_set.t =
+  match x with
+  | Arr {content ; _} -> from_array content
+  | _ -> Spec_set.singleton (from_json_single x )
+
+
+let bs_package_output = "-bs-package-output"
+
+(** Assume input is valid 
+    {[ -bs-package-output commonjs:lib/js/jscomp/test ]}
+*)
+let package_flag ({format; in_source } : spec) dir =
+  Ext_string.inter2
+    bs_package_output 
+    (Ext_string.concat3
+       format
+       Ext_string.single_colon
+       (if in_source then dir else
+          (if format = Literals.amdjs then 
+             amd_js_prefix dir 
+           else if format = Literals.commonjs then 
+             common_js_prefix dir 
+           else if format = Literals.es6 then 
+             es6_prefix dir 
+           else if format = Literals.es6_global then 
+             es6_global_prefix dir   
+           else if format = Literals.amdjs_global then 
+             amdjs_global_prefix dir 
+           else assert false))
+    )
+
+let package_flag_of_package_specs (package_specs : t) 
+    (dirname : string ) = 
+  (Spec_set.fold (fun format acc ->
+       Ext_string.inter2 acc (package_flag format dirname )
+
+     ) package_specs Ext_string.empty)
+
+let default_package_specs = 
+  Spec_set.singleton 
+    { format = Literals.commonjs ; in_source = false }
+(** js output for each package *)
+let package_output ({format; in_source } : spec) output=
+
+  let prefix  =
+    if in_source then fun x -> x 
+    else
+      (if format = Literals.commonjs then
+         common_js_prefix
+       else if format = Literals.amdjs then
+         amd_js_prefix
+       else if format = Literals.es6 then 
+         es6_prefix   
+       else if format = Literals.es6_global then 
+         es6_global_prefix  
+       else  if format = Literals.amdjs_global then 
+         amdjs_global_prefix
+       else assert false)
+  in
+  (Bsb_config.proj_rel @@ prefix output )
+
+(**
+    [get_list_of_output_js specs "src/hi/hello"]
+
+*)
+let get_list_of_output_js 
+    package_specs output_file_sans_extension = 
+  Spec_set.fold (fun format acc ->
+      package_output format 
+        ( Ext_namespace.js_name_of_basename output_file_sans_extension)
+      :: acc
+    ) package_specs []
+
+end
 module Ext_color : sig 
 #1 "ext_color.mli"
 (* Copyright (C) 2015-2016 Bloomberg Finance L.P.
@@ -6665,8 +6908,6 @@ val get_ocaml_dir: string -> string
 
 val get_ocaml_lib_dir : is_js:bool -> string -> string
 
-val get_findlib_path : string -> string
-
 end = struct
 #1 "bsb_build_util.ml"
 (* Copyright (C) 2015-2016 Bloomberg Finance L.P.
@@ -6919,508 +7160,6 @@ let get_ocaml_dir cwd =
 
 let get_ocaml_lib_dir ~is_js cwd =
   (Filename.dirname (get_bsc_dir cwd)) // "lib" // "ocaml"
-
-let get_findlib_path cwd = cwd // Bsb_config.lib_bs // Bsb_config.findlib_conf
-
-end
-module Bsb_unix : sig 
-#1 "bsb_unix.mli"
-(* Copyright (C) 2015-2016 Bloomberg Finance L.P.
- * 
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Lesser General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * In addition to the permissions granted to you by the LGPL, you may combine
- * or link a "work that uses the Library" with a publicly distributed version
- * of this file to produce a combined library or application, then distribute
- * that combined work under the terms of your choosing, with no requirement
- * to comply with the obligations normally placed on you by section 4 of the
- * LGPL version 3 (or the corresponding section of a later version of the LGPL
- * should you choose to use a later version).
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Lesser General Public License for more details.
- * 
- * You should have received a copy of the GNU Lesser General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
-
-type command = 
-  { 
-    cmd : string ;
-    cwd : string ; 
-    args : string array 
-  }  
-
-
-
-
-val run_command_execv :   command -> unit 
-
-
-val remove_dir_recursive : string -> unit 
-
-(*  *)
-val run_command_capture_stdout: string -> string
-
-val run_command_with_env: string -> string array -> string
-
-end = struct
-#1 "bsb_unix.ml"
-(* Copyright (C) 2015-2016 Bloomberg Finance L.P.
- * 
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Lesser General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * In addition to the permissions granted to you by the LGPL, you may combine
- * or link a "work that uses the Library" with a publicly distributed version
- * of this file to produce a combined library or application, then distribute
- * that combined work under the terms of your choosing, with no requirement
- * to comply with the obligations normally placed on you by section 4 of the
- * LGPL version 3 (or the corresponding section of a later version of the LGPL
- * should you choose to use a later version).
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Lesser General Public License for more details.
- * 
- * You should have received a copy of the GNU Lesser General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
-
-
-
-type command = 
-  { 
-    cmd : string ;
-    cwd : string ; 
-    args : string array 
-  }  
-
-
-let log cmd = 
-  Bsb_log.info "@{<info>Entering@} %s @." cmd.cwd ;  
-  Bsb_log.info "@{<info>Cmd:@} " ; 
-  Bsb_log.info_args cmd.args
-  
-let fail cmd =
-  Bsb_log.error "@{<error>Failure:@} %s \n Location: %s@." cmd.cmd cmd.cwd
-
-let run_command_execv_unix  cmd =
-  match Unix.fork () with 
-  | 0 -> 
-    log cmd;
-    Unix.chdir cmd.cwd;
-    Unix.execv cmd.cmd cmd.args 
-  | pid -> 
-    match Unix.waitpid [] pid  with 
-    | pid, process_status ->       
-      match process_status with 
-      | Unix.WEXITED eid ->
-        if eid <> 0 then 
-          begin 
-            fail cmd;
-            exit eid    
-          end;
-      | Unix.WSIGNALED _ | Unix.WSTOPPED _ -> 
-        begin 
-          Bsb_log.error "@{<error>Interrupted:@} %s@." cmd.cmd;
-          exit 2 
-        end        
-
-
-(** TODO: the args are not quoted, here 
-    we are calling a very limited set of `bsb` commands, so that 
-    we are safe
-*)
-let run_command_execv_win (cmd : command) =
-  let old_cwd = Unix.getcwd () in 
-  log cmd;
-  Unix.chdir cmd.cwd;
-  let eid =
-    Sys.command 
-      (String.concat Ext_string.single_space 
-         ( Filename.quote cmd.cmd ::( List.tl  @@ Array.to_list cmd.args))) in 
-  if eid <> 0 then 
-    begin 
-      fail cmd;
-      exit eid    
-    end
-  else  begin 
-    Bsb_log.info "@{<info>Leaving@} %s => %s  @." cmd.cwd  old_cwd;
-    Unix.chdir old_cwd
-  end
-
-
-let run_command_execv = 
-  if Ext_sys.is_windows_or_cygwin then 
-    run_command_execv_win
-  else run_command_execv_unix  
-(** it assume you have permissions, so always catch it to fail 
-    gracefully
-*)
-
-let rec remove_dir_recursive dir = 
-  if Sys.is_directory dir then 
-    begin 
-      let files = Sys.readdir dir in 
-      for i = 0 to Array.length files - 1 do 
-        remove_dir_recursive (Filename.concat dir (Array.unsafe_get files i))
-      done ;
-      Unix.rmdir dir 
-    end
-  else Sys.remove dir 
-
-let run_command_capture_stdout cmd =
-  let ic, oc = Unix.open_process cmd in
-  let buf = Buffer.create 64 in
-  (try
-     while true do
-       Buffer.add_channel buf ic 1
-     done
-   with End_of_file -> ());
-  let _ = Unix.close_process (ic, oc) in
-  Buffer.contents buf
-
-let run_command_with_env cmd env =
-  let ic, oc, err = Unix.open_process_full cmd env in
-  let buf = Buffer.create 64 in
-  (try
-     while true do
-       Buffer.add_channel buf ic 1
-     done
-   with End_of_file -> ());
-  let _ = Unix.close_process_full (ic, oc, err) in
-  Buffer.contents buf
-
-end
-module Bsb_helper_findlib : sig 
-#1 "bsb_helper_findlib.mli"
-(* Copyright (C) 2015-2016 Bloomberg Finance L.P.
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Lesser General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * In addition to the permissions granted to you by the LGPL, you may combine
- * or link a "work that uses the Library" with a publicly distributed version
- * of this file to produce a combined library or application, then distribute
- * that combined work under the terms of your choosing, with no requirement
- * to comply with the obligations normally placed on you by section 4 of the
- * LGPL version 3 (or the corresponding section of a later version of the LGPL
- * should you choose to use a later version).
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Lesser General Public License for more details.
- *
- * You should have received a copy of the GNU Lesser General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
-
-val gen_findlib_conf : string -> string -> unit
-
-end = struct
-#1 "bsb_helper_findlib.ml"
-let (//) = Ext_path.combine
-
-let gen_findlib_conf output_dir cwd =
-  let env = Unix.environment () in
-  let destdir = Bsb_unix.run_command_with_env "ocamlfind printconf destdir" env in
-  (* TODO(sansouci): Probably pretty brittle. If there is no output to stdout
-     it's likely there was an error on stderr of the kind "ocamlfind not found".
-     We just assume that it's bad either way.*)
-  let env = if destdir = "" then
-    (* We have to remove this because it might be wrong and will wrongly influence our conf *)
-    let var_to_remove = "OCAMLFIND_CONF" in 
-    env
-      |> Array.to_list 
-      |> List.filter (fun v -> (if String.length v >= (String.length var_to_remove + 1)
-          then String.sub v 0 (String.length var_to_remove + 1) <> "OCAMLFIND_CONF=" 
-          else true))
-      |> Array.of_list 
-  else env in 
-  (* Try it again with new env. *)
-  let destdir = Bsb_unix.run_command_with_env "ocamlfind printconf destdir" env in
-  if destdir = "" then
-    Bsb_log.error "Error running `ocamlfind printconf destdir` to generate the findlib.conf. Hint: do you have `ocamlfind` installed?"
-  else begin 
-    let path = Bsb_unix.run_command_with_env "ocamlfind printconf path" env in
-    if path = "" then
-      Bsb_log.error "Error running `ocamlfind printconf destdir` to generate the findlib.conf. Hint: do you have `ocamlfind` installed?"
-    else begin 
-      let destdirTrimmed = (String.sub destdir 0 (String.length destdir - 1)) in
-      let pathTrimmed = (String.sub path 0 (String.length path - 1)) in
-      let ocaml_dir = Bsb_build_util.get_ocaml_dir cwd in
-      (* Sigh multi-line string adds all sorts of unwanted indentation and doesn't look that much better :(  *)
-      let findlibconf = Printf.sprintf "\
-          destdir=\"%s\"\n\
-          path=\"%s\"\n\
-          ocamlc=\"%s\"\n\
-          ocamlopt=\"%s\"\
-        "
-        destdirTrimmed
-        pathTrimmed
-        (ocaml_dir // "ocamlc.opt")
-        (ocaml_dir // "ocamlopt.opt") in
-      
-      let oc = open_out_bin output_dir in 
-      output_string oc findlibconf; 
-      close_out oc
-    end
-  end
-
-end
-module Bsb_package_specs : sig 
-#1 "bsb_package_specs.mli"
-(* Copyright (C) 2017 Authors of BuckleScript
- * 
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Lesser General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * In addition to the permissions granted to you by the LGPL, you may combine
- * or link a "work that uses the Library" with a publicly distributed version
- * of this file to produce a combined library or application, then distribute
- * that combined work under the terms of your choosing, with no requirement
- * to comply with the obligations normally placed on you by section 4 of the
- * LGPL version 3 (or the corresponding section of a later version of the LGPL
- * should you choose to use a later version).
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Lesser General Public License for more details.
- * 
- * You should have received a copy of the GNU Lesser General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
-
-type t
-
-(* val package_flag: t -> string -> string *)
-
-(* val package_output: t -> string -> string *)
-
-val supported_format : string -> bool
-
-val default_package_specs : t
-
-val from_json:
-  Ext_json_types.t -> t 
-
-val get_list_of_output_js : 
-  t -> string -> string list
-
-(**
-  Sample output: {[ -bs-package-output commonjs:lib/js/jscomp/test]}
-*)
-val package_flag_of_package_specs : 
-  t -> string -> string
-
-(* val get_package_specs_from_array : 
-  Ext_json_types.t array -> t *)
-
-end = struct
-#1 "bsb_package_specs.ml"
-(* Copyright (C) 2017 Authors of BuckleScript
- * 
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Lesser General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * In addition to the permissions granted to you by the LGPL, you may combine
- * or link a "work that uses the Library" with a publicly distributed version
- * of this file to produce a combined library or application, then distribute
- * that combined work under the terms of your choosing, with no requirement
- * to comply with the obligations normally placed on you by section 4 of the
- * LGPL version 3 (or the corresponding section of a later version of the LGPL
- * should you choose to use a later version).
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Lesser General Public License for more details.
- * 
- * You should have received a copy of the GNU Lesser General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
-
-
-let (//) = Ext_path.combine 
-
-let common_js_prefix p  =  Bsb_config.lib_js  // p
-let amd_js_prefix p = Bsb_config.lib_amd // p 
-let es6_prefix p = Bsb_config.lib_es6 // p 
-let es6_global_prefix p =  Bsb_config.lib_es6_global // p
-let amdjs_global_prefix p = Bsb_config.lib_amd_global // p 
-
-type spec = {
-  format : string;
-  in_source : bool 
-}
-
-module Spec_set = Set.Make( struct type t = spec 
-    let compare = Pervasives.compare 
-  end)
-
-type t = Spec_set.t 
-
-
-
-let supported_format x = 
-  x = Literals.amdjs ||
-  x = Literals.commonjs ||
-  x = Literals.es6 ||
-  x = Literals.es6_global ||
-  x = Literals.amdjs_global
-
-let bad_module_format_message_exn ~loc format =
-  Bsb_exception.errorf ~loc "package-specs: `%s` isn't a valid output module format. It has to be one of: %s, %s, %s, %s or %s"
-    format
-    Literals.amdjs
-    Literals.commonjs
-    Literals.es6
-    Literals.es6_global
-    Literals.amdjs_global
-
-let rec from_array (arr : Ext_json_types.t array) : Spec_set.t =
-  let spec = ref Spec_set.empty in
-  let has_in_source = ref false in
-  arr
-  |> Array.iter (fun (x : Ext_json_types.t) ->
-
-      let result = from_json_single x  in
-      if result.in_source then 
-        (
-          if not !has_in_source then
-            has_in_source:= true
-          else 
-            Bsb_exception.errorf 
-              ~loc:(Ext_json.loc_of x) 
-              "package-specs: we've detected two module formats that are both configured to be in-source." 
-        );
-      spec := Spec_set.add result !spec
-    );
-  !spec
-
-(* TODO: FIXME: better API without mutating *)
-and from_json_single (x : Ext_json_types.t) : spec =
-  match x with
-  | Str {str = format; loc } ->
-    if supported_format format then
-      {format ; in_source = false }
-    else
-      (bad_module_format_message_exn ~loc format)
-  | Obj {map; loc} ->
-    begin match String_map.find_exn "module" map with
-      | Str {str = format} ->
-        let in_source = 
-          match String_map.find_opt Bsb_build_schemas.in_source map with
-          | Some (True _) -> true
-          | Some _
-          | None -> false
-        in
-        if supported_format format then
-          {format ; in_source  }
-        else
-          bad_module_format_message_exn ~loc format
-      | Arr _ ->
-        Bsb_exception.errorf ~loc
-          "package-specs: when the configuration is an object, `module` field should be a string, not an array. If you want to pass multiple module specs, try turning package-specs into an array of objects (or strings) instead."
-      | _ ->
-        Bsb_exception.errorf ~loc
-          "package-specs: the `module` field of the configuration object should be a string."
-      | exception _ ->
-        Bsb_exception.errorf ~loc
-          "package-specs: when the configuration is an object, the `module` field is mandatory."
-    end
-  | _ -> Bsb_exception.errorf ~loc:(Ext_json.loc_of x)
-           "package-specs: we expect either a string or an object."
-
-let  from_json (x : Ext_json_types.t) : Spec_set.t =
-  match x with
-  | Arr {content ; _} -> from_array content
-  | _ -> Spec_set.singleton (from_json_single x )
-
-
-let bs_package_output = "-bs-package-output"
-
-(** Assume input is valid 
-    {[ -bs-package-output commonjs:lib/js/jscomp/test ]}
-*)
-let package_flag ({format; in_source } : spec) dir =
-  Ext_string.inter2
-    bs_package_output 
-    (Ext_string.concat3
-       format
-       Ext_string.single_colon
-       (if in_source then dir else
-          (if format = Literals.amdjs then 
-             amd_js_prefix dir 
-           else if format = Literals.commonjs then 
-             common_js_prefix dir 
-           else if format = Literals.es6 then 
-             es6_prefix dir 
-           else if format = Literals.es6_global then 
-             es6_global_prefix dir   
-           else if format = Literals.amdjs_global then 
-             amdjs_global_prefix dir 
-           else assert false))
-    )
-
-let package_flag_of_package_specs (package_specs : t) 
-    (dirname : string ) = 
-  (Spec_set.fold (fun format acc ->
-       Ext_string.inter2 acc (package_flag format dirname )
-
-     ) package_specs Ext_string.empty)
-
-let default_package_specs = 
-  Spec_set.singleton 
-    { format = Literals.commonjs ; in_source = false }
-(** js output for each package *)
-let package_output ({format; in_source } : spec) output=
-
-  let prefix  =
-    if in_source then fun x -> x 
-    else
-      (if format = Literals.commonjs then
-         common_js_prefix
-       else if format = Literals.amdjs then
-         amd_js_prefix
-       else if format = Literals.es6 then 
-         es6_prefix   
-       else if format = Literals.es6_global then 
-         es6_global_prefix  
-       else  if format = Literals.amdjs_global then 
-         amdjs_global_prefix
-       else assert false)
-  in
-  (Bsb_config.proj_rel @@ prefix output )
-
-(**
-    [get_list_of_output_js specs "src/hi/hello"]
-
-*)
-let get_list_of_output_js 
-    package_specs output_file_sans_extension = 
-  Spec_set.fold (fun format acc ->
-      package_output format 
-        ( Ext_namespace.js_name_of_basename output_file_sans_extension)
-      :: acc
-    ) package_specs []
 
 end
 module Vec_gen
@@ -10735,22 +10474,19 @@ let link link_byte_or_native ~main_module ~batch_files ~clibs ~includes ~ocamlfi
     else begin
       (* @CrossPlatform This might work on windows since we're using the Unix module which claims to
          have a windows implementation... We should double check this. *)
-      let environment = Unix.environment () in
       (* @Hack we assume we're inside lib/bs/nested here, this might change in the future, breaking this 
             Ben - October 6th 2017
       *)
       let dir = Filename.dirname @@ Filename.dirname @@ Filename.dirname @@ cwd in
-      let findlib_env_var = if global_ocaml_compiler then "" else "OCAMLFIND_CONF=" ^ Bsb_build_util.get_findlib_path dir in
       let list_of_args = ("ocamlfind" :: compiler :: []) 
         @ (if bs_super_errors then ["-passopt"; "-bs-super-errors"] else []) 
         @ Bsb_default.ocaml_flags
         @ ("-linkpkg" :: ocamlfind_packages)
         @ ("-g" :: "-o" :: output_file :: all_object_files) in
       (* List.iter (fun a -> print_endline a) list_of_args; *)
-      Unix.execvpe
+      Unix.execvp
         "ocamlfind"
         (Array.of_list (list_of_args))
-        (Array.append [| findlib_env_var |] environment)
     end
   end else
     failwith @@ "No " ^ suffix_object_files ^ " to link. Hint: is the entry point module '" ^ main_module ^ "' right?"
@@ -10890,15 +10626,13 @@ let pack pack_byte_or_native ~batch_files ~includes ~ocamlfind_packages ~bs_supe
             Ben - October 6th 2017
       *)
       let dir = Filename.dirname @@ Filename.dirname @@ Filename.dirname @@ cwd in
-      let findlib_env_var = if global_ocaml_compiler then "" else "OCAMLFIND_CONF=" ^ Bsb_build_util.get_findlib_path dir in
       let list_of_args = ("ocamlfind" :: compiler :: "-a" :: "-g" :: ocamlfind_packages) 
       @ ((if bs_super_errors then ["-passopt"; "-bs-super-errors"] else []))
       @ Bsb_default.ocaml_flags
       @  ("-o" :: (Literals.library_file ^ suffix_library_files) :: includes @ all_object_files) in
-      Unix.execvpe
+      Unix.execvp
         "ocamlfind"
           (Array.of_list list_of_args)
-          [| findlib_env_var |]
     end
   else
     failwith @@ "No " ^ suffix_object_files ^ " to pack into a lib."
@@ -11119,12 +10853,6 @@ let () =
     
     "-add-clib", (Arg.String add_clib),
     " adds a .a library file to be linked into the final executable";
-    
-    
-    "-gen-findlib", (Arg.String (fun dir ->
-      Bsb_helper_findlib.gen_findlib_conf dir (Sys.getcwd ())
-    )),
-    " Generates a findlib.conf file replacing ocamlc/ocamlopt with the local compilers.";
     
     "-global-ocaml-compiler", (Arg.Unit (fun () -> global_ocaml_compiler := true)),
     " Tell bsb_helper to use the globally available compiler when packing or linking."

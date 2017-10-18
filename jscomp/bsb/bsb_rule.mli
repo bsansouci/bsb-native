@@ -59,7 +59,6 @@ val build_package_gen_mlast_simple : t
 val build_package_build_cmi_bytecode : t
 val build_package_build_cmi_native : t
 
-val generate_findlib_conf : t
 (** rules are generally composed of built-in rules and customized rules, there are two design choices:
     1. respect custom rules with the same name, then we need adjust our built-in 
     rules dynamically in case the conflict.

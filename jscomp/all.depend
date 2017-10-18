@@ -792,8 +792,7 @@ bsb/bsb_build_util.cmx : ext/string_map.cmx ext/string_hashtbl.cmx \
     ext/literals.cmx ext/ext_sys.cmx ext/ext_string.cmx ext/ext_path.cmx \
     ext/ext_list.cmx ext/ext_json_types.cmx ext/ext_json_parse.cmx \
     ext/ext_json.cmx ext/ext_array.cmx bsb/bsb_pkg.cmx bsb/bsb_log.cmx \
-    bsb/bsb_exception.cmx bsb/bsb_config.cmx bsb/bsb_build_schemas.cmx \
-    bsb/bsb_build_util.cmi
+    bsb/bsb_exception.cmx bsb/bsb_build_schemas.cmx bsb/bsb_build_util.cmi
 bsb/bsb_clean.cmx : ext/ext_path.cmx bsb/bsb_unix.cmx bsb/bsb_log.cmx \
     bsb/bsb_config.cmx bsb/bsb_build_util.cmx bsb/bsb_clean.cmi
 bsb/bsb_config.cmx : ext/ext_path.cmx bsb/bsb_config.cmi
@@ -821,20 +820,17 @@ bsb/bsb_helper_dep_graph.cmx : ext/string_set.cmx ext/string_map.cmx \
     ext/string_hashtbl.cmx bsb/bsb_log.cmx bsb/bsb_helper_dep_graph.cmi
 bsb/bsb_helper_extract.cmx : ext/string_set.cmx ext/ext_string.cmx \
     bsb/bsb_helper_extract.cmi
-bsb/bsb_helper_findlib.cmx : ext/ext_path.cmx bsb/bsb_unix.cmx \
-    bsb/bsb_log.cmx bsb/bsb_build_util.cmx bsb/bsb_helper_findlib.cmi
 bsb/bsb_helper_linker.cmx : ext/string_map.cmx ext/literals.cmx \
     ext/ext_path.cmx ext/ext_modulename.cmx bsb/bsb_helper_extract.cmx \
     bsb/bsb_helper_dep_graph.cmx bsb/bsb_default_paths.cmx \
-    bsb/bsb_default.cmx bsb/bsb_build_util.cmx bsb/bsb_helper_linker.cmi
+    bsb/bsb_default.cmx bsb/bsb_helper_linker.cmi
 bsb/bsb_helper_main.cmx : ext/ext_path.cmx bsb/bsb_helper_packer.cmx \
-    bsb/bsb_helper_linker.cmx bsb/bsb_helper_findlib.cmx \
-    bsb/bsb_dir_index.cmx bsb/bsb_depfile_gen.cmx bsb/bsb_helper_main.cmi
+    bsb/bsb_helper_linker.cmx bsb/bsb_dir_index.cmx bsb/bsb_depfile_gen.cmx \
+    bsb/bsb_helper_main.cmi
 bsb/bsb_helper_packer.cmx : ext/string_set.cmx ext/string_map.cmx \
     ext/literals.cmx ext/ext_path.cmx ext/ext_modulename.cmx \
     bsb/bsb_helper_extract.cmx bsb/bsb_helper_dep_graph.cmx \
-    bsb/bsb_default_paths.cmx bsb/bsb_default.cmx bsb/bsb_build_util.cmx \
-    bsb/bsb_helper_packer.cmi
+    bsb/bsb_default_paths.cmx bsb/bsb_default.cmx bsb/bsb_helper_packer.cmi
 bsb/bsb_log.cmx : ext/ext_string.cmx ext/ext_color.cmx bsb/bsb_log.cmi
 bsb/bsb_main.cmx : ext/ext_sys.cmx ext/ext_string.cmx ext/ext_pervasives.cmx \
     ext/ext_path.cmx ext/ext_array.cmx bsb/bsb_world.cmx \
@@ -935,7 +931,6 @@ bsb/bsb_file.cmi :
 bsb/bsb_helper_dep_graph.cmi : ext/string_set.cmi ext/string_map.cmi \
     ext/string_hashtbl.cmi
 bsb/bsb_helper_extract.cmi : ext/string_set.cmi
-bsb/bsb_helper_findlib.cmi :
 bsb/bsb_helper_linker.cmi :
 bsb/bsb_helper_main.cmi :
 bsb/bsb_helper_packer.cmi :

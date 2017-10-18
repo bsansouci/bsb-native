@@ -174,12 +174,6 @@ let () =
     "-add-clib", (Arg.String add_clib),
     " adds a .a library file to be linked into the final executable";
     
-    
-    "-gen-findlib", (Arg.String (fun dir ->
-      Bsb_helper_findlib.gen_findlib_conf dir (Sys.getcwd ())
-    )),
-    " Generates a findlib.conf file replacing ocamlc/ocamlopt with the local compilers.";
-    
     "-global-ocaml-compiler", (Arg.Unit (fun () -> global_ocaml_compiler := true)),
     " Tell bsb_helper to use the globally available compiler when packing or linking."
     ] anonymous usage

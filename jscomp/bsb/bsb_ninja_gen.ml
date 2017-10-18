@@ -121,8 +121,9 @@ let output_ninja_and_namespace_map
     Bsb_build_util.flag_concat
       (if use_ocamlfind then "-passopt" else Ext_string.single_space)
       (ocaml_flags @ (if not global_ocaml_compiler then ["-color"; "always"] else []))  in
+
   let refmt_flags = String.concat Ext_string.single_space refmt_flags in
-  let bs_super_errors = if main_bs_super_errors && not global_ocaml_compiler then "-bs-super-errors" else "" in
+  let bs_super_errors = if main_bs_super_errors && not global_ocaml_compiler && not use_ocamlfind then "-bs-super-errors" else "" in
   let bs_package_includes = 
     Bsb_build_util.flag_concat dash_i @@ Ext_list.map 
       (fun (x : Bsb_config_types.dependency) -> x.package_install_path) bs_dependencies
@@ -130,8 +131,7 @@ let output_ninja_and_namespace_map
   let bs_package_dev_includes = 
     Bsb_build_util.flag_concat dash_i @@ Ext_list.map 
       (fun (x : Bsb_config_types.dependency) -> x.package_install_path) bs_dev_dependencies
-  in  
-  let findlib_conf_path = Bsb_build_util.get_findlib_path cwd in
+  in 
   
   begin
     let () =
@@ -199,6 +199,7 @@ let output_ninja_and_namespace_map
           Bsb_ninja_global_vars.ocamlfind_dependencies,  Bsb_build_util.flag_concat "-package" (external_ocamlfind_dependencies @ ocamlfind_dependencies);
           Bsb_ninja_global_vars.global_ocaml_compiler, if global_ocaml_compiler then "-global-ocaml-compiler" else "";
           Bsb_ninja_global_vars.berror, if global_ocaml_compiler then Ext_string.inter2 "2>&1 |" (bsc_dir // berror_exe) else "";
+
           (* @HACK 
               This might cause stale artifacts. This makes everything implicitly depend on the namespace file... 
               
@@ -206,11 +207,6 @@ let output_ninja_and_namespace_map
                      Ben - September 28th 2017
           *)
           Bsb_ninja_global_vars.open_flag, open_flag;
-          
-          Bsb_ninja_global_vars.findlib_conf_path, findlib_conf_path;
-          Bsb_ninja_global_vars.findlib_conf_env_var, 
-            if use_ocamlfind then (if global_ocaml_compiler then "" else "OCAMLFIND_CONF=" ^ findlib_conf_path)
-            else "";
           
           (** TODO: could be removed by adding a flag
               [-bs-ns react]
@@ -373,14 +369,6 @@ let output_ninja_and_namespace_map
         end;
         (ns ^ Literals.suffix_cmi) :: all_info
     in
-    (* Add rule to generate the findlib.conf file only if we need it. *)
-    let all_info = if ocamlfind_dependencies <> [] && not global_ocaml_compiler then begin
-      Bsb_ninja_util.output_build oc
-        ~output:(findlib_conf_path)
-        ~input:""
-        ~rule:Bsb_rule.generate_findlib_conf;
-      findlib_conf_path :: all_info
-    end else all_info in
     let () =
       List.iter (fun x -> Bsb_ninja_util.output_build oc
                     ~output:x

@@ -248,5 +248,3 @@ let get_ocaml_dir cwd =
 
 let get_ocaml_lib_dir ~is_js cwd =
   (Filename.dirname (get_bsc_dir cwd)) // "lib" // "ocaml"
-
-let get_findlib_path cwd = cwd // Bsb_config.lib_bs // Bsb_config.findlib_conf

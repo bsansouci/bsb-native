@@ -6,14 +6,12 @@ bin/bsb_helper.ml : ext/set_gen.ml
 bin/bsb_helper.ml : ext/vec_gen.ml
 bin/bsb_helper.ml : bsb/bsb_log.mli
 bin/bsb_helper.ml : bsb/bsb_pkg.mli
-bin/bsb_helper.ml : bsb/bsb_unix.ml
 bin/bsb_helper.ml : ext/ext_json.ml
 bin/bsb_helper.ml : ext/ext_list.ml
 bin/bsb_helper.ml : ext/ext_path.ml
 bin/bsb_helper.ml : ext/ext_sys.mli
 bin/bsb_helper.ml : ext/ext_util.ml
 bin/bsb_helper.ml : ext/literals.ml
-bin/bsb_helper.ml : bsb/bsb_unix.mli
 bin/bsb_helper.ml : ext/ext_array.ml
 bin/bsb_helper.ml : ext/ext_bytes.ml
 bin/bsb_helper.ml : ext/ext_color.ml
@@ -84,12 +82,10 @@ bin/bsb_helper.ml : bsb/bsb_helper_packer.ml
 bin/bsb_helper.ml : bsb/bsb_package_specs.ml
 bin/bsb_helper.ml : bsb/bsb_parse_sources.ml
 bin/bsb_helper.ml : bsb/bsb_helper_extract.ml
-bin/bsb_helper.ml : bsb/bsb_helper_findlib.ml
 bin/bsb_helper.ml : bsb/bsb_helper_linker.mli
 bin/bsb_helper.ml : bsb/bsb_helper_packer.mli
 bin/bsb_helper.ml : bsb/bsb_package_specs.mli
 bin/bsb_helper.ml : bsb/bsb_parse_sources.mli
 bin/bsb_helper.ml : bsb/bsb_helper_extract.mli
-bin/bsb_helper.ml : bsb/bsb_helper_findlib.mli
 bin/bsb_helper.ml : bsb/bsb_helper_dep_graph.ml
 bin/bsb_helper.ml : bsb/bsb_helper_dep_graph.mli

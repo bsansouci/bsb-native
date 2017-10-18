@@ -272,11 +272,6 @@ let build_cmxa_library =
               ${in} -pack-native-library ${berror}"
     "build_cmxa_library"
 
-let generate_findlib_conf = 
-  define
-    ~command:"${bsb_helper} -gen-findlib ${findlib_conf_path}"
-    "generate_findlib_conf"
-
 (* a snapshot of rule_names environment*)
 let built_in_rule_names = !rule_names 
 let built_in_rule_id = !rule_id
@@ -318,8 +313,6 @@ let reset (custom_rules : string String_map.t) =
     build_package_gen_mlast_simple.used <- false;
     build_package_build_cmi_bytecode.used <- false;
     build_package_build_cmi_native.used <- false;
-    
-    generate_findlib_conf.used <- false;
     
     String_map.mapi (fun name command -> 
         define ~command name

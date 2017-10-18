@@ -92,15 +92,13 @@ let pack pack_byte_or_native ~batch_files ~includes ~ocamlfind_packages ~bs_supe
             Ben - October 6th 2017
       *)
       let dir = Filename.dirname @@ Filename.dirname @@ Filename.dirname @@ cwd in
-      let findlib_env_var = if global_ocaml_compiler then "" else "OCAMLFIND_CONF=" ^ Bsb_build_util.get_findlib_path dir in
       let list_of_args = ("ocamlfind" :: compiler :: "-a" :: "-g" :: ocamlfind_packages) 
       @ ((if bs_super_errors then ["-passopt"; "-bs-super-errors"] else []))
       @ Bsb_default.ocaml_flags
       @  ("-o" :: (Literals.library_file ^ suffix_library_files) :: includes @ all_object_files) in
-      Unix.execvpe
+      Unix.execvp
         "ocamlfind"
           (Array.of_list list_of_args)
-          [| findlib_env_var |]
     end
   else
     failwith @@ "No " ^ suffix_object_files ^ " to pack into a lib."
