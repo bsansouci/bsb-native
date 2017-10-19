@@ -152,7 +152,7 @@ let c_linker_flags = "c-linker-flags"
 let build_script = "build-script"
 let allowed_build_kinds = "allowed-build-kinds"
 let ocamlfind_dependencies = "ocamlfind-dependencies"
-let bin_annot = "bin-annot"
+let ocaml_flags = "ocaml-flags"
 
 let warnings = "warnings"
 let number = "number"
@@ -10033,8 +10033,8 @@ type t =
     build_script: string option;
     allowed_build_kinds: compilation_kind_t list;
     ocamlfind_dependencies: string list;
-    bin_annot: bool;
     global_ocaml_compiler: bool;
+    ocaml_flags: string list;
   }
 
 end
@@ -10138,7 +10138,7 @@ let bsc_flags =
     "-color"; "always" 
   ]
 
-let ocaml_flags = ["-no-alias-deps"]
+let ocaml_flags = ["-no-alias-deps"; "-thread"]
 
 let refmt_flags = ["--print"; "binary"]
 
@@ -10635,9 +10635,9 @@ let interpret_json
   let bsc_flags = ref Bsb_default.bsc_flags in  
   let warnings = ref Bsb_default.warnings in
   let ocamlfind_dependencies = ref [] in
-  let bin_annot = ref false in
   let global_ocaml_compiler = ref false in
   let ppx_flags = ref []in 
+  let ocaml_flags = ref Bsb_default.ocaml_flags in
 
   let js_post_build_cmd = ref None in 
   let built_in_package = ref None in
@@ -10765,7 +10765,7 @@ let interpret_json
     |? (Bsb_build_schemas.build_script, `Str (fun s -> build_script := Some s))
     |? (Bsb_build_schemas.ocamlfind_dependencies, `Arr (fun s -> ocamlfind_dependencies := get_list_string s))
     |? (Bsb_build_schemas.bs_super_errors, `Bool (fun b -> bs_super_errors := b))
-    |? (Bsb_build_schemas.bin_annot, `Bool (fun b -> bin_annot := b))
+    |? (Bsb_build_schemas.ocaml_flags, `Arr (fun s -> ocaml_flags := !ocaml_flags @ (get_list_string s)))
     |? (Bsb_build_schemas.global_ocaml_compiler, `Bool (fun b -> global_ocaml_compiler := b))
     |> ignore ;
     begin match String_map.find_opt Bsb_build_schemas.sources map with 
@@ -10853,8 +10853,8 @@ let interpret_json
           build_script = !build_script;
           allowed_build_kinds = allowed_build_kinds;
           ocamlfind_dependencies = !ocamlfind_dependencies;
-          bin_annot = !bin_annot;
           global_ocaml_compiler = !global_ocaml_compiler;
+          ocaml_flags = !ocaml_flags;
         }
       | None -> failwith "no sources specified, please checkout the schema for more details"
     end
@@ -11380,7 +11380,6 @@ let ocamlc = "ocamlc"
 let ocamlopt = "ocamlopt"
 let ocamlfind = "ocamlfind"
 let ocamlfind_dependencies = "ocamlfind_dependencies"
-let bin_annot = "bs_bin_annot"
 let external_deps_for_linking = "external_deps_for_linking"
 let open_flag = "open_flag"
 let findlib_conf_path = "findlib_conf_path"
@@ -11666,7 +11665,7 @@ let build_cmj_cmi_js =
     "build_cmj_cmi" (* the compiler should never consult [.cmi] when [.mli] does not exist *)
 let build_cmi =
   define
-    ~command:"${bsc} ${bs_super_errors} ${bs_package_flags} ${bs_bin_annot} -bs-no-builtin-ppx-mli -bs-no-implicit-include \
+    ~command:"${bsc} ${bs_super_errors} ${bs_package_flags} -bs-no-builtin-ppx-mli -bs-no-implicit-include \
               ${bs_package_includes} ${bsc_lib_includes} ${bsc_extra_includes} ${open_package} ${warnings} ${bsc_flags} -o ${out} -c  ${in}"
     ~depfile:"${in}.d"
     "build_cmi" (* the compiler should always consult [.cmi], current the vanilla ocaml compiler only consult [.cmi] when [.mli] found*)
@@ -11683,41 +11682,41 @@ let build_package_gen_mlast_simple =
     
 let build_package_build_cmi_bytecode = 
   define
-    ~command:"${findlib_conf_env_var} ${ocamlfind} ${ocamlc} ${bs_super_errors_ocamlfind} ${bs_bin_annot} ${bs_package_includes} ${bsc_lib_includes} ${ocamlfind_dependencies} ${bsc_extra_includes} ${ocaml_flags} \
+    ~command:"${findlib_conf_env_var} ${ocamlfind} ${ocamlc} ${bs_super_errors_ocamlfind} ${bs_package_includes} ${bsc_lib_includes} ${ocamlfind_dependencies} ${bsc_extra_includes} ${ocaml_flags} \
               -o ${out} ${warnings} -no-alias-deps -w -49 -g -c -intf-suffix .mliast_simple -impl ${in} ${postbuild} ${berror}"
     "build_package_build_cmi_bytecode"
 
 let build_package_build_cmi_native = 
   define
-    ~command:"${findlib_conf_env_var} ${ocamlfind} ${ocamlopt} ${bs_super_errors_ocamlfind} ${bs_bin_annot} ${bs_package_includes} ${bsc_lib_includes} ${ocamlfind_dependencies} ${bsc_extra_includes} ${ocaml_flags} \
+    ~command:"${findlib_conf_env_var} ${ocamlfind} ${ocamlopt} ${bs_super_errors_ocamlfind} ${bs_package_includes} ${bsc_lib_includes} ${ocamlfind_dependencies} ${bsc_extra_includes} ${ocaml_flags} \
               -o ${out} ${warnings} -no-alias-deps -w -49 -g -c -intf-suffix .mliast_simple -impl ${in} ${postbuild} ${berror}"
     "build_package_build_cmi_native"
 
 
 let build_cmo_cmi_bytecode =
   define
-    ~command:"${findlib_conf_env_var} ${ocamlfind} ${ocamlc} ${open_flag} ${bs_super_errors_ocamlfind} ${bs_bin_annot} ${bs_package_includes} ${bsc_lib_includes} ${ocamlfind_dependencies} ${bsc_extra_includes} ${ocaml_flags} \
+    ~command:"${findlib_conf_env_var} ${ocamlfind} ${ocamlc} ${open_flag} ${bs_super_errors_ocamlfind} ${bs_package_includes} ${bsc_lib_includes} ${ocamlfind_dependencies} ${bsc_extra_includes} ${ocaml_flags} \
               -o ${out} ${warnings} -g -c -intf-suffix .mliast_simple -impl ${in}_simple ${postbuild} ${berror}"
     ~depfile:"${in}.d"
     "build_cmo_cmi_bytecode"
     
 let build_cmi_bytecode =
   define
-    ~command:"${findlib_conf_env_var} ${ocamlfind} ${ocamlc} ${open_flag} ${bs_super_errors_ocamlfind} ${bs_bin_annot} ${bs_package_includes} ${bsc_lib_includes} ${ocamlfind_dependencies} ${bsc_extra_includes} ${ocaml_flags} \
+    ~command:"${findlib_conf_env_var} ${ocamlfind} ${ocamlc} ${open_flag} ${bs_super_errors_ocamlfind} ${bs_package_includes} ${bsc_lib_includes} ${ocamlfind_dependencies} ${bsc_extra_includes} ${ocaml_flags} \
               -o ${out} ${warnings} -g -c -intf ${in}_simple ${postbuild} ${berror}"
     ~depfile:"${in}.d"
     "build_cmi_bytecode"
 
 let build_cmx_cmi_native =
   define
-    ~command:"${findlib_conf_env_var} ${ocamlfind} ${ocamlopt} ${open_flag} ${bs_super_errors_ocamlfind} ${bs_bin_annot} ${bs_package_includes} ${bsc_lib_includes} ${ocamlfind_dependencies} ${bsc_extra_includes} ${ocaml_flags} \
+    ~command:"${findlib_conf_env_var} ${ocamlfind} ${ocamlopt} ${open_flag} ${bs_super_errors_ocamlfind} ${bs_package_includes} ${bsc_lib_includes} ${ocamlfind_dependencies} ${bsc_extra_includes} ${ocaml_flags} \
               -o ${out} ${warnings} -g -c -intf-suffix .mliast_simple -impl ${in}_simple ${postbuild} ${berror}"
     ~depfile:"${in}.d"
     "build_cmx_cmi_native"
 
 let build_cmi_native =
   define
-    ~command:"${findlib_conf_env_var} ${ocamlfind} ${ocamlopt} ${open_flag} ${bs_super_errors_ocamlfind} ${bs_bin_annot} ${bs_package_includes} ${bsc_lib_includes} ${ocamlfind_dependencies} ${bsc_extra_includes} ${ocaml_flags} \
+    ~command:"${findlib_conf_env_var} ${ocamlfind} ${ocamlopt} ${open_flag} ${bs_super_errors_ocamlfind} ${bs_package_includes} ${bsc_lib_includes} ${ocamlfind_dependencies} ${bsc_extra_includes} ${ocaml_flags} \
               -o ${out} ${warnings} -g -c -intf ${in}_simple ${postbuild} ${berror}"
     ~depfile:"${in}.d"
     "build_cmi_native"
@@ -13089,7 +13088,7 @@ let output_ninja_and_namespace_map
       build_script;
       allowed_build_kinds;
       ocamlfind_dependencies;
-      bin_annot;
+      ocaml_flags;
     } : Bsb_config_types.t)
   =
   let custom_rules = Bsb_rule.reset generators in 
@@ -13112,12 +13111,13 @@ let output_ninja_and_namespace_map
   let ocamlopt = "ocamlopt" in
   let ppx_flags = Bsb_build_util.flag_concat dash_ppx ppx_flags in
   let bsc_flags =  String.concat Ext_string.single_space bsc_flags in
-  
+
   let use_ocamlfind = ocamlfind_dependencies <> [] in
-  
-  (* @Incomplete Not allowed to tweak ocaml_flags yet. *)
-  let ocaml_flags = Bsb_build_util.flag_concat (if use_ocamlfind then "-passopt" else Ext_string.single_space) Bsb_default.ocaml_flags in
-  let ocaml_flags = if not global_ocaml_compiler then Ext_string.inter2 ocaml_flags "-color always" else ocaml_flags in
+
+  let ocaml_flags =
+    Bsb_build_util.flag_concat
+      (if use_ocamlfind then "-passopt" else Ext_string.single_space)
+      (ocaml_flags @ (if not global_ocaml_compiler then ["-color"; "always"] else []))  in
   let refmt_flags = String.concat Ext_string.single_space refmt_flags in
   let bs_super_errors = if main_bs_super_errors && not global_ocaml_compiler then "-bs-super-errors" else "" in
   let bs_package_includes = 
@@ -13194,7 +13194,6 @@ let output_ninja_and_namespace_map
             else (if global_ocaml_compiler then ocamlopt ^ ".opt" else ocaml_dir // ocamlopt ^ ".opt");
           Bsb_ninja_global_vars.ocamlfind, if use_ocamlfind then ocamlfind else "";
           Bsb_ninja_global_vars.ocamlfind_dependencies,  Bsb_build_util.flag_concat "-package" (external_ocamlfind_dependencies @ ocamlfind_dependencies);
-          Bsb_ninja_global_vars.bin_annot, if bin_annot then "-bin-annot" else "";
           Bsb_ninja_global_vars.global_ocaml_compiler, if global_ocaml_compiler then "-global-ocaml-compiler" else "";
           Bsb_ninja_global_vars.berror, if global_ocaml_compiler then Ext_string.inter2 "2>&1 |" (bsc_dir // berror_exe) else "";
           (* @HACK 

@@ -157,9 +157,9 @@ let interpret_json
   let bsc_flags = ref Bsb_default.bsc_flags in  
   let warnings = ref Bsb_default.warnings in
   let ocamlfind_dependencies = ref [] in
-  let bin_annot = ref false in
   let global_ocaml_compiler = ref false in
   let ppx_flags = ref []in 
+  let ocaml_flags = ref Bsb_default.ocaml_flags in
 
   let js_post_build_cmd = ref None in 
   let built_in_package = ref None in
@@ -287,7 +287,7 @@ let interpret_json
     |? (Bsb_build_schemas.build_script, `Str (fun s -> build_script := Some s))
     |? (Bsb_build_schemas.ocamlfind_dependencies, `Arr (fun s -> ocamlfind_dependencies := get_list_string s))
     |? (Bsb_build_schemas.bs_super_errors, `Bool (fun b -> bs_super_errors := b))
-    |? (Bsb_build_schemas.bin_annot, `Bool (fun b -> bin_annot := b))
+    |? (Bsb_build_schemas.ocaml_flags, `Arr (fun s -> ocaml_flags := !ocaml_flags @ (get_list_string s)))
     |? (Bsb_build_schemas.global_ocaml_compiler, `Bool (fun b -> global_ocaml_compiler := b))
     |> ignore ;
     begin match String_map.find_opt Bsb_build_schemas.sources map with 
@@ -375,8 +375,8 @@ let interpret_json
           build_script = !build_script;
           allowed_build_kinds = allowed_build_kinds;
           ocamlfind_dependencies = !ocamlfind_dependencies;
-          bin_annot = !bin_annot;
           global_ocaml_compiler = !global_ocaml_compiler;
+          ocaml_flags = !ocaml_flags;
         }
       | None -> failwith "no sources specified, please checkout the schema for more details"
     end

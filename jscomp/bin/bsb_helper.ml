@@ -3908,7 +3908,7 @@ let c_linker_flags = "c-linker-flags"
 let build_script = "build-script"
 let allowed_build_kinds = "allowed-build-kinds"
 let ocamlfind_dependencies = "ocamlfind-dependencies"
-let bin_annot = "bin-annot"
+let ocaml_flags = "ocaml-flags"
 
 let warnings = "warnings"
 let number = "number"
@@ -10248,8 +10248,8 @@ type t =
     build_script: string option;
     allowed_build_kinds: compilation_kind_t list;
     ocamlfind_dependencies: string list;
-    bin_annot: bool;
     global_ocaml_compiler: bool;
+    ocaml_flags: string list;
   }
 
 end
@@ -10353,7 +10353,7 @@ let bsc_flags =
     "-color"; "always" 
   ]
 
-let ocaml_flags = ["-no-alias-deps"]
+let ocaml_flags = ["-no-alias-deps"; "-thread"]
 
 let refmt_flags = ["--print"; "binary"]
 

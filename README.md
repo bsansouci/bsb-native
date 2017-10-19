@@ -64,7 +64,10 @@ Yes `bsb-native` supports opam packages (see [ocamlfind example](https://github.
 
     // Array of opam dependencies.
     "ocamlfind-dependencies": ["lwt.unix"],
-    
+
+    // Array of flags to pass the OCaml compiler.
+    "ocaml-flags": ["-bin-annot"],
+
     // This allows you to write JS specific packages (for example) and depend 
     // on them without bsb choking on them when building to another platform.
     // If you have `MyLibJs` which exposes a module `Bla`, and `MyLibNative` 

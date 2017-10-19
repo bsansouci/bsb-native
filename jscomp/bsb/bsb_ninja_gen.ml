@@ -91,7 +91,7 @@ let output_ninja_and_namespace_map
       build_script;
       allowed_build_kinds;
       ocamlfind_dependencies;
-      bin_annot;
+      ocaml_flags;
     } : Bsb_config_types.t)
   =
   let custom_rules = Bsb_rule.reset generators in 
@@ -114,12 +114,13 @@ let output_ninja_and_namespace_map
   let ocamlopt = "ocamlopt" in
   let ppx_flags = Bsb_build_util.flag_concat dash_ppx ppx_flags in
   let bsc_flags =  String.concat Ext_string.single_space bsc_flags in
-  
+
   let use_ocamlfind = ocamlfind_dependencies <> [] in
-  
-  (* @Incomplete Not allowed to tweak ocaml_flags yet. *)
-  let ocaml_flags = Bsb_build_util.flag_concat (if use_ocamlfind then "-passopt" else Ext_string.single_space) Bsb_default.ocaml_flags in
-  let ocaml_flags = if not global_ocaml_compiler then Ext_string.inter2 ocaml_flags "-color always" else ocaml_flags in
+
+  let ocaml_flags =
+    Bsb_build_util.flag_concat
+      (if use_ocamlfind then "-passopt" else Ext_string.single_space)
+      (ocaml_flags @ (if not global_ocaml_compiler then ["-color"; "always"] else []))  in
   let refmt_flags = String.concat Ext_string.single_space refmt_flags in
   let bs_super_errors = if main_bs_super_errors && not global_ocaml_compiler then "-bs-super-errors" else "" in
   let bs_package_includes = 
@@ -196,7 +197,6 @@ let output_ninja_and_namespace_map
             else (if global_ocaml_compiler then ocamlopt ^ ".opt" else ocaml_dir // ocamlopt ^ ".opt");
           Bsb_ninja_global_vars.ocamlfind, if use_ocamlfind then ocamlfind else "";
           Bsb_ninja_global_vars.ocamlfind_dependencies,  Bsb_build_util.flag_concat "-package" (external_ocamlfind_dependencies @ ocamlfind_dependencies);
-          Bsb_ninja_global_vars.bin_annot, if bin_annot then "-bin-annot" else "";
           Bsb_ninja_global_vars.global_ocaml_compiler, if global_ocaml_compiler then "-global-ocaml-compiler" else "";
           Bsb_ninja_global_vars.berror, if global_ocaml_compiler then Ext_string.inter2 "2>&1 |" (bsc_dir // berror_exe) else "";
           (* @HACK 
