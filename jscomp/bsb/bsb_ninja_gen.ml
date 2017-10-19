@@ -117,8 +117,10 @@ let output_ninja_and_namespace_map
 
   let use_ocamlfind = ocamlfind_dependencies <> [] in
 
-  let ocaml_flags = Bsb_build_util.flag_concat (if use_ocamlfind then "-passopt" else Ext_string.single_space) ocaml_flags in
-  let ocaml_flags = if not global_ocaml_compiler then Ext_string.inter3 ocaml_flags (if use_ocamlfind then "-passopt" else "") "-color always" else ocaml_flags in
+  let ocaml_flags =
+    Bsb_build_util.flag_concat
+      (if use_ocamlfind then "-passopt" else Ext_string.single_space)
+      (ocaml_flags @ (if not global_ocaml_compiler then ["-color"; "always"] else []))  in
   let refmt_flags = String.concat Ext_string.single_space refmt_flags in
   let bs_super_errors = if main_bs_super_errors && not global_ocaml_compiler then "-bs-super-errors" else "" in
   let bs_package_includes = 
