@@ -52,7 +52,7 @@ let bsc_flags =
     "-color"; "always" 
   ]
 
-let ocaml_flags = ["-no-alias-deps"]
+let ocaml_flags = ["-no-alias-deps"; "-thread"]
 
 let refmt_flags = ["--print"; "binary"]
 

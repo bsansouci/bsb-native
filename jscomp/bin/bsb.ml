@@ -10138,7 +10138,7 @@ let bsc_flags =
     "-color"; "always" 
   ]
 
-let ocaml_flags = ["-no-alias-deps"]
+let ocaml_flags = ["-no-alias-deps"; "-thread"]
 
 let refmt_flags = ["--print"; "binary"]
 
@@ -10765,7 +10765,7 @@ let interpret_json
     |? (Bsb_build_schemas.build_script, `Str (fun s -> build_script := Some s))
     |? (Bsb_build_schemas.ocamlfind_dependencies, `Arr (fun s -> ocamlfind_dependencies := get_list_string s))
     |? (Bsb_build_schemas.bs_super_errors, `Bool (fun b -> bs_super_errors := b))
-    |? (Bsb_build_schemas.ocaml_flags, `Arr (fun s -> ocaml_flags := (List.fold_left (fun acc v -> v :: acc) [] (List.rev (get_list_string s)))))
+    |? (Bsb_build_schemas.ocaml_flags, `Arr (fun s -> ocaml_flags := !ocaml_flags @ (get_list_string s)))
     |? (Bsb_build_schemas.global_ocaml_compiler, `Bool (fun b -> global_ocaml_compiler := b))
     |> ignore ;
     begin match String_map.find_opt Bsb_build_schemas.sources map with 
