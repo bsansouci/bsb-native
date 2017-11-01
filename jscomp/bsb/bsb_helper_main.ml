@@ -51,6 +51,12 @@ let bs_super_errors = ref false
 
 let dev_group = ref 0
 let namespace = ref None
+
+
+let anonymous filename =
+  collect_file filename
+let usage = "Usage: bsb_helper.exe [options] \nOptions are:"
+#if BS_NATIVE then
 let link link_byte_or_native = 
   begin match !main_module with
   | None -> failwith "Linking needs a main module. Please add -main-module MyMainModule to the invocation."
@@ -67,10 +73,7 @@ let link link_byte_or_native =
       ~global_ocaml_compiler:!global_ocaml_compiler
       (Sys.getcwd ())
   end
-
-let anonymous filename =
-  collect_file filename
-let usage = "Usage: bsb_helper.exe [options] \nOptions are:"
+#end  
 let () =
   Arg.parse [
     "-g", Arg.Int (fun i -> dev_group := i ),
@@ -78,7 +81,7 @@ let () =
     ;
     "-MD", Arg.String (
       fun x -> 
-        Bsb_depfile_gen.make
+        Bsb_helper_depfile_gen.emit_dep_file
           Js 
           x (Bsb_dir_index.of_int !dev_group )
           !namespace
@@ -86,14 +89,15 @@ let () =
     " (internal)Generate dep file for ninja format(from .ml[i]deps)";
     "-ns", Arg.String (fun s -> namespace := Some s),
     " Set namespace";
+#if BS_NATIVE then    
     "-MD-bytecode", Arg.String (
       fun x -> 
-        Bsb_depfile_gen.make
+        Bsb_helper_depfile_gen.emit_dep_file
           Bytecode 
           x (Bsb_dir_index.of_int !dev_group ) !namespace),          
     " (internal)Generate dep file for ninja format(from .ml[i]deps)";
     "-MD-native", Arg.String (fun x -> 
-        Bsb_depfile_gen.make
+        Bsb_helper_depfile_gen.emit_dep_file
           Native 
            x (Bsb_dir_index.of_int !dev_group )
            !namespace
@@ -176,4 +180,5 @@ let () =
     
     "-global-ocaml-compiler", (Arg.Unit (fun () -> global_ocaml_compiler := true)),
     " Tell bsb_helper to use the globally available compiler when packing or linking."
-    ] anonymous usage
+#end    
+  ] anonymous usage

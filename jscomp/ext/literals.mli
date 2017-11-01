@@ -101,7 +101,7 @@ val suffix_rei : string
 val suffix_d : string
 val suffix_mlastd : string
 val suffix_mliastd : string
-val suffix_js : string
+
 val suffix_mli : string 
 val suffix_cmt : string 
 val suffix_cmti : string 
@@ -114,8 +114,8 @@ val amdjs_global : string
 val unused_attribute : string 
 val dash_nostdlib : string
 
-val reactjs_jsx_ppx_exe : string 
 val reactjs_jsx_ppx_2_exe : string 
+val reactjs_jsx_ppx_3_exe : string 
 val unescaped_j_delimiter : string 
 val escaped_j_delimiter : string 
 

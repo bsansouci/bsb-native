@@ -37,7 +37,7 @@ let regenerate_ninja
   ?main_bs_super_errors
   ?global_ocaml_compiler
   ~is_top_level
-  ~no_dev
+  ~not_dev
   ~override_package_specs
   ~generate_watch_metadata
   ~forced
@@ -46,11 +46,13 @@ let regenerate_ninja
   cwd bsc_dir ocaml_dir 
   : _ option =
   let output_deps = cwd // Bsb_config.lib_bs // bsdeps in
-  let check_result : Bsb_bsdeps.check_result =
-    Bsb_bsdeps.check ~cwd  ~forced ~file:output_deps backend in
+  let check_result  =
+    Bsb_ninja_check.check 
+      ~cwd  
+      ~forced ~file:output_deps backend in
   let () = 
     Bsb_log.info
-      "@{<info>BSB check@} build spec : %a @." Bsb_bsdeps.pp_check_result check_result in 
+      "@{<info>BSB check@} build spec : %a @." Bsb_ninja_check.pp_check_result check_result in 
   begin match check_result  with 
     | Good ->
       None  (* Fast path, no need regenerate ninja *)
@@ -66,8 +68,8 @@ let regenerate_ninja
         | Bsb_config_types.Bytecode -> "bytecode"
       end in
       if check_result = Bsb_bsc_version_mismatch then begin 
-        print_endline "Also clean current repo due to we have detected a different compiler";
-        Bsb_clean.clean_self ~nested bsc_dir cwd; 
+        Bsb_log.info "@{<info>Different compiler version@}: clean current repo";
+        Bsb_clean.clean_self ~is_cmdline_build_kind_set:true ~nested bsc_dir cwd; 
       end ; 
       (* Generate the nested folder before anything else... *)
       Bsb_build_util.mkp (cwd // Bsb_config.lib_bs // nested);
@@ -76,20 +78,12 @@ let regenerate_ninja
           ~override_package_specs
           ~bsc_dir
           ~generate_watch_metadata
-          ~no_dev
+          ~not_dev
           ~backend
           cwd in 
       begin 
         Bsb_merlin_gen.merlin_file_gen ~cwd ~backend
           (bsc_dir // bsppx_exe) config;
-        (match config.namespace with 
-        | None -> ()
-        | Some namespace -> 
-          (* generate a map file
-            TODO: adapt ninja rules
-          *)
-          Bsb_pkg_map_gen.output ~dir:cwd namespace config.bs_file_groups
-        );
         let external_deps_for_linking_and_clibs = match external_deps_for_linking_and_clibs with 
         | None -> 
           (* Either there's a `root_project_entry` (meaning we're currently building 
@@ -137,7 +131,7 @@ let regenerate_ninja
                         ~override_package_specs
                         ~bsc_dir
                         ~generate_watch_metadata:false
-                        ~no_dev:true
+                        ~not_dev:true
                         ~backend
                         cwd in
                     begin match backend with 
@@ -169,10 +163,10 @@ let regenerate_ninja
           | Some global_ocaml_compiler -> global_ocaml_compiler
         end in 
         Bsb_ninja_gen.output_ninja_and_namespace_map 
-          ~external_deps_for_linking_and_clibs 
           ~cwd 
           ~bsc_dir 
-          ~no_dev
+          ~not_dev
+          ~external_deps_for_linking_and_clibs 
           ~ocaml_dir 
           ~root_project_dir 
           ~is_top_level 
@@ -180,14 +174,11 @@ let regenerate_ninja
           ~backend 
           ~main_bs_super_errors
           config;
-        Literals.bsconfig_json :: config.globbed_dirs
-        |> Ext_list.map
-          (fun x ->
-             { Bsb_bsdeps.dir_or_file = x ;
-               stamp = (Unix.stat (cwd // x)).st_mtime
-             }
-          )
-        |> (fun x -> Bsb_bsdeps.store ~cwd ~file:output_deps (Array.of_list x) backend);
+        (* PR2184: we still need record empty dir 
+            since it may add files in the future *)  
+        Bsb_ninja_check.record ~cwd ~file:output_deps 
+          (Literals.bsconfig_json::config.globbed_dirs) 
+          backend;
         Some config 
       end 
   end

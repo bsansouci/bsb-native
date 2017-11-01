@@ -36,7 +36,7 @@ val regenerate_ninja :
   ?main_bs_super_errors:bool ->
   ?global_ocaml_compiler:bool ->
   is_top_level:bool ->
-  no_dev:bool ->
+  not_dev:bool ->
   override_package_specs:Bsb_package_specs.t option ->
   generate_watch_metadata: bool -> 
   forced: bool -> 

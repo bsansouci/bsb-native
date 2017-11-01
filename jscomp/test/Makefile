@@ -4,7 +4,7 @@ CAMLC=../bin/bsc.exe
 BSPACK=../bin/bspack.exe
 INCLUDES= -I ../stdlib  -I ../runtime -I ../others/
 
-OTHERS := literals a test_ari test_export2 test_internalOO test_obj_simple_ffi test_scope \
+OTHERS := test_literals a test_ari test_export2 test_internalOO test_obj_simple_ffi test_scope \
 	test_switch arith_lexer test_array test_external test_is_js test_order \
 	test_trywith arith_parser test_array_primitive test_js_ffi test_pack \
 	test_seq test_u arith_syntax test_bug test_ffi test_let test_per\
@@ -198,7 +198,9 @@ OTHERS := literals a test_ari test_export2 test_internalOO test_obj_simple_ffi t
 	escape_esmodule\
 	esmodule_ref\
 	miss_colon_test\
-	gpr_1245_test
+	gpr_1245_test\
+	gpr_2126_test\
+	big_enum
 # bs_uncurry_test
 # needs Lam to get rid of Uncurry arity first
 
@@ -212,8 +214,8 @@ $(addsuffix .cmi, $(OTHERS)): ../runtime/js.cmi
 $(addsuffix .cmj, $(OTHERS)): ../runtime/js.cmj
 
 # It is okay to test deprecated API
-COMPFLAGS+=  $(MODULE_FLAGS) -w -40 -warn-error A+8-3-30-26 
-COMPFLAGS+=  -bs-no-version-header -absname -bs-no-error-unused-attribute -bs-diagnose -bs-cross-module-opt -bs-package-name  bs-platform -bs-package-output commonjs:jscomp/test
+COMPFLAGS+=  $(MODULE_FLAGS) -w -40 -warn-error A+8-3-30-26-101-102 
+COMPFLAGS+=  -bs-no-version-header -absname -bs-diagnose -bs-cross-module-opt -bs-package-name  bs-platform -bs-package-output commonjs:jscomp/test
 
 
 $(TESTS): $(CAMLC)
@@ -226,7 +228,7 @@ clean::
 	rm -f  *.annot
 	rm -f $(TESTS)
 	rm -f *.rawlambda *.lam *.lambda *.map
-	rm arith_lexer.ml number_lexer.ml simple_lexer_test.ml
+	rm -f arith_lexer.ml number_lexer.ml simple_lexer_test.ml
 
 .mli.cmi:
 	$(CAMLC) $(INCLUDES) $(COMPFLAGS) -c $<

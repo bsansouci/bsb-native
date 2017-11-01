@@ -127,6 +127,11 @@ let chop_extension ?(loc="") name =
 let chop_extension_if_any fname =
   try Filename.chop_extension fname with Invalid_argument _ -> fname
 
+let rec chop_all_extensions_if_any fname =
+  match Filename.chop_extension fname with 
+  | x -> chop_all_extensions_if_any x 
+  | exception _ -> fname
+
 let get_extension x =
   let pos = Ext_string.rindex_neg x '.' in 
   if pos < 0 then ""
@@ -290,3 +295,12 @@ let absolute cwd s =
   match s with 
   | File x -> File (absolute_path cwd x )
   | Dir x -> Dir (absolute_path cwd x)
+
+let concat dirname filename =
+  if filename = Filename.current_dir_name then dirname
+  else if dirname = Filename.current_dir_name then filename
+  else Filename.concat dirname filename
+  
+
+let check_suffix_case =
+  Ext_string.ends_with

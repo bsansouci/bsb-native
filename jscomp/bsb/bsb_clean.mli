@@ -26,6 +26,6 @@
   TODO: clean staled in source js artifacts
 *)
 
-val clean_bs_deps : nested:string -> string -> string -> unit 
+val clean_bs_deps : is_cmdline_build_kind_set:bool -> nested:string -> string -> string -> unit 
 
-val clean_self : nested:string -> string -> string -> unit 
+val clean_self : is_cmdline_build_kind_set:bool -> nested:string -> string -> string -> unit 

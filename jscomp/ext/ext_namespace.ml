@@ -48,17 +48,61 @@ let remove_ns_suffix name =
   if i < 0 then name 
   else String.sub name 0 i 
 
-
-let js_name_of_basename s = 
-  remove_ns_suffix  s ^ Literals.suffix_js
-
-let js_name_of_modulename ~little s = 
-  if little then 
-    remove_ns_suffix (String.uncapitalize s) ^ Literals.suffix_js
+let try_split_module_name name = 
+  let len = String.length name in 
+  let i = rindex_rec name (len - 1)  in 
+  if i < 0 then None 
   else 
-    remove_ns_suffix s ^ Literals.suffix_js
+    Some (String.sub name (i+1) (len - i - 1),
+          String.sub name 0 i )
+type file_kind = 
+  | Upper_js
+  | Upper_bs
+  | Little_js 
+  | Little_bs
 
-    
+let suffix_js = ".js"  
+let bs_suffix_js = ".bs.js"
+
+let ends_with_bs_suffix_then_chop s = 
+  Ext_string.ends_with_then_chop s bs_suffix_js
+  
+let js_name_of_basename bs_suffix s =   
+  remove_ns_suffix  s ^ 
+  (if bs_suffix then bs_suffix_js else  suffix_js )
+
+let js_name_of_modulename little s = 
+  match little with 
+  | Little_js -> 
+    remove_ns_suffix (String.uncapitalize s) ^ suffix_js
+  | Little_bs -> 
+    remove_ns_suffix (String.uncapitalize s) ^ bs_suffix_js
+  | Upper_js ->
+    remove_ns_suffix s ^ suffix_js
+  | Upper_bs -> 
+    remove_ns_suffix s ^ bs_suffix_js
+
+(* https://docs.npmjs.com/files/package.json 
+   Some rules:
+   The name must be less than or equal to 214 characters. This includes the scope for scoped packages.
+   The name can't start with a dot or an underscore.
+   New packages must not have uppercase letters in the name.
+   The name ends up being part of a URL, an argument on the command line, and a folder name. Therefore, the name can't contain any non-URL-safe characters.
+*)
+let is_valid_npm_package_name (s : string) = 
+  let len = String.length s in 
+  len <= 214 && (* magic number forced by npm *)
+  len > 0 &&
+  match String.unsafe_get s 0 with 
+  | 'a' .. 'z' | '@' -> 
+    Ext_string.for_all_from s 1 
+      (fun x -> 
+         match x with 
+         |  'a'..'z' | '0'..'9' | '_' | '-' -> true
+         | _ -> false )
+  | _ -> false 
+
+
 let namespace_of_package_name (s : string) : string = 
   let len = String.length s in 
   let buf = Buffer.create len in 

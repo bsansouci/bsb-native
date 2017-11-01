@@ -91,7 +91,6 @@ Yes `bsb-native` supports opam packages (see [ocamlfind example](https://github.
 }
 ```
 
-
 ## Multi-target
 `bsb-native` actually supports building Reason/OCaml to JS as well as to native/bytecode. What that enables is cross platform code that depends only on an interface, and bsb-native will choose the right implementation depending on what you target.
 

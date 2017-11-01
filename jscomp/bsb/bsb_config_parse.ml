@@ -23,6 +23,8 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
 
 let config_file_bak = "bsconfig.json.bak"
+let refmt3_exe = "refmt3.exe"
+let refmt2_exe = "refmt.exe"
 let get_list_string = Bsb_build_util.get_list_string
 let (//) = Ext_path.combine
 
@@ -127,28 +129,45 @@ let entries_from_bsconfig () =
 (*TODO: it is a little mess that [cwd] and [project dir] are shared*)
 
 
+let extract_package_name_and_namespace
+    loc (map : Ext_json_types.t String_map.t) : string * string option =   
+  let package_name = 
+    match String_map.find_opt Bsb_build_schemas.name map with 
 
-
+    | Some (Str { str = "_" })
+      -> 
+      Bsb_exception.errorf ~loc "_ is a reserved package name"
+    | Some (Str {str = name }) -> 
+      name 
+    | Some _ | None -> 
+      Bsb_exception.errorf ~loc
+        "field name  as string is required"
+  in 
+  let namespace = 
+    match String_map.find_opt Bsb_build_schemas.namespace map with 
+    | None -> None 
+    | Some (True _) -> 
+      Some (Ext_namespace.namespace_of_package_name package_name)
+    | Some (False _) 
+    | Some _ -> None in 
+  package_name, namespace
 (** ATT: make sure such function is re-entrant. 
     With a given [cwd] it works anywhere*)
 let interpret_json 
     ~override_package_specs
     ~bsc_dir 
     ~generate_watch_metadata
-    ~no_dev 
     ~backend
+    ~not_dev 
     cwd  
 
   : Bsb_config_types.t =
 
   let reason_react_jsx = ref None in 
   let config_json = (cwd // Literals.bsconfig_json) in
-  let refmt = ref None in
   let refmt_flags = ref Bsb_default.refmt_flags in
   let build_script = ref None in
   let static_libraries = ref [] in
-  let package_name = ref None in 
-  let namespace = ref false in 
   let bs_external_includes = ref [] in 
   let bs_super_errors = ref Bsb_default.bs_super_errors in
   (** we should not resolve it too early,
@@ -180,9 +199,33 @@ let interpret_json
   let entries = ref Bsb_default.main_entries in
   let cut_generators = ref false in 
   let config_json_chan = open_in_bin config_json  in
-  let global_data = Ext_json_parse.parse_json_from_chan config_json_chan  in
+  let global_data = 
+    Ext_json_parse.parse_json_from_chan 
+      config_json config_json_chan  in
   match global_data with
-  | Obj { map} ->
+  | Obj { map ; loc } ->
+    let package_name, namespace = 
+      extract_package_name_and_namespace loc  map in 
+    let refmt =   
+      match String_map.find_opt Bsb_build_schemas.refmt map with 
+      | Some (Flo {flo} as config) -> 
+        begin match flo with 
+        | "2" -> bsc_dir // refmt2_exe
+        | "3" -> bsc_dir // refmt3_exe
+        | _ -> Bsb_exception.config_error config "expect version 2 or 3"
+        end
+      | Some (Str {str}) 
+        -> 
+
+        (Bsb_build_util.resolve_bsb_magic_file 
+          ~cwd ~desc:Bsb_build_schemas.refmt str)
+      | Some config  -> 
+        Bsb_exception.config_error config "expect version 2 or 3"
+      | None ->
+        Bsb_log.warn "@{<warn>Warning:@} refmt version missing. It is recommended to set it explicitly, since we may change the default in the future.@.";
+        bsc_dir // refmt2_exe
+
+    in 
     (* The default situation is empty *)
     (match String_map.find_opt Bsb_build_schemas.use_stdlib map with      
      | Some (False _) -> 
@@ -207,35 +250,25 @@ let interpret_json
     map
     |? (Bsb_build_schemas.reason, `Obj begin fun m -> 
         match String_map.find_opt Bsb_build_schemas.react_jsx m with 
-
-        | Some (False _)
-        | None -> ()
         | Some (Flo{loc; flo}) -> 
           begin match flo with 
-            | "1" -> 
-              reason_react_jsx := 
-                Some (Filename.quote (Filename.concat bsc_dir Literals.reactjs_jsx_ppx_exe) )
             | "2" -> 
               reason_react_jsx := 
                 Some (Filename.quote 
                         (Filename.concat bsc_dir Literals.reactjs_jsx_ppx_2_exe) )
+            | "3" -> 
+              Bsb_exception.errorf ~loc "JSX version 3 is deprecated, please downgrade to 1.x for version 3"
             | _ -> Bsb_exception.errorf ~loc "Unsupported jsx version %s" flo
-          end
-        | Some (True _) -> 
-          reason_react_jsx := 
-            Some (Filename.quote (Filename.concat bsc_dir Literals.reactjs_jsx_ppx_exe) 
-                 )
-        | Some x -> Bsb_exception.errorf ~loc:(Ext_json.loc_of x) 
-                      "Unexpected input for jsx"
+          end        
+        | Some x -> Bsb_exception.config_error x 
+                      "Unexpected input (expect a version number) for jsx, note boolean is no longer allowed"
+        | None -> ()
       end)
 
     |? (Bsb_build_schemas.generate_merlin, `Bool (fun b ->
         generate_merlin := b
       ))
-    |? (Bsb_build_schemas.name, `Str (fun s -> package_name := Some s))
-    |? (Bsb_build_schemas.namespace, `Bool (fun b ->
-        namespace := b
-      ))
+
     |? (Bsb_build_schemas.js_post_build, `Obj begin fun m ->
         m |? (Bsb_build_schemas.cmd , `Str (fun s -> 
             js_post_build_cmd := Some (Bsb_build_util.resolve_bsb_magic_file ~cwd ~desc:Bsb_build_schemas.js_post_build s)
@@ -248,7 +281,7 @@ let interpret_json
     |? (Bsb_build_schemas.bs_dependencies, `Arr (fun s -> bs_dependencies := Bsb_build_util.get_list_string s |> Ext_list.map (resolve_package backend cwd)))
     |? (Bsb_build_schemas.bs_dev_dependencies,
         `Arr (fun s ->
-            if not  no_dev then 
+            if not  not_dev then 
               bs_dev_dependencies
               := Bsb_build_util.get_list_string s
                  |> Ext_list.map (resolve_package backend cwd))
@@ -278,8 +311,6 @@ let interpret_json
                   Bsb_exception.errorf ~loc {| generators exepect format like { "name" : "cppo",  "command"  : "cppo $in -o $out"} |}
                 end
               | _ -> acc ) String_map.empty  s  ))
-    |? (Bsb_build_schemas.refmt, `Str (fun s -> 
-        refmt := Some (Bsb_build_util.resolve_bsb_magic_file ~cwd ~desc:Bsb_build_schemas.refmt s) ))
     |? (Bsb_build_schemas.refmt_flags, `Arr (fun s -> refmt_flags := get_list_string s))
     |? (Bsb_build_schemas.entries, `Arr (fun s -> entries := parse_entries s))
     |? (Bsb_build_schemas.static_libraries, `Arr (fun s -> static_libraries := (List.map (fun v -> cwd // v) (get_list_string s))))
@@ -293,13 +324,14 @@ let interpret_json
     begin match String_map.find_opt Bsb_build_schemas.sources map with 
       | Some x -> 
         let res = Bsb_parse_sources.parse_sources 
-            {no_dev; 
+            {not_dev; 
              dir_index =
                Bsb_dir_index.lib_dir_index; 
              cwd = Filename.current_dir_name; 
              root = cwd;
              cut_generators = !cut_generators;
              traverse = false;
+             namespace; 
             }  x in 
         if generate_watch_metadata then
           Bsb_watcher_gen.generate_sourcedirs_meta cwd res ;     
@@ -317,31 +349,23 @@ let interpret_json
             Unix.unlink config_json;
             Unix.rename output_file config_json
         end;
-        let package_name =       
-          match !package_name with
-          | None 
-            ->
-              Bsb_exception.config_error global_data
-              "Field name is required"
-          | Some "_" 
-            -> 
-            Bsb_exception.config_error global_data
-            "_ is a reserved package name"
-          | Some name -> 
-            name
-
-        in 
-        let namespace =     
-          if !namespace then 
-            Some (Ext_namespace.namespace_of_package_name package_name)
-          else   None  in  
         let warning : Bsb_warning.t option  = 
           match String_map.find_opt Bsb_build_schemas.warnings map with 
           | None -> None 
           | Some (Obj {map }) -> Bsb_warning.from_map map 
           | Some config -> Bsb_exception.config_error config "expect an object"
         in 
+        let bs_suffix = 
+          match String_map.find_opt Bsb_build_schemas.suffix map with 
+          | None -> false  
+          | Some (Str {str = ".js"} ) -> false 
+          | Some (Str {str = ".bs.js"}) -> true           
+          | Some config -> 
+            Bsb_exception.config_error config 
+              "expect .bs.js or .js string here"
+        in   
         {
+          bs_suffix ;
           package_name ;
           namespace ;    
           warning = warning;
@@ -351,7 +375,7 @@ let interpret_json
           ppx_flags = !ppx_flags ;
           bs_dependencies = !bs_dependencies;
           bs_dev_dependencies = !bs_dev_dependencies;
-          refmt = !refmt ;
+          refmt;
           refmt_flags = !refmt_flags ;
           js_post_build_cmd =  !js_post_build_cmd ;
           package_specs = 

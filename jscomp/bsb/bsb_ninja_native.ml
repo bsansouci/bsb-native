@@ -32,7 +32,7 @@ let output_build = Bsb_ninja_util.output_build
 let (//) = Ext_path.combine
 
 let install_file module_info files_to_install =
-  String_hash_set.add  files_to_install (Bsb_build_cache.filename_sans_suffix_of_module_info module_info)
+  String_hash_set.add  files_to_install (Bsb_db.filename_sans_suffix_of_module_info module_info)
 
 
 
@@ -49,11 +49,12 @@ let handle_file_group oc
   ~package_specs
   ~js_post_build_cmd
   ~namespace
+  ~bs_suffix
   (files_to_install : String_hash_set.t)
   acc
   (group: Bsb_parse_sources.file_group) : Bsb_ninja_file_groups.info =
   let handle_module_info  oc  namespace module_name
-      ( module_info : Bsb_build_cache.module_info)
+      ( module_info : Bsb_db.module_info)
       info  =
     let installable =
       match group.public with
@@ -85,7 +86,7 @@ let handle_file_group oc
         | Native   -> output_filename_sans_extension ^ Literals.suffix_cmx
       in
       let output_js =
-        Bsb_package_specs.get_list_of_output_js package_specs output_filename_sans_extension in 
+        Bsb_package_specs.get_list_of_output_js package_specs bs_suffix output_filename_sans_extension in 
       (* let output_mldeps = output_filename_sans_extension ^ Literals.suffix_mldeps in  *)
       (* let output_mlideps = output_filename_sans_extension ^ Literals.suffix_mlideps in  *)
       let shadows =
@@ -271,7 +272,7 @@ let link oc ret ~entries ~file_groups ~static_libraries ~namespace ~external_dep
       end in
     let (all_mlast_files, all_cmo_or_cmx_files, all_cmi_files) =
       List.fold_left (fun acc group -> 
-        String_map.fold (fun _ (v : Bsb_build_cache.module_info) (all_mlast_files, all_cmo_or_cmx_files, all_cmi_files) -> 
+        String_map.fold (fun _ (v : Bsb_db.module_info) (all_mlast_files, all_cmo_or_cmx_files, all_cmi_files) -> 
           let mlname = match v.ml with
             | Ml_source (input, _, _) ->
             let input = (Ext_path.chop_extension_if_any input)  in
@@ -333,7 +334,7 @@ let pack oc ret ~backend ~file_groups ~namespace =
      files that are used by the main project. *)
   let all_cmo_or_cmx_files, all_cmi_files =
     List.fold_left (fun acc group -> 
-      String_map.fold (fun _ (v : Bsb_build_cache.module_info) (all_cmo_or_cmx_files, all_cmi_files) -> 
+      String_map.fold (fun _ (v : Bsb_db.module_info) (all_cmo_or_cmx_files, all_cmi_files) -> 
         let mlname = match v.ml with
             | Ml_source (input, _, _) ->
             let input = (Ext_path.chop_extension_if_any input)  in
@@ -389,6 +390,7 @@ let handle_file_groups oc
   ~files_to_install
   ~static_libraries
   ~external_deps_for_linking
+  ~bs_suffix
   (file_groups  :  Bsb_parse_sources.file_group list) namespace st =
   let file_groups = List.filter (fun group ->
     match backend with 
@@ -403,6 +405,7 @@ let handle_file_groups oc
       ~package_specs
       ~js_post_build_cmd 
       ~namespace
+      ~bs_suffix
       files_to_install
   ) st file_groups in
   if is_top_level then

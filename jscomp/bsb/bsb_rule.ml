@@ -189,7 +189,7 @@ let build_cmj_cmi_js =
 let build_cmi =
   define
     ~command:"${bsc} ${bs_super_errors} ${bs_package_flags} -bs-no-builtin-ppx-mli -bs-no-implicit-include \
-              ${bs_package_includes} ${bsc_lib_includes} ${bsc_extra_includes} ${open_package} ${warnings} ${bsc_flags} -o ${out} -c  ${in}"
+              ${bs_package_includes} ${bsc_lib_includes} ${bsc_extra_includes} ${warnings} ${bsc_flags} -o ${out} -c  ${in}"
     ~depfile:"${in}.d"
     "build_cmi" (* the compiler should always consult [.cmi], current the vanilla ocaml compiler only consult [.cmi] when [.mli] found*)
 

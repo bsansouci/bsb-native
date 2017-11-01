@@ -46,7 +46,7 @@ let query_current_package_sources cwd backend bsc_dir =
     let config_opt  = Bsb_ninja_regen.regenerate_ninja 
       ~is_top_level:true
       ~root_project_dir:cwd
-      ~no_dev:false
+      ~not_dev:false
       ~override_package_specs:None
       ~generate_watch_metadata:true
       ~forced:true ~backend cwd bsc_dir ocaml_dir in 

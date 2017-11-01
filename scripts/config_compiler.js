@@ -1,10 +1,9 @@
 'use strict';
 
-var Fs                      = require("fs");
-var Path                    = require("path");
-var Process                 = require("process");
-var Child_process           = require("child_process");
-var Caml_builtin_exceptions = require("./caml_builtin_exceptions.js");
+var Fs            = require("fs");
+var Path          = require("path");
+var Process       = require("process");
+var Child_process = require("child_process");
 
 var delete_env_var = (
   function(process, key) { delete process.env[key] }
@@ -81,14 +80,7 @@ function patch_config(jscomp_dir, config_map, is_windows) {
           return "";
         }
       } else {
-        throw [
-              Caml_builtin_exceptions.assert_failure,
-              [
-                "config_compiler.ml",
-                110,
-                16
-              ]
-            ];
+        throw new Error("File \"config_compiler.ml\", line 94, characters 34-41");
       }
     }
   };
@@ -147,14 +139,7 @@ var dirname;
 if (match !== undefined) {
   dirname = match;
 } else {
-  throw [
-        Caml_builtin_exceptions.assert_failure,
-        [
-          "config_compiler.ml",
-          150,
-          14
-        ]
-      ];
+  throw new Error("Not node");
 }
 
 var working_dir = Process.cwd();

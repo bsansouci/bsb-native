@@ -26,10 +26,10 @@
   generate ninja file based on [cwd] and [bsc_dir]
 *)
 val output_ninja_and_namespace_map :
-  external_deps_for_linking_and_clibs:string list * string list * string list ->
   cwd:string ->
   bsc_dir:string ->  
-  no_dev:bool -> 
+  not_dev:bool -> 
+  external_deps_for_linking_and_clibs:string list * string list * string list ->
   ocaml_dir:string ->
   root_project_dir:string ->
   is_top_level: bool ->

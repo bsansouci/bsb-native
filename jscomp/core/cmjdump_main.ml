@@ -24,13 +24,25 @@
 
 let p = Format.fprintf 
 
+let pp_cmj_case fmt (cmj_case : Js_cmj_format.cmj_case) = 
+  match cmj_case with 
+  | Little_js -> 
+    p fmt "@[case : little, .js @]@."
+  | Little_bs -> 
+    p fmt "@[case : little, .bs.js @]@."    
+  | Upper_js -> 
+    p fmt "@[case: upper, .js  @]@."
+  | Upper_bs -> 
+    p fmt "@[case: upper, .bs.js  @]@."    
+
 let pp_cmj fmt 
-    ({ values ; effect; npm_package_path ; case} :Js_cmj_format.t) = 
+    ({ values ; effect; npm_package_path ; cmj_case} :Js_cmj_format.t) = 
   p fmt "@[package info: %a@]@."  
     Js_packages_info.dump_packages_info
     npm_package_path
-    ;
-  p fmt "@[case:%b@]@." case ; 
+  ;
+  pp_cmj_case fmt cmj_case;
+
   p fmt "@[effect: %a@]@."
     (fun fmt o ->
        match o with None -> ()
@@ -38,15 +50,22 @@ let pp_cmj fmt
     ) effect ;
   p fmt "@[arities: @[%a@]@]@."
     (fun fmt m -> 
-       m |> String_map.iter (fun k (v : Js_cmj_format.cmj_value) -> 
-           match v.arity with 
-           | Single arity ->
-             p fmt "@[%s:@ @[%a@]@]@." k Lam_arity.print arity
-           | Submodule xs -> 
-             p fmt "@[<h 1>@[%s:@ @[<hov 2>%a@]@]@]" k 
-               (fun fmt xs ->
-                  Array.iter (fun arity -> p fmt "@[%a@]@ ;" Lam_arity.print arity ) 
-                    xs) xs 
+       m |> String_map.iter 
+         (fun k ({arity; closed_lambda} : Js_cmj_format.cmj_value) -> 
+            let non_saved = closed_lambda = None in 
+            match arity with             
+            | Single arity ->
+              p fmt "@[%s:@ %b@ @[%a@]@]@." 
+                k 
+                (not non_saved) 
+                Lam_arity.print arity
+            | Submodule xs -> 
+              p fmt "@[<h 1>@[%s:@ %b@ @[<hov 2>%a@]@]@]" 
+                k 
+                (not non_saved)
+                (fun fmt xs ->
+                   Array.iter (fun arity -> p fmt "@[%a@]@ ;" Lam_arity.print arity ) 
+                     xs) xs 
 
          )) values
 

@@ -51,16 +51,8 @@
         },
         "react-jsx-version": {
             "title": "jsx-version",
-            "oneOf": [
-                {
-                    "type": "boolean",
-                    "description": "backward compatible mode, true means on with the default to be version 1 (the default value is subject to change)"
-                },
-                {
-                    "type": "number",
-                    "description": "jsx version number, current recommend version number is 2"
-                }
-            ]
+            "type": "number",
+            "description": "backward compatible mode, true means on with the default to be version 1 (the default value is subject to change)"
         },
         "ppx-specs": {
             "type": "array",
@@ -193,17 +185,17 @@
                             }
                         },
                         "subdirs": {
-                            "title" : "Sub directories",
-                            "oneOf" : [
+                            "title": "Sub directories",
+                            "oneOf": [
                                 {
                                     "$ref": "#/definitions/sources",
                                     "description": "More source directories"
                                 },
                                 {
-                                    "type" : "boolean",
+                                    "type": "boolean",
                                     "description": "true means traverse to all subdirs"
                                 }
-                            ]                                                        
+                            ]
                         },
                         "group": {
                             "oneOf": [
@@ -293,6 +285,19 @@
                 }
             }
         },
+        "refmt-specs": {
+            "oneOf": [
+                {
+                    "type": "number",
+                    "enum": [2, 3],
+                    "description": "Reason syntax version to use. Prefer 3. Default: 2, for backward-compatiblity"
+                },
+                {
+                    "type": "string",
+                    "description": "(Usually not needed) Alternative path to `refmt`, the Reason syntax binary. Default: path to the `refmt.exe` BuckleScript provides out of the box"
+                }
+            ]
+        },
         "bsc-flags": {
             "oneOf": [
                 {
@@ -336,8 +341,8 @@
             "type": "string",
             "description": "Package name"
         },
-        "namespace" : {
-            "type" : "boolean",
+        "namespace": {
+            "type": "boolean",
             "description": "(WIP)whether use namespace or not, the name of namespace is automatically converted from name"
         },
         "sources": {
@@ -371,21 +376,21 @@
             "$ref": "#/definitions/bsc-flags",
             "description": "Flags passed to bsc.exe"
         },
-        "warnings" : {
-            "type" : "object",
+        "warnings": {
+            "type": "object",
             "properties": {
-                "number" : {
-                    "type" : "string",
+                "number": {
+                    "type": "string",
                     "description": "Default: -40+6+7+27+32..39+44+45 [Here](https://caml.inria.fr/pub/docs/manual-ocaml/comp.html#sec270) for the meanings of the warning flags"
                 },
-                "error" : {
-                    "oneOf" : [
+                "error": {
+                    "oneOf": [
                         {
-                            "type" : "boolean",
-                            "description" : "True means warn is error(default)"
+                            "type": "boolean",
+                            "description": "True means warn is error(default)"
                         },
                         {
-                            "type" : "string",
+                            "type": "string",
                             "description": "Same as warning number but different set"
                         }
                     ]
@@ -395,7 +400,7 @@
         },
         "ppx-flags": {
             "$ref": "#/definitions/ppx-specs",
-            "description": "PPX macros to pass to compiler. The syntax is package_name/binary, for example: `reason/reactjs_jsx_ppx.native`. Currenly searches in `node_modules`"
+            "description": "PPX macros to pass to compiler. The syntax is package_name/binary, for example: `reason/reactjs_jsx_ppx_3.native`. Currenly searches in `node_modules`"
         },
         "js-post-build": {
             "$ref": "#/definitions/js-post-build",
@@ -425,8 +430,8 @@
             "description": "(Not needed usually) external include directories, which will be applied `-I` to all compilation units"
         },
         "refmt": {
-            "type": "string",
-            "description": "(Not needed usually) alternative path to `refmt` for Reason syntax, for example: `reason/refmt_impl.native`. Default: the `refmt.exe` BuckleScript provides out of the box"
+            "$ref": "#/definitions/refmt-specs",
+            "description": "Reason syntax configuration"
         },
         "refmt-flags": {
             "type": "array",
@@ -434,6 +439,13 @@
                 "type": "string"
             },
             "description": "(Not needed usually) arguments to pass to `refmt` above. Default: `[\"--print\", \"binary\"]`."
+        },
+        "suffix" : {
+            "enum" : [
+                ".js",
+                ".bs.js"
+            ],
+            "description": "suffix of generated js files, default to [.js] "
         }
     },
     "additionalProperties": false,

@@ -39,7 +39,7 @@ type compilation_kind_t = Js | Bytecode | Native
 type  file_group = 
   { dir : string ; 
     (* currently relative path expected for ninja file generation *)
-    sources : Bsb_build_cache.t ; 
+    sources : Bsb_db.t ; 
     resources : string list ; 
     (* relative path *)
     public : public;
@@ -48,7 +48,10 @@ type  file_group =
     kind: compilation_kind_t list;
   } 
 
-
+(** when [is_empty file_group]
+    we don't need issue [-I] [-S] in [.merlin] file
+*)  
+val is_empty : file_group -> bool 
 
 type t = 
   { files :  file_group list ;
@@ -63,39 +66,38 @@ type t =
 
 
 type cxt = {
-  no_dev : bool ;
+  not_dev : bool ;
   dir_index : Bsb_dir_index.t ; 
   cwd : string ;
   root : string ;
   cut_generators : bool;
-  traverse : bool
+  traverse : bool;
+  namespace : string option;
 }
 
 
-val parsing_simple_dir : 
+(* val parsing_simple_dir : 
   cxt -> 
   string -> 
-  t
+  t *)
 
-val parsing_source_dir_map :
+(* val parsing_source_dir_map :
   cxt ->
   Ext_json_types.t String_map.t -> 
-  t
+  t *)
 
-val parsing_source : 
+(* val parsing_source : 
   cxt -> 
   Ext_json_types.t ->     
-  t 
+  t  *)
 
-val parsing_arr_sources :  
+(* val parsing_arr_sources :  
   cxt ->
   Ext_json_types.t array ->
-  t
+  t *)
 
-(** entry is to the 
-    [sources] in the schema
-
-    [parse_sources cxt json]
+(** [parse_sources cxt json]
+    entry is to the [sources] in the schema    
     given a root, return an object which is
     all relative paths, this function will do the IO
 *)

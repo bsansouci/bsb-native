@@ -29,8 +29,9 @@ type t
 
 
 (**
+   [combine path1 path2]
    1. add some simplifications when concatenating
-   2. when the second one is absolute, drop the first one
+   2. when [path2] is absolute, return [path2]
 *)  
 val combine : 
   string -> 
@@ -44,6 +45,8 @@ val chop_extension : ?loc:string -> string -> string
 
 val chop_extension_if_any : string -> string
 
+val chop_all_extensions_if_any : 
+  string -> string 
 
 (**
    {[
@@ -81,3 +84,11 @@ val normalize_absolute_path : string -> string
 
 val absolute_path : string Lazy.t -> string -> string
 
+(** [concat dirname filename]
+    The same as {!Filename.concat} except a tiny optimization 
+    for current directory simplification
+*)
+val concat : string -> string -> string 
+
+val check_suffix_case : 
+  string -> string -> bool

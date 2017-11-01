@@ -77,18 +77,16 @@ let command = "command"
 let edge = "edge"
 let namespace = "namespace"
 let in_source = "in-source"
-
+let warnings = "warnings"
+let number = "number"
+let error = "error"
+let suffix = "suffix"
 
 let bs_super_errors = "bs-super-errors"
-
 let static_libraries = "static-libraries"
 let c_linker_flags = "c-linker-flags"
 let build_script = "build-script"
 let allowed_build_kinds = "allowed-build-kinds"
 let ocamlfind_dependencies = "ocamlfind-dependencies"
 let ocaml_flags = "ocaml-flags"
-
-let warnings = "warnings"
-let number = "number"
-let error = "error"
 let global_ocaml_compiler = "global-ocaml-compiler"

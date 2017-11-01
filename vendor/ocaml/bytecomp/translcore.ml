@@ -328,7 +328,10 @@ let prim_makearray =
     prim_native_name = ""; prim_native_float = false }
 
 let prim_obj_dup =
-  { prim_name = "caml_obj_dup"; prim_arity = 1; prim_alloc = true;
+  lazy { prim_name = 
+    if !Clflags.bs_only then "caml_array_dup"
+    else "caml_obj_dup"; 
+    prim_arity = 1; prim_alloc = true;
     prim_native_name = ""; prim_native_float = false }
 
 let find_primitive loc prim_name =
@@ -363,7 +366,8 @@ let transl_prim loc prim args =
       when simplify_constant_constructor ->
         intcomp
     | [arg1; arg2] when has_base_type arg1 Predef.path_int
-                     || has_base_type arg1 Predef.path_char ->
+                     || has_base_type arg1 Predef.path_char
+                     || not (Typeopt.maybe_pointer arg1)->
         intcomp
     | [arg1; arg2] when has_base_type arg1 Predef.path_float ->
         floatcomp
@@ -818,7 +822,7 @@ and transl_exp0 e =
               Lconst(Const_float_array(List.map extract_float cl))
           | Pgenarray ->
               raise Not_constant in             (* can this really happen? *)
-        Lprim(Pccall prim_obj_dup, [master], e.exp_loc)
+        Lprim(Pccall (Lazy.force prim_obj_dup), [master], e.exp_loc)
       with Not_constant ->
         Lprim(Pmakearray kind, ll, e.exp_loc)
       end

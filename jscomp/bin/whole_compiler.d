@@ -64,8 +64,8 @@ bin/whole_compiler.ml : core/lam_arity.ml
 bin/whole_compiler.ml : core/lam_group.ml
 bin/whole_compiler.ml : core/lam_print.ml
 bin/whole_compiler.ml : core/lam_stats.ml
+bin/whole_compiler.ml : core/lam_subst.ml
 bin/whole_compiler.ml : core/lam_util.mli
-bin/whole_compiler.ml : core/type_util.ml
 bin/whole_compiler.ml : ext/ext_array.mli
 bin/whole_compiler.ml : ext/ext_bytes.mli
 bin/whole_compiler.ml : ext/ext_format.ml
@@ -75,7 +75,6 @@ bin/whole_compiler.ml : ext/ext_string.ml
 bin/whole_compiler.ml : ext/ident_map.mli
 bin/whole_compiler.ml : ext/ident_set.mli
 bin/whole_compiler.ml : ext/string_map.ml
-bin/whole_compiler.ml : syntax/ast_arg.ml
 bin/whole_compiler.ml : syntax/ast_exp.ml
 bin/whole_compiler.ml : syntax/ast_pat.ml
 bin/whole_compiler.ml : common/ext_log.mli
@@ -88,7 +87,7 @@ bin/whole_compiler.ml : core/lam_arity.mli
 bin/whole_compiler.ml : core/lam_group.mli
 bin/whole_compiler.ml : core/lam_print.mli
 bin/whole_compiler.ml : core/lam_stats.mli
-bin/whole_compiler.ml : core/type_util.mli
+bin/whole_compiler.ml : core/lam_subst.mli
 bin/whole_compiler.ml : ext/ext_format.mli
 bin/whole_compiler.ml : ext/ext_option.mli
 bin/whole_compiler.ml : ext/ext_string.mli
@@ -96,7 +95,6 @@ bin/whole_compiler.ml : ext/hashtbl_gen.ml
 bin/whole_compiler.ml : ext/int_hashtbl.ml
 bin/whole_compiler.ml : ext/int_vec_vec.ml
 bin/whole_compiler.ml : ext/string_map.mli
-bin/whole_compiler.ml : syntax/ast_arg.mli
 bin/whole_compiler.ml : syntax/ast_comb.ml
 bin/whole_compiler.ml : syntax/ast_exp.mli
 bin/whole_compiler.ml : syntax/ast_pat.mli
@@ -117,6 +115,7 @@ bin/whole_compiler.ml : core/lam_closure.ml
 bin/whole_compiler.ml : core/lam_compile.ml
 bin/whole_compiler.ml : core/lam_id_kind.ml
 bin/whole_compiler.ml : core/ocaml_parse.ml
+bin/whole_compiler.ml : core/ocaml_types.ml
 bin/whole_compiler.ml : ext/ext_filename.ml
 bin/whole_compiler.ml : ext/ext_js_regex.ml
 bin/whole_compiler.ml : ext/ext_position.ml
@@ -149,6 +148,7 @@ bin/whole_compiler.ml : core/lam_coercion.ml
 bin/whole_compiler.ml : core/lam_compile.mli
 bin/whole_compiler.ml : core/lam_id_kind.mli
 bin/whole_compiler.ml : core/ocaml_parse.mli
+bin/whole_compiler.ml : core/ocaml_types.mli
 bin/whole_compiler.ml : ext/ext_filename.mli
 bin/whole_compiler.ml : ext/ext_js_regex.mli
 bin/whole_compiler.ml : ext/ext_namespace.ml
@@ -217,7 +217,6 @@ bin/whole_compiler.ml : ext/ident_hash_set.mli
 bin/whole_compiler.ml : ext/string_hash_set.ml
 bin/whole_compiler.ml : ext/string_hashtbl.mli
 bin/whole_compiler.ml : stubs/bs_hash_stubs.ml
-bin/whole_compiler.ml : syntax/ast_external.ml
 bin/whole_compiler.ml : syntax/ast_literal.mli
 bin/whole_compiler.ml : syntax/ast_payload.mli
 bin/whole_compiler.ml : syntax/bs_syntaxerr.ml
@@ -252,8 +251,6 @@ bin/whole_compiler.ml : depends/ast_extract.mli
 bin/whole_compiler.ml : depends/bs_exception.ml
 bin/whole_compiler.ml : ext/string_hash_set.mli
 bin/whole_compiler.ml : syntax/ast_core_type.ml
-bin/whole_compiler.ml : syntax/ast_external.mli
-bin/whole_compiler.ml : syntax/ast_ffi_types.ml
 bin/whole_compiler.ml : syntax/ast_signature.ml
 bin/whole_compiler.ml : syntax/ast_structure.ml
 bin/whole_compiler.ml : syntax/bs_syntaxerr.mli
@@ -283,7 +280,6 @@ bin/whole_compiler.ml : core/js_packages_info.ml
 bin/whole_compiler.ml : core/js_pass_flatten.mli
 bin/whole_compiler.ml : core/lam_beta_reduce.mli
 bin/whole_compiler.ml : core/lam_bounded_vars.ml
-bin/whole_compiler.ml : core/lam_compile_defs.ml
 bin/whole_compiler.ml : core/lam_compile_env.mli
 bin/whole_compiler.ml : core/lam_compile_main.ml
 bin/whole_compiler.ml : core/lam_compile_util.ml
@@ -295,7 +291,6 @@ bin/whole_compiler.ml : depends/bs_exception.mli
 bin/whole_compiler.ml : syntax/ast_attributes.ml
 bin/whole_compiler.ml : syntax/ast_core_type.mli
 bin/whole_compiler.ml : syntax/ast_derive_dyn.ml
-bin/whole_compiler.ml : syntax/ast_ffi_types.mli
 bin/whole_compiler.ml : syntax/ast_signature.mli
 bin/whole_compiler.ml : syntax/ast_structure.mli
 bin/whole_compiler.ml : ../vendor/ocaml/bytecomp/lambda.ml
@@ -325,7 +320,6 @@ bin/whole_compiler.ml : core/js_packages_info.mli
 bin/whole_compiler.ml : core/js_packages_state.ml
 bin/whole_compiler.ml : core/lam_bounded_vars.mli
 bin/whole_compiler.ml : core/lam_compile_const.ml
-bin/whole_compiler.ml : core/lam_compile_defs.mli
 bin/whole_compiler.ml : core/lam_compile_main.mli
 bin/whole_compiler.ml : core/lam_compile_util.mli
 bin/whole_compiler.ml : core/lam_module_ident.mli
@@ -336,6 +330,7 @@ bin/whole_compiler.ml : super_errors/super_env.ml
 bin/whole_compiler.ml : syntax/ast_attributes.mli
 bin/whole_compiler.ml : syntax/ast_derive_dyn.mli
 bin/whole_compiler.ml : syntax/ast_derive_util.ml
+bin/whole_compiler.ml : syntax/ast_external_mk.ml
 bin/whole_compiler.ml : syntax/ast_utf8_string.ml
 bin/whole_compiler.ml : syntax/bs_ast_iterator.ml
 bin/whole_compiler.ml : ../vendor/ocaml/bytecomp/lambda.mli
@@ -363,13 +358,14 @@ bin/whole_compiler.ml : core/lam_compile_global.ml
 bin/whole_compiler.ml : core/lam_eta_conversion.ml
 bin/whole_compiler.ml : core/lam_pass_lets_dce.mli
 bin/whole_compiler.ml : core/ocaml_stdlib_slots.ml
-bin/whole_compiler.ml : core/type_int_to_string.ml
 bin/whole_compiler.ml : ext/hash_set_ident_mask.ml
 bin/whole_compiler.ml : super_errors/super_main.ml
 bin/whole_compiler.ml : super_errors/super_misc.ml
+bin/whole_compiler.ml : syntax/ast_external_mk.mli
 bin/whole_compiler.ml : syntax/ast_utf8_string.mli
 bin/whole_compiler.ml : syntax/bs_ast_invariant.ml
 bin/whole_compiler.ml : syntax/bs_ast_iterator.mli
+bin/whole_compiler.ml : syntax/external_process.ml
 bin/whole_compiler.ml : ../vendor/ocaml/bytecomp/matching.ml
 bin/whole_compiler.ml : ../vendor/ocaml/bytecomp/typeopt.mli
 bin/whole_compiler.ml : ../vendor/ocaml/parsing/asttypes.mli
@@ -386,6 +382,7 @@ bin/whole_compiler.ml : ../vendor/ocaml/typing/printtyped.ml
 bin/whole_compiler.ml : ../vendor/ocaml/typing/typeclass.mli
 bin/whole_compiler.ml : ../vendor/ocaml/typing/typedtree.mli
 bin/whole_compiler.ml : core/js_of_lam_exception.ml
+bin/whole_compiler.ml : core/lam_compile_context.ml
 bin/whole_compiler.ml : core/lam_compile_global.mli
 bin/whole_compiler.ml : core/lam_eta_conversion.mli
 bin/whole_compiler.ml : core/ocaml_batch_compile.ml
@@ -393,6 +390,8 @@ bin/whole_compiler.ml : ext/hash_set_ident_mask.mli
 bin/whole_compiler.ml : ext/ordered_hash_map_gen.ml
 bin/whole_compiler.ml : super_errors/super_misc.mli
 bin/whole_compiler.ml : syntax/bs_ast_invariant.mli
+bin/whole_compiler.ml : syntax/external_arg_spec.ml
+bin/whole_compiler.ml : syntax/external_process.mli
 bin/whole_compiler.ml : ../vendor/ocaml/bytecomp/matching.mli
 bin/whole_compiler.ml : ../vendor/ocaml/bytecomp/translmod.ml
 bin/whole_compiler.ml : ../vendor/ocaml/bytecomp/translobj.ml
@@ -411,8 +410,11 @@ bin/whole_compiler.ml : ../vendor/ocaml/typing/printtyped.mli
 bin/whole_compiler.ml : core/js_name_of_module_id.ml
 bin/whole_compiler.ml : core/js_of_lam_exception.mli
 bin/whole_compiler.ml : core/lam_beta_reduce_util.ml
+bin/whole_compiler.ml : core/lam_compile_context.mli
 bin/whole_compiler.ml : core/ocaml_batch_compile.mli
 bin/whole_compiler.ml : super_errors/super_pparse.ml
+bin/whole_compiler.ml : syntax/external_arg_spec.mli
+bin/whole_compiler.ml : syntax/external_ffi_types.ml
 bin/whole_compiler.ml : ../vendor/ocaml/bytecomp/translcore.ml
 bin/whole_compiler.ml : ../vendor/ocaml/bytecomp/translmod.mli
 bin/whole_compiler.ml : ../vendor/ocaml/bytecomp/translobj.mli
@@ -430,6 +432,7 @@ bin/whole_compiler.ml : core/lam_compile_primitive.ml
 bin/whole_compiler.ml : core/lam_pass_deep_flatten.ml
 bin/whole_compiler.ml : core/lam_pass_remove_alias.ml
 bin/whole_compiler.ml : super_errors/super_typemod.ml
+bin/whole_compiler.ml : syntax/external_ffi_types.mli
 bin/whole_compiler.ml : ../vendor/ocaml/bytecomp/printlambda.ml
 bin/whole_compiler.ml : ../vendor/ocaml/bytecomp/translclass.ml
 bin/whole_compiler.ml : ../vendor/ocaml/bytecomp/translcore.mli
@@ -462,16 +465,16 @@ bin/whole_compiler.ml : syntax/ast_utf8_string_interp.ml
 bin/whole_compiler.ml : core/lam_compile_external_call.ml
 bin/whole_compiler.ml : core/lam_compile_external_obj.mli
 bin/whole_compiler.ml : core/lam_pass_alpha_conversion.ml
-bin/whole_compiler.ml : syntax/ast_external_attributes.ml
 bin/whole_compiler.ml : syntax/ast_utf8_string_interp.mli
 bin/whole_compiler.ml : core/lam_compile_external_call.mli
 bin/whole_compiler.ml : core/lam_pass_alpha_conversion.mli
 bin/whole_compiler.ml : super_errors/super_reason_react.ml
-bin/whole_compiler.ml : syntax/ast_external_attributes.mli
 bin/whole_compiler.ml : ext/ordered_hash_map_local_ident.ml
 bin/whole_compiler.ml : super_errors/super_reason_react.mli
 bin/whole_compiler.ml : ext/ordered_hash_map_local_ident.mli
 bin/whole_compiler.ml : core/js_pass_flatten_and_mark_dead.ml
+bin/whole_compiler.ml : outcome_printer/outcome_printer_ns.ml
 bin/whole_compiler.ml : core/js_pass_flatten_and_mark_dead.mli
-bin/whole_compiler.ml : reason_outcome_printer/tweaked_reason_oprint.ml
-bin/whole_compiler.ml : reason_outcome_printer/reason_outcome_printer_main.ml
+bin/whole_compiler.ml : outcome_printer/outcome_printer_ns.mli
+bin/whole_compiler.ml : outcome_printer/tweaked_reason_oprint.ml
+bin/whole_compiler.ml : outcome_printer/reason_outcome_printer_main.ml

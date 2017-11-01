@@ -34,7 +34,7 @@ module E = Js_exp_make
 (* If it is the return value, since it is a side-effect call,
    we return unit, otherwise just return it
 *)
-let decorate_side_effect ({st; should_return;_} : Lam_compile_defs.cxt) e : E.t = 
+let decorate_side_effect ({st; should_return;_} : Lam_compile_context.t) e : E.t = 
   match st, should_return with 
   | _, ReturnTrue _ 
   | (Assign _ | Declare _ | NeedValue), _  -> E.seq e E.unit
@@ -42,7 +42,7 @@ let decorate_side_effect ({st; should_return;_} : Lam_compile_defs.cxt) e : E.t 
 (* NeedValue should return a meaningful expression*)
 
 let translate  loc
-    ({ meta = { env; _}; _} as cxt : Lam_compile_defs.cxt) 
+    ({ meta = { env; _}; _} as cxt : Lam_compile_context.t) 
     (prim : Lam.primitive)
     (args : J.expression list) : J.expression = 
   match prim with
@@ -660,7 +660,7 @@ let translate  loc
       | _ -> assert false
     end
   | Parrayrefs _kind ->
-    Lam_dispatch_primitive.translate "caml_array_get" args
+    Lam_dispatch_primitive.translate loc "caml_array_get" args
   | Pmakearray kind -> 
     Js_of_lam_array.make_array Mutable kind args 
   | Parraysetu _kind -> 
@@ -670,9 +670,9 @@ let translate  loc
     end
 
   | Parraysets _kind -> 
-    Lam_dispatch_primitive.translate "caml_array_set" args
+    Lam_dispatch_primitive.translate loc "caml_array_set" args
   | Pccall prim -> 
-    Lam_dispatch_primitive.translate prim.prim_name  args
+    Lam_dispatch_primitive.translate loc prim.prim_name  args
   (* Lam_compile_external_call.translate loc cxt prim args *)
   (* Test if the argument is a block or an immediate integer *)
   | Pjs_object_create labels
@@ -681,7 +681,7 @@ let translate  loc
   (*Lam_compile_external_obj.assemble_args_obj labels args *)
   | Pjs_call (_, arg_types, ffi) -> 
     Lam_compile_external_call.translate_ffi 
-      loc ffi cxt arg_types args 
+      loc cxt arg_types ffi args 
   (** FIXME, this can be removed later *)
   | Pisint -> 
     begin 
@@ -804,11 +804,9 @@ let translate  loc
   | Pbigstring_set_32 _
   | Pbigstring_set_64 _
     -> 
-    let comment = "Missing primitive" in       
-    let s = Lam_util.string_of_primitive prim in
-    let warn = Printf.sprintf  "%s: %s\n" comment s in
-    Ext_log.warn __LOC__ "%s"  warn;
     (*we dont use [throw] here, since [throw] is an statement  *)        
-    E.dump  Error [ E.str warn]
+    let s = Lam_print.primitive_to_string prim in    
+    Bs_warnings.warn_missing_primitive loc  s;
+    E.not_implemented s 
 
 

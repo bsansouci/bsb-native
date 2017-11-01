@@ -3,7 +3,7 @@ let ((>::),
 
 let (=~) = OUnit.assert_equal    
 
-
+let printer_string = fun x -> x 
 
 
 let suites = 
@@ -27,25 +27,15 @@ let suites =
 
     __LOC__ >:: begin fun _ -> 
       OUnit.assert_bool __LOC__
-        (Ext_string.for_all_range "xABc"~start:1
-           ~finish:2 (function 'A' .. 'Z' -> true | _ -> false));
+        (not (Ext_string.for_all_from "xABc"1
+                (function 'A' .. 'Z' -> true | _ -> false)));
       OUnit.assert_bool __LOC__
-        (not (Ext_string.for_all_range "xABc"~start:1
-                ~finish:3(function 'A' .. 'Z' -> true | _ -> false)));
+        ( (Ext_string.for_all_from "xABC" 1
+             (function 'A' .. 'Z' -> true | _ -> false)));
       OUnit.assert_bool __LOC__
-        ( (Ext_string.for_all_range "xABc"~start:1
-             ~finish:2 (function 'A' .. 'Z' -> true | _ -> false)));
-      OUnit.assert_bool __LOC__
-        ( (Ext_string.for_all_range "xABc"~start:1
-             ~finish:1 (function 'A' .. 'Z' -> true | _ -> false)));
-      OUnit.assert_bool __LOC__
-        ( (Ext_string.for_all_range "xABc"~start:1
-             ~finish:0 (function 'A' .. 'Z' -> true | _ -> false)));    
-      OUnit.assert_raise_any       
-        (fun _ ->  (Ext_string.for_all_range "xABc"~start:1
-                      ~finish:4 (function 'A' .. 'Z' -> true | _ -> false)));    
-
-    end;
+        ( (Ext_string.for_all_from "xABC" 1_000
+             (function 'A' .. 'Z' -> true | _ -> false)));             
+    end; 
 
     __LOC__ >:: begin fun _ -> 
       OUnit.assert_bool __LOC__ @@
@@ -63,12 +53,12 @@ let suites =
     end;
     __LOC__ >:: begin fun _ -> 
       OUnit.assert_bool __LOC__ @@
-      List.for_all Ext_string.is_valid_npm_package_name
+      List.for_all Ext_namespace.is_valid_npm_package_name
         ["x"; "@angualr"; "test"; "hi-x"; "hi-"]
       ;
       OUnit.assert_bool __LOC__ @@
       List.for_all 
-        (fun x -> not (Ext_string.is_valid_npm_package_name x))
+        (fun x -> not (Ext_namespace.is_valid_npm_package_name x))
         ["x "; "x'"; "Test"; "hI"]
       ;
     end;
@@ -105,17 +95,25 @@ let suites =
       Ext_string.starts_with "abb" "abbc" =~ false;
     end;
     __LOC__ >:: begin fun _ -> 
+      let (=~) = OUnit.assert_equal ~printer:(fun x -> string_of_bool x ) in 
+      let k = Ext_string.ends_with in 
+      k "xx.ml" ".ml" =~ true;
+      k "xx.bs.js" ".js" =~ true ;
+      k "xx" ".x" =~false;
+      k "xx" "" =~true
+    end;  
+    __LOC__ >:: begin fun _ -> 
       Ext_string.ends_with_then_chop "xx.ml"  ".ml" =~ Some "xx";
       Ext_string.ends_with_then_chop "xx.ml" ".mll" =~ None
     end;
-    __LOC__ >:: begin fun _ -> 
-      Ext_string.starts_with_and_number "js_fn_mk_01" ~offset:0 "js_fn_mk_" =~ 1 ;
-      Ext_string.starts_with_and_number "js_fn_run_02" ~offset:0 "js_fn_mk_" =~ -1 ;
-      Ext_string.starts_with_and_number "js_fn_mk_03" ~offset:6 "mk_" =~ 3 ;
-      Ext_string.starts_with_and_number "js_fn_mk_04" ~offset:6 "run_" =~ -1;
-      Ext_string.starts_with_and_number "js_fn_run_04" ~offset:6 "run_" =~ 4;
-      Ext_string.(starts_with_and_number "js_fn_run_04" ~offset:6 "run_" = 3) =~ false 
-    end;
+    (* __LOC__ >:: begin fun _ -> 
+       Ext_string.starts_with_and_number "js_fn_mk_01" ~offset:0 "js_fn_mk_" =~ 1 ;
+       Ext_string.starts_with_and_number "js_fn_run_02" ~offset:0 "js_fn_mk_" =~ -1 ;
+       Ext_string.starts_with_and_number "js_fn_mk_03" ~offset:6 "mk_" =~ 3 ;
+       Ext_string.starts_with_and_number "js_fn_mk_04" ~offset:6 "run_" =~ -1;
+       Ext_string.starts_with_and_number "js_fn_run_04" ~offset:6 "run_" =~ 4;
+       Ext_string.(starts_with_and_number "js_fn_run_04" ~offset:6 "run_" = 3) =~ false 
+       end; *)
     __LOC__ >:: begin fun _ -> 
       Ext_string.for_all (function '_' -> true | _ -> false)
         "____" =~ true;
@@ -128,9 +126,9 @@ let suites =
       Ext_string.tail_from "ghsogh" 1 =~ "hsogh";
       Ext_string.tail_from "ghsogh" 0 =~ "ghsogh"
     end;
-    __LOC__ >:: begin fun _ -> 
-      Ext_string.digits_of_str "11_js" ~offset:0 2 =~ 11 
-    end;
+    (* __LOC__ >:: begin fun _ -> 
+       Ext_string.digits_of_str "11_js" ~offset:0 2 =~ 11 
+       end; *)
     __LOC__ >:: begin fun _ -> 
       OUnit.assert_bool __LOC__ 
         (Ext_string.replace_backward_slash "a:\\b\\d" = 
@@ -309,20 +307,33 @@ let suites =
       =~ "Reason"
     end;
     __LOC__ >:: begin fun _ -> 
-      Ext_namespace.js_name_of_basename "a-b"
+      Ext_namespace.js_name_of_basename false "a-b"
       =~ "a.js";
-      Ext_namespace.js_name_of_basename "a-"
+      Ext_namespace.js_name_of_basename false "a-"
       =~ "a.js";
-      Ext_namespace.js_name_of_basename "a--"
+      Ext_namespace.js_name_of_basename false "a--"
       =~ "a-.js";
-      Ext_namespace.js_name_of_basename "AA-b"
+      Ext_namespace.js_name_of_basename false "AA-b"
       =~ "AA.js";
-      Ext_namespace.js_name_of_modulename ~little:true "AA-b"
+      Ext_namespace.js_name_of_modulename 
+        Little_js "AA-b"
       =~ "aA.js";
-      Ext_namespace.js_name_of_modulename ~little:false "AA-b"
+      Ext_namespace.js_name_of_modulename 
+        Upper_js "AA-b"
       =~ "AA.js";
+      Ext_namespace.js_name_of_modulename 
+        Upper_bs "AA-b"
+      =~ "AA.bs.js";
     end;
-
+    __LOC__ >:: begin   fun _ -> 
+      let (=~) = OUnit.assert_equal ~printer:(fun x -> 
+          match x with 
+          | None -> ""
+          | Some (a,b) -> a ^","^ b
+        ) in  
+      Ext_namespace.try_split_module_name "Js-X" =~ Some ("X","Js");
+      Ext_namespace.try_split_module_name "Js_X" =~ None
+    end;
     __LOC__ >:: begin fun _ ->
       let (=~) = OUnit.assert_equal ~printer:(fun x -> x) in  
       let f = Ext_string.capitalize_ascii in
@@ -334,5 +345,28 @@ let suites =
       let v = "bc" in
       f v =~ "Bc";
       v =~ "bc"
-    end
+    end;
+    __LOC__ >:: begin fun _ -> 
+      let (=~) = OUnit.assert_equal ~printer:printer_string in 
+      Ext_path.chop_all_extensions_if_any "a.bs.js" =~ "a" ; 
+      Ext_path.chop_all_extensions_if_any "a.js" =~ "a";
+      Ext_path.chop_all_extensions_if_any "a" =~ "a";
+      Ext_path.chop_all_extensions_if_any "a.x.bs.js" =~ "a"
+    end;
+    let (=~) = OUnit.assert_equal ~printer:(fun x -> x) in 
+    __LOC__ >:: begin fun _ ->
+      let k = Ext_modulename.js_id_name_of_hint_name in 
+      k "xx" =~ "Xx";
+      k "react-dom" =~ "ReactDom";
+      k "a/b/react-dom" =~ "ReactDom";
+      k "a/b" =~ "B";
+      k "a/" =~ "A/" ; (*TODO: warning?*)
+      k "#moduleid" =~ "Moduleid";
+      k "@bundle" =~ "Bundle";
+      k "xx#bc" =~ "Xxbc";
+      k "hi@myproj" =~ "Himyproj";
+      k "ab/c/xx.b.js" =~ "XxBJs"; (* improve it in the future*)
+      k "c/d/a--b"=~ "AB";
+      k "c/d/ac--" =~ "Ac"
+    end 
   ]

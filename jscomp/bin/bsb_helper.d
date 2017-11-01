@@ -1,3 +1,5 @@
+bin/bsb_helper.ml : bsb/bsb_db.ml
+bin/bsb_helper.ml : bsb/bsb_db.mli
 bin/bsb_helper.ml : bsb/bsb_log.ml
 bin/bsb_helper.ml : bsb/bsb_pkg.ml
 bin/bsb_helper.ml : ext/ext_sys.ml
@@ -61,9 +63,7 @@ bin/bsb_helper.ml : ext/ext_modulename.ml
 bin/bsb_helper.ml : ext/ext_namespace.mli
 bin/bsb_helper.ml : ext/ext_pervasives.ml
 bin/bsb_helper.ml : ext/string_hashtbl.ml
-bin/bsb_helper.ml : bsb/bsb_build_cache.ml
 bin/bsb_helper.ml : bsb/bsb_build_util.mli
-bin/bsb_helper.ml : bsb/bsb_depfile_gen.ml
 bin/bsb_helper.ml : bsb/bsb_helper_main.ml
 bin/bsb_helper.ml : ext/ext_json_parse.mli
 bin/bsb_helper.ml : ext/ext_modulename.mli
@@ -71,9 +71,7 @@ bin/bsb_helper.ml : ext/ext_pervasives.mli
 bin/bsb_helper.ml : ext/string_hash_set.ml
 bin/bsb_helper.ml : ext/string_hashtbl.mli
 bin/bsb_helper.ml : stubs/bs_hash_stubs.ml
-bin/bsb_helper.ml : bsb/bsb_build_cache.mli
 bin/bsb_helper.ml : bsb/bsb_config_types.ml
-bin/bsb_helper.ml : bsb/bsb_depfile_gen.mli
 bin/bsb_helper.ml : bsb/bsb_helper_main.mli
 bin/bsb_helper.ml : ext/string_hash_set.mli
 bin/bsb_helper.ml : bsb/bsb_build_schemas.ml
@@ -89,3 +87,5 @@ bin/bsb_helper.ml : bsb/bsb_parse_sources.mli
 bin/bsb_helper.ml : bsb/bsb_helper_extract.mli
 bin/bsb_helper.ml : bsb/bsb_helper_dep_graph.ml
 bin/bsb_helper.ml : bsb/bsb_helper_dep_graph.mli
+bin/bsb_helper.ml : bsb/bsb_helper_depfile_gen.ml
+bin/bsb_helper.ml : bsb/bsb_helper_depfile_gen.mli

@@ -31,7 +31,7 @@ let () =
     let ic = open_in_bin file in 
 
     let arrs = 
-      Bsb_depfile_gen.deps_of_channel ic 
+      Bsb_helper_depfile_gen.deps_of_channel ic 
     in
     p Format.std_formatter "@[Dependent modules: @[%a@]@]@."
       (Format.pp_print_list ~pp_sep:(fun fmt () ->
@@ -39,13 +39,13 @@ let () =
          ) Format.pp_print_string) 
       (Array.to_list arrs);
     p Format.std_formatter "@.==============================@.";
-    if Filename.check_suffix file ".mlast" then 
+    if Ext_path.check_suffix_case file ".mlast" then 
       begin
         Pprintast.structure Format.std_formatter
           (Ml_binary.read_ast Ml_binary.Ml ic );
         close_in ic 
       end
-    else if Filename.check_suffix file ".mliast" then 
+    else if Ext_path.check_suffix_case file ".mliast" then 
       begin
         Pprintast.signature Format.std_formatter
           (Ml_binary.read_ast Ml_binary.Mli ic);

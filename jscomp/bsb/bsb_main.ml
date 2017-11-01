@@ -73,18 +73,6 @@ let separator = "--"
 let watch_mode = ref false
 let make_world = ref false 
 let set_make_world () = make_world := true
-
-(* Takes a cleanFunc and calls it on the right folder. *)
-let clean cleanFunc =
-  if !is_cmdline_build_kind_set then
-    let nested = get_string_backend (get_backend ()) in
-    cleanFunc ~nested bsc_dir cwd
-  else begin
-    cleanFunc ~nested:"js" bsc_dir cwd;
-    cleanFunc ~nested:"bytecode" bsc_dir cwd;
-    cleanFunc ~nested:"native" bsc_dir cwd;
-  end
-
 let bs_version_string = Bs_version.version
 
 let print_version_string () = 
@@ -109,14 +97,14 @@ let bsb_main_flags : (string * Arg.spec * string) list=
     regen, Arg.Set force_regenerate,
     " (internal) Always regenerate build.ninja no matter bsconfig.json is changed or not (for debugging purpose)"
     ;
-    "-clean-world", Arg.Unit (fun _ -> clean Bsb_clean.clean_bs_deps),
+    "-clean-world", Arg.Unit (fun _ -> Bsb_clean.clean_bs_deps ~is_cmdline_build_kind_set:!is_cmdline_build_kind_set ~nested:(get_string_backend (get_backend ())) bsc_dir cwd),
     " Clean all bs dependencies";
-    "-clean", Arg.Unit (fun _ -> clean Bsb_clean.clean_self),
+    "-clean", Arg.Unit (fun _ -> Bsb_clean.clean_self ~is_cmdline_build_kind_set:!is_cmdline_build_kind_set ~nested:(get_string_backend (get_backend ())) bsc_dir cwd),
     " Clean only current project";
     "-make-world", Arg.Unit set_make_world,
     " Build all dependencies and itself ";
     "-init", Arg.String (fun path -> generate_theme_with_path := Some path),
-    " Init sample project to get started. Note (`bsb -init sample` will create a sample project while `bsb -init .` will resuse current directory)";
+    " Init sample project to get started. Note (`bsb -init sample` will create a sample project while `bsb -init .` will reuse current directory)";
     "-theme", Arg.String set_theme,
     " The theme for project initialization, default is basic(https://github.com/bucklescript/bucklescript/tree/master/jscomp/bsb/templates)";
     "-query", Arg.String (fun s -> Bsb_query.query ~cwd ~bsc_dir ~backend:(get_backend ()) s ),
@@ -191,18 +179,6 @@ let handle_anonymous_arg arg =
 
 let watch_exit () =
   Bsb_log.info "@{<info>Watching@}... @.";
-  let bsb_watcher =
-    Bsb_default_paths.bin_dir // "bsb_watcher.js" in
-  if Ext_sys.is_windows_or_cygwin then
-    exit (Sys.command (Ext_string.concat3 node_lit Ext_string.single_space (Filename.quote bsb_watcher)))
-  else
-    Unix.execvp node_lit
-      [| node_lit ;
-         bsb_watcher
-      |]
-
-let watch_exit () =
-  print_endline "\nStart Watching now ";
   (* @Incomplete windows support here. We need to pass those args to the nodejs file. 
      Didn't bother for now.
           Ben - July 23rd 2017 
@@ -239,7 +215,10 @@ let () =
          will cause regenerate_ninja to re-crawl the external dep graph (only 
          for Native and Bytecode).  *)
       let _config_opt =  
-        Bsb_ninja_regen.regenerate_ninja ~override_package_specs:None ~is_top_level:true ~no_dev:false 
+        Bsb_ninja_regen.regenerate_ninja 
+          ~override_package_specs:None 
+          ~is_top_level:true
+          ~not_dev:false 
           ~generate_watch_metadata:true
           ~root_project_dir:cwd
           ~forced:true
@@ -256,7 +235,6 @@ let () =
         ->
         begin
           Arg.parse bsb_main_flags handle_anonymous_arg usage;
-          
           (* first, check whether we're in boilerplate generation mode, aka -init foo -theme bar *)
           match !generate_theme_with_path with
           | Some path -> Bsb_theme_init.init_sample_project ~cwd ~theme:!current_theme path
@@ -286,7 +264,7 @@ let () =
                   ~generate_watch_metadata:true 
                   ~override_package_specs:None 
                   ~is_top_level:true
-                  ~no_dev:false 
+                  ~not_dev:false 
                   ~root_project_dir:cwd
                   ~forced:force_regenerate
                   ~backend
@@ -320,7 +298,7 @@ let () =
             ~generate_watch_metadata:true
             ~override_package_specs:None
             ~is_top_level:true
-            ~no_dev:false
+            ~not_dev:false
             ~root_project_dir:cwd
             ~forced:!force_regenerate
             ~backend
@@ -334,8 +312,22 @@ let () =
     end
   end
   with 
-    | Bsb_exception.Error e ->
-      Bsb_exception.print Format.err_formatter e ;
-      Format.pp_print_newline Format.err_formatter ();
-      exit 2 
-    | e -> Ext_pervasives.reraise e 
+  | Bsb_exception.Error e ->
+    Bsb_exception.print Format.err_formatter e ;
+    Format.pp_print_newline Format.err_formatter ();
+    exit 2
+  | Ext_json_parse.Error (start,_,e) -> 
+    Format.fprintf Format.err_formatter
+      "File %S, line %d\n\
+       @{<error>Error:@} %a@."
+      start.pos_fname start.pos_lnum
+      Ext_json_parse.report_error e ;
+    exit 2
+  | Arg.Bad s 
+  | Sys_error s -> 
+    Format.fprintf Format.err_formatter
+      "@{<error>Error:@} %s@."
+      s ;
+    exit 2
+  | e -> Ext_pervasives.reraise e 
+

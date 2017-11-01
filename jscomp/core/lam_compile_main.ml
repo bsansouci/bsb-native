@@ -32,7 +32,18 @@
 module E = Js_exp_make 
 module S = Js_stmt_make  
 
- open Js_output.Ops 
+let get_cmj_case output_prefix : Ext_namespace.file_kind = 
+  let little = 
+    Ext_char.is_lower_case (Filename.basename output_prefix).[0] 
+  in 
+  match little, !Js_config.bs_suffix with 
+  | true, true -> Little_bs
+  | true, false -> Little_js
+  | false, true -> Upper_bs 
+  | false, false -> Upper_js
+  
+
+open Js_output.Ops 
 
 let compile_group ({filename = file_name; env;} as meta : Lam_stats.t) 
     (x : Lam_group.t) : Js_output.t  = 
@@ -150,7 +161,7 @@ let compile_group ({filename = file_name; env;} as meta : Lam_stats.t)
     (* ([Js_stmt_make.comment (Gen_of_env.query_type id  env )], None)  ++ *)
     Lam_compile.compile_let  kind { st = Declare (kind, id);
                                     should_return = ReturnFalse;
-                                    jmp_table = Lam_compile_defs.empty_handler_map;
+                                    jmp_table = Lam_compile_context.empty_handler_map;
                                     meta
                                   } id  lam
 
@@ -158,14 +169,14 @@ let compile_group ({filename = file_name; env;} as meta : Lam_stats.t)
     Lam_compile.compile_recursive_lets 
       { st = EffectCall ;
         should_return = ReturnFalse; 
-        jmp_table = Lam_compile_defs.empty_handler_map;
+        jmp_table = Lam_compile_context.empty_handler_map;
         meta
       } 
       id_lams
   | Nop lam, _ -> (* TODO: Side effect callls, log and see statistics *)
     Lam_compile.compile_lambda {st = EffectCall;
                                 should_return = ReturnFalse;
-                                jmp_table = Lam_compile_defs.empty_handler_map;
+                                jmp_table = Lam_compile_context.empty_handler_map;
                                 meta
                                } lam
 
@@ -355,7 +366,7 @@ let compile  ~filename (output_prefix : string) env _sigs
           maybe_pure 
           external_module_ids
           coerced_input.export_map
-          (Ext_char.is_lower_case (Filename.basename output_prefix).[0])
+          (get_cmj_case output_prefix)
       in
       (if not @@ !Clflags.dont_write_files then
          Js_cmj_format.to_file 
@@ -380,10 +391,10 @@ let lambda_as_module
     let lambda_output = compile ~filename output_prefix env sigs lam in
     let basename =  
       (* #758, output_prefix is already chopped *)
-       Ext_namespace.js_name_of_basename (Filename.basename
-         output_prefix (* -o *)
-         (* filename *) (* see #757  *)
-      ) in
+      (* -o  filename, see #757  *)
+       Ext_namespace.js_name_of_basename !Js_config.bs_suffix 
+        (Filename.basename
+         output_prefix) in
       (* #913
          only generate little-case js file
       *)

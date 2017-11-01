@@ -230,7 +230,7 @@ function exec() {
 
 function watch$1(dir) {
   return makeWatcher(dir, function (_, fileName) {
-              if (fileName.endsWith(".ml") || fileName.endsWith(".mli") || fileName.endsWith(".cppo") || fileName.endsWith(".js") || fileName === "Makefile" || fileName === "Makefile.shared") {
+              if (fileName.endsWith(".ml") || fileName.endsWith(".mli") || fileName.endsWith(".cppo") || fileName.endsWith(".js") || fileName === "Makefile" || fileName === "Makefile.shared" || fileName.endsWith(".mll")) {
                 return exec(/* () */0);
               } else {
                 return 0;
@@ -272,7 +272,10 @@ if (exit === 1) {
         "xwatcher",
         "bsb",
         "common",
-        "."
+        "super_errors",
+        "outcome_printer",
+        ".",
+
       ]);
   exec(/* () */0);
 }

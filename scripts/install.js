@@ -86,7 +86,14 @@ var make = is_bsd ? 'gmake' : 'make';
 
 function non_windows_npm_release() {
     console.log('Build a local version of OCaml compiler, it may take a couple of minutes')
-    child_process.execSync(path.join(__dirname, 'buildocaml.sh')) // TODO: sh -c ? this will be wrong if we have white space in the path
+    try {
+        child_process.execSync(path.join(__dirname, 'buildocaml.sh')) // TODO: sh -c ? this will be wrong if we have white space in the path
+    } catch (e) {
+        console.log(e.stdout.toString());
+        console.log(e.stderr.toString());
+        console.log('Building a local version of the OCaml compiler failed, check the outut above for more information. A possible problem is that you don\'t have a compiler installed');
+        throw e;
+    }
     console.log('configure again with local ocaml installed')
     child_process.execSync('node ../scripts/config_compiler.js', working_config)
     console.log("config finished")        

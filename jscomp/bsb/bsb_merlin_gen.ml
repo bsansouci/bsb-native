@@ -96,13 +96,8 @@ let bsc_flg_to_merlin_ocamlc_flg ~backend bsc_flags  =
      if backend = Bsb_config_types.Js then Literals.dash_nostdlib::bsc_flags else bsc_flags) 
 
 (* No need for [-warn-error] in merlin  *)     
-let warning_to_merlin_flg (warning: Bsb_warning.t option) : string= 
-    merlin_flg ^ 
-    ( match warning with 
-    | None  
-    | Some {number = None}
-      -> Bsb_warning.default_warning_flag
-    | Some {number = Some x } -> "-w " ^ x)
+let warning_to_merlin_flg (warning: Bsb_warning.t option) : string=     
+  merlin_flg ^ Bsb_warning.get_warning_flag warning
 
 
 let merlin_file_gen ~cwd ~backend
@@ -173,7 +168,7 @@ let merlin_file_gen ~cwd ~backend
         Buffer.add_string buffer path ;
       );
     bs_dev_dependencies (**TODO: shall we generate .merlin for dev packages ?*)
-    |> List.iter (fun package ->
+    |> List.iter (fun package ->    
         let path = package.Bsb_config_types.package_install_path in
         Buffer.add_string buffer merlin_s ;
         Buffer.add_string buffer path ;
@@ -187,10 +182,13 @@ let merlin_file_gen ~cwd ~backend
       | Bsb_config_types.Bytecode -> "bytecode" 
     in
     res_files |> List.iter (fun (x : Bsb_parse_sources.file_group) -> 
-        Buffer.add_string buffer merlin_s;
-        Buffer.add_string buffer x.dir ;
-        Buffer.add_string buffer merlin_b;
-        Buffer.add_string buffer (Bsb_config.lib_bs // nested // x.dir) ;
+        if not (Bsb_parse_sources.is_empty x) then 
+          begin
+            Buffer.add_string buffer merlin_s;
+            Buffer.add_string buffer x.dir ;
+            Buffer.add_string buffer merlin_b;
+            Buffer.add_string buffer (Bsb_config.lib_bs // nested // x.dir) ;
+          end
       ) ;
     if List.length ocamlfind_dependencies > 0 then begin
       Buffer.add_string buffer merlin_pkg;

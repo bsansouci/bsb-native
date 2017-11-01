@@ -31,9 +31,12 @@ let ninja_clean ~nested bsc_dir proj_dir =
     let cmd = bsc_dir // "ninja.exe" in 
     let cwd = proj_dir // nested // Bsb_config.lib_bs  in
     if Sys.file_exists cwd then 
-      Bsb_unix.run_command_execv { cmd ; args = [|cmd; "-t"; "clean"|] ; cwd  };
+      let eid = 
+        (Bsb_unix.run_command_execv { cmd ; args = [|cmd; "-t"; "clean"|] ; cwd  }) in
+      if eid <> 0 then  
+        Bsb_log.warn "@{<warning>ninja clean failed@}@."
   with  e -> 
-    Bsb_log.warn "@{<warning>ninja clean failed : %s @." (Printexc.to_string e)
+    Bsb_log.warn "@{<warning>ninja clean failed@} : %s @." (Printexc.to_string e)
 
 let clean_bs_garbage ~nested bsc_dir proj_dir =
   Bsb_log.info "@{<info>Cleaning:@} in %s@." proj_dir ; 
@@ -49,10 +52,27 @@ let clean_bs_garbage ~nested bsc_dir proj_dir =
     Bsb_log.warn "@{<warning>Failed@} to clean due to %s" (Printexc.to_string e)
 
 
-let clean_bs_deps ~nested bsc_dir proj_dir =
-  Bsb_build_util.walk_all_deps  proj_dir  (fun { cwd} ->
-      (* whether top or not always do the cleaning *)
-      clean_bs_garbage ~nested bsc_dir cwd
-    )
+let clean_bs_deps ~is_cmdline_build_kind_set ~nested bsc_dir proj_dir =
+  if is_cmdline_build_kind_set then
+    Bsb_build_util.walk_all_deps  proj_dir  (fun { cwd} ->
+        (* whether top or not always do the cleaning *)
+        clean_bs_garbage ~nested bsc_dir cwd
+      )
+  else begin
+    Bsb_build_util.walk_all_deps  proj_dir  (fun { cwd} ->
+        (* whether top or not always do the cleaning *)
+        clean_bs_garbage ~nested:"js" bsc_dir cwd;
+        clean_bs_garbage ~nested:"bytecode" bsc_dir cwd;
+        clean_bs_garbage ~nested:"native" bsc_dir cwd;
+      )
+  end
 
-let clean_self ~nested bsc_dir proj_dir = clean_bs_garbage ~nested bsc_dir proj_dir
+let clean_self ~is_cmdline_build_kind_set ~nested bsc_dir proj_dir = 
+  if is_cmdline_build_kind_set then
+    clean_bs_garbage ~nested bsc_dir proj_dir
+  else begin
+    clean_bs_garbage ~nested:"js" bsc_dir proj_dir;
+    clean_bs_garbage ~nested:"bytecode" bsc_dir proj_dir;
+    clean_bs_garbage ~nested:"native" bsc_dir proj_dir;
+  end
+  

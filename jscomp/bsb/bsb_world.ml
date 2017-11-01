@@ -29,6 +29,7 @@ let (//) = Ext_path.combine
     logging installed files
 *)
 let install_targets ~backend cwd (config : Bsb_config_types.t option) =
+  
   let install ~destdir file = 
     if Bsb_file.install_if_exists ~destdir file  then 
       begin 
@@ -98,7 +99,7 @@ let build_bs_deps cwd ~root_project_dir ~backend ~main_bs_super_errors ~global_o
          begin 
            let config_opt = Bsb_ninja_regen.regenerate_ninja 
              ~is_top_level:false
-             ~no_dev:true
+             ~not_dev:true
              ~generate_watch_metadata:false
              ~override_package_specs:(Some deps) 
              ~root_project_dir
@@ -114,7 +115,7 @@ let build_bs_deps cwd ~root_project_dir ~backend ~main_bs_super_errors ~global_o
                 ~override_package_specs:(Some deps)
                 ~bsc_dir
                 ~generate_watch_metadata:false
-                ~no_dev:true
+                ~not_dev:true
                 ~backend
                 cwd
             | Some config -> config
@@ -134,11 +135,16 @@ let build_bs_deps cwd ~root_project_dir ~backend ~main_bs_super_errors ~global_o
                 all_external_deps := (cwd // Bsb_config.lib_ocaml // "native") :: !all_external_deps;
                 "native"
               end in
-             Bsb_unix.run_command_execv
-               {cmd = vendor_ninja;
+             let command = 
+              {Bsb_unix.cmd = vendor_ninja;
                 cwd = cwd // Bsb_config.lib_bs // nested;
                 args  = [|vendor_ninja|]
-               };
+               } in     
+             let eid =
+               Bsb_unix.run_command_execv
+               command in 
+             if eid <> 0 then   
+              Bsb_unix.command_fatal_error command eid;
              (* When ninja is not regenerated, ninja will still do the build, 
                 still need reinstall check
                 Note that we can check if ninja print "no work to do", 

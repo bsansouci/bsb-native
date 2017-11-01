@@ -56,7 +56,7 @@ type t =
       so that we can calculate correct relative path in 
       [.merlin]
     *)
-    refmt : string option;
+    refmt : string;
     refmt_flags : string list;
     js_post_build_cmd : string option;
     package_specs : Bsb_package_specs.t ; 
@@ -68,6 +68,7 @@ type t =
     entries : entries_t list ;
     generators : string String_map.t ; 
     cut_generators : bool; (* note when used as a dev mode, we will always ignore it *)
+    bs_suffix : bool ; (* true means [.bs.js] we should pass [-bs-suffix] flag *)
     
     
     bs_super_errors : bool;
