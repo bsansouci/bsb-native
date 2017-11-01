@@ -180,224 +180,24 @@ module Super_warnings
 let fprintf = Format.fprintf
 (* taken from https://github.com/BuckleScript/ocaml/blob/d4144647d1bf9bc7dc3aadc24c25a7efa3a67915/utils/warnings.ml#L251 *)
 (* actual modified message branches are commented *)
-let message = Warnings.(function
-  | Comment_start -> "this is the start of a comment."
-  | Comment_not_end -> "this is not the end of a comment."
+let message (warning : Warnings.t)  =
+  match warning with 
   | Deprecated s -> s ^ " is deprecated. "
-  | Fragile_match "" ->
-      "this pattern-matching is fragile."
-  | Fragile_match s ->
-      "this pattern-matching is fragile.\n\
-       It will remain exhaustive when constructors are added to type " ^ s ^ "."
-  | Partial_application ->
-      "this function application is partial,\n\
-       maybe some arguments are missing."
-  | Labels_omitted ->
-      "labels were omitted in the application of this function."
-  | Method_override [lab] ->
-      "the method " ^ lab ^ " is overridden."
-  | Method_override (cname :: slist) ->
-      String.concat " "
-        ("the following methods are overridden by the class"
-         :: cname  :: ":\n " :: slist)
-  | Method_override [] -> assert false
   | Partial_match "" ->
-      (* modified *)
       "You forgot to handle a possible value here, though we don't have more information on the value."
   | Partial_match s ->
-      (* modified *)
       "You forgot to handle a possible value here, for example: \n" ^ s
-  | Non_closed_record_pattern s ->
-      "the following labels are not bound in this record pattern:\n" ^ s ^
-      "\nEither bind these labels explicitly or add '; _' to the pattern."
-  | Statement_type ->
-      "this expression should have type unit."
-  | Unused_match -> "this match case is unused."
-  | Unused_pat   -> "this sub-pattern is unused."
-  | Instance_variable_override [lab] ->
-      "the instance variable " ^ lab ^ " is overridden.\n" ^
-      "The behaviour changed in ocaml 3.10 (previous behaviour was hiding.)"
-  | Instance_variable_override (cname :: slist) ->
-      String.concat " "
-        ("the following instance variables are overridden by the class"
-         :: cname  :: ":\n " :: slist) ^
-      "\nThe behaviour changed in ocaml 3.10 (previous behaviour was hiding.)"
-  | Instance_variable_override [] -> assert false
-  | Illegal_backslash -> "illegal backslash escape in string."
-  | Implicit_public_methods l ->
-      "the following private methods were made public implicitly:\n "
-      ^ String.concat " " l ^ "."
   | Unerasable_optional_argument ->
-      (* modified *)
-      (* TODO: better formatting *)
       String.concat "\n\n"
         ["This is an optional argument at the final position of the function; omitting it while calling the function might be confused with currying. For example:";
         "  let myTitle = displayTitle \"hello!\";";
         "if `displayTitle` accepts an optional argument at the final position, it'd be unclear whether `myTitle` is a curried function or the final result.";
         "Here's the language's rule: an optional argument is erased as soon as the 1st positional (i.e. neither labeled nor optional) argument defined after it is passed in.";
         "To solve this, you'd conventionally add an extra () argument at the end of the function declaration."]
-  | Undeclared_virtual_method m -> "the virtual method "^m^" is not declared."
-  | Not_principal s -> s^" is not principal."
-  | Without_principality s -> s^" without principality."
-  | Unused_argument -> "this argument will not be used by the function."
-  | Nonreturning_statement ->
-      "this statement never returns (or has an unsound type.)"
-  | Preprocessor s -> s
-  | Useless_record_with ->
-      "all the fields are explicitly listed in this record:\n\
-       the 'with' clause is useless."
   | Bad_module_name (modname) ->
-      (* modified *)
       "This file's name is potentially invalid. The build systems conventionally turn a file name into a module name by upper-casing the first letter. " ^ modname ^ " isn't a valid module name.\n" ^
       "Note: some build systems might e.g. turn kebab-case into CamelCase module, which is why this isn't a hard error."
-  | All_clauses_guarded ->
-      "bad style, all clauses in this pattern-matching are guarded."
-  | Unused_var v | Unused_var_strict v -> "unused variable " ^ v ^ "."
-  | Wildcard_arg_to_constant_constr ->
-     "wildcard pattern given as argument to a constant constructor"
-  | Eol_in_string ->
-     "unescaped end-of-line in a string constant (non-portable code)"
-  | Duplicate_definitions (kind, cname, tc1, tc2) ->
-      Printf.sprintf "the %s %s is defined in both types %s and %s."
-        kind cname tc1 tc2
-  | Multiple_definition(modname, file1, file2) ->
-      Printf.sprintf
-        "files %s and %s both define a module named %s"
-        file1 file2 modname
-  | Unused_value_declaration v -> "unused value " ^ v ^ "."
-  | Unused_open s -> "unused open " ^ s ^ "."
-  | Unused_type_declaration s -> "unused type " ^ s ^ "."
-  | Unused_for_index s -> "unused for-loop index " ^ s ^ "."
-  | Unused_ancestor s -> "unused ancestor variable " ^ s ^ "."
-  | Unused_constructor (s, false, false) -> "unused constructor " ^ s ^ "."
-  | Unused_constructor (s, true, _) ->
-      "constructor " ^ s ^
-      " is never used to build values.\n\
-        (However, this constructor appears in patterns.)"
-  | Unused_constructor (s, false, true) ->
-      "constructor " ^ s ^
-      " is never used to build values.\n\
-        Its type is exported as a private type."
-  | Unused_extension (s, false, false) ->
-      "unused extension constructor " ^ s ^ "."
-  | Unused_extension (s, true, _) ->
-      "extension constructor " ^ s ^
-      " is never used to build values.\n\
-        (However, this constructor appears in patterns.)"
-  | Unused_extension (s, false, true) ->
-      "extension constructor " ^ s ^
-      " is never used to build values.\n\
-        It is exported or rebound as a private extension."
-  | Unused_rec_flag ->
-      "unused rec flag."
-  | Name_out_of_scope (ty, [nm], false) ->
-      nm ^ " was selected from type " ^ ty ^
-      ".\nIt is not visible in the current scope, and will not \n\
-       be selected if the type becomes unknown."
-  | Name_out_of_scope (_, _, false) -> assert false
-  | Name_out_of_scope (ty, slist, true) ->
-      "this record of type "^ ty ^" contains fields that are \n\
-       not visible in the current scope: "
-      ^ String.concat " " slist ^ ".\n\
-       They will not be selected if the type becomes unknown."
-  | Ambiguous_name ([s], tl, false) ->
-      s ^ " belongs to several types: " ^ String.concat " " tl ^
-      "\nThe first one was selected. Please disambiguate if this is wrong."
-  | Ambiguous_name (_, _, false) -> assert false
-  | Ambiguous_name (slist, tl, true) ->
-      "these field labels belong to several types: " ^
-      String.concat " " tl ^
-      "\nThe first one was selected. Please disambiguate if this is wrong."
-  | Disambiguated_name s ->
-      "this use of " ^ s ^ " required disambiguation."
-  | Nonoptional_label s ->
-      "the label " ^ s ^ " is not optional."
-  | Open_shadow_identifier (kind, s) ->
-      Printf.sprintf
-        "this open statement shadows the %s identifier %s (which is later used)"
-        kind s
-  | Open_shadow_label_constructor (kind, s) ->
-      Printf.sprintf
-        "this open statement shadows the %s %s (which is later used)"
-        kind s
-  | Bad_env_variable (var, s) ->
-      Printf.sprintf "illegal environment variable %s : %s" var s
-  | Attribute_payload (a, s) ->
-      Printf.sprintf "illegal payload for attribute '%s'.\n%s" a s
-  | Eliminated_optional_arguments sl ->
-      Printf.sprintf "implicit elimination of optional argument%s %s"
-        (if List.length sl = 1 then "" else "s")
-        (String.concat ", " sl)
-  | No_cmi_file s ->
-      "no cmi file was found in path for module " ^ s
-  | Bad_docstring unattached ->
-      if unattached then "unattached documentation comment (ignored)"
-      else "ambiguous documentation comment"
-);;
-
-(* This is lifted as-is from `warnings.ml`. We've only copy-pasted here because warnings.mli doesn't expose this function *)
-let number = Warnings.(function
-  | Comment_start -> 1
-  | Comment_not_end -> 2
-  | Deprecated _ -> 3
-  | Fragile_match _ -> 4
-  | Partial_application -> 5
-  | Labels_omitted -> 6
-  | Method_override _ -> 7
-  | Partial_match _ -> 8
-  | Non_closed_record_pattern _ -> 9
-  | Statement_type -> 10
-  | Unused_match -> 11
-  | Unused_pat -> 12
-  | Instance_variable_override _ -> 13
-  | Illegal_backslash -> 14
-  | Implicit_public_methods _ -> 15
-  | Unerasable_optional_argument -> 16
-  | Undeclared_virtual_method _ -> 17
-  | Not_principal _ -> 18
-  | Without_principality _ -> 19
-  | Unused_argument -> 20
-  | Nonreturning_statement -> 21
-  | Preprocessor _ -> 22
-  | Useless_record_with -> 23
-  | Bad_module_name _ -> 24
-  | All_clauses_guarded -> 25
-  | Unused_var _ -> 26
-  | Unused_var_strict _ -> 27
-  | Wildcard_arg_to_constant_constr -> 28
-  | Eol_in_string -> 29
-  | Duplicate_definitions _ -> 30
-  | Multiple_definition _ -> 31
-  | Unused_value_declaration _ -> 32
-  | Unused_open _ -> 33
-  | Unused_type_declaration _ -> 34
-  | Unused_for_index _ -> 35
-  | Unused_ancestor _ -> 36
-  | Unused_constructor _ -> 37
-  | Unused_extension _ -> 38
-  | Unused_rec_flag -> 39
-  | Name_out_of_scope _ -> 40
-  | Ambiguous_name _ -> 41
-  | Disambiguated_name _ -> 42
-  | Nonoptional_label _ -> 43
-  | Open_shadow_identifier _ -> 44
-  | Open_shadow_label_constructor _ -> 45
-  | Bad_env_variable _ -> 46
-  | Attribute_payload _ -> 47
-  | Eliminated_optional_arguments _ -> 48
-  | No_cmi_file _ -> 49
-  | Bad_docstring _ -> 50
-);;
-
-(* taken from https://github.com/BuckleScript/ocaml/blob/d4144647d1bf9bc7dc3aadc24c25a7efa3a67915/utils/warnings.ml#L396 *)
-(* the only difference is the 2 first `let`s, where we use our own `message`
-  and `number` functions, and the last line commented out because we don't use
-  it (not sure what it's for, actually) *)
-let print ppf w =
-  let msg = message w in
-  Format.fprintf ppf "%s" msg;
-  Format.pp_print_flush ppf ()
-  (*if (!current).error.(num) then incr nerrors*)
+  | _ -> Warnings.message warning
 ;;
 
 end
@@ -546,9 +346,9 @@ let super_warning_printer loc ppf w =
     setup_colors ();
     (* open a vertical box. Everything in our message is indented 2 spaces *)
     Format.fprintf ppf "@[<v 2>@,%a@,%a@,@]"
-      (print ~is_warning:true ("Warning number " ^ (Super_warnings.number w |> string_of_int)))
+      (print ~is_warning:true ("Warning number " ^ (Warnings.number w |> string_of_int)))
       loc
-      Super_warnings.print
+      (Warnings.super_print Super_warnings.message)
       w
   end
 ;;
@@ -812,19 +612,23 @@ module Ext_string : sig
 
 
 
-(** Extension to the standard library [String] module, avoid locale sensitivity *) 
+(** Extension to the standard library [String] module, fixed some bugs like
+    avoiding locale sensitivity *) 
+
+(** default is false *)    
+val split_by : ?keep_empty:bool -> (char -> bool) -> string -> string list
 
 
+(** remove whitespace letters ('\t', '\n', ' ') on both side*)
 val trim : string -> string 
 
-val split_by : ?keep_empty:bool -> (char -> bool) -> string -> string list
-(** default is false *)
 
+(** default is false *)
 val split : ?keep_empty:bool -> string -> char -> string list
-(** default is false *)
 
-val quick_split_by_ws : string -> string list 
 (** split by space chars for quick scripting *)
+val quick_split_by_ws : string -> string list 
+
 
 
 val starts_with : string -> string -> bool
@@ -838,6 +642,8 @@ val ends_with_index : string -> string -> int
 val ends_with : string -> string -> bool
 
 (**
+  [ends_with_then_chop name ext]
+  @example:
    {[
      ends_with_then_chop "a.cmj" ".cmj"
      "a"
@@ -849,10 +655,16 @@ val ends_with_then_chop : string -> string -> string option
 
 val escaped : string -> string
 
-(** the range is [start, finish]
+(**
+  [for_all_from  s start p]
+  if [start] is negative, it raises,
+  if [start] is too large, it returns true
 *)
-val for_all_range : 
-  string -> start:int -> finish:int -> (char -> bool) -> bool 
+val for_all_from:
+  string -> 
+  int -> 
+  (char -> bool) -> 
+  bool 
 
 val for_all : (char -> bool) -> string -> bool
 
@@ -862,6 +674,10 @@ val repeat : int -> string -> string
 
 val equal : string -> string -> bool
 
+(**
+  [find ~start ~sub s]
+  returns [-1] if not found
+*)
 val find : ?start:int -> sub:string -> string -> int
 
 val contain_substring : string -> string -> bool 
@@ -870,13 +686,10 @@ val non_overlap_count : sub:string -> string -> int
 
 val rfind : sub:string -> string -> int
 
+(** [tail_from s 1]
+  return a substring from offset 1 (inclusive)
+*)
 val tail_from : string -> int -> string
-
-val digits_of_str : string -> offset:int -> int -> int
-
-val starts_with_and_number : string -> offset:int -> string -> int
-
-val unsafe_concat_with_length : int -> string -> string list -> string
 
 
 (** returns negative number if not found *)
@@ -890,15 +703,7 @@ type check_result =
 val is_valid_source_name :
    string -> check_result
 
-(* TODO handle cases like 
-   '@angular/core'
-   its directory structure is like 
-   {[
-     @angular
-     |-------- core
-   ]}
-*)
-val is_valid_npm_package_name : string -> bool 
+
 
 
 
@@ -938,8 +743,6 @@ val current_dir_lit : string
 
 val capitalize_ascii : string -> string
 
-(** return [Some xx] means the original *)
-(* val capitalize_ascii_opt : string -> string option *)
 
 end = struct
 #1 "ext_string.ml"
@@ -1034,6 +837,11 @@ let starts_with s beg =
    !i = beg_len
   )
 
+let rec ends_aux s end_ j k = 
+  if k < 0 then (j + 1)
+  else if String.unsafe_get s j = String.unsafe_get end_ k then 
+    ends_aux s end_ (j - 1) (k - 1)
+  else  -1   
 
 (** return an index which is minus when [s] does not 
     end with [beg]
@@ -1043,12 +851,7 @@ let ends_with_index s end_ =
   let s_beg = String.length end_ - 1 in
   if s_beg > s_finish then -1
   else
-    let rec aux j k = 
-      if k < 0 then (j + 1)
-      else if String.unsafe_get s j = String.unsafe_get end_ k then 
-        aux (j - 1) (k - 1)
-      else  -1 in 
-    aux s_finish s_beg
+    ends_aux s end_ s_finish s_beg
 
 let ends_with s end_ = ends_with_index s end_ >= 0 
 
@@ -1091,19 +894,6 @@ let escaped s =
     Bytes.unsafe_to_string (Ext_bytes.escaped (Bytes.unsafe_of_string s))
   else
     s
-    
-(* let ninja_escaped s =
-  let rec needs_escape i =
-    if i >= String.length s then false else
-      match String.unsafe_get s i with
-      | '$' -> true
-      | ' ' .. '~' -> needs_escape (i+1)
-      | _ -> true
-  in
-  if needs_escape 0 then
-    Bytes.unsafe_to_string (Ext_bytes.ninja_escaped (Bytes.unsafe_of_string s))
-  else
-    s *)
 
 (* it is unsafe to expose such API as unsafe since 
    user can provide bad input range 
@@ -1114,10 +904,11 @@ let rec unsafe_for_all_range s ~start ~finish p =
   p (String.unsafe_get s start) && 
   unsafe_for_all_range s ~start:(start + 1) ~finish p
 
-let for_all_range s ~start ~finish p = 
+let for_all_from s start  p = 
   let len = String.length s in 
-  if start < 0 || finish >= len then invalid_arg "Ext_string.for_all_range"
-  else unsafe_for_all_range s ~start ~finish p 
+  if start < 0  then invalid_arg "Ext_string.for_all_from"
+  else unsafe_for_all_range s ~start ~finish:(len - 1) p 
+
 
 let for_all (p : char -> bool) s =   
   unsafe_for_all_range s ~start:0  ~finish:(String.length s - 1) p 
@@ -1182,7 +973,6 @@ let non_overlap_count ~sub s =
 let rfind ~sub s =
   let n = String.length sub in
   let i = ref (String.length s - n) in
-  (* let module M = struct exception Exit end in  *)
   try
     while !i >= 0 do
       if unsafe_is_sub ~sub 0 s !i ~len:n then 
@@ -1198,69 +988,7 @@ let tail_from s x =
   if  x > len then invalid_arg ("Ext_string.tail_from " ^s ^ " : "^ string_of_int x )
   else String.sub s x (len - x)
 
-
-(**
-   {[ 
-     digits_of_str "11_js" 2 == 11     
-   ]}
-*)
-let digits_of_str s ~offset x = 
-  let rec aux i acc s x  = 
-    if i >= x then acc 
-    else aux (i + 1) (10 * acc + Char.code s.[offset + i] - 48 (* Char.code '0' *)) s x in 
-  aux 0 0 s x 
-
-
-
-(*
-   {[
-     starts_with_and_number "js_fn_mk_01" 0 "js_fn_mk_" = 1 ;;
-     starts_with_and_number "js_fn_run_02" 0 "js_fn_mk_" = -1 ;;
-     starts_with_and_number "js_fn_mk_03" 6 "mk_" = 3 ;;
-     starts_with_and_number "js_fn_mk_04" 6 "run_" = -1;;
-     starts_with_and_number "js_fn_run_04" 6 "run_" = 4;;
-     (starts_with_and_number "js_fn_run_04" 6 "run_" = 3) = false ;;
-   ]}
-*)
-let starts_with_and_number s ~offset beg =
-  let beg_len = String.length beg in
-  let s_len = String.length s in
-  let finish_delim = offset + beg_len in 
-
-  if finish_delim >  s_len  then -1 
-  else 
-    let i = ref offset  in
-    while !i <  finish_delim
-          && String.unsafe_get s !i =
-             String.unsafe_get beg (!i - offset) do 
-      incr i 
-    done;
-    if !i = finish_delim then 
-      digits_of_str ~offset:finish_delim s 2 
-    else 
-      -1 
-
 let equal (x : string) y  = x = y
-
-let unsafe_concat_with_length len sep l =
-  match l with 
-  | [] -> ""
-  | hd :: tl -> (* num is positive *)
-    let r = Bytes.create len in
-    let hd_len = String.length hd in 
-    let sep_len = String.length sep in 
-    String.unsafe_blit hd 0 r 0 hd_len;
-    let pos = ref hd_len in
-    List.iter
-      (fun s ->
-         let s_len = String.length s in
-         String.unsafe_blit sep 0 r !pos sep_len;
-         pos := !pos +  sep_len;
-         String.unsafe_blit s 0 r !pos s_len;
-         pos := !pos + s_len)
-      tl;
-    Bytes.unsafe_to_string r
-
 
 let rec rindex_rec s i c =
   if i < 0 then i else
@@ -1290,25 +1018,6 @@ let is_valid_module_file (s : string) =
   | _ -> false 
 
 
-(* https://docs.npmjs.com/files/package.json 
-   Some rules:
-   The name must be less than or equal to 214 characters. This includes the scope for scoped packages.
-   The name can't start with a dot or an underscore.
-   New packages must not have uppercase letters in the name.
-   The name ends up being part of a URL, an argument on the command line, and a folder name. Therefore, the name can't contain any non-URL-safe characters.
-*)
-let is_valid_npm_package_name (s : string) = 
-  let len = String.length s in 
-  len <= 214 && (* magic number forced by npm *)
-  len > 0 &&
-  match String.unsafe_get s 0 with 
-  | 'a' .. 'z' | '@' -> 
-    unsafe_for_all_range s ~start:1 ~finish:(len - 1)
-      (fun x -> 
-         match x with 
-         |  'a'..'z' | '0'..'9' | '_' | '-' -> true
-         | _ -> false )
-  | _ -> false 
 
 
 type check_result = 
@@ -1488,21 +1197,8 @@ let capitalize_ascii (s : string) : string =
       else s 
     end
 
-let capitalize_ascii_opt (s : string) : string option = 
-  if String.length s = 0 then None
-  else 
-    begin
-      let c = String.unsafe_get s 0 in 
-      if (c >= 'a' && c <= 'z')
-      || (c >= '\224' && c <= '\246')
-      || (c >= '\248' && c <= '\254') then 
-        let uc = Char.unsafe_chr (Char.code c - 32) in 
-        let bytes = Bytes.of_string s in
-        Bytes.unsafe_set bytes 0 uc;
-        Some (Bytes.unsafe_to_string bytes)
-      else None
-    end
-    
+
+
 
 
 
@@ -1922,7 +1618,7 @@ let report_error env ppf = function
       else if Super_reason_react.is_array_wanted_reactElement trace then
         fprintf ppf "@[<v>\
           @[@{<info>Are you passing an array as a ReasonReact DOM (lower-case) component's children?@}@ If not, disregard this.@ \
-          If so, please use `ReasonReact.createDomElement`:@ https://reasonml.github.io/reason-react/index.html#reason-react-working-with-children@]@,@,\
+          If so, please use `ReasonReact.createDomElement`:@ https://reasonml.github.io/reason-react/docs/en/children.html@]@,@,\
           @[@{<info>Here's the original error message@}@]@,\
         @]";
       super_report_unification_error ppf env trace
