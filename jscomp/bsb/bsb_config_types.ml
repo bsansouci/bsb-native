@@ -30,8 +30,14 @@ type dependency =
   }
 type dependencies = dependency list 
 
-(* `string` is a path to the entrypoint *)
-type entries_t = JsTarget of string | NativeTarget of string | BytecodeTarget of string
+type entry_type_t = Binary | Ppx | Library
+
+type entries_metadata_t = {
+    type_: entry_type_t;
+    main_module_name: string;
+}
+
+type entries_t = JsTarget of entries_metadata_t | NativeTarget of entries_metadata_t | BytecodeTarget of entries_metadata_t
 
 type reason_react_jsx = string option 
 

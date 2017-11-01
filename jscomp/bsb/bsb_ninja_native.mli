@@ -37,6 +37,7 @@ val handle_file_groups : out_channel ->
   files_to_install:String_hash_set.t ->  
   static_libraries:string list ->
   external_deps_for_linking:string list ->
+  ocaml_dir:string ->
   bs_suffix:bool ->
   Bsb_parse_sources.file_group list ->
   string option ->

@@ -32,7 +32,7 @@ val ocaml_flags : string list
 
 val refmt_flags : string list  
 
-
+val type_ : Bsb_config_types.entry_type_t
 
 val main_entries : Bsb_config_types.entries_t list
 

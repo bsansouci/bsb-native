@@ -312,6 +312,7 @@ let output_ninja_and_namespace_map
           ~files_to_install
           ~static_libraries:(external_static_libraries @ static_libraries)
           ~external_deps_for_linking
+          ~ocaml_dir
           ~bs_suffix
           bs_file_groups
           namespace
@@ -331,6 +332,7 @@ let output_ninja_and_namespace_map
           ~files_to_install
           ~static_libraries:(external_static_libraries @ static_libraries)
           ~external_deps_for_linking
+          ~ocaml_dir
           ~bs_suffix
           bs_file_groups
           namespace

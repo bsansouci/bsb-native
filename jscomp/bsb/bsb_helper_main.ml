@@ -27,6 +27,11 @@ let main_module = ref None
 let set_main_module modulename =
   main_module := Some modulename
 
+let ocaml_flags = ref []
+
+let add_ocaml_flags s = 
+  ocaml_flags := s :: !ocaml_flags
+
 let includes :  _ list ref = ref []
 
 let add_include =
@@ -71,6 +76,7 @@ let link link_byte_or_native =
       ~bs_super_errors:!bs_super_errors
       ~namespace:!namespace
       ~global_ocaml_compiler:!global_ocaml_compiler
+      ~ocaml_flags:(List.rev !ocaml_flags)
       (Sys.getcwd ())
   end
 #end  
@@ -155,6 +161,7 @@ let () =
         ~bs_super_errors:!bs_super_errors
         ~namespace:!namespace
         ~global_ocaml_compiler:!global_ocaml_compiler
+        ~ocaml_flags:(List.rev !ocaml_flags)
         (Sys.getcwd ())
     )),
     " pack native files (cmx) into a library file (cmxa)";
@@ -168,6 +175,7 @@ let () =
         ~bs_super_errors:!bs_super_errors
         ~namespace:!namespace
         ~global_ocaml_compiler:!global_ocaml_compiler
+        ~ocaml_flags:(List.rev !ocaml_flags)
         (Sys.getcwd ())
     )),
     " pack bytecode files (cmo) into a library file (cma)";
@@ -179,6 +187,9 @@ let () =
     " adds a .a library file to be linked into the final executable";
     
     "-global-ocaml-compiler", (Arg.Unit (fun () -> global_ocaml_compiler := true)),
-    " Tell bsb_helper to use the globally available compiler when packing or linking."
+    " Tell bsb_helper to use the globally available compiler when packing or linking.";
+    
+    "-add-ocaml-flags", (Arg.String add_ocaml_flags),
+    " Pass flags to the underlying compiler."
 #end    
   ] anonymous usage

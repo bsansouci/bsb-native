@@ -68,24 +68,32 @@ let parse_entries (field : Ext_json_types.t array) =
         (* kind defaults to bytecode *)
         let kind = ref "js" in
         let main = ref None in
+        let type_ = ref Bsb_default.type_ in
         let _ = map
                 |? (Bsb_build_schemas.kind, `Str (fun x -> kind := x))
+                |? (Bsb_build_schemas.type_, `Str (fun x -> type_ := match x with
+                  | "library" -> Bsb_config_types.Library
+                  | "binary" -> Bsb_config_types.Binary
+                  | "ppx" -> Bsb_config_types.Ppx
+                  | _ -> failwith "Field 'type' is required and its value should be 'library', 'binary' or 'ppx'"
+                ))
                 |? (Bsb_build_schemas.main, `Str (fun x -> main := Some x))
         in
-        let path = begin match !main with
+        let main_module_name = begin match !main with
           (* This is technically optional when compiling to js *)
           | None when !kind = Literals.js ->
             "Index"
           | None -> 
             failwith "Missing field 'main'. That field is required its value needs to be the main module for the target"
-          | Some path -> path
+          | Some main_module_name -> main_module_name
         end in
+        let metadata = {Bsb_config_types.main_module_name; type_ = !type_} in
         if !kind = Literals.native then
-          Some (Bsb_config_types.NativeTarget path)
+          Some (Bsb_config_types.NativeTarget metadata)
         else if !kind = Literals.bytecode then
-          Some (Bsb_config_types.BytecodeTarget path)
+          Some (Bsb_config_types.BytecodeTarget metadata)
         else if !kind = Literals.js then
-          Some (Bsb_config_types.JsTarget path)
+          Some (Bsb_config_types.JsTarget metadata)
         else
           failwith "Missing field 'kind'. That field is required and its value be 'js', 'native' or 'bytecode'"
       | _ -> failwith "Unrecognized object inside array 'entries' field.") 

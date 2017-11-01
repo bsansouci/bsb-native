@@ -260,15 +260,35 @@ let handle_file_group oc
       handle_module_info  oc namespace k v acc
     ) group.sources  acc
 
-let link oc ret ~entries ~file_groups ~static_libraries ~namespace ~external_deps_for_linking =
+let link oc ret ~entries ~file_groups ~static_libraries ~namespace ~external_deps_for_linking ~ocaml_dir =
   List.fold_left (fun acc project_entry ->
-    let output, rule_name, library_file_name, suffix_cmo_or_cmx, main_module_name =
+    let output, rule_name, library_file_name, suffix_cmo_or_cmx, main_module_name, shadows =
       begin match project_entry with
-      | Bsb_config_types.JsTarget main_module_name       -> assert false
-      | Bsb_config_types.BytecodeTarget main_module_name -> 
-        (String.lowercase main_module_name) ^ ".byte"  , Rules.linking_bytecode, "lib" ^ Literals.suffix_cma, Literals.suffix_cmo, main_module_name
-      | Bsb_config_types.NativeTarget main_module_name   -> 
-        (String.lowercase main_module_name) ^ ".native", Rules.linking_native  , "lib" ^ Literals.suffix_cmxa, Literals.suffix_cmx, main_module_name
+      | Bsb_config_types.JsTarget {main_module_name; type_}       -> assert false
+      | Bsb_config_types.BytecodeTarget {main_module_name; type_} -> 
+        (String.lowercase main_module_name) ^ ".byte" , 
+        Rules.linking_bytecode, 
+        "lib" ^ Literals.suffix_cma, 
+        Literals.suffix_cmo, 
+        main_module_name, 
+        if type_ = Ppx then 
+          let ocamlcommon = ocaml_dir // "lib" // "ocaml" // "compiler-libs" // "ocamlcommon.cma" in 
+          [{
+            Bsb_ninja_util.key = "ocaml_flags_helper";
+            op = Bsb_ninja_util.Overwrite (Bsb_build_util.flag_concat "-add-ocaml-flags" ["-I"; "+compiler-libs"; ocamlcommon])
+          }] else []
+      | Bsb_config_types.NativeTarget {main_module_name; type_}   -> 
+        (String.lowercase main_module_name) ^ ".native", 
+        Rules.linking_native  , 
+        "lib" ^ Literals.suffix_cmxa, 
+        Literals.suffix_cmx, 
+        main_module_name,
+        if type_ = Ppx then
+          let ocamlcommon = ocaml_dir // "lib" // "ocaml" // "compiler-libs" // "ocamlcommon.cmxa" in 
+          [{
+            Bsb_ninja_util.key = "ocaml_flags_helper";
+            op = Bsb_ninja_util.Overwrite (Bsb_build_util.flag_concat "-add-ocaml-flags" ["-I"; "+compiler-libs"; ocamlcommon])
+          }] else []
       end in
     let (all_mlast_files, all_cmo_or_cmx_files, all_cmi_files) =
       List.fold_left (fun acc group -> 
@@ -309,7 +329,7 @@ let link oc ret ~entries ~file_groups ~static_libraries ~namespace ~external_dep
         ) group.Bsb_parse_sources.sources acc) 
       ([], [], [])
       file_groups in
-    let shadows = [{
+    let shadows = shadows @ [{
       Bsb_ninja_util.key = "main_module";
       op = Bsb_ninja_util.Overwrite main_module_name}; {key = "static_libraries"; op = Bsb_ninja_util.Overwrite (Bsb_build_util.flag_concat "-add-clib" static_libraries)}] in
     output_build oc
@@ -369,13 +389,18 @@ let pack oc ret ~backend ~file_groups ~namespace =
     ([], [])
     file_groups in
   (* In the case that a library is just an interface file, we don't do anything *)
+  (* let shadows = [{
+      Bsb_ninja_util.key = "ocaml_flags_helper";
+      op = Bsb_ninja_util.Overwrite (Bsb_build_util.flag_concat "-add-ocaml-flags" ["-I"; "+compiler-libs"])
+    }] in *)
   if List.length all_cmo_or_cmx_files > 0 then begin
     output_build oc
       ~output:output_cma_or_cmxa
       ~input:""
       ~inputs:all_cmo_or_cmx_files
       ~implicit_deps:all_cmi_files
-      ~rule:rule_name ;
+      ~rule:rule_name;
+      (* ~shadows; *)
     ret @ []
   end else ret
 
@@ -390,6 +415,7 @@ let handle_file_groups oc
   ~files_to_install
   ~static_libraries
   ~external_deps_for_linking
+  ~ocaml_dir
   ~bs_suffix
   (file_groups  :  Bsb_parse_sources.file_group list) namespace st =
   let file_groups = List.filter (fun group ->
@@ -409,6 +435,6 @@ let handle_file_groups oc
       files_to_install
   ) st file_groups in
   if is_top_level then
-    link oc ret ~entries ~file_groups ~static_libraries ~namespace ~external_deps_for_linking
+    link oc ret ~entries ~file_groups ~static_libraries ~namespace ~external_deps_for_linking ~ocaml_dir
   else
     pack oc ret ~backend ~file_groups ~namespace

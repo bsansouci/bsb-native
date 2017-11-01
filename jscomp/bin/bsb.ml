@@ -10281,8 +10281,14 @@ type dependency =
   }
 type dependencies = dependency list 
 
-(* `string` is a path to the entrypoint *)
-type entries_t = JsTarget of string | NativeTarget of string | BytecodeTarget of string
+type entry_type_t = Binary | Ppx | Library
+
+type entries_metadata_t = {
+    type_: entry_type_t;
+    main_module_name: string;
+}
+
+type entries_t = JsTarget of entries_metadata_t | NativeTarget of entries_metadata_t | BytecodeTarget of entries_metadata_t
 
 type reason_react_jsx = string option 
 
@@ -10369,7 +10375,7 @@ val ocaml_flags : string list
 
 val refmt_flags : string list  
 
-
+val type_ : Bsb_config_types.entry_type_t
 
 val main_entries : Bsb_config_types.entries_t list
 
@@ -10433,13 +10439,14 @@ let bsc_flags =
     "-color"; "always" 
   ]
 
-let ocaml_flags = ["-no-alias-deps"; "-thread"]
+let ocaml_flags = ["-no-alias-deps"; "-thread"; "-I"; "+compiler-libs"]
 
 let refmt_flags = ["--print"; "binary"]
 
 
+let type_ = Bsb_config_types.Library
 
-let main_entries = [Bsb_config_types.JsTarget "Index"]
+let main_entries = [Bsb_config_types.JsTarget {main_module_name = "Index"; type_ = type_}]
 
 let allowed_build_kinds = [Bsb_config_types.Js; Bsb_config_types.Bytecode; Bsb_config_types.Native]
 
@@ -10844,24 +10851,32 @@ let parse_entries (field : Ext_json_types.t array) =
         (* kind defaults to bytecode *)
         let kind = ref "js" in
         let main = ref None in
+        let type_ = ref Bsb_default.type_ in
         let _ = map
                 |? (Bsb_build_schemas.kind, `Str (fun x -> kind := x))
+                |? (Bsb_build_schemas.type_, `Str (fun x -> type_ := match x with
+                  | "library" -> Bsb_config_types.Library
+                  | "binary" -> Bsb_config_types.Binary
+                  | "ppx" -> Bsb_config_types.Ppx
+                  | _ -> failwith "Field 'type' is required and its value should be 'library', 'binary' or 'ppx'"
+                ))
                 |? (Bsb_build_schemas.main, `Str (fun x -> main := Some x))
         in
-        let path = begin match !main with
+        let main_module_name = begin match !main with
           (* This is technically optional when compiling to js *)
           | None when !kind = Literals.js ->
             "Index"
           | None -> 
             failwith "Missing field 'main'. That field is required its value needs to be the main module for the target"
-          | Some path -> path
+          | Some main_module_name -> main_module_name
         end in
+        let metadata = {Bsb_config_types.main_module_name; type_ = !type_} in
         if !kind = Literals.native then
-          Some (Bsb_config_types.NativeTarget path)
+          Some (Bsb_config_types.NativeTarget metadata)
         else if !kind = Literals.bytecode then
-          Some (Bsb_config_types.BytecodeTarget path)
+          Some (Bsb_config_types.BytecodeTarget metadata)
         else if !kind = Literals.js then
-          Some (Bsb_config_types.JsTarget path)
+          Some (Bsb_config_types.JsTarget metadata)
         else
           failwith "Missing field 'kind'. That field is required and its value be 'js', 'native' or 'bytecode'"
       | _ -> failwith "Unrecognized object inside array 'entries' field.") 
@@ -12122,27 +12137,27 @@ let build_cmi_native =
 
 let linking_bytecode =
   define
-    ~command:"${bsb_helper} ${namespace} ${global_ocaml_compiler} -bs-main ${main_module} ${bs_super_errors} ${static_libraries} \
+    ~command:"${bsb_helper} ${ocaml_flags_helper} ${namespace} ${global_ocaml_compiler} -bs-main ${main_module} ${bs_super_errors} ${static_libraries} \
               ${ocamlfind_dependencies} ${external_deps_for_linking} ${in} -link-bytecode ${out} ${berror}"
     "linking_bytecode"
 
 let linking_native =
   define
-    ~command:"${bsb_helper} ${namespace} ${global_ocaml_compiler} -bs-main ${main_module} ${bs_super_errors} ${static_libraries} \
+    ~command:"${bsb_helper} ${ocaml_flags_helper} ${namespace} ${global_ocaml_compiler} -bs-main ${main_module} ${bs_super_errors} ${static_libraries} \
               ${ocamlfind_dependencies} ${external_deps_for_linking} ${in} -link-native ${out} ${berror}"
     "linking_native"
 
 
 let build_cma_library =
   define
-    ~command:"${bsb_helper} ${namespace} ${global_ocaml_compiler} ${bs_super_errors} ${static_libraries} ${ocamlfind_dependencies} \
+    ~command:"${bsb_helper} ${ocaml_flags_helper} ${namespace} ${global_ocaml_compiler} ${bs_super_errors} ${static_libraries} ${ocamlfind_dependencies} \
               ${bs_package_includes} ${bsc_lib_includes} ${bsc_extra_includes} \
               ${in} -pack-bytecode-library ${berror}"
     "build_cma_library"
 
 let build_cmxa_library =
   define
-    ~command:"${bsb_helper} ${namespace} ${global_ocaml_compiler} ${bs_super_errors} ${static_libraries} ${ocamlfind_dependencies} \
+    ~command:"${bsb_helper} ${ocaml_flags_helper} ${namespace} ${global_ocaml_compiler} ${bs_super_errors} ${static_libraries} ${ocamlfind_dependencies} \
               ${bs_package_includes} ${bsc_lib_includes} ${bsc_extra_includes} \
               ${in} -pack-native-library ${berror}"
     "build_cmxa_library"
@@ -12854,6 +12869,7 @@ val handle_file_groups : out_channel ->
   files_to_install:String_hash_set.t ->  
   static_libraries:string list ->
   external_deps_for_linking:string list ->
+  ocaml_dir:string ->
   bs_suffix:bool ->
   Bsb_parse_sources.file_group list ->
   string option ->
@@ -13124,15 +13140,35 @@ let handle_file_group oc
       handle_module_info  oc namespace k v acc
     ) group.sources  acc
 
-let link oc ret ~entries ~file_groups ~static_libraries ~namespace ~external_deps_for_linking =
+let link oc ret ~entries ~file_groups ~static_libraries ~namespace ~external_deps_for_linking ~ocaml_dir =
   List.fold_left (fun acc project_entry ->
-    let output, rule_name, library_file_name, suffix_cmo_or_cmx, main_module_name =
+    let output, rule_name, library_file_name, suffix_cmo_or_cmx, main_module_name, shadows =
       begin match project_entry with
-      | Bsb_config_types.JsTarget main_module_name       -> assert false
-      | Bsb_config_types.BytecodeTarget main_module_name -> 
-        (String.lowercase main_module_name) ^ ".byte"  , Rules.linking_bytecode, "lib" ^ Literals.suffix_cma, Literals.suffix_cmo, main_module_name
-      | Bsb_config_types.NativeTarget main_module_name   -> 
-        (String.lowercase main_module_name) ^ ".native", Rules.linking_native  , "lib" ^ Literals.suffix_cmxa, Literals.suffix_cmx, main_module_name
+      | Bsb_config_types.JsTarget {main_module_name; type_}       -> assert false
+      | Bsb_config_types.BytecodeTarget {main_module_name; type_} -> 
+        (String.lowercase main_module_name) ^ ".byte" , 
+        Rules.linking_bytecode, 
+        "lib" ^ Literals.suffix_cma, 
+        Literals.suffix_cmo, 
+        main_module_name, 
+        if type_ = Ppx then 
+          let ocamlcommon = ocaml_dir // "lib" // "ocaml" // "compiler-libs" // "ocamlcommon.cma" in 
+          [{
+            Bsb_ninja_util.key = "ocaml_flags_helper";
+            op = Bsb_ninja_util.Overwrite (Bsb_build_util.flag_concat "-add-ocaml-flags" ["-I"; "+compiler-libs"; ocamlcommon])
+          }] else []
+      | Bsb_config_types.NativeTarget {main_module_name; type_}   -> 
+        (String.lowercase main_module_name) ^ ".native", 
+        Rules.linking_native  , 
+        "lib" ^ Literals.suffix_cmxa, 
+        Literals.suffix_cmx, 
+        main_module_name,
+        if type_ = Ppx then
+          let ocamlcommon = ocaml_dir // "lib" // "ocaml" // "compiler-libs" // "ocamlcommon.cmxa" in 
+          [{
+            Bsb_ninja_util.key = "ocaml_flags_helper";
+            op = Bsb_ninja_util.Overwrite (Bsb_build_util.flag_concat "-add-ocaml-flags" ["-I"; "+compiler-libs"; ocamlcommon])
+          }] else []
       end in
     let (all_mlast_files, all_cmo_or_cmx_files, all_cmi_files) =
       List.fold_left (fun acc group -> 
@@ -13173,7 +13209,7 @@ let link oc ret ~entries ~file_groups ~static_libraries ~namespace ~external_dep
         ) group.Bsb_parse_sources.sources acc) 
       ([], [], [])
       file_groups in
-    let shadows = [{
+    let shadows = shadows @ [{
       Bsb_ninja_util.key = "main_module";
       op = Bsb_ninja_util.Overwrite main_module_name}; {key = "static_libraries"; op = Bsb_ninja_util.Overwrite (Bsb_build_util.flag_concat "-add-clib" static_libraries)}] in
     output_build oc
@@ -13233,13 +13269,18 @@ let pack oc ret ~backend ~file_groups ~namespace =
     ([], [])
     file_groups in
   (* In the case that a library is just an interface file, we don't do anything *)
+  (* let shadows = [{
+      Bsb_ninja_util.key = "ocaml_flags_helper";
+      op = Bsb_ninja_util.Overwrite (Bsb_build_util.flag_concat "-add-ocaml-flags" ["-I"; "+compiler-libs"])
+    }] in *)
   if List.length all_cmo_or_cmx_files > 0 then begin
     output_build oc
       ~output:output_cma_or_cmxa
       ~input:""
       ~inputs:all_cmo_or_cmx_files
       ~implicit_deps:all_cmi_files
-      ~rule:rule_name ;
+      ~rule:rule_name;
+      (* ~shadows; *)
     ret @ []
   end else ret
 
@@ -13254,6 +13295,7 @@ let handle_file_groups oc
   ~files_to_install
   ~static_libraries
   ~external_deps_for_linking
+  ~ocaml_dir
   ~bs_suffix
   (file_groups  :  Bsb_parse_sources.file_group list) namespace st =
   let file_groups = List.filter (fun group ->
@@ -13273,7 +13315,7 @@ let handle_file_groups oc
       files_to_install
   ) st file_groups in
   if is_top_level then
-    link oc ret ~entries ~file_groups ~static_libraries ~namespace ~external_deps_for_linking
+    link oc ret ~entries ~file_groups ~static_libraries ~namespace ~external_deps_for_linking ~ocaml_dir
   else
     pack oc ret ~backend ~file_groups ~namespace
 
@@ -13636,6 +13678,7 @@ let output_ninja_and_namespace_map
           ~files_to_install
           ~static_libraries:(external_static_libraries @ static_libraries)
           ~external_deps_for_linking
+          ~ocaml_dir
           ~bs_suffix
           bs_file_groups
           namespace
@@ -13655,6 +13698,7 @@ let output_ninja_and_namespace_map
           ~files_to_install
           ~static_libraries:(external_static_libraries @ static_libraries)
           ~external_deps_for_linking
+          ~ocaml_dir
           ~bs_suffix
           bs_file_groups
           namespace

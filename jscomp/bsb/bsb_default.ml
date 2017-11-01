@@ -52,13 +52,14 @@ let bsc_flags =
     "-color"; "always" 
   ]
 
-let ocaml_flags = ["-no-alias-deps"; "-thread"]
+let ocaml_flags = ["-no-alias-deps"; "-thread"; "-I"; "+compiler-libs"]
 
 let refmt_flags = ["--print"; "binary"]
 
 
+let type_ = Bsb_config_types.Library
 
-let main_entries = [Bsb_config_types.JsTarget "Index"]
+let main_entries = [Bsb_config_types.JsTarget {main_module_name = "Index"; type_ = type_}]
 
 let allowed_build_kinds = [Bsb_config_types.Js; Bsb_config_types.Bytecode; Bsb_config_types.Native]
 
