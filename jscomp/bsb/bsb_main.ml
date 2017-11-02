@@ -156,7 +156,7 @@ let ninja_command_exit  vendor_ninja ninja_args nested =
       if ninja_args_len = 0 then ninja_common_args else 
         Array.append ninja_common_args ninja_args in 
     Bsb_log.info_args args ;      
-    Unix.execvp vendor_ninja args      
+    Unix.execvpe vendor_ninja args (Array.append (Unix.environment ()) [| "BSB_BACKEND=" ^ nested |])
 
 
 

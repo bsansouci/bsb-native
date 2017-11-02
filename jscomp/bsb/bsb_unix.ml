@@ -28,7 +28,8 @@ type command =
   { 
     cmd : string ;
     cwd : string ; 
-    args : string array 
+    args : string array ;
+    env : string array ;
   }  
 
 
@@ -46,7 +47,7 @@ let run_command_execv_unix  cmd : int =
   | 0 -> 
     log cmd;
     Unix.chdir cmd.cwd;
-    Unix.execv cmd.cmd cmd.args 
+    Unix.execve cmd.cmd cmd.args cmd.env
   | pid -> 
     match Unix.waitpid [] pid  with 
     | pid, process_status ->       

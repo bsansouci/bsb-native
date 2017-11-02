@@ -32,7 +32,7 @@ let ninja_clean ~nested bsc_dir proj_dir =
     let cwd = proj_dir // nested // Bsb_config.lib_bs  in
     if Sys.file_exists cwd then 
       let eid = 
-        (Bsb_unix.run_command_execv { cmd ; args = [|cmd; "-t"; "clean"|] ; cwd  }) in
+        (Bsb_unix.run_command_execv { cmd ; args = [|cmd; "-t"; "clean"|] ; cwd ; env = (Unix.environment ()) }) in
       if eid <> 0 then  
         Bsb_log.warn "@{<warning>ninja clean failed@}@."
   with  e -> 

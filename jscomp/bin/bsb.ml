@@ -6220,7 +6220,8 @@ type command =
   { 
     cmd : string ;
     cwd : string ; 
-    args : string array 
+    args : string array ;
+    env : string array ;
   }  
 
 
@@ -6268,7 +6269,8 @@ type command =
   { 
     cmd : string ;
     cwd : string ; 
-    args : string array 
+    args : string array ;
+    env : string array ;
   }  
 
 
@@ -6286,7 +6288,7 @@ let run_command_execv_unix  cmd : int =
   | 0 -> 
     log cmd;
     Unix.chdir cmd.cwd;
-    Unix.execv cmd.cmd cmd.args 
+    Unix.execve cmd.cmd cmd.args cmd.env
   | pid -> 
     match Unix.waitpid [] pid  with 
     | pid, process_status ->       
@@ -6428,7 +6430,7 @@ let ninja_clean ~nested bsc_dir proj_dir =
     let cwd = proj_dir // nested // Bsb_config.lib_bs  in
     if Sys.file_exists cwd then 
       let eid = 
-        (Bsb_unix.run_command_execv { cmd ; args = [|cmd; "-t"; "clean"|] ; cwd  }) in
+        (Bsb_unix.run_command_execv { cmd ; args = [|cmd; "-t"; "clean"|] ; cwd ; env = (Unix.environment ()) }) in
       if eid <> 0 then  
         Bsb_log.warn "@{<warning>ninja clean failed@}@."
   with  e -> 
@@ -15285,7 +15287,8 @@ let build_bs_deps cwd ~root_project_dir ~backend ~main_bs_super_errors ~global_o
              let command = 
               {Bsb_unix.cmd = vendor_ninja;
                 cwd = cwd // Bsb_config.lib_bs // nested;
-                args  = [|vendor_ninja|]
+                args  = [|vendor_ninja|] ;
+                env = Array.append (Unix.environment ()) [| "BSB_BACKEND=" ^ nested |] ;
                } in     
              let eid =
                Bsb_unix.run_command_execv
@@ -15475,7 +15478,7 @@ let ninja_command_exit  vendor_ninja ninja_args nested =
       if ninja_args_len = 0 then ninja_common_args else 
         Array.append ninja_common_args ninja_args in 
     Bsb_log.info_args args ;      
-    Unix.execvp vendor_ninja args      
+    Unix.execvpe vendor_ninja args (Array.append (Unix.environment ()) [| "BSB_BACKEND=" ^ nested |])
 
 
 

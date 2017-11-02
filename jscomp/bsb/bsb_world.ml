@@ -138,7 +138,8 @@ let build_bs_deps cwd ~root_project_dir ~backend ~main_bs_super_errors ~global_o
              let command = 
               {Bsb_unix.cmd = vendor_ninja;
                 cwd = cwd // Bsb_config.lib_bs // nested;
-                args  = [|vendor_ninja|]
+                args  = [|vendor_ninja|] ;
+                env = Array.append (Unix.environment ()) [| "BSB_BACKEND=" ^ nested |] ;
                } in     
              let eid =
                Bsb_unix.run_command_execv
