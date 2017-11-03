@@ -5772,7 +5772,6 @@ val link : link_t ->
   ocamlfind_packages:string list -> 
   bs_super_errors:bool -> 
   namespace:string option ->
-  global_ocaml_compiler:bool ->
   ocaml_flags:string list ->
   string ->
   unit
@@ -5807,7 +5806,7 @@ type link_t = LinkBytecode of string | LinkNative of string
 
 let (//) = Ext_path.combine
 
-let link link_byte_or_native ~main_module ~batch_files ~clibs ~includes ~ocamlfind_packages ~bs_super_errors ~namespace ~global_ocaml_compiler ~ocaml_flags cwd =
+let link link_byte_or_native ~main_module ~batch_files ~clibs ~includes ~ocamlfind_packages ~bs_super_errors ~namespace ~ocaml_flags cwd =
   let suffix_object_files, suffix_library_files, compiler, add_custom, output_file = begin match link_byte_or_native with
   | LinkBytecode output_file -> Literals.suffix_cmo, Literals.suffix_cma , "ocamlc"  , true, output_file
   | LinkNative output_file   -> Literals.suffix_cmx, Literals.suffix_cmxa, "ocamlopt", false, output_file
@@ -5861,7 +5860,7 @@ let link link_byte_or_native ~main_module ~batch_files ~clibs ~includes ~ocamlfi
      *)
     if ocamlfind_packages = [] then
       let ocaml_dir = Bsb_default_paths.ocaml_dir in
-      let compiler = if global_ocaml_compiler then compiler ^ ".opt" else ocaml_dir // compiler ^ ".opt" in
+      let compiler = ocaml_dir // compiler ^ ".opt" in
       let list_of_args = (compiler :: "-g"
         :: (if bs_super_errors then ["-bs-super-errors"] else [])) 
         @ ocaml_flags
@@ -5925,7 +5924,6 @@ val pack : pack_t ->
   ocamlfind_packages:string list -> 
   bs_super_errors:bool -> 
   namespace:string option ->
-  global_ocaml_compiler:bool ->
   ocaml_flags:string list ->
   string ->
   unit
@@ -5969,7 +5967,7 @@ let module_of_filename filename =
   | exception Not_found -> str
   | len -> String.sub str 0 len
 
-let pack pack_byte_or_native ~batch_files ~includes ~ocamlfind_packages ~bs_super_errors ~namespace ~global_ocaml_compiler ~ocaml_flags cwd =
+let pack pack_byte_or_native ~batch_files ~includes ~ocamlfind_packages ~bs_super_errors ~namespace ~ocaml_flags cwd =
   let suffix_object_files, suffix_library_files, compiler, custom_flag = begin match pack_byte_or_native with
   | PackBytecode -> Literals.suffix_cmo, Literals.suffix_cma , "ocamlc", true
   | PackNative   -> Literals.suffix_cmx, Literals.suffix_cmxa, "ocamlopt", false
@@ -6014,7 +6012,7 @@ let pack pack_byte_or_native ~batch_files ~includes ~ocamlfind_packages ~bs_supe
        to install ocamlfind. *)
     if ocamlfind_packages = [] then
       let ocaml_dir = Bsb_default_paths.ocaml_dir in
-      let compiler = if global_ocaml_compiler then compiler ^ ".opt" else ocaml_dir // compiler ^ ".opt" in
+      let compiler = ocaml_dir // compiler ^ ".opt" in
       Unix.execvp
         compiler
           (Array.of_list ((compiler :: "-a" :: "-g" :: (if bs_super_errors then ["-bs-super-errors"] else []) )
@@ -6127,8 +6125,6 @@ let batch_files = ref []
 let collect_file name =
   batch_files := name :: !batch_files
 
-let global_ocaml_compiler = ref false
-
 (* let output_prefix = ref None *)
 let ocamlfind_packages = ref []
 
@@ -6155,7 +6151,6 @@ let link link_byte_or_native =
       ~ocamlfind_packages:!ocamlfind_packages
       ~bs_super_errors:!bs_super_errors
       ~namespace:!namespace
-      ~global_ocaml_compiler:!global_ocaml_compiler
       ~ocaml_flags:(List.rev !ocaml_flags)
       (Sys.getcwd ())
   end
@@ -6240,7 +6235,6 @@ let () =
         ~ocamlfind_packages:!ocamlfind_packages
         ~bs_super_errors:!bs_super_errors
         ~namespace:!namespace
-        ~global_ocaml_compiler:!global_ocaml_compiler
         ~ocaml_flags:(List.rev !ocaml_flags)
         (Sys.getcwd ())
     )),
@@ -6254,7 +6248,6 @@ let () =
         ~ocamlfind_packages:!ocamlfind_packages
         ~bs_super_errors:!bs_super_errors
         ~namespace:!namespace
-        ~global_ocaml_compiler:!global_ocaml_compiler
         ~ocaml_flags:(List.rev !ocaml_flags)
         (Sys.getcwd ())
     )),
@@ -6265,9 +6258,6 @@ let () =
     
     "-add-clib", (Arg.String add_clib),
     " adds a .a library file to be linked into the final executable";
-    
-    "-global-ocaml-compiler", (Arg.Unit (fun () -> global_ocaml_compiler := true)),
-    " Tell bsb_helper to use the globally available compiler when packing or linking.";
     
     "-add-ocaml-flags", (Arg.String add_ocaml_flags),
     " Pass flags to the underlying compiler."

@@ -47,8 +47,6 @@ let batch_files = ref []
 let collect_file name =
   batch_files := name :: !batch_files
 
-let global_ocaml_compiler = ref false
-
 (* let output_prefix = ref None *)
 let ocamlfind_packages = ref []
 
@@ -75,7 +73,6 @@ let link link_byte_or_native =
       ~ocamlfind_packages:!ocamlfind_packages
       ~bs_super_errors:!bs_super_errors
       ~namespace:!namespace
-      ~global_ocaml_compiler:!global_ocaml_compiler
       ~ocaml_flags:(List.rev !ocaml_flags)
       (Sys.getcwd ())
   end
@@ -160,7 +157,6 @@ let () =
         ~ocamlfind_packages:!ocamlfind_packages
         ~bs_super_errors:!bs_super_errors
         ~namespace:!namespace
-        ~global_ocaml_compiler:!global_ocaml_compiler
         ~ocaml_flags:(List.rev !ocaml_flags)
         (Sys.getcwd ())
     )),
@@ -174,7 +170,6 @@ let () =
         ~ocamlfind_packages:!ocamlfind_packages
         ~bs_super_errors:!bs_super_errors
         ~namespace:!namespace
-        ~global_ocaml_compiler:!global_ocaml_compiler
         ~ocaml_flags:(List.rev !ocaml_flags)
         (Sys.getcwd ())
     )),
@@ -185,9 +180,6 @@ let () =
     
     "-add-clib", (Arg.String add_clib),
     " adds a .a library file to be linked into the final executable";
-    
-    "-global-ocaml-compiler", (Arg.Unit (fun () -> global_ocaml_compiler := true)),
-    " Tell bsb_helper to use the globally available compiler when packing or linking.";
     
     "-add-ocaml-flags", (Arg.String add_ocaml_flags),
     " Pass flags to the underlying compiler."

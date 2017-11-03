@@ -35,7 +35,6 @@ let (//) = Ext_path.combine
 let regenerate_ninja
   ?external_deps_for_linking_and_clibs
   ?main_bs_super_errors
-  ?global_ocaml_compiler
   ~is_top_level
   ~not_dev
   ~override_package_specs
@@ -158,10 +157,6 @@ let regenerate_ninja
           | None -> config.Bsb_config_types.bs_super_errors
           | Some bs_super_errors -> bs_super_errors
         end in 
-        let global_ocaml_compiler = begin match global_ocaml_compiler with 
-          | None -> config.Bsb_config_types.global_ocaml_compiler
-          | Some global_ocaml_compiler -> global_ocaml_compiler
-        end in 
         Bsb_ninja_gen.output_ninja_and_namespace_map 
           ~cwd 
           ~bsc_dir 
@@ -170,7 +165,6 @@ let regenerate_ninja
           ~ocaml_dir 
           ~root_project_dir 
           ~is_top_level 
-          ~global_ocaml_compiler
           ~backend 
           ~main_bs_super_errors
           config;

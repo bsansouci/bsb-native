@@ -155,7 +155,6 @@ let build_script = "build-script"
 let allowed_build_kinds = "allowed-build-kinds"
 let ocamlfind_dependencies = "ocamlfind-dependencies"
 let ocaml_flags = "ocaml-flags"
-let global_ocaml_compiler = "global-ocaml-compiler"
 
 end
 module Ext_array : sig 
@@ -10336,7 +10335,6 @@ type t =
     build_script: string option;
     allowed_build_kinds: compilation_kind_t list;
     ocamlfind_dependencies: string list;
-    global_ocaml_compiler: bool;
     ocaml_flags: string list;
   }
 
@@ -10766,8 +10764,8 @@ module Bsb_config_parse : sig
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
 
-val get_global_config_from_bsconfig : 
-    unit -> (Bsb_package_specs.t * bool * bool)
+val simple_get_from_bsconfig : 
+    unit -> (Bsb_package_specs.t * bool)
 
 val entries_from_bsconfig : unit -> Bsb_config_types.entries_t list
 
@@ -10886,7 +10884,7 @@ let parse_entries (field : Ext_json_types.t array) =
 
 
 
-let get_global_config_from_bsconfig () = 
+let simple_get_from_bsconfig () = 
   let json = Ext_json_parse.parse_json_from_file Literals.bsconfig_json in
   begin match json with
     | Obj {map} ->
@@ -10898,12 +10896,10 @@ let get_global_config_from_bsconfig () =
           Bsb_package_specs.default_package_specs
       end in
       let bs_super_errors = ref Bsb_default.bs_super_errors in
-      let global_ocaml_compiler = ref false in
       map 
         |? (Bsb_build_schemas.bs_super_errors, `Bool (fun b -> bs_super_errors := b))
-        |? (Bsb_build_schemas.global_ocaml_compiler, `Bool (fun b -> global_ocaml_compiler := b))
         |> ignore;
-      (package_specs, !bs_super_errors, !global_ocaml_compiler)
+      (package_specs, !bs_super_errors)
     | _ -> assert false
   end
 
@@ -10969,7 +10965,6 @@ let interpret_json
   let bsc_flags = ref Bsb_default.bsc_flags in  
   let warnings = ref Bsb_default.warnings in
   let ocamlfind_dependencies = ref [] in
-  let global_ocaml_compiler = ref false in
   let ppx_flags = ref []in 
   let ocaml_flags = ref Bsb_default.ocaml_flags in
 
@@ -11112,7 +11107,6 @@ let interpret_json
     |? (Bsb_build_schemas.ocamlfind_dependencies, `Arr (fun s -> ocamlfind_dependencies := get_list_string s))
     |? (Bsb_build_schemas.bs_super_errors, `Bool (fun b -> bs_super_errors := b))
     |? (Bsb_build_schemas.ocaml_flags, `Arr (fun s -> ocaml_flags := !ocaml_flags @ (get_list_string s)))
-    |? (Bsb_build_schemas.global_ocaml_compiler, `Bool (fun b -> global_ocaml_compiler := b))
     |> ignore ;
     begin match String_map.find_opt Bsb_build_schemas.sources map with 
       | Some x -> 
@@ -11192,7 +11186,6 @@ let interpret_json
           build_script = !build_script;
           allowed_build_kinds = allowed_build_kinds;
           ocamlfind_dependencies = !ocamlfind_dependencies;
-          global_ocaml_compiler = !global_ocaml_compiler;
           ocaml_flags = !ocaml_flags;
         }
       | None -> failwith "no sources specified, please checkout the schema for more details"
@@ -11801,7 +11794,6 @@ let ocamlfind_dependencies = "ocamlfind_dependencies"
 let external_deps_for_linking = "external_deps_for_linking"
 let open_flag = "open_flag"
 let ocaml_flags = "ocaml_flags"
-let global_ocaml_compiler = "global_ocaml_compiler"
 let berror = "berror"
 
 end
@@ -12097,71 +12089,71 @@ let build_package_gen_mlast_simple =
     
 let build_package_build_cmi_bytecode = 
   define
-    ~command:"${findlib_conf_env_var} ${ocamlfind} ${ocamlc} ${bs_super_errors_ocamlfind} ${bs_package_includes} ${bsc_lib_includes} ${ocamlfind_dependencies} ${bsc_extra_includes} ${ocaml_flags} \
-              -o ${out} ${warnings} -no-alias-deps -w -49 -g -c -intf-suffix .mliast_simple -impl ${in} ${postbuild} ${berror}"
+    ~command:"${ocamlfind} ${ocamlc} ${bs_super_errors_ocamlfind} ${bs_package_includes} ${bsc_lib_includes} ${ocamlfind_dependencies} ${bsc_extra_includes} ${ocaml_flags} \
+              -o ${out} ${warnings} -no-alias-deps -w -49 -g -c -intf-suffix .mliast_simple -impl ${in} ${postbuild}"
     "build_package_build_cmi_bytecode"
 
 let build_package_build_cmi_native = 
   define
-    ~command:"${findlib_conf_env_var} ${ocamlfind} ${ocamlopt} ${bs_super_errors_ocamlfind} ${bs_package_includes} ${bsc_lib_includes} ${ocamlfind_dependencies} ${bsc_extra_includes} ${ocaml_flags} \
-              -o ${out} ${warnings} -no-alias-deps -w -49 -g -c -intf-suffix .mliast_simple -impl ${in} ${postbuild} ${berror}"
+    ~command:"${ocamlfind} ${ocamlopt} ${bs_super_errors_ocamlfind} ${bs_package_includes} ${bsc_lib_includes} ${ocamlfind_dependencies} ${bsc_extra_includes} ${ocaml_flags} \
+              -o ${out} ${warnings} -no-alias-deps -w -49 -g -c -intf-suffix .mliast_simple -impl ${in} ${postbuild}"
     "build_package_build_cmi_native"
 
 
 let build_cmo_cmi_bytecode =
   define
-    ~command:"${findlib_conf_env_var} ${ocamlfind} ${ocamlc} ${open_flag} ${bs_super_errors_ocamlfind} ${bs_package_includes} ${bsc_lib_includes} ${ocamlfind_dependencies} ${bsc_extra_includes} ${ocaml_flags} \
-              -o ${out} ${warnings} -g -c -intf-suffix .mliast_simple -impl ${in}_simple ${postbuild} ${berror}"
+    ~command:"${ocamlfind} ${ocamlc} ${open_flag} ${bs_super_errors_ocamlfind} ${bs_package_includes} ${bsc_lib_includes} ${ocamlfind_dependencies} ${bsc_extra_includes} ${ocaml_flags} \
+              -o ${out} ${warnings} -g -c -intf-suffix .mliast_simple -impl ${in}_simple ${postbuild}"
     ~depfile:"${in}.d"
     "build_cmo_cmi_bytecode"
     
 let build_cmi_bytecode =
   define
-    ~command:"${findlib_conf_env_var} ${ocamlfind} ${ocamlc} ${open_flag} ${bs_super_errors_ocamlfind} ${bs_package_includes} ${bsc_lib_includes} ${ocamlfind_dependencies} ${bsc_extra_includes} ${ocaml_flags} \
-              -o ${out} ${warnings} -g -c -intf ${in}_simple ${postbuild} ${berror}"
+    ~command:"${ocamlfind} ${ocamlc} ${open_flag} ${bs_super_errors_ocamlfind} ${bs_package_includes} ${bsc_lib_includes} ${ocamlfind_dependencies} ${bsc_extra_includes} ${ocaml_flags} \
+              -o ${out} ${warnings} -g -c -intf ${in}_simple ${postbuild}"
     ~depfile:"${in}.d"
     "build_cmi_bytecode"
 
 let build_cmx_cmi_native =
   define
-    ~command:"${findlib_conf_env_var} ${ocamlfind} ${ocamlopt} ${open_flag} ${bs_super_errors_ocamlfind} ${bs_package_includes} ${bsc_lib_includes} ${ocamlfind_dependencies} ${bsc_extra_includes} ${ocaml_flags} \
-              -o ${out} ${warnings} -g -c -intf-suffix .mliast_simple -impl ${in}_simple ${postbuild} ${berror}"
+    ~command:"${ocamlfind} ${ocamlopt} ${open_flag} ${bs_super_errors_ocamlfind} ${bs_package_includes} ${bsc_lib_includes} ${ocamlfind_dependencies} ${bsc_extra_includes} ${ocaml_flags} \
+              -o ${out} ${warnings} -g -c -intf-suffix .mliast_simple -impl ${in}_simple ${postbuild}"
     ~depfile:"${in}.d"
     "build_cmx_cmi_native"
 
 let build_cmi_native =
   define
-    ~command:"${findlib_conf_env_var} ${ocamlfind} ${ocamlopt} ${open_flag} ${bs_super_errors_ocamlfind} ${bs_package_includes} ${bsc_lib_includes} ${ocamlfind_dependencies} ${bsc_extra_includes} ${ocaml_flags} \
-              -o ${out} ${warnings} -g -c -intf ${in}_simple ${postbuild} ${berror}"
+    ~command:"${ocamlfind} ${ocamlopt} ${open_flag} ${bs_super_errors_ocamlfind} ${bs_package_includes} ${bsc_lib_includes} ${ocamlfind_dependencies} ${bsc_extra_includes} ${ocaml_flags} \
+              -o ${out} ${warnings} -g -c -intf ${in}_simple ${postbuild}"
     ~depfile:"${in}.d"
     "build_cmi_native"
 
 
 let linking_bytecode =
   define
-    ~command:"${bsb_helper} ${ocaml_flags_helper} ${namespace} ${global_ocaml_compiler} -bs-main ${main_module} ${bs_super_errors} ${static_libraries} \
-              ${ocamlfind_dependencies} ${external_deps_for_linking} ${in} -link-bytecode ${out} ${berror}"
+    ~command:"${bsb_helper} ${ocaml_flags_helper} ${namespace} -bs-main ${main_module} ${bs_super_errors} ${static_libraries} \
+              ${ocamlfind_dependencies} ${external_deps_for_linking} ${in} -link-bytecode ${out}"
     "linking_bytecode"
 
 let linking_native =
   define
-    ~command:"${bsb_helper} ${ocaml_flags_helper} ${namespace} ${global_ocaml_compiler} -bs-main ${main_module} ${bs_super_errors} ${static_libraries} \
-              ${ocamlfind_dependencies} ${external_deps_for_linking} ${in} -link-native ${out} ${berror}"
+    ~command:"${bsb_helper} ${ocaml_flags_helper} ${namespace} -bs-main ${main_module} ${bs_super_errors} ${static_libraries} \
+              ${ocamlfind_dependencies} ${external_deps_for_linking} ${in} -link-native ${out}"
     "linking_native"
 
 
 let build_cma_library =
   define
-    ~command:"${bsb_helper} ${ocaml_flags_helper} ${namespace} ${global_ocaml_compiler} ${bs_super_errors} ${static_libraries} ${ocamlfind_dependencies} \
+    ~command:"${bsb_helper} ${ocaml_flags_helper} ${namespace} ${bs_super_errors} ${static_libraries} ${ocamlfind_dependencies} \
               ${bs_package_includes} ${bsc_lib_includes} ${bsc_extra_includes} \
-              ${in} -pack-bytecode-library ${berror}"
+              ${in} -pack-bytecode-library"
     "build_cma_library"
 
 let build_cmxa_library =
   define
-    ~command:"${bsb_helper} ${ocaml_flags_helper} ${namespace} ${global_ocaml_compiler} ${bs_super_errors} ${static_libraries} ${ocamlfind_dependencies} \
+    ~command:"${bsb_helper} ${ocaml_flags_helper} ${namespace} ${bs_super_errors} ${static_libraries} ${ocamlfind_dependencies} \
               ${bs_package_includes} ${bsc_lib_includes} ${bsc_extra_includes} \
-              ${in} -pack-native-library ${berror}"
+              ${in} -pack-native-library"
     "build_cmxa_library"
 
 (* a snapshot of rule_names environment*)
@@ -13359,7 +13351,6 @@ val output_ninja_and_namespace_map :
   ocaml_dir:string ->
   root_project_dir:string ->
   is_top_level: bool ->
-  global_ocaml_compiler:bool ->
   backend:Bsb_config_types.compilation_kind_t ->
   main_bs_super_errors:bool ->
   Bsb_config_types.t -> unit 
@@ -13429,7 +13420,6 @@ let output_ninja_and_namespace_map
     ~ocaml_dir         
     ~root_project_dir
     ~is_top_level
-    ~global_ocaml_compiler
     ~backend
     ~main_bs_super_errors
     ({
@@ -13489,10 +13479,11 @@ let output_ninja_and_namespace_map
   let ocaml_flags =
     Bsb_build_util.flag_concat
       (if use_ocamlfind then "-passopt" else Ext_string.single_space)
-      (ocaml_flags @ (if not global_ocaml_compiler then ["-color"; "always"] else []))  in
+      (ocaml_flags @ ["-color"; "always"])  in
 
   let refmt_flags = String.concat Ext_string.single_space refmt_flags in
-  let bs_super_errors = if main_bs_super_errors && not global_ocaml_compiler && not use_ocamlfind then "-bs-super-errors" else "" in
+  (* Exclude JS because we always add -bs-super-errors for JS... *)
+  let bs_super_errors = if main_bs_super_errors && not use_ocamlfind && backend != Bsb_config_types.Js then "-bs-super-errors" else "" in
   let bs_package_includes = 
     Bsb_build_util.flag_concat dash_i @@ Ext_list.map 
       (fun (x : Bsb_config_types.dependency) -> x.package_install_path) bs_dependencies
@@ -13563,13 +13554,11 @@ let output_ninja_and_namespace_map
           
           Bsb_ninja_global_vars.external_deps_for_linking, Bsb_build_util.flag_concat dash_i external_deps_for_linking;
           Bsb_ninja_global_vars.ocamlc, if use_ocamlfind then ocamlc
-            else (if global_ocaml_compiler then ocamlc ^ ".opt" else ocaml_dir // ocamlc ^ ".opt");
+            else (ocaml_dir // ocamlc ^ ".opt");
           Bsb_ninja_global_vars.ocamlopt, if use_ocamlfind then ocamlopt
-            else (if global_ocaml_compiler then ocamlopt ^ ".opt" else ocaml_dir // ocamlopt ^ ".opt");
+            else (ocaml_dir // ocamlopt ^ ".opt");
           Bsb_ninja_global_vars.ocamlfind, if use_ocamlfind then ocamlfind else "";
           Bsb_ninja_global_vars.ocamlfind_dependencies,  Bsb_build_util.flag_concat "-package" (external_ocamlfind_dependencies @ ocamlfind_dependencies);
-          Bsb_ninja_global_vars.global_ocaml_compiler, if global_ocaml_compiler || use_ocamlfind then "-global-ocaml-compiler" else "";
-          Bsb_ninja_global_vars.berror, if global_ocaml_compiler then Ext_string.inter2 "2>&1 |" (bsc_dir // berror_exe) else "";
 
           (* @HACK 
               This might cause stale artifacts. This makes everything implicitly depend on the namespace file... 
@@ -13819,7 +13808,6 @@ module Bsb_ninja_regen : sig
 val regenerate_ninja :
   ?external_deps_for_linking_and_clibs:(string list) * (string list) * (string list) ->
   ?main_bs_super_errors:bool ->
-  ?global_ocaml_compiler:bool ->
   is_top_level:bool ->
   not_dev:bool ->
   override_package_specs:Bsb_package_specs.t option ->
@@ -13869,7 +13857,6 @@ let (//) = Ext_path.combine
 let regenerate_ninja
   ?external_deps_for_linking_and_clibs
   ?main_bs_super_errors
-  ?global_ocaml_compiler
   ~is_top_level
   ~not_dev
   ~override_package_specs
@@ -13992,10 +13979,6 @@ let regenerate_ninja
           | None -> config.Bsb_config_types.bs_super_errors
           | Some bs_super_errors -> bs_super_errors
         end in 
-        let global_ocaml_compiler = begin match global_ocaml_compiler with 
-          | None -> config.Bsb_config_types.global_ocaml_compiler
-          | Some global_ocaml_compiler -> global_ocaml_compiler
-        end in 
         Bsb_ninja_gen.output_ninja_and_namespace_map 
           ~cwd 
           ~bsc_dir 
@@ -14004,7 +13987,6 @@ let regenerate_ninja
           ~ocaml_dir 
           ~root_project_dir 
           ~is_top_level 
-          ~global_ocaml_compiler
           ~backend 
           ~main_bs_super_errors
           config;
@@ -15232,7 +15214,7 @@ let install_targets ~backend cwd (config : Bsb_config_types.t option) =
 
 
 
-let build_bs_deps cwd ~root_project_dir ~backend ~main_bs_super_errors ~global_ocaml_compiler deps =
+let build_bs_deps cwd ~root_project_dir ~backend ~main_bs_super_errors deps =
   let bsc_dir = Bsb_default_paths.bin_dir in
   let vendor_ninja = bsc_dir // "ninja.exe" in
   let ocaml_dir = Bsb_default_paths.ocaml_dir in
@@ -15255,7 +15237,6 @@ let build_bs_deps cwd ~root_project_dir ~backend ~main_bs_super_errors ~global_o
              ~forced:true
              ~backend
              ~main_bs_super_errors
-             ~global_ocaml_compiler
              cwd bsc_dir ocaml_dir in (* set true to force regenrate ninja file so we have [config_opt]*)
            let config = begin match config_opt with 
             | None ->
@@ -15310,8 +15291,8 @@ let build_bs_deps cwd ~root_project_dir ~backend ~main_bs_super_errors ~global_o
 
 let make_world_deps cwd ~root_project_dir ~backend =
   Bsb_log.info "Making the dependency world!@.";
-  let (deps, main_bs_super_errors, global_ocaml_compiler) = Bsb_config_parse.get_global_config_from_bsconfig () in
-  build_bs_deps cwd ~root_project_dir ~backend ~main_bs_super_errors ~global_ocaml_compiler deps
+  let (deps, main_bs_super_errors) = Bsb_config_parse.simple_get_from_bsconfig () in
+  build_bs_deps cwd ~root_project_dir ~backend ~main_bs_super_errors deps
 
 end
 module Bsb_main : sig 

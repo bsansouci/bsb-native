@@ -61,7 +61,6 @@ let output_ninja_and_namespace_map
     ~ocaml_dir         
     ~root_project_dir
     ~is_top_level
-    ~global_ocaml_compiler
     ~backend
     ~main_bs_super_errors
     ({
@@ -121,10 +120,11 @@ let output_ninja_and_namespace_map
   let ocaml_flags =
     Bsb_build_util.flag_concat
       (if use_ocamlfind then "-passopt" else Ext_string.single_space)
-      (ocaml_flags @ (if not global_ocaml_compiler then ["-color"; "always"] else []))  in
+      (ocaml_flags @ ["-color"; "always"])  in
 
   let refmt_flags = String.concat Ext_string.single_space refmt_flags in
-  let bs_super_errors = if main_bs_super_errors && not global_ocaml_compiler && not use_ocamlfind then "-bs-super-errors" else "" in
+  (* Exclude JS because we always add -bs-super-errors for JS... *)
+  let bs_super_errors = if main_bs_super_errors && not use_ocamlfind && backend != Bsb_config_types.Js then "-bs-super-errors" else "" in
   let bs_package_includes = 
     Bsb_build_util.flag_concat dash_i @@ Ext_list.map 
       (fun (x : Bsb_config_types.dependency) -> x.package_install_path) bs_dependencies
@@ -195,13 +195,11 @@ let output_ninja_and_namespace_map
           
           Bsb_ninja_global_vars.external_deps_for_linking, Bsb_build_util.flag_concat dash_i external_deps_for_linking;
           Bsb_ninja_global_vars.ocamlc, if use_ocamlfind then ocamlc
-            else (if global_ocaml_compiler then ocamlc ^ ".opt" else ocaml_dir // ocamlc ^ ".opt");
+            else (ocaml_dir // ocamlc ^ ".opt");
           Bsb_ninja_global_vars.ocamlopt, if use_ocamlfind then ocamlopt
-            else (if global_ocaml_compiler then ocamlopt ^ ".opt" else ocaml_dir // ocamlopt ^ ".opt");
+            else (ocaml_dir // ocamlopt ^ ".opt");
           Bsb_ninja_global_vars.ocamlfind, if use_ocamlfind then ocamlfind else "";
           Bsb_ninja_global_vars.ocamlfind_dependencies,  Bsb_build_util.flag_concat "-package" (external_ocamlfind_dependencies @ ocamlfind_dependencies);
-          Bsb_ninja_global_vars.global_ocaml_compiler, if global_ocaml_compiler || use_ocamlfind then "-global-ocaml-compiler" else "";
-          Bsb_ninja_global_vars.berror, if global_ocaml_compiler then Ext_string.inter2 "2>&1 |" (bsc_dir // berror_exe) else "";
 
           (* @HACK 
               This might cause stale artifacts. This makes everything implicitly depend on the namespace file... 

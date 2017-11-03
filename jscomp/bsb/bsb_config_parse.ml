@@ -101,7 +101,7 @@ let parse_entries (field : Ext_json_types.t array) =
 
 
 
-let get_global_config_from_bsconfig () = 
+let simple_get_from_bsconfig () = 
   let json = Ext_json_parse.parse_json_from_file Literals.bsconfig_json in
   begin match json with
     | Obj {map} ->
@@ -113,12 +113,10 @@ let get_global_config_from_bsconfig () =
           Bsb_package_specs.default_package_specs
       end in
       let bs_super_errors = ref Bsb_default.bs_super_errors in
-      let global_ocaml_compiler = ref false in
       map 
         |? (Bsb_build_schemas.bs_super_errors, `Bool (fun b -> bs_super_errors := b))
-        |? (Bsb_build_schemas.global_ocaml_compiler, `Bool (fun b -> global_ocaml_compiler := b))
         |> ignore;
-      (package_specs, !bs_super_errors, !global_ocaml_compiler)
+      (package_specs, !bs_super_errors)
     | _ -> assert false
   end
 
@@ -184,7 +182,6 @@ let interpret_json
   let bsc_flags = ref Bsb_default.bsc_flags in  
   let warnings = ref Bsb_default.warnings in
   let ocamlfind_dependencies = ref [] in
-  let global_ocaml_compiler = ref false in
   let ppx_flags = ref []in 
   let ocaml_flags = ref Bsb_default.ocaml_flags in
 
@@ -327,7 +324,6 @@ let interpret_json
     |? (Bsb_build_schemas.ocamlfind_dependencies, `Arr (fun s -> ocamlfind_dependencies := get_list_string s))
     |? (Bsb_build_schemas.bs_super_errors, `Bool (fun b -> bs_super_errors := b))
     |? (Bsb_build_schemas.ocaml_flags, `Arr (fun s -> ocaml_flags := !ocaml_flags @ (get_list_string s)))
-    |? (Bsb_build_schemas.global_ocaml_compiler, `Bool (fun b -> global_ocaml_compiler := b))
     |> ignore ;
     begin match String_map.find_opt Bsb_build_schemas.sources map with 
       | Some x -> 
@@ -407,7 +403,6 @@ let interpret_json
           build_script = !build_script;
           allowed_build_kinds = allowed_build_kinds;
           ocamlfind_dependencies = !ocamlfind_dependencies;
-          global_ocaml_compiler = !global_ocaml_compiler;
           ocaml_flags = !ocaml_flags;
         }
       | None -> failwith "no sources specified, please checkout the schema for more details"
