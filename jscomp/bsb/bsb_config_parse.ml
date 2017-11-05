@@ -62,21 +62,22 @@ let parse_allowed_build_kinds map =
 let (|?)  m (key, cb) =
   m  |> Ext_json.test key cb
 
-let parse_entries (field : Ext_json_types.t array) =
+let parse_entries name (field : Ext_json_types.t array) =
   Ext_array.to_list_map (function
       | Ext_json_types.Obj {map} ->
         let backend = ref "js" in
         let main = ref None in
         let _ = map
                 |? (Bsb_build_schemas.kind, `Str (fun x -> 
-                  Bsb_log.warn "@{<warn>Warning:@} 'kind' field in 'entries' is deprecated and will be removed in the next release. Please use 'backend'.@.";
+                  Bsb_log.warn "@{<warn>Warning@} package %s: 'kind' field in 'entries' is deprecated and will be removed in the next release. Please use 'backend'.@." name;
                   backend := x))
                 |? (Bsb_build_schemas.backend, `Str (fun x -> backend := x))
                 |? (Bsb_build_schemas.main, `Str (fun x -> 
-                  Bsb_log.warn "@{<warn>Warning:@} 'main' field in 'entries' is deprecated and will be removed in the next release. Please use 'main-module'.@.";
+                  Bsb_log.warn "@{<warn>Warning@} package %s: 'main' field in 'entries' is deprecated and will be removed in the next release. Please use 'main-module'.@." name;
                   main := Some x))
                 |? (Bsb_build_schemas.main_module, `Str (fun x -> main := Some x))
         in
+          
         let main_module_name = begin match !main with
           (* This is technically optional when compiling to js *)
           | None when !backend = Literals.js -> "Index"
@@ -121,7 +122,10 @@ let entries_from_bsconfig () =
   begin match json with
     | Obj {map} ->
       let entries = ref Bsb_default.main_entries in
-      map |? (Bsb_build_schemas.entries, `Arr (fun s -> entries := parse_entries s)) |> ignore;
+      let name = ref "[unnamed]" in
+      map 
+        |? (Bsb_build_schemas.name, `Str (fun s -> name := s))
+        |? (Bsb_build_schemas.entries, `Arr (fun s -> entries := parse_entries !name s)) |> ignore;
       !entries
     | _ -> assert false
   end
@@ -314,7 +318,7 @@ let interpret_json
                 end
               | _ -> acc ) String_map.empty  s  ))
     |? (Bsb_build_schemas.refmt_flags, `Arr (fun s -> refmt_flags := get_list_string s))
-    |? (Bsb_build_schemas.entries, `Arr (fun s -> entries := parse_entries s))
+    |? (Bsb_build_schemas.entries, `Arr (fun s -> entries := parse_entries package_name s))
     |? (Bsb_build_schemas.static_libraries, `Arr (fun s -> static_libraries := (List.map (fun v -> cwd // v) (get_list_string s))))
     |? (Bsb_build_schemas.c_linker_flags, `Arr (fun s -> static_libraries := (List.fold_left (fun acc v -> "-ccopt" :: v :: acc) [] (List.rev (get_list_string s))) @ !static_libraries))
     |? (Bsb_build_schemas.build_script, `Str (fun s -> build_script := Some s))
@@ -326,6 +330,7 @@ let interpret_json
     begin match String_map.find_opt Bsb_build_schemas.sources map with 
       | Some x -> 
         let res = Bsb_parse_sources.parse_sources 
+          package_name
             {not_dev; 
              dir_index =
                Bsb_dir_index.lib_dir_index; 
@@ -333,6 +338,7 @@ let interpret_json
              root = cwd;
              cut_generators = !cut_generators;
              traverse = false;
+             backend = [Bsb_parse_sources.Js; Bsb_parse_sources.Native; Bsb_parse_sources.Bytecode];
              namespace; 
             }  x in 
         if generate_watch_metadata then

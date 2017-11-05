@@ -9255,7 +9255,7 @@ type  file_group =
     public : public;
     dir_index : Bsb_dir_index.t; 
     generators : build_generator list;
-    kind: compilation_kind_t list;
+    backend: compilation_kind_t list;
   } 
 
 (** when [is_empty file_group]
@@ -9283,6 +9283,7 @@ type cxt = {
   cut_generators : bool;
   traverse : bool;
   namespace : string option;
+  backend: compilation_kind_t list;
 }
 
 
@@ -9312,6 +9313,7 @@ type cxt = {
     all relative paths, this function will do the IO
 *)
 val parse_sources : 
+  string ->
   cxt ->
   Ext_json_types.t  ->
   t 
@@ -9372,7 +9374,7 @@ type  file_group =
     public : public ;
     dir_index : Bsb_dir_index.t  ;
     generators : build_generator list ; 
-    kind: compilation_kind_t list;
+    backend: compilation_kind_t list;
     (* output of [generators] should be added to [sources],
        if it is [.ml,.mli,.re,.rei]
     *)
@@ -9409,6 +9411,7 @@ type cxt = {
   cut_generators : bool;
   traverse : bool;
   namespace : string option;
+  backend: compilation_kind_t list;
 }
 
 let collect_pub_modules 
@@ -9586,14 +9589,16 @@ let try_unlink s =
 
 let rec 
   parsing_source_dir_map 
+    package_name
     ({ cwd =  dir; not_dev; cut_generators ; 
        traverse = cxt_traverse ;
+       backend = parent_backend;
      } as cxt )
     (input : Ext_json_types.t String_map.t) : t     
   = 
   let cur_update_queue = ref [] in 
   let cur_globbed_dirs = ref [] in 
-  let kind = ref [Js; Bytecode; Native] in
+  let backend = ref [Js; Bytecode; Native] in
   let generators, cur_sources = extract_generators input (cut_generators || not_dev) dir in 
   let sub_dirs_field = String_map.find_opt Bsb_build_schemas.subdirs input in 
   let file_array = lazy (Sys.readdir (Filename.concat cxt.root dir)) in 
@@ -9665,21 +9670,27 @@ let rec
 
     | Some x -> Bsb_exception.config_error x "files field expect array or object "
   end;
-  (* kind matching *)
-  begin match String_map.find_opt Bsb_build_schemas.kind input with 
-    | Some (Arr {loc_start; content = s }) -> (* [ a,b ] *)      
-      kind := List.map (fun (s : string) ->
+
+  let maybeKind = begin match String_map.find_opt Bsb_build_schemas.kind input with
+    | None -> String_map.find_opt Bsb_build_schemas.backend input
+    | x ->
+      Bsb_log.warn "@{<warn>Warning@} package %s: 'kind' field in 'sources' is deprecated and will be removed in the next release. Please use 'backend'.@." package_name;
+      x
+  end in
+  begin match maybeKind with 
+    | Some (Arr {loc_start; content = s }) -> (* [ a,b ] *)
+      backend := List.map (fun (s : string) ->
         match s with 
         | "js"       -> Js
         | "native"   -> Native
         | "bytecode" -> Bytecode
-        | str -> Bsb_exception.errorf ~loc:loc_start "'kind' field expects one of: 'js', 'bytecode' or 'native'. Found '%s'" str
+        | str -> Bsb_exception.errorf ~loc:loc_start "'backend' field expects one of: 'js', 'bytecode' or 'native'. Found '%s'" str
       ) (Bsb_build_util.get_list_string s) 
-    | Some (Str {str = "js"} )       -> kind := [Js]
-    | Some (Str {str = "native"} )   -> kind := [Native]
-    | Some (Str {str = "bytecode"} ) -> kind := [Bytecode]
-    | Some x -> Bsb_exception.config_error x "'kind' field expects one of: 'js', 'bytecode' or 'native'"
-    | None -> ()
+    | Some (Str {str = "js"} )       -> backend := [Js]
+    | Some (Str {str = "native"} )   -> backend := [Native]
+    | Some (Str {str = "bytecode"} ) -> backend := [Bytecode]
+    | Some x -> Bsb_exception.config_error x "'backend' field expects one of: 'js', 'bytecode' or 'native'"
+    | None -> backend := parent_backend
   end;
   
   let cur_sources = !cur_sources in 
@@ -9692,7 +9703,7 @@ let rec
      public ;
      dir_index = cxt.dir_index ;
      generators ; 
-     kind = !kind;
+     backend = !backend;
     } in 
   let children, children_update_queue, children_globbed_dirs =     
     match sub_dirs_field, 
@@ -9708,8 +9719,10 @@ let rec
             if Sys.is_directory (Filename.concat parent x) then 
               (
                 parsing_source_dir_map
+                  package_name
                   {cxt with 
                    cwd = Ext_path.concat cxt.cwd (Ext_filename.simple_convert_node_path_to_os_path x);
+                   backend = !backend;
                    traverse = true
                   } String_map.empty ++ origin 
               )
@@ -9720,7 +9733,7 @@ let rec
     | Some (False _), _  -> [], [], []
 
     | Some s, _  -> 
-      let res  = parse_sources cxt s in 
+      let res  = parse_sources package_name cxt s in 
       res.files ,
       res.intervals,
       res.globbed_dirs
@@ -9763,7 +9776,7 @@ let rec
   } 
 
 
-and parsing_single_source ({not_dev; dir_index ; cwd} as cxt ) (x : Ext_json_types.t )
+and parsing_single_source package_name ({not_dev; dir_index ; cwd} as cxt ) (x : Ext_json_types.t )
   : t  =
   match x with 
   | Str  { str = dir }  -> 
@@ -9771,6 +9784,7 @@ and parsing_single_source ({not_dev; dir_index ; cwd} as cxt ) (x : Ext_json_typ
       empty
     else 
       parsing_source_dir_map 
+        package_name
         {cxt with 
          cwd = Ext_path.concat cwd (Ext_filename.simple_convert_node_path_to_os_path dir)}
         String_map.empty  
@@ -9794,19 +9808,20 @@ and parsing_single_source ({not_dev; dir_index ; cwd} as cxt ) (x : Ext_json_typ
 
       in
       parsing_source_dir_map 
+        package_name
         {cxt with dir_index = current_dir_index; 
                   cwd= Ext_path.concat cwd dir} map
   | _ -> empty 
-and  parsing_arr_sources cxt (file_groups : Ext_json_types.t array)  = 
+and  parsing_arr_sources package_name cxt (file_groups : Ext_json_types.t array)  = 
   Array.fold_left (fun  origin x ->
-      parsing_single_source cxt x ++ origin 
+      parsing_single_source package_name cxt x ++ origin 
     ) empty  file_groups 
 
-and  parse_sources ( cxt : cxt) (sources : Ext_json_types.t )  = 
+and  parse_sources package_name ( cxt : cxt) (sources : Ext_json_types.t )  = 
   match sources with   
   | Arr file_groups -> 
-    parsing_arr_sources cxt file_groups.content
-  | _ -> parsing_single_source cxt sources
+    parsing_arr_sources package_name cxt file_groups.content
+  | _ -> parsing_single_source package_name cxt sources
 
 
 
@@ -10846,21 +10861,22 @@ let parse_allowed_build_kinds map =
 let (|?)  m (key, cb) =
   m  |> Ext_json.test key cb
 
-let parse_entries (field : Ext_json_types.t array) =
+let parse_entries name (field : Ext_json_types.t array) =
   Ext_array.to_list_map (function
       | Ext_json_types.Obj {map} ->
         let backend = ref "js" in
         let main = ref None in
         let _ = map
                 |? (Bsb_build_schemas.kind, `Str (fun x -> 
-                  Bsb_log.warn "@{<warn>Warning:@} 'kind' field in 'entries' is deprecated and will be removed in the next release. Please use 'backend'.@.";
+                  Bsb_log.warn "@{<warn>Warning@} package %s: 'kind' field in 'entries' is deprecated and will be removed in the next release. Please use 'backend'.@." name;
                   backend := x))
                 |? (Bsb_build_schemas.backend, `Str (fun x -> backend := x))
                 |? (Bsb_build_schemas.main, `Str (fun x -> 
-                  Bsb_log.warn "@{<warn>Warning:@} 'main' field in 'entries' is deprecated and will be removed in the next release. Please use 'main-module'.@.";
+                  Bsb_log.warn "@{<warn>Warning@} package %s: 'main' field in 'entries' is deprecated and will be removed in the next release. Please use 'main-module'.@." name;
                   main := Some x))
                 |? (Bsb_build_schemas.main_module, `Str (fun x -> main := Some x))
         in
+          
         let main_module_name = begin match !main with
           (* This is technically optional when compiling to js *)
           | None when !backend = Literals.js -> "Index"
@@ -10905,7 +10921,10 @@ let entries_from_bsconfig () =
   begin match json with
     | Obj {map} ->
       let entries = ref Bsb_default.main_entries in
-      map |? (Bsb_build_schemas.entries, `Arr (fun s -> entries := parse_entries s)) |> ignore;
+      let name = ref "[unnamed]" in
+      map 
+        |? (Bsb_build_schemas.name, `Str (fun s -> name := s))
+        |? (Bsb_build_schemas.entries, `Arr (fun s -> entries := parse_entries !name s)) |> ignore;
       !entries
     | _ -> assert false
   end
@@ -11098,7 +11117,7 @@ let interpret_json
                 end
               | _ -> acc ) String_map.empty  s  ))
     |? (Bsb_build_schemas.refmt_flags, `Arr (fun s -> refmt_flags := get_list_string s))
-    |? (Bsb_build_schemas.entries, `Arr (fun s -> entries := parse_entries s))
+    |? (Bsb_build_schemas.entries, `Arr (fun s -> entries := parse_entries package_name s))
     |? (Bsb_build_schemas.static_libraries, `Arr (fun s -> static_libraries := (List.map (fun v -> cwd // v) (get_list_string s))))
     |? (Bsb_build_schemas.c_linker_flags, `Arr (fun s -> static_libraries := (List.fold_left (fun acc v -> "-ccopt" :: v :: acc) [] (List.rev (get_list_string s))) @ !static_libraries))
     |? (Bsb_build_schemas.build_script, `Str (fun s -> build_script := Some s))
@@ -11110,6 +11129,7 @@ let interpret_json
     begin match String_map.find_opt Bsb_build_schemas.sources map with 
       | Some x -> 
         let res = Bsb_parse_sources.parse_sources 
+          package_name
             {not_dev; 
              dir_index =
                Bsb_dir_index.lib_dir_index; 
@@ -11117,6 +11137,7 @@ let interpret_json
              root = cwd;
              cut_generators = !cut_generators;
              traverse = false;
+             backend = [Bsb_parse_sources.Js; Bsb_parse_sources.Native; Bsb_parse_sources.Bytecode];
              namespace; 
             }  x in 
         if generate_watch_metadata then
@@ -12808,11 +12829,11 @@ let handle_file_groups
     ~backend
     (file_groups  :  Bsb_parse_sources.file_group list)
     namespace (st : info) : info  =
-  let file_groups = List.filter (fun group ->
+  let file_groups = List.filter (fun (group : Bsb_parse_sources.file_group) ->
     match backend with 
-    | Bsb_config_types.Js       -> List.mem Bsb_parse_sources.Js group.Bsb_parse_sources.kind
-    | Bsb_config_types.Native   -> List.mem Bsb_parse_sources.Native group.Bsb_parse_sources.kind
-    | Bsb_config_types.Bytecode -> List.mem Bsb_parse_sources.Bytecode group.Bsb_parse_sources.kind
+    | Bsb_config_types.Js       -> List.mem Bsb_parse_sources.Js group.Bsb_parse_sources.backend
+    | Bsb_config_types.Native   -> List.mem Bsb_parse_sources.Native group.Bsb_parse_sources.backend
+    | Bsb_config_types.Bytecode -> List.mem Bsb_parse_sources.Bytecode group.Bsb_parse_sources.backend
   ) file_groups in 
   List.fold_left 
     (handle_file_group 
@@ -13278,11 +13299,11 @@ let handle_file_groups oc
   ~ocaml_dir
   ~bs_suffix
   (file_groups  :  Bsb_parse_sources.file_group list) namespace st =
-  let file_groups = List.filter (fun group ->
+  let file_groups = List.filter (fun (group : Bsb_parse_sources.file_group) ->
     match backend with 
-    | Bsb_config_types.Js       -> List.mem Bsb_parse_sources.Js group.Bsb_parse_sources.kind
-    | Bsb_config_types.Native   -> List.mem Bsb_parse_sources.Native group.Bsb_parse_sources.kind
-    | Bsb_config_types.Bytecode -> List.mem Bsb_parse_sources.Bytecode group.Bsb_parse_sources.kind
+    | Bsb_config_types.Js       -> List.mem Bsb_parse_sources.Js group.Bsb_parse_sources.backend
+    | Bsb_config_types.Native   -> List.mem Bsb_parse_sources.Native group.Bsb_parse_sources.backend
+    | Bsb_config_types.Bytecode -> List.mem Bsb_parse_sources.Bytecode group.Bsb_parse_sources.backend
   ) file_groups in 
   let ret = List.fold_left (
     handle_file_group oc

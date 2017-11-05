@@ -45,7 +45,7 @@ type  file_group =
     public : public;
     dir_index : Bsb_dir_index.t; 
     generators : build_generator list;
-    kind: compilation_kind_t list;
+    backend: compilation_kind_t list;
   } 
 
 (** when [is_empty file_group]
@@ -73,6 +73,7 @@ type cxt = {
   cut_generators : bool;
   traverse : bool;
   namespace : string option;
+  backend: compilation_kind_t list;
 }
 
 
@@ -102,6 +103,7 @@ type cxt = {
     all relative paths, this function will do the IO
 *)
 val parse_sources : 
+  string ->
   cxt ->
   Ext_json_types.t  ->
   t 

@@ -51,7 +51,7 @@ type  file_group =
     public : public ;
     dir_index : Bsb_dir_index.t  ;
     generators : build_generator list ; 
-    kind: compilation_kind_t list;
+    backend: compilation_kind_t list;
     (* output of [generators] should be added to [sources],
        if it is [.ml,.mli,.re,.rei]
     *)
@@ -88,6 +88,7 @@ type cxt = {
   cut_generators : bool;
   traverse : bool;
   namespace : string option;
+  backend: compilation_kind_t list;
 }
 
 let collect_pub_modules 
@@ -265,14 +266,16 @@ let try_unlink s =
 
 let rec 
   parsing_source_dir_map 
+    package_name
     ({ cwd =  dir; not_dev; cut_generators ; 
        traverse = cxt_traverse ;
+       backend = parent_backend;
      } as cxt )
     (input : Ext_json_types.t String_map.t) : t     
   = 
   let cur_update_queue = ref [] in 
   let cur_globbed_dirs = ref [] in 
-  let kind = ref [Js; Bytecode; Native] in
+  let backend = ref [Js; Bytecode; Native] in
   let generators, cur_sources = extract_generators input (cut_generators || not_dev) dir in 
   let sub_dirs_field = String_map.find_opt Bsb_build_schemas.subdirs input in 
   let file_array = lazy (Sys.readdir (Filename.concat cxt.root dir)) in 
@@ -344,21 +347,27 @@ let rec
 
     | Some x -> Bsb_exception.config_error x "files field expect array or object "
   end;
-  (* kind matching *)
-  begin match String_map.find_opt Bsb_build_schemas.kind input with 
-    | Some (Arr {loc_start; content = s }) -> (* [ a,b ] *)      
-      kind := List.map (fun (s : string) ->
+
+  let maybeKind = begin match String_map.find_opt Bsb_build_schemas.kind input with
+    | None -> String_map.find_opt Bsb_build_schemas.backend input
+    | x ->
+      Bsb_log.warn "@{<warn>Warning@} package %s: 'kind' field in 'sources' is deprecated and will be removed in the next release. Please use 'backend'.@." package_name;
+      x
+  end in
+  begin match maybeKind with 
+    | Some (Arr {loc_start; content = s }) -> (* [ a,b ] *)
+      backend := List.map (fun (s : string) ->
         match s with 
         | "js"       -> Js
         | "native"   -> Native
         | "bytecode" -> Bytecode
-        | str -> Bsb_exception.errorf ~loc:loc_start "'kind' field expects one of: 'js', 'bytecode' or 'native'. Found '%s'" str
+        | str -> Bsb_exception.errorf ~loc:loc_start "'backend' field expects one of: 'js', 'bytecode' or 'native'. Found '%s'" str
       ) (Bsb_build_util.get_list_string s) 
-    | Some (Str {str = "js"} )       -> kind := [Js]
-    | Some (Str {str = "native"} )   -> kind := [Native]
-    | Some (Str {str = "bytecode"} ) -> kind := [Bytecode]
-    | Some x -> Bsb_exception.config_error x "'kind' field expects one of: 'js', 'bytecode' or 'native'"
-    | None -> ()
+    | Some (Str {str = "js"} )       -> backend := [Js]
+    | Some (Str {str = "native"} )   -> backend := [Native]
+    | Some (Str {str = "bytecode"} ) -> backend := [Bytecode]
+    | Some x -> Bsb_exception.config_error x "'backend' field expects one of: 'js', 'bytecode' or 'native'"
+    | None -> backend := parent_backend
   end;
   
   let cur_sources = !cur_sources in 
@@ -371,7 +380,7 @@ let rec
      public ;
      dir_index = cxt.dir_index ;
      generators ; 
-     kind = !kind;
+     backend = !backend;
     } in 
   let children, children_update_queue, children_globbed_dirs =     
     match sub_dirs_field, 
@@ -387,8 +396,10 @@ let rec
             if Sys.is_directory (Filename.concat parent x) then 
               (
                 parsing_source_dir_map
+                  package_name
                   {cxt with 
                    cwd = Ext_path.concat cxt.cwd (Ext_filename.simple_convert_node_path_to_os_path x);
+                   backend = !backend;
                    traverse = true
                   } String_map.empty ++ origin 
               )
@@ -399,7 +410,7 @@ let rec
     | Some (False _), _  -> [], [], []
 
     | Some s, _  -> 
-      let res  = parse_sources cxt s in 
+      let res  = parse_sources package_name cxt s in 
       res.files ,
       res.intervals,
       res.globbed_dirs
@@ -442,7 +453,7 @@ let rec
   } 
 
 
-and parsing_single_source ({not_dev; dir_index ; cwd} as cxt ) (x : Ext_json_types.t )
+and parsing_single_source package_name ({not_dev; dir_index ; cwd} as cxt ) (x : Ext_json_types.t )
   : t  =
   match x with 
   | Str  { str = dir }  -> 
@@ -450,6 +461,7 @@ and parsing_single_source ({not_dev; dir_index ; cwd} as cxt ) (x : Ext_json_typ
       empty
     else 
       parsing_source_dir_map 
+        package_name
         {cxt with 
          cwd = Ext_path.concat cwd (Ext_filename.simple_convert_node_path_to_os_path dir)}
         String_map.empty  
@@ -473,19 +485,20 @@ and parsing_single_source ({not_dev; dir_index ; cwd} as cxt ) (x : Ext_json_typ
 
       in
       parsing_source_dir_map 
+        package_name
         {cxt with dir_index = current_dir_index; 
                   cwd= Ext_path.concat cwd dir} map
   | _ -> empty 
-and  parsing_arr_sources cxt (file_groups : Ext_json_types.t array)  = 
+and  parsing_arr_sources package_name cxt (file_groups : Ext_json_types.t array)  = 
   Array.fold_left (fun  origin x ->
-      parsing_single_source cxt x ++ origin 
+      parsing_single_source package_name cxt x ++ origin 
     ) empty  file_groups 
 
-and  parse_sources ( cxt : cxt) (sources : Ext_json_types.t )  = 
+and  parse_sources package_name ( cxt : cxt) (sources : Ext_json_types.t )  = 
   match sources with   
   | Arr file_groups -> 
-    parsing_arr_sources cxt file_groups.content
-  | _ -> parsing_single_source cxt sources
+    parsing_arr_sources package_name cxt file_groups.content
+  | _ -> parsing_single_source package_name cxt sources
 
 
 
