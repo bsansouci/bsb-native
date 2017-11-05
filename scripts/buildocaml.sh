@@ -7,4 +7,4 @@ set -e
 # -no-shared-libs
 DIRNAME=`pwd`
 cd vendor/ocaml
-./configure -prefix `pwd`  -no-ocamldoc -no-ocamlbuild -no-curses -no-graph -no-pthread -no-debugger  && make -j9 world.opt && make install && mkdir -p $DIRNAME/lib/ocaml/caml && make -C otherlibs/systhreads && cp otherlibs/systhreads/threads.h $DIRNAME/lib/ocaml/caml/threads.h && cd ..
+./configure -prefix `pwd`  -no-ocamldoc -no-ocamlbuild -no-curses -no-graph -no-debugger  && make -j9 world.opt && make install && mkdir -p $DIRNAME/lib/ocaml/caml && make -C otherlibs/systhreads && cp otherlibs/systhreads/threads.h $DIRNAME/lib/ocaml/caml/threads.h && cd ..
