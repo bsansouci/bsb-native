@@ -57,7 +57,7 @@ let output_ninja_and_namespace_map
     ~cwd 
     ~bsc_dir
     ~not_dev           
-    ~external_deps_for_linking_and_clibs:(external_deps_for_linking, external_static_libraries, external_ocamlfind_dependencies)
+    ~acc_libraries_for_linking:(external_deps_for_linking, external_static_libraries, external_ocamlfind_dependencies, external_ocaml_dependencies)
     ~ocaml_dir         
     ~root_project_dir
     ~is_top_level
@@ -92,6 +92,7 @@ let output_ninja_and_namespace_map
       allowed_build_kinds;
       ocamlfind_dependencies;
       ocaml_flags;
+      ocaml_dependencies;
     } : Bsb_config_types.t)
   =
   let custom_rules = Bsb_rule.reset generators in 
@@ -116,7 +117,17 @@ let output_ninja_and_namespace_map
   let bsc_flags =  String.concat Ext_string.single_space bsc_flags in
 
   let use_ocamlfind = ocamlfind_dependencies <> [] in
-
+  
+  let ocaml_flags = (List.fold_left (fun acc  v -> 
+    match v with
+    | "compiler-libs" -> "-I" :: "+compiler-libs" :: acc
+    | "threads" -> "-thread" :: acc
+    | _ -> acc
+  ) [] ocaml_dependencies) in
+  
+  let external_ocaml_dependencies = List.fold_left (fun acc v -> Depend.StringSet.add v acc) external_ocaml_dependencies ocaml_dependencies in
+  let external_ocaml_dependencies = Depend.StringSet.elements external_ocaml_dependencies in
+  
   let ocaml_flags =
     Bsb_build_util.flag_concat
       (if use_ocamlfind then "-passopt" else Ext_string.single_space)
@@ -162,7 +173,7 @@ let output_ninja_and_namespace_map
           Ext_string.inter2 "-ppx" s 
       in 
       let warnings = Bsb_warning.opt_warning_to_string not_dev warning in
-
+      
       Bsb_ninja_util.output_kvs
         [|
           Bsb_ninja_global_vars.bs_package_flags, bs_package_flags ; 
@@ -200,7 +211,8 @@ let output_ninja_and_namespace_map
             else (ocaml_dir // ocamlopt ^ ".opt");
           Bsb_ninja_global_vars.ocamlfind, if use_ocamlfind then ocamlfind else "";
           Bsb_ninja_global_vars.ocamlfind_dependencies,  Bsb_build_util.flag_concat "-package" (external_ocamlfind_dependencies @ ocamlfind_dependencies);
-
+          Bsb_ninja_global_vars.ocaml_dependencies, Bsb_build_util.flag_concat "-add-ocaml-dependency" external_ocaml_dependencies;
+          
           (* @HACK 
               This might cause stale artifacts. This makes everything implicitly depend on the namespace file... 
               

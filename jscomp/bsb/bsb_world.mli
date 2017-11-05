@@ -32,4 +32,4 @@ val make_world_deps:
   string ->
   root_project_dir:string ->
   backend:Bsb_config_types.compilation_kind_t ->
-  (string list) * (string list) * (string list)
+  (string list) * (string list) * (string list) * Depend.StringSet.t

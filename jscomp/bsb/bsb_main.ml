@@ -211,7 +211,7 @@ let () =
 
       let backend = get_backend () in
       (* print_endline __LOC__; *)
-      (* TODO(sansouci): Optimize this. Not passing external_deps_for_linking_and_clibs 
+      (* TODO(sansouci): Optimize this. Not passing acc_libraries_for_linking 
          will cause regenerate_ninja to re-crawl the external dep graph (only 
          for Native and Bytecode).  *)
       let _config_opt =  
@@ -255,12 +255,12 @@ let () =
               | make_world, force_regenerate ->
                 (* If -make-world is passed we first do that because we'll collect
                    the library files as we go. *)
-                let external_deps_for_linking_and_clibs = if make_world then
+                let acc_libraries_for_linking = if make_world then
                   Some (Bsb_world.make_world_deps cwd ~root_project_dir:cwd ~backend)
                 else None in
                 (* don't regenerate files when we only run [bsb -clean-world] *)
                 let _ = Bsb_ninja_regen.regenerate_ninja 
-                  ?external_deps_for_linking_and_clibs 
+                  ?acc_libraries_for_linking 
                   ~generate_watch_metadata:true 
                   ~override_package_specs:None 
                   ~is_top_level:true
@@ -290,11 +290,11 @@ let () =
           let backend = get_backend () in
           
           (* [-make-world] should never be combined with [-package-specs] *)
-          let external_deps_for_linking_and_clibs = if !make_world then 
+          let acc_libraries_for_linking = if !make_world then 
             Some (Bsb_world.make_world_deps cwd ~root_project_dir:cwd ~backend)
           else None in
           let _ = Bsb_ninja_regen.regenerate_ninja 
-            ?external_deps_for_linking_and_clibs
+            ?acc_libraries_for_linking
             ~generate_watch_metadata:true
             ~override_package_specs:None
             ~is_top_level:true

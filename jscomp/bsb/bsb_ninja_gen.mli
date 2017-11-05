@@ -29,7 +29,7 @@ val output_ninja_and_namespace_map :
   cwd:string ->
   bsc_dir:string ->  
   not_dev:bool -> 
-  external_deps_for_linking_and_clibs:string list * string list * string list ->
+  acc_libraries_for_linking:string list * string list * string list * Depend.StringSet.t ->
   ocaml_dir:string ->
   root_project_dir:string ->
   is_top_level: bool ->

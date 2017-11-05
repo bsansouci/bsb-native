@@ -57,10 +57,10 @@ let ocaml_flags = ["-no-alias-deps"; "-thread"; "-I"; "+compiler-libs"]
 let refmt_flags = ["--print"; "binary"]
 
 
-let type_ = Bsb_config_types.Library
-
-let main_entries = [Bsb_config_types.JsTarget {main_module_name = "Index"; type_ = type_}]
+let main_entries = [Bsb_config_types.JsTarget "Index"]
 
 let allowed_build_kinds = [Bsb_config_types.Js; Bsb_config_types.Bytecode; Bsb_config_types.Native]
 
 let bs_super_errors = true
+
+let ocaml_dependencies = ["unix"; "bigarray"; "str"; "dynlink"; "nums"; "threads"; ]

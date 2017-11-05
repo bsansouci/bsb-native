@@ -32,6 +32,6 @@ val link : link_t ->
   ocamlfind_packages:string list -> 
   bs_super_errors:bool -> 
   namespace:string option ->
-  ocaml_flags:string list ->
+  ocaml_dependencies:string list ->
   string ->
   unit

@@ -65,35 +65,31 @@ let (|?)  m (key, cb) =
 let parse_entries (field : Ext_json_types.t array) =
   Ext_array.to_list_map (function
       | Ext_json_types.Obj {map} ->
-        (* kind defaults to bytecode *)
-        let kind = ref "js" in
+        let backend = ref "js" in
         let main = ref None in
-        let type_ = ref Bsb_default.type_ in
         let _ = map
-                |? (Bsb_build_schemas.kind, `Str (fun x -> kind := x))
-                |? (Bsb_build_schemas.type_, `Str (fun x -> type_ := match x with
-                  | "library" -> Bsb_config_types.Library
-                  | "binary" -> Bsb_config_types.Binary
-                  | "ppx" -> Bsb_config_types.Ppx
-                  | _ -> failwith "Field 'type' is required and its value should be 'library', 'binary' or 'ppx'"
-                ))
-                |? (Bsb_build_schemas.main, `Str (fun x -> main := Some x))
+                |? (Bsb_build_schemas.kind, `Str (fun x -> 
+                  Bsb_log.warn "@{<warn>Warning:@} 'kind' field in 'entries' is deprecated and will be removed in the next release. Please use 'backend'.@.";
+                  backend := x))
+                |? (Bsb_build_schemas.backend, `Str (fun x -> backend := x))
+                |? (Bsb_build_schemas.main, `Str (fun x -> 
+                  Bsb_log.warn "@{<warn>Warning:@} 'main' field in 'entries' is deprecated and will be removed in the next release. Please use 'main-module'.@.";
+                  main := Some x))
+                |? (Bsb_build_schemas.main_module, `Str (fun x -> main := Some x))
         in
         let main_module_name = begin match !main with
           (* This is technically optional when compiling to js *)
-          | None when !kind = Literals.js ->
-            "Index"
+          | None when !backend = Literals.js -> "Index"
           | None -> 
-            failwith "Missing field 'main'. That field is required its value needs to be the main module for the target"
+            failwith "Missing field 'main-module'. That field is required its value needs to be the main module for the target"
           | Some main_module_name -> main_module_name
         end in
-        let metadata = {Bsb_config_types.main_module_name; type_ = !type_} in
-        if !kind = Literals.native then
-          Some (Bsb_config_types.NativeTarget metadata)
-        else if !kind = Literals.bytecode then
-          Some (Bsb_config_types.BytecodeTarget metadata)
-        else if !kind = Literals.js then
-          Some (Bsb_config_types.JsTarget metadata)
+        if !backend = Literals.native then
+          Some (Bsb_config_types.NativeTarget main_module_name)
+        else if !backend = Literals.bytecode then
+          Some (Bsb_config_types.BytecodeTarget main_module_name)
+        else if !backend = Literals.js then
+          Some (Bsb_config_types.JsTarget main_module_name)
         else
           failwith "Missing field 'kind'. That field is required and its value be 'js', 'native' or 'bytecode'"
       | _ -> failwith "Unrecognized object inside array 'entries' field.") 
@@ -184,6 +180,7 @@ let interpret_json
   let ocamlfind_dependencies = ref [] in
   let ppx_flags = ref []in 
   let ocaml_flags = ref Bsb_default.ocaml_flags in
+  let ocaml_dependencies= ref Bsb_default.ocaml_dependencies in 
 
   let js_post_build_cmd = ref None in 
   let built_in_package = ref None in
@@ -324,6 +321,7 @@ let interpret_json
     |? (Bsb_build_schemas.ocamlfind_dependencies, `Arr (fun s -> ocamlfind_dependencies := get_list_string s))
     |? (Bsb_build_schemas.bs_super_errors, `Bool (fun b -> bs_super_errors := b))
     |? (Bsb_build_schemas.ocaml_flags, `Arr (fun s -> ocaml_flags := !ocaml_flags @ (get_list_string s)))
+    |? (Bsb_build_schemas.ocaml_dependencies, `Arr (fun s -> ocaml_dependencies := (get_list_string s)))
     |> ignore ;
     begin match String_map.find_opt Bsb_build_schemas.sources map with 
       | Some x -> 
@@ -404,6 +402,7 @@ let interpret_json
           allowed_build_kinds = allowed_build_kinds;
           ocamlfind_dependencies = !ocamlfind_dependencies;
           ocaml_flags = !ocaml_flags;
+          ocaml_dependencies = !ocaml_dependencies;
         }
       | None -> failwith "no sources specified, please checkout the schema for more details"
     end

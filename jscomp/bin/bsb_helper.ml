@@ -5772,7 +5772,7 @@ val link : link_t ->
   ocamlfind_packages:string list -> 
   bs_super_errors:bool -> 
   namespace:string option ->
-  ocaml_flags:string list ->
+  ocaml_dependencies:string list ->
   string ->
   unit
 
@@ -5806,7 +5806,7 @@ type link_t = LinkBytecode of string | LinkNative of string
 
 let (//) = Ext_path.combine
 
-let link link_byte_or_native ~main_module ~batch_files ~clibs ~includes ~ocamlfind_packages ~bs_super_errors ~namespace ~ocaml_flags cwd =
+let link link_byte_or_native ~main_module ~batch_files ~clibs ~includes ~ocamlfind_packages ~bs_super_errors ~namespace ~ocaml_dependencies cwd =
   let suffix_object_files, suffix_library_files, compiler, add_custom, output_file = begin match link_byte_or_native with
   | LinkBytecode output_file -> Literals.suffix_cmo, Literals.suffix_cma , "ocamlc"  , true, output_file
   | LinkNative output_file   -> Literals.suffix_cmx, Literals.suffix_cmxa, "ocamlopt", false, output_file
@@ -5846,24 +5846,57 @@ let link link_byte_or_native ~main_module ~batch_files ~clibs ~includes ~ocamlfi
         (Ext_path.combine dir (Literals.library_file ^ suffix_library_files)) :: acc)
       [] includes in
     (* This list will be reversed so we append the otherlibs object files at the end, and they'll end at the beginning. *)
-    let otherlibs = Bsb_helper_dep_graph.get_otherlibs_dependencies ~ocamlfind:(ocamlfind_packages <> []) dependency_graph suffix_library_files in
+    let ocaml_dir = Bsb_default_paths.ocaml_dir in
+    
+    let suffix = begin match link_byte_or_native with
+      | LinkBytecode _ -> Literals.suffix_cma
+      | LinkNative _   -> Literals.suffix_cmxa
+    end in
+
+    let ocaml_dependencies = List.fold_left (fun acc v -> 
+      match v with
+      | "compiler-libs" -> 
+        ((ocaml_dir // "lib" // "ocaml" // "compiler-libs" // "ocamlcommon") ^ suffix) :: acc
+      | "threads" -> 
+        "-thread" :: ("threads" ^ suffix) :: acc
+      | v -> (v ^ suffix) :: acc
+    ) [] ocaml_dependencies in 
+
+    (* let (otherlibs, extra_flags) = 
+      let compiler_libs_requested = List.filter (fun v -> v = "compiler-libs") ocaml_flags in
+      if List.length compiler_libs_requested = 1 then begin
+        print_endline " compiler_libs_requested = 1 ";
+        if ocamlfind_packages = [] then
+          let ocamlcommon =  in 
+          (ocamlcommon :: (List.filter (fun v -> v != "compiler-libs") ocaml_flags), ["-I"; "+compiler-libs"])
+        else ("compiler-libs.common" :: List.filter (fun v -> v != "compiler-libs") ocaml_flags, [])
+      end else begin 
+        (ocaml_flags, []) 
+      end in *)
+      (* Yup, the library is called nums.cma but the module is called Num, and when depending on it
+         through ocamlfind you need to use the name Num. *)
+    (* let otherlibs = if ocamlfind_packages = [] then 
+      (List.map (fun v -> if v = "num" then v ^ "s" ^ suffix else v ^ suffix) otherlibs) 
+    else 
+      (List.fold_left (fun acc v -> "-package" :: v :: acc) [] otherlibs) in *)
+    
+    (* Bsb_helper_dep_graph.get_otherlibs_dependencies ~ocamlfind:(ocamlfind_packages <> []) dependency_graph suffix_library_files in *)
     let clibs = if add_custom && clibs <> [] then
       "-custom" :: clibs
     else
       clibs
     in
-    let all_object_files = otherlibs @ clibs @ library_files @ List.rev (list_of_object_files) in
+    
+    let all_object_files = ocaml_dependencies @ clibs @ library_files @ List.rev (list_of_object_files) in
     (* If there are no ocamlfind packages then let's not use ocamlfind, let's use the opt compiler instead.
        This is for mainly because we'd like to offer a "sandboxed" experience for those who want it.
        So if you don't care about opam dependencies you can solely rely on Bucklescript and npm, no need 
        to install ocamlfind. 
      *)
     if ocamlfind_packages = [] then
-      let ocaml_dir = Bsb_default_paths.ocaml_dir in
       let compiler = ocaml_dir // compiler ^ ".opt" in
       let list_of_args = (compiler :: "-g"
         :: (if bs_super_errors then ["-bs-super-errors"] else [])) 
-        @ ocaml_flags
         @ "-o" :: output_file :: all_object_files in
         (* List.iter (fun a -> print_endline a) list_of_args; *)
       Unix.execvp
@@ -5878,7 +5911,6 @@ let link link_byte_or_native ~main_module ~batch_files ~clibs ~includes ~ocamlfi
       let dir = Filename.dirname @@ Filename.dirname @@ Filename.dirname @@ cwd in
       let list_of_args = ("ocamlfind" :: compiler :: []) 
         @ (if bs_super_errors then ["-passopt"; "-bs-super-errors"] else []) 
-        @ ocaml_flags
         @ ("-linkpkg" :: ocamlfind_packages)
         @ ("-g" :: "-o" :: output_file :: all_object_files) in
       (* List.iter (fun a -> print_endline a) list_of_args; *)
@@ -5924,7 +5956,6 @@ val pack : pack_t ->
   ocamlfind_packages:string list -> 
   bs_super_errors:bool -> 
   namespace:string option ->
-  ocaml_flags:string list ->
   string ->
   unit
 
@@ -5967,7 +5998,7 @@ let module_of_filename filename =
   | exception Not_found -> str
   | len -> String.sub str 0 len
 
-let pack pack_byte_or_native ~batch_files ~includes ~ocamlfind_packages ~bs_super_errors ~namespace ~ocaml_flags cwd =
+let pack pack_byte_or_native ~batch_files ~includes ~ocamlfind_packages ~bs_super_errors ~namespace cwd =
   let suffix_object_files, suffix_library_files, compiler, custom_flag = begin match pack_byte_or_native with
   | PackBytecode -> Literals.suffix_cmo, Literals.suffix_cma , "ocamlc", true
   | PackNative   -> Literals.suffix_cmx, Literals.suffix_cmxa, "ocamlopt", false
@@ -6016,7 +6047,7 @@ let pack pack_byte_or_native ~batch_files ~includes ~ocamlfind_packages ~bs_supe
       Unix.execvp
         compiler
           (Array.of_list ((compiler :: "-a" :: "-g" :: (if bs_super_errors then ["-bs-super-errors"] else []) )
-            @ ocaml_flags @ "-o" :: (Literals.library_file ^ suffix_library_files) :: includes @ all_object_files))
+            @ "-o" :: (Literals.library_file ^ suffix_library_files) :: includes @ all_object_files))
     else begin
       (* @CrossPlatform This might work on windows since we're using the Unix module which claims to
          have a windows implementation... We should double check this. *)
@@ -6026,7 +6057,6 @@ let pack pack_byte_or_native ~batch_files ~includes ~ocamlfind_packages ~bs_supe
       let dir = Filename.dirname @@ Filename.dirname @@ Filename.dirname @@ cwd in
       let list_of_args = ("ocamlfind" :: compiler :: "-a" :: "-g" :: ocamlfind_packages) 
       @ ((if bs_super_errors then ["-passopt"; "-bs-super-errors"] else []))
-      @ ocaml_flags
       @  ("-o" :: (Literals.library_file ^ suffix_library_files) :: includes @ all_object_files) in
       Unix.execvp
         "ocamlfind"
@@ -6105,10 +6135,10 @@ let main_module = ref None
 let set_main_module modulename =
   main_module := Some modulename
 
-let ocaml_flags = ref []
+let ocaml_dependencies = ref []
 
-let add_ocaml_flags s = 
-  ocaml_flags := s :: !ocaml_flags
+let add_ocaml_dependencies s = 
+  ocaml_dependencies := s :: !ocaml_dependencies
 
 let includes :  _ list ref = ref []
 
@@ -6151,7 +6181,7 @@ let link link_byte_or_native =
       ~ocamlfind_packages:!ocamlfind_packages
       ~bs_super_errors:!bs_super_errors
       ~namespace:!namespace
-      ~ocaml_flags:(List.rev !ocaml_flags)
+      ~ocaml_dependencies:(List.rev !ocaml_dependencies)
       (Sys.getcwd ())
   end
   
@@ -6235,7 +6265,6 @@ let () =
         ~ocamlfind_packages:!ocamlfind_packages
         ~bs_super_errors:!bs_super_errors
         ~namespace:!namespace
-        ~ocaml_flags:(List.rev !ocaml_flags)
         (Sys.getcwd ())
     )),
     " pack native files (cmx) into a library file (cmxa)";
@@ -6248,7 +6277,6 @@ let () =
         ~ocamlfind_packages:!ocamlfind_packages
         ~bs_super_errors:!bs_super_errors
         ~namespace:!namespace
-        ~ocaml_flags:(List.rev !ocaml_flags)
         (Sys.getcwd ())
     )),
     " pack bytecode files (cmo) into a library file (cma)";
@@ -6259,8 +6287,8 @@ let () =
     "-add-clib", (Arg.String add_clib),
     " adds a .a library file to be linked into the final executable";
     
-    "-add-ocaml-flags", (Arg.String add_ocaml_flags),
-    " Pass flags to the underlying compiler."
+    "-add-ocaml-dependency", (Arg.String add_ocaml_dependencies),
+    " Add a dependency on otherlibs or compiler-libs."
     
   ] anonymous usage
 

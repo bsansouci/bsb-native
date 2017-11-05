@@ -30,14 +30,11 @@ type dependency =
   }
 type dependencies = dependency list 
 
-type entry_type_t = Binary | Ppx | Library
 
-type entries_metadata_t = {
-    type_: entry_type_t;
-    main_module_name: string;
-}
-
-type entries_t = JsTarget of entries_metadata_t | NativeTarget of entries_metadata_t | BytecodeTarget of entries_metadata_t
+type entries_t = 
+    | JsTarget of string 
+    | NativeTarget of string 
+    | BytecodeTarget of string 
 
 type reason_react_jsx = string option 
 
@@ -84,4 +81,5 @@ type t =
     allowed_build_kinds: compilation_kind_t list;
     ocamlfind_dependencies: string list;
     ocaml_flags: string list;
+    ocaml_dependencies: string list;
   }

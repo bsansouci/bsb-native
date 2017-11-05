@@ -264,31 +264,21 @@ let link oc ret ~entries ~file_groups ~static_libraries ~namespace ~external_dep
   List.fold_left (fun acc project_entry ->
     let output, rule_name, library_file_name, suffix_cmo_or_cmx, main_module_name, shadows =
       begin match project_entry with
-      | Bsb_config_types.JsTarget {main_module_name; type_}       -> assert false
-      | Bsb_config_types.BytecodeTarget {main_module_name; type_} -> 
+      | Bsb_config_types.JsTarget main_module_name       -> assert false
+      | Bsb_config_types.BytecodeTarget main_module_name -> 
         (String.lowercase main_module_name) ^ ".byte" , 
         Rules.linking_bytecode, 
         "lib" ^ Literals.suffix_cma, 
         Literals.suffix_cmo, 
         main_module_name, 
-        if type_ = Ppx then 
-          let ocamlcommon = ocaml_dir // "lib" // "ocaml" // "compiler-libs" // "ocamlcommon.cma" in 
-          [{
-            Bsb_ninja_util.key = "ocaml_flags_helper";
-            op = Bsb_ninja_util.Overwrite (Bsb_build_util.flag_concat "-add-ocaml-flags" ["-I"; "+compiler-libs"; ocamlcommon])
-          }] else []
-      | Bsb_config_types.NativeTarget {main_module_name; type_}   -> 
+        []
+      | Bsb_config_types.NativeTarget main_module_name   -> 
         (String.lowercase main_module_name) ^ ".native", 
         Rules.linking_native  , 
         "lib" ^ Literals.suffix_cmxa, 
         Literals.suffix_cmx, 
         main_module_name,
-        if type_ = Ppx then
-          let ocamlcommon = ocaml_dir // "lib" // "ocaml" // "compiler-libs" // "ocamlcommon.cmxa" in 
-          [{
-            Bsb_ninja_util.key = "ocaml_flags_helper";
-            op = Bsb_ninja_util.Overwrite (Bsb_build_util.flag_concat "-add-ocaml-flags" ["-I"; "+compiler-libs"; ocamlcommon])
-          }] else []
+        []
       end in
     let (all_mlast_files, all_cmo_or_cmx_files, all_cmi_files) =
       List.fold_left (fun acc group -> 
@@ -389,10 +379,6 @@ let pack oc ret ~backend ~file_groups ~namespace =
     ([], [])
     file_groups in
   (* In the case that a library is just an interface file, we don't do anything *)
-  (* let shadows = [{
-      Bsb_ninja_util.key = "ocaml_flags_helper";
-      op = Bsb_ninja_util.Overwrite (Bsb_build_util.flag_concat "-add-ocaml-flags" ["-I"; "+compiler-libs"])
-    }] in *)
   if List.length all_cmo_or_cmx_files > 0 then begin
     output_build oc
       ~output:output_cma_or_cmxa
@@ -400,7 +386,6 @@ let pack oc ret ~backend ~file_groups ~namespace =
       ~inputs:all_cmo_or_cmx_files
       ~implicit_deps:all_cmi_files
       ~rule:rule_name;
-      (* ~shadows; *)
     ret @ []
   end else ret
 

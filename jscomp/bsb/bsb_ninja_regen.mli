@@ -32,7 +32,7 @@
 
   
 val regenerate_ninja :
-  ?external_deps_for_linking_and_clibs:(string list) * (string list) * (string list) ->
+  ?acc_libraries_for_linking:(string list) * (string list) * (string list) * Depend.StringSet.t ->
   ?main_bs_super_errors:bool ->
   is_top_level:bool ->
   not_dev:bool ->
