@@ -99,7 +99,8 @@ let pack pack_byte_or_native
       let compiler = ocaml_dir // compiler ^ ".opt" in
       Unix.execvp
         compiler
-          (Array.of_list (("-a" :: "-g" :: (if bs_super_errors then ["-bs-super-errors"] else []) @ warning_command )
+          (Array.of_list ((compiler :: "-a" :: "-g" :: (if bs_super_errors then ["-bs-super-errors"] else []) )
+            @ warning_command
             @ "-o" :: (Literals.library_file ^ suffix_library_files) :: includes @ all_object_files))
     else begin
       (* @CrossPlatform This might work on windows since we're using the Unix module which claims to
