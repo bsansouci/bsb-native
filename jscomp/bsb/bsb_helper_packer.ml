@@ -35,7 +35,15 @@ let module_of_filename filename =
   | exception Not_found -> str
   | len -> String.sub str 0 len
 
-let pack pack_byte_or_native ~batch_files ~includes ~ocamlfind_packages ~bs_super_errors ~namespace ~warnings cwd =
+let pack pack_byte_or_native 
+  ~batch_files
+  ~includes
+  ~ocamlfind_packages
+  ~bs_super_errors
+  ~namespace
+  ~warnings 
+  ~warn_error
+  cwd =
   let suffix_object_files, suffix_library_files, compiler, custom_flag = begin match pack_byte_or_native with
   | PackBytecode -> Literals.suffix_cmo, Literals.suffix_cma , "ocamlc", true
   | PackNative   -> Literals.suffix_cmx, Literals.suffix_cmxa, "ocamlopt", false
@@ -72,6 +80,14 @@ let pack pack_byte_or_native ~batch_files ~includes ~ocamlfind_packages ~bs_supe
     | None -> all_object_files
     | Some namespace -> (namespace ^ suffix_object_files) :: all_object_files 
   in
+  
+  let warning_command = if String.length warnings > 0 then
+    "-w" :: warnings :: []
+  else [] in 
+  let warning_command = if String.length warn_error > 0 then
+    "-warn-error" :: warn_error :: warning_command
+  else warning_command in 
+    
   if all_object_files <> [] then
     let includes = List.fold_left (fun acc dir -> "-I" :: dir :: acc) [] includes in
     (* If there are no ocamlfind packages then let's not use ocamlfind, let's use the opt compiler instead.
@@ -83,7 +99,7 @@ let pack pack_byte_or_native ~batch_files ~includes ~ocamlfind_packages ~bs_supe
       let compiler = ocaml_dir // compiler ^ ".opt" in
       Unix.execvp
         compiler
-          (Array.of_list ((compiler :: "-w" :: warnings :: "-a" :: "-g" :: (if bs_super_errors then ["-bs-super-errors"] else []) )
+          (Array.of_list (("-a" :: "-g" :: (if bs_super_errors then ["-bs-super-errors"] else []) @ warning_command )
             @ "-o" :: (Literals.library_file ^ suffix_library_files) :: includes @ all_object_files))
     else begin
       (* @CrossPlatform This might work on windows since we're using the Unix module which claims to
@@ -94,7 +110,8 @@ let pack pack_byte_or_native ~batch_files ~includes ~ocamlfind_packages ~bs_supe
       let dir = Filename.dirname @@ Filename.dirname @@ Filename.dirname @@ cwd in
       let list_of_args = ("ocamlfind" :: compiler :: "-a" :: "-g" :: ocamlfind_packages) 
       @ ((if bs_super_errors then ["-passopt"; "-bs-super-errors"] else []))
-      @  ("-w" :: warnings :: "-o" :: (Literals.library_file ^ suffix_library_files) :: includes @ all_object_files) in
+      @ warning_command
+      @  ("-o" :: (Literals.library_file ^ suffix_library_files) :: includes @ all_object_files) in
       Unix.execvp
         "ocamlfind"
           (Array.of_list list_of_args)

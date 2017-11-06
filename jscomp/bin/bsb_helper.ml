@@ -5774,6 +5774,7 @@ val link : link_t ->
   namespace:string option ->
   ocaml_dependencies:string list ->
   warnings: string ->
+  warn_error: string ->
   string ->
   unit
 
@@ -5807,7 +5808,18 @@ type link_t = LinkBytecode of string | LinkNative of string
 
 let (//) = Ext_path.combine
 
-let link link_byte_or_native ~main_module ~batch_files ~clibs ~includes ~ocamlfind_packages ~bs_super_errors ~namespace ~ocaml_dependencies ~warnings cwd =
+let link link_byte_or_native 
+  ~main_module
+  ~batch_files
+  ~clibs
+  ~includes
+  ~ocamlfind_packages
+  ~bs_super_errors
+  ~namespace
+  ~ocaml_dependencies
+  ~warnings 
+  ~warn_error
+  cwd =
   let suffix_object_files, suffix_library_files, compiler, add_custom, output_file = begin match link_byte_or_native with
   | LinkBytecode output_file -> Literals.suffix_cmo, Literals.suffix_cma , "ocamlc"  , true, output_file
   | LinkNative output_file   -> Literals.suffix_cmx, Literals.suffix_cmxa, "ocamlopt", false, output_file
@@ -5887,6 +5899,12 @@ let link link_byte_or_native ~main_module ~batch_files ~clibs ~includes ~ocamlfi
     else
       clibs
     in
+    let warning_command = if String.length warnings > 0 then
+      "-w" :: warnings :: []
+    else [] in 
+    let warning_command = if String.length warn_error > 0 then
+      "-warn-error" :: warn_error :: warning_command
+    else warning_command in 
     
     let all_object_files = ocaml_dependencies @ clibs @ library_files @ List.rev (list_of_object_files) in
     (* If there are no ocamlfind packages then let's not use ocamlfind, let's use the opt compiler instead.
@@ -5898,7 +5916,8 @@ let link link_byte_or_native ~main_module ~batch_files ~clibs ~includes ~ocamlfi
       let compiler = ocaml_dir // compiler ^ ".opt" in
       let list_of_args = (compiler :: "-g"
         :: (if bs_super_errors then ["-bs-super-errors"] else [])) 
-        @ "-w" :: warnings :: "-o" :: output_file :: all_object_files in
+        @ warning_command
+        @ "-o" :: output_file :: all_object_files in
         (* List.iter (fun a -> print_endline a) list_of_args; *)
       Unix.execvp
         compiler
@@ -5913,7 +5932,8 @@ let link link_byte_or_native ~main_module ~batch_files ~clibs ~includes ~ocamlfi
       let list_of_args = ("ocamlfind" :: compiler :: []) 
         @ (if bs_super_errors then ["-passopt"; "-bs-super-errors"] else []) 
         @ ("-linkpkg" :: ocamlfind_packages)
-        @ ("-w" :: warnings :: "-g" :: "-o" :: output_file :: all_object_files) in
+        @ warning_command
+        @ ("-g" :: "-o" :: output_file :: all_object_files) in
       (* List.iter (fun a -> print_endline a) list_of_args; *)
       Unix.execvp
         "ocamlfind"
@@ -5958,6 +5978,7 @@ val pack : pack_t ->
   bs_super_errors:bool -> 
   namespace:string option ->
   warnings: string -> 
+  warn_error: string ->
   string ->
   unit
 
@@ -6000,7 +6021,15 @@ let module_of_filename filename =
   | exception Not_found -> str
   | len -> String.sub str 0 len
 
-let pack pack_byte_or_native ~batch_files ~includes ~ocamlfind_packages ~bs_super_errors ~namespace ~warnings cwd =
+let pack pack_byte_or_native 
+  ~batch_files
+  ~includes
+  ~ocamlfind_packages
+  ~bs_super_errors
+  ~namespace
+  ~warnings 
+  ~warn_error
+  cwd =
   let suffix_object_files, suffix_library_files, compiler, custom_flag = begin match pack_byte_or_native with
   | PackBytecode -> Literals.suffix_cmo, Literals.suffix_cma , "ocamlc", true
   | PackNative   -> Literals.suffix_cmx, Literals.suffix_cmxa, "ocamlopt", false
@@ -6037,6 +6066,14 @@ let pack pack_byte_or_native ~batch_files ~includes ~ocamlfind_packages ~bs_supe
     | None -> all_object_files
     | Some namespace -> (namespace ^ suffix_object_files) :: all_object_files 
   in
+  
+  let warning_command = if String.length warnings > 0 then
+    "-w" :: warnings :: []
+  else [] in 
+  let warning_command = if String.length warn_error > 0 then
+    "-warn-error" :: warn_error :: warning_command
+  else warning_command in 
+    
   if all_object_files <> [] then
     let includes = List.fold_left (fun acc dir -> "-I" :: dir :: acc) [] includes in
     (* If there are no ocamlfind packages then let's not use ocamlfind, let's use the opt compiler instead.
@@ -6048,7 +6085,7 @@ let pack pack_byte_or_native ~batch_files ~includes ~ocamlfind_packages ~bs_supe
       let compiler = ocaml_dir // compiler ^ ".opt" in
       Unix.execvp
         compiler
-          (Array.of_list ((compiler :: "-w" :: warnings :: "-a" :: "-g" :: (if bs_super_errors then ["-bs-super-errors"] else []) )
+          (Array.of_list (("-a" :: "-g" :: (if bs_super_errors then ["-bs-super-errors"] else []) @ warning_command )
             @ "-o" :: (Literals.library_file ^ suffix_library_files) :: includes @ all_object_files))
     else begin
       (* @CrossPlatform This might work on windows since we're using the Unix module which claims to
@@ -6059,7 +6096,8 @@ let pack pack_byte_or_native ~batch_files ~includes ~ocamlfind_packages ~bs_supe
       let dir = Filename.dirname @@ Filename.dirname @@ Filename.dirname @@ cwd in
       let list_of_args = ("ocamlfind" :: compiler :: "-a" :: "-g" :: ocamlfind_packages) 
       @ ((if bs_super_errors then ["-passopt"; "-bs-super-errors"] else []))
-      @  ("-w" :: warnings :: "-o" :: (Literals.library_file ^ suffix_library_files) :: includes @ all_object_files) in
+      @ warning_command
+      @  ("-o" :: (Literals.library_file ^ suffix_library_files) :: includes @ all_object_files) in
       Unix.execvp
         "ocamlfind"
           (Array.of_list list_of_args)
@@ -6139,6 +6177,8 @@ let set_main_module modulename =
 
 let warnings = ref ""
 
+let warn_error = ref ""
+
 let ocaml_dependencies = ref []
 
 let add_ocaml_dependencies s = 
@@ -6187,6 +6227,7 @@ let link link_byte_or_native =
       ~namespace:!namespace
       ~ocaml_dependencies:(List.rev !ocaml_dependencies)
       ~warnings:!warnings
+      ~warn_error:!warn_error
       (Sys.getcwd ())
   end
 
@@ -6199,6 +6240,7 @@ let pack link_byte_or_native =
     ~bs_super_errors:!bs_super_errors
     ~namespace:!namespace
     ~warnings:!warnings
+    ~warn_error:!warn_error
     (Sys.getcwd ())
     
   
@@ -6295,7 +6337,10 @@ let () =
     " Add a dependency on otherlibs or compiler-libs.";
     
     "-w", (Arg.String (fun w -> warnings := w )),
-    " Use warnings for packer/linker."
+    " Use warnings for packer/linker.";
+    
+    "-warn-error", (Arg.String (fun w -> warn_error := w )),
+    " Turn warnings into errors for packer/linker."
     
   ] anonymous usage
 

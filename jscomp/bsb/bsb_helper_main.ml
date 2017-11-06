@@ -29,6 +29,8 @@ let set_main_module modulename =
 
 let warnings = ref ""
 
+let warn_error = ref ""
+
 let ocaml_dependencies = ref []
 
 let add_ocaml_dependencies s = 
@@ -77,6 +79,7 @@ let link link_byte_or_native =
       ~namespace:!namespace
       ~ocaml_dependencies:(List.rev !ocaml_dependencies)
       ~warnings:!warnings
+      ~warn_error:!warn_error
       (Sys.getcwd ())
   end
 
@@ -89,6 +92,7 @@ let pack link_byte_or_native =
     ~bs_super_errors:!bs_super_errors
     ~namespace:!namespace
     ~warnings:!warnings
+    ~warn_error:!warn_error
     (Sys.getcwd ())
     
 #end  
@@ -185,6 +189,9 @@ let () =
     " Add a dependency on otherlibs or compiler-libs.";
     
     "-w", (Arg.String (fun w -> warnings := w )),
-    " Use warnings for packer/linker."
+    " Use warnings for packer/linker.";
+    
+    "-warn-error", (Arg.String (fun w -> warn_error := w )),
+    " Turn warnings into errors for packer/linker."
 #end    
   ] anonymous usage

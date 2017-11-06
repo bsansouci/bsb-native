@@ -31,5 +31,6 @@ val pack : pack_t ->
   bs_super_errors:bool -> 
   namespace:string option ->
   warnings: string -> 
+  warn_error: string ->
   string ->
   unit

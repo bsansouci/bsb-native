@@ -26,7 +26,18 @@ type link_t = LinkBytecode of string | LinkNative of string
 
 let (//) = Ext_path.combine
 
-let link link_byte_or_native ~main_module ~batch_files ~clibs ~includes ~ocamlfind_packages ~bs_super_errors ~namespace ~ocaml_dependencies ~warnings cwd =
+let link link_byte_or_native 
+  ~main_module
+  ~batch_files
+  ~clibs
+  ~includes
+  ~ocamlfind_packages
+  ~bs_super_errors
+  ~namespace
+  ~ocaml_dependencies
+  ~warnings 
+  ~warn_error
+  cwd =
   let suffix_object_files, suffix_library_files, compiler, add_custom, output_file = begin match link_byte_or_native with
   | LinkBytecode output_file -> Literals.suffix_cmo, Literals.suffix_cma , "ocamlc"  , true, output_file
   | LinkNative output_file   -> Literals.suffix_cmx, Literals.suffix_cmxa, "ocamlopt", false, output_file
@@ -106,6 +117,12 @@ let link link_byte_or_native ~main_module ~batch_files ~clibs ~includes ~ocamlfi
     else
       clibs
     in
+    let warning_command = if String.length warnings > 0 then
+      "-w" :: warnings :: []
+    else [] in 
+    let warning_command = if String.length warn_error > 0 then
+      "-warn-error" :: warn_error :: warning_command
+    else warning_command in 
     
     let all_object_files = ocaml_dependencies @ clibs @ library_files @ List.rev (list_of_object_files) in
     (* If there are no ocamlfind packages then let's not use ocamlfind, let's use the opt compiler instead.
@@ -117,7 +134,8 @@ let link link_byte_or_native ~main_module ~batch_files ~clibs ~includes ~ocamlfi
       let compiler = ocaml_dir // compiler ^ ".opt" in
       let list_of_args = (compiler :: "-g"
         :: (if bs_super_errors then ["-bs-super-errors"] else [])) 
-        @ "-w" :: warnings :: "-o" :: output_file :: all_object_files in
+        @ warning_command
+        @ "-o" :: output_file :: all_object_files in
         (* List.iter (fun a -> print_endline a) list_of_args; *)
       Unix.execvp
         compiler
@@ -132,7 +150,8 @@ let link link_byte_or_native ~main_module ~batch_files ~clibs ~includes ~ocamlfi
       let list_of_args = ("ocamlfind" :: compiler :: []) 
         @ (if bs_super_errors then ["-passopt"; "-bs-super-errors"] else []) 
         @ ("-linkpkg" :: ocamlfind_packages)
-        @ ("-w" :: warnings :: "-g" :: "-o" :: output_file :: all_object_files) in
+        @ warning_command
+        @ ("-g" :: "-o" :: output_file :: all_object_files) in
       (* List.iter (fun a -> print_endline a) list_of_args; *)
       Unix.execvp
         "ocamlfind"
