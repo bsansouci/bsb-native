@@ -362,12 +362,13 @@ let rec
         | "native"   -> Native
         | "bytecode" -> Bytecode
         | str -> Bsb_exception.errorf ~loc:loc_start "'backend' field expects one of: 'js', 'bytecode' or 'native'. Found '%s'" str
-      ) (Bsb_build_util.get_list_string s) 
+      ) (Bsb_build_util.get_list_string s);
     | Some (Str {str = "js"} )       -> backend := [Js]
     | Some (Str {str = "native"} )   -> backend := [Native]
     | Some (Str {str = "bytecode"} ) -> backend := [Bytecode]
     | Some x -> Bsb_exception.config_error x "'backend' field expects one of: 'js', 'bytecode' or 'native'"
-    | None -> backend := parent_backend
+    | None -> 
+      backend := parent_backend
   end;
   
   let cur_sources = !cur_sources in 
@@ -410,7 +411,7 @@ let rec
     | Some (False _), _  -> [], [], []
 
     | Some s, _  -> 
-      let res  = parse_sources package_name cxt s in 
+      let res  = parse_sources package_name {cxt with backend = !backend} s in 
       res.files ,
       res.intervals,
       res.globbed_dirs

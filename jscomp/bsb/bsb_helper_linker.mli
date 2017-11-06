@@ -33,5 +33,6 @@ val link : link_t ->
   bs_super_errors:bool -> 
   namespace:string option ->
   ocaml_dependencies:string list ->
+  warnings: string ->
   string ->
   unit

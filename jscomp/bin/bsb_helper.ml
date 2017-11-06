@@ -5773,6 +5773,7 @@ val link : link_t ->
   bs_super_errors:bool -> 
   namespace:string option ->
   ocaml_dependencies:string list ->
+  warnings: string ->
   string ->
   unit
 
@@ -5806,7 +5807,7 @@ type link_t = LinkBytecode of string | LinkNative of string
 
 let (//) = Ext_path.combine
 
-let link link_byte_or_native ~main_module ~batch_files ~clibs ~includes ~ocamlfind_packages ~bs_super_errors ~namespace ~ocaml_dependencies cwd =
+let link link_byte_or_native ~main_module ~batch_files ~clibs ~includes ~ocamlfind_packages ~bs_super_errors ~namespace ~ocaml_dependencies ~warnings cwd =
   let suffix_object_files, suffix_library_files, compiler, add_custom, output_file = begin match link_byte_or_native with
   | LinkBytecode output_file -> Literals.suffix_cmo, Literals.suffix_cma , "ocamlc"  , true, output_file
   | LinkNative output_file   -> Literals.suffix_cmx, Literals.suffix_cmxa, "ocamlopt", false, output_file
@@ -5897,7 +5898,7 @@ let link link_byte_or_native ~main_module ~batch_files ~clibs ~includes ~ocamlfi
       let compiler = ocaml_dir // compiler ^ ".opt" in
       let list_of_args = (compiler :: "-g"
         :: (if bs_super_errors then ["-bs-super-errors"] else [])) 
-        @ "-o" :: output_file :: all_object_files in
+        @ "-w" :: warnings :: "-o" :: output_file :: all_object_files in
         (* List.iter (fun a -> print_endline a) list_of_args; *)
       Unix.execvp
         compiler
@@ -5912,7 +5913,7 @@ let link link_byte_or_native ~main_module ~batch_files ~clibs ~includes ~ocamlfi
       let list_of_args = ("ocamlfind" :: compiler :: []) 
         @ (if bs_super_errors then ["-passopt"; "-bs-super-errors"] else []) 
         @ ("-linkpkg" :: ocamlfind_packages)
-        @ ("-g" :: "-o" :: output_file :: all_object_files) in
+        @ ("-w" :: warnings :: "-g" :: "-o" :: output_file :: all_object_files) in
       (* List.iter (fun a -> print_endline a) list_of_args; *)
       Unix.execvp
         "ocamlfind"
@@ -5956,6 +5957,7 @@ val pack : pack_t ->
   ocamlfind_packages:string list -> 
   bs_super_errors:bool -> 
   namespace:string option ->
+  warnings: string -> 
   string ->
   unit
 
@@ -5998,7 +6000,7 @@ let module_of_filename filename =
   | exception Not_found -> str
   | len -> String.sub str 0 len
 
-let pack pack_byte_or_native ~batch_files ~includes ~ocamlfind_packages ~bs_super_errors ~namespace cwd =
+let pack pack_byte_or_native ~batch_files ~includes ~ocamlfind_packages ~bs_super_errors ~namespace ~warnings cwd =
   let suffix_object_files, suffix_library_files, compiler, custom_flag = begin match pack_byte_or_native with
   | PackBytecode -> Literals.suffix_cmo, Literals.suffix_cma , "ocamlc", true
   | PackNative   -> Literals.suffix_cmx, Literals.suffix_cmxa, "ocamlopt", false
@@ -6046,7 +6048,7 @@ let pack pack_byte_or_native ~batch_files ~includes ~ocamlfind_packages ~bs_supe
       let compiler = ocaml_dir // compiler ^ ".opt" in
       Unix.execvp
         compiler
-          (Array.of_list ((compiler :: "-a" :: "-g" :: (if bs_super_errors then ["-bs-super-errors"] else []) )
+          (Array.of_list ((compiler :: "-w" :: warnings :: "-a" :: "-g" :: (if bs_super_errors then ["-bs-super-errors"] else []) )
             @ "-o" :: (Literals.library_file ^ suffix_library_files) :: includes @ all_object_files))
     else begin
       (* @CrossPlatform This might work on windows since we're using the Unix module which claims to
@@ -6057,7 +6059,7 @@ let pack pack_byte_or_native ~batch_files ~includes ~ocamlfind_packages ~bs_supe
       let dir = Filename.dirname @@ Filename.dirname @@ Filename.dirname @@ cwd in
       let list_of_args = ("ocamlfind" :: compiler :: "-a" :: "-g" :: ocamlfind_packages) 
       @ ((if bs_super_errors then ["-passopt"; "-bs-super-errors"] else []))
-      @  ("-o" :: (Literals.library_file ^ suffix_library_files) :: includes @ all_object_files) in
+      @  ("-w" :: warnings :: "-o" :: (Literals.library_file ^ suffix_library_files) :: includes @ all_object_files) in
       Unix.execvp
         "ocamlfind"
           (Array.of_list list_of_args)
@@ -6135,6 +6137,8 @@ let main_module = ref None
 let set_main_module modulename =
   main_module := Some modulename
 
+let warnings = ref ""
+
 let ocaml_dependencies = ref []
 
 let add_ocaml_dependencies s = 
@@ -6182,8 +6186,21 @@ let link link_byte_or_native =
       ~bs_super_errors:!bs_super_errors
       ~namespace:!namespace
       ~ocaml_dependencies:(List.rev !ocaml_dependencies)
+      ~warnings:!warnings
       (Sys.getcwd ())
   end
+
+let pack link_byte_or_native =
+  Bsb_helper_packer.pack
+    link_byte_or_native
+    ~includes:!includes
+    ~batch_files:!batch_files
+    ~ocamlfind_packages:!ocamlfind_packages
+    ~bs_super_errors:!bs_super_errors
+    ~namespace:!namespace
+    ~warnings:!warnings
+    (Sys.getcwd ())
+    
   
 let () =
   Arg.parse [
@@ -6258,26 +6275,13 @@ let () =
     " add an ocamlfind pacakge to be packed/linked";
     
     "-pack-native-library", (Arg.Unit (fun () -> 
-      Bsb_helper_packer.pack
-        Bsb_helper_packer.PackNative
-        ~includes:!includes
-        ~batch_files:!batch_files
-        ~ocamlfind_packages:!ocamlfind_packages
-        ~bs_super_errors:!bs_super_errors
-        ~namespace:!namespace
-        (Sys.getcwd ())
+      pack Bsb_helper_packer.PackNative
+        
     )),
     " pack native files (cmx) into a library file (cmxa)";
 
     "-pack-bytecode-library", (Arg.Unit (fun () -> 
-      Bsb_helper_packer.pack
-        Bsb_helper_packer.PackBytecode
-        ~includes:!includes
-        ~batch_files:!batch_files
-        ~ocamlfind_packages:!ocamlfind_packages
-        ~bs_super_errors:!bs_super_errors
-        ~namespace:!namespace
-        (Sys.getcwd ())
+      pack Bsb_helper_packer.PackBytecode
     )),
     " pack bytecode files (cmo) into a library file (cma)";
     
@@ -6288,7 +6292,10 @@ let () =
     " adds a .a library file to be linked into the final executable";
     
     "-add-ocaml-dependency", (Arg.String add_ocaml_dependencies),
-    " Add a dependency on otherlibs or compiler-libs."
+    " Add a dependency on otherlibs or compiler-libs.";
+    
+    "-w", (Arg.String (fun w -> warnings := w )),
+    " Use warnings for packer/linker."
     
   ] anonymous usage
 

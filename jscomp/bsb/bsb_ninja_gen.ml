@@ -192,7 +192,7 @@ let output_ninja_and_namespace_map
           Bsb_ninja_global_vars.refmt_flags, refmt_flags;
           Bsb_ninja_global_vars.namespace , namespace_flag ; 
           
-          
+#if BS_NATIVE then
           Bsb_ninja_global_vars.ocaml_flags, ocaml_flags;
           
           Bsb_ninja_global_vars.bs_super_errors_ocamlfind, 
@@ -220,7 +220,8 @@ let output_ninja_and_namespace_map
                      Ben - September 28th 2017
           *)
           Bsb_ninja_global_vars.open_flag, open_flag;
-          
+
+#end
           (** TODO: could be removed by adding a flag
               [-bs-ns react]
           *)

@@ -9685,12 +9685,13 @@ let rec
         | "native"   -> Native
         | "bytecode" -> Bytecode
         | str -> Bsb_exception.errorf ~loc:loc_start "'backend' field expects one of: 'js', 'bytecode' or 'native'. Found '%s'" str
-      ) (Bsb_build_util.get_list_string s) 
+      ) (Bsb_build_util.get_list_string s);
     | Some (Str {str = "js"} )       -> backend := [Js]
     | Some (Str {str = "native"} )   -> backend := [Native]
     | Some (Str {str = "bytecode"} ) -> backend := [Bytecode]
     | Some x -> Bsb_exception.config_error x "'backend' field expects one of: 'js', 'bytecode' or 'native'"
-    | None -> backend := parent_backend
+    | None -> 
+      backend := parent_backend
   end;
   
   let cur_sources = !cur_sources in 
@@ -9733,7 +9734,7 @@ let rec
     | Some (False _), _  -> [], [], []
 
     | Some s, _  -> 
-      let res  = parse_sources package_name cxt s in 
+      let res  = parse_sources package_name {cxt with backend = !backend} s in 
       res.files ,
       res.intervals,
       res.globbed_dirs
@@ -11805,6 +11806,7 @@ let package_sep = "-"
 
 let warnings = "warnings"
 
+
 let bs_super_errors = "bs_super_errors"
 let bs_super_errors_ocamlfind = "bs_super_errors_ocamlfind"
 
@@ -11817,6 +11819,8 @@ let open_flag = "open_flag"
 let ocaml_flags = "ocaml_flags"
 let berror = "berror"
 let ocaml_dependencies = "ocaml_dependencies"
+let bsb_helper_warnings = "bsb_helper_warnings"
+
 
 end
 module Bsb_rule : sig 
@@ -12153,27 +12157,27 @@ let build_cmi_native =
 
 let linking_bytecode =
   define
-    ~command:"${bsb_helper} ${ocaml_dependencies} ${namespace} -bs-main ${main_module} ${bs_super_errors} ${static_libraries} \
+    ~command:"${bsb_helper} ${ocaml_dependencies} ${warnings} ${namespace} -bs-main ${main_module} ${bs_super_errors} ${static_libraries} \
               ${ocamlfind_dependencies} ${external_deps_for_linking} ${in} -link-bytecode ${out}"
     "linking_bytecode"
 
 let linking_native =
   define
-    ~command:"${bsb_helper} ${ocaml_dependencies} ${namespace} -bs-main ${main_module} ${bs_super_errors} ${static_libraries} \
+    ~command:"${bsb_helper} ${ocaml_dependencies} ${warnings} ${namespace} -bs-main ${main_module} ${bs_super_errors} ${static_libraries} \
               ${ocamlfind_dependencies} ${external_deps_for_linking} ${in} -link-native ${out}"
     "linking_native"
 
 
 let build_cma_library =
   define
-    ~command:"${bsb_helper} ${ocaml_dependencies} ${namespace} ${bs_super_errors} ${static_libraries} ${ocamlfind_dependencies} \
+    ~command:"${bsb_helper} ${ocaml_dependencies} ${warnings} ${namespace} ${bs_super_errors} ${static_libraries} ${ocamlfind_dependencies} \
               ${bs_package_includes} ${bsc_lib_includes} ${bsc_extra_includes} \
               ${in} -pack-bytecode-library"
     "build_cma_library"
 
 let build_cmxa_library =
   define
-    ~command:"${bsb_helper} ${ocaml_dependencies} ${namespace} ${bs_super_errors} ${static_libraries} ${ocamlfind_dependencies} \
+    ~command:"${bsb_helper} ${ocaml_dependencies} ${warnings} ${namespace} ${bs_super_errors} ${static_libraries} ${ocamlfind_dependencies} \
               ${bs_package_includes} ${bsc_lib_includes} ${bsc_extra_includes} \
               ${in} -pack-native-library"
     "build_cmxa_library"
@@ -17446,7 +17450,7 @@ let output_ninja_and_namespace_map
           Bsb_ninja_global_vars.refmt_flags, refmt_flags;
           Bsb_ninja_global_vars.namespace , namespace_flag ; 
           
-          
+
           Bsb_ninja_global_vars.ocaml_flags, ocaml_flags;
           
           Bsb_ninja_global_vars.bs_super_errors_ocamlfind, 
@@ -17474,7 +17478,8 @@ let output_ninja_and_namespace_map
                      Ben - September 28th 2017
           *)
           Bsb_ninja_global_vars.open_flag, open_flag;
-          
+
+
           (** TODO: could be removed by adding a flag
               [-bs-ns react]
           *)

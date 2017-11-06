@@ -30,5 +30,6 @@ val pack : pack_t ->
   ocamlfind_packages:string list -> 
   bs_super_errors:bool -> 
   namespace:string option ->
+  warnings: string -> 
   string ->
   unit

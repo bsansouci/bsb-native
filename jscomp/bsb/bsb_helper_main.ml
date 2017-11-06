@@ -27,6 +27,8 @@ let main_module = ref None
 let set_main_module modulename =
   main_module := Some modulename
 
+let warnings = ref ""
+
 let ocaml_dependencies = ref []
 
 let add_ocaml_dependencies s = 
@@ -74,8 +76,21 @@ let link link_byte_or_native =
       ~bs_super_errors:!bs_super_errors
       ~namespace:!namespace
       ~ocaml_dependencies:(List.rev !ocaml_dependencies)
+      ~warnings:!warnings
       (Sys.getcwd ())
   end
+
+let pack link_byte_or_native =
+  Bsb_helper_packer.pack
+    link_byte_or_native
+    ~includes:!includes
+    ~batch_files:!batch_files
+    ~ocamlfind_packages:!ocamlfind_packages
+    ~bs_super_errors:!bs_super_errors
+    ~namespace:!namespace
+    ~warnings:!warnings
+    (Sys.getcwd ())
+    
 #end  
 let () =
   Arg.parse [
@@ -150,26 +165,13 @@ let () =
     " add an ocamlfind pacakge to be packed/linked";
     
     "-pack-native-library", (Arg.Unit (fun () -> 
-      Bsb_helper_packer.pack
-        Bsb_helper_packer.PackNative
-        ~includes:!includes
-        ~batch_files:!batch_files
-        ~ocamlfind_packages:!ocamlfind_packages
-        ~bs_super_errors:!bs_super_errors
-        ~namespace:!namespace
-        (Sys.getcwd ())
+      pack Bsb_helper_packer.PackNative
+        
     )),
     " pack native files (cmx) into a library file (cmxa)";
 
     "-pack-bytecode-library", (Arg.Unit (fun () -> 
-      Bsb_helper_packer.pack
-        Bsb_helper_packer.PackBytecode
-        ~includes:!includes
-        ~batch_files:!batch_files
-        ~ocamlfind_packages:!ocamlfind_packages
-        ~bs_super_errors:!bs_super_errors
-        ~namespace:!namespace
-        (Sys.getcwd ())
+      pack Bsb_helper_packer.PackBytecode
     )),
     " pack bytecode files (cmo) into a library file (cma)";
     
@@ -180,6 +182,9 @@ let () =
     " adds a .a library file to be linked into the final executable";
     
     "-add-ocaml-dependency", (Arg.String add_ocaml_dependencies),
-    " Add a dependency on otherlibs or compiler-libs."
+    " Add a dependency on otherlibs or compiler-libs.";
+    
+    "-w", (Arg.String (fun w -> warnings := w )),
+    " Use warnings for packer/linker."
 #end    
   ] anonymous usage
