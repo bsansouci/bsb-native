@@ -14,8 +14,8 @@ For [example](https://github.com/bsansouci/BetterErrors/tree/bsb-support):
   "name" : "NameOfLibrary",
   "sources" : "src",
   "entries": [{
-    "kind": "bytecode",
-    "main": "Index"
+    "backend": "bytecode",
+    "main-module": "Index"
   }]
 }
 ```
@@ -23,14 +23,14 @@ For [example](https://github.com/bsansouci/BetterErrors/tree/bsb-support):
 ## Run
 `./node_modules/.bin/bsb -make-world` (or add an [npm script](https://docs.npmjs.com/misc/scripts) to simply run `bsb -make-world`).
 
-That will pickup the first entry's `kind` and build all entries to that `kind`. e.g if you have multiple `bytecode` targets, they'll all get built but not the `js` ones nor `native` ones. If you want to build to all targets you need to run the build command multiple times with different `-backend`.
+That will pickup the first entry's `backend` and build all entries to that `backend`. e.g if you have multiple `bytecode` targets, they'll all get built but not the `js` ones nor `native` ones. If you want to build to all targets you need to run the build command multiple times with different `-backend`.
 
 ## Useful flags
 The `-make-world` flag builds all of the dependencies and the project.
 
 The `-w` enabled the watch mode which will rebuild on any source file change.
 
-The `-backend [js|bytecode|native]` flag tells `bsb-native` to build all entries in the `bsconfig.json` which match the kind `js`, `bytecode` or `native`.
+The `-backend [js|bytecode|native]` flag tells `bsb-native` to build all entries in the `bsconfig.json` which match the backend `js`, `bytecode` or `native`.
 
 The build artifacts are put into the folder `lib/bs`. The bytecode executable would be at `lib/bs/bytecode/index.byte` and the native one at `lib/bs/native/index.native` for example.
 
@@ -42,8 +42,8 @@ Yes `bsb-native` supports opam packages (see [ocamlfind example](https://github.
   "sources" : "src",
   "ocamlfind-dependencies": ["lwt.unix", "lwt.ppx"],
   "entries": [{
-    "kind": "bytecode",
-    "main": "Index"
+    "backend": "bytecode",
+    "main-module": "Index"
   }]
 }
 ```
@@ -58,14 +58,23 @@ Yes `bsb-native` supports opam packages (see [ocamlfind example](https://github.
     // When running `bsb -backend bytecode`, bsb will filter this array for 
     // all the entries compiling to bytecode and compile _all_ of those.
     "entries": [{
-      "kind": "bytecode", // can be "bytecode" (ocamlc), "js" (bsc) or "native" (ocamlopt),
-      "main": "MainModule",
+      "backend": "bytecode", // can be "bytecode" (ocamlc), "js" (bsc) or "native" (ocamlopt),
+      "main-module": "MainModule",
     }],
 
     // Array of opam dependencies.
     "ocamlfind-dependencies": ["lwt.unix"],
-
-    // Array of flags to pass the OCaml compiler.
+    
+    // Array of built-in ocaml dependencies that are not Pervasives (ie not 
+    // linked by default).
+    // This is useful for making a ppx, where you need "compiler-libs".
+    // All of these except "compiler-libs" is linked by default, so you don't 
+    // have to worry about it. That said it does increase the binary size so 
+    // you can remove unused things here.
+    "ocaml-dependencies": ["bigarray", "unix", "threads", "compiler-libs"],
+  
+    // Array of flags to pass the OCaml compiler. This shouldn't be needed for 
+    // most things.
     "ocaml-flags": ["-bin-annot"],
 
     // This allows you to write JS specific packages (for example) and depend 
@@ -74,20 +83,20 @@ Yes `bsb-native` supports opam packages (see [ocamlfind example](https://github.
     // which also exposes `Bla`, the compiler will use the native `Bla` when
     // compiling to native and the JS `Bla` when compiling to JS thanks to this
     // flag.
-    "allowed-build-kinds": "js" // Can be a string or an array, with the same values as "entries".
+    "allowed-build-kinds": "js", // Can be a string or an array, with the same values as "entries".
 
     // List of relative paths (relative from library dir) to be linked at the 
     // end. Bsb-native doesn't care how those were generated as long as they // are there at the linking stage. Generally you can use `build-script` to
     // build those.
-    "static-libraries": ["lib/c/my_lib.o"]
+    "static-libraries": ["lib/c/my_lib.o"],
 
     // Command invoked first, before bsb tries to build anything else.
     // Useful for building C code linked into the exec using 
     // `static-libraries`.
-    "build-script": "make"
+    "build-script": "make",
 
     // List of flags to be passed to the C linker at the linking stage.
-    "c-linker-flags": ["-L/path/to/folder/with/linker/stuff"]
+    "c-linker-flags": ["-L/path/to/folder/with/linker/stuff"],
 }
 ```
 
@@ -98,4 +107,15 @@ For example, you can write code that depends on the module Reasongl, and bsb-nat
 
 Currently the way this works is to have each platform specific dependency expose a module with the same name and rely on the field `allowed-build-kinds` in the `bsconfig.json` to tell bsb-native which one of platform specific dep you want to build, given that you want to build the whole project to a specific target. Say you target JS, then ReasonglWeb will get built which exposes its own [Reasongl](https://github.com/bsansouci/reasongl-web/blob/bsb-support-new/src/reasongl.re) module.
 
-This is _not_ the best way. We're working on improving this by allowing conditional compilation within a project using a PPX.
+### matchenv
+If you would like to have all your code in the same package, you can use [matchenv](https://github.com/bsansouci/matchenv). That package allows you to write something like
+```
+include
+  [%matchenv
+    switch (BSB_BACKEND) {
+    | "bytecode" => MyModule_Native
+    | "native" => MyModule_Native
+    | "js" => MyModule_Js
+   }];
+```
+inside a file called `MyModule` (for example). Then when you build to JS that module will use the `MyModule_Js` implementation. Same for native/bytecode. This is deeply integrated into bsb-native to make everything easier.
