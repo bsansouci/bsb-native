@@ -1,6 +1,6 @@
 # bsb-native
 
-Bsb-native is like [bsb](http://bucklescript.github.io/bucklescript/Manual.html#_bucklescript_build_system_code_bsb_code), but compiles to native OCaml instead.
+Bsb-native is a fork of [bsb](http://bucklescript.github.io/bucklescript/Manual.html#_bucklescript_build_system_code_bsb_code) that compiles to native OCaml instead.
 
 
 ## Install
@@ -22,12 +22,14 @@ For [example](https://github.com/bsansouci/BetterErrors/tree/bsb-support):
 ```
 
 ## Run
-`./node_modules/.bin/bsb -make-world` (or add an [npm script](https://docs.npmjs.com/misc/scripts) to simply run `bsb -make-world`).
+`./node_modules/.bin/bsb -make-world` (or add an [npm script](https://docs.npmjs.com/misc/scripts) that runs `bsb -make-world`).
 
 That will pickup the first entry's `backend` and build all entries to that `backend`. e.g if you have multiple `bytecode` targets, they'll all get built but not the `js` ones nor `native` ones. If you want to build to all targets you need to run the build command multiple times with different `-backend`.
 
 ## Useful flags
 The `-make-world` flag builds all of the dependencies and the project.
+
+The `-clean-world` flag cleans all of the build artifacts.
 
 The `-w` enabled the watch mode which will rebuild on any source file change.
 
@@ -36,7 +38,8 @@ The `-backend [js|bytecode|native]` flag tells `bsb-native` to build all entries
 The build artifacts are put into the folder `lib/bs`. The bytecode executable would be at `lib/bs/bytecode/index.byte` and the native one at `lib/bs/native/index.native` for example.
 
 ## Opam packages
-Yes `bsb-native` supports opam packages (see [ocamlfind example](https://github.com/bsansouci/bsb-native-example/tree/ocamlfind-trial))
+Yes `bsb-native` supports opam packages (see [ocamlfind example](https://github.com/bsansouci/bsb-native-example/tree/ocamlfind-trial)). 
+**BUT** you need to be on the switch `4.02.3+buckle-master` (which you can get to by running `opam switch 4.02.3+buckle-master`).
 ```js
 {
   "name" : "NameOfLibrary",
@@ -120,3 +123,65 @@ include
    }];
 ```
 inside a file called `MyModule` (for example). Then when you build to JS that module will use the `MyModule_Js` implementation. Same for native/bytecode. This is deeply integrated into bsb-native to make everything easier.
+
+
+# Contributing
+
+The code is inside `jscomp`.
+
+### Dev
+1) To contribute you need opam and you need to be on the right switch.
+
+OSX using [homebrew](https://brew.sh)
+```
+brew install opam
+```
+
+Linux
+```
+wget https://raw.github.com/ocaml/opam/master/shell/opam_installer.sh -O - | sh -s /usr/local/bin
+```
+
+Windows isn't figured out yet.
+
+2) Configure opam
+```
+opam init --comp=4.02.3+buckle-master
+eval `opam config env`
+
+opan switch reinstall 4.02.3+buckle-master # do this if you get errors even from a clean compilation
+```
+
+3) Install camlp4
+```
+opam install camlp4
+```
+
+4) Build ocaml. Run in the bucklescript directory
+```
+./scripts/buildocaml.sh
+```
+
+5) Build bsb-native. This command can be the only command used to build while developing.
+```
+make worldnative
+```
+
+
+Each time you make a change you can run `make worldnative`, it'll incrementally only re-build the right stuff.
+If a change isn't picked up you can `make clean` and try again.
+
+
+### Release
+Before making a PR (or at the end of a PR) you should build the release files, which are the packed files inside jscomp/bin. Each file represents one exec and contains all the ML code for that exec.
+
+To do that simply run
+```
+make force-nativesnapshot
+```
+
+You can test those generated artifacts by running 
+```
+make -C bin all
+```
+_note_: this is not the same as `make bin/all`. The former will use `./bin`'s makefile to figure out what the rule `all` means. The latter will look into the current directory's makefile for a rule called `bin/all`,
