@@ -1,4 +1,4 @@
-# Build Instructions
+# Extra Build Instructions
 
 ## Release mode
 
@@ -9,14 +9,7 @@ OCaml compiler  with the right version installed:
 node scripts/install.js
 ```
 
-The build process will generate configure file with correct `LIBDIR` path,
-build all binaries and libraries and
-install the binaries into `bin` and lib files into `lib`.
-
-First it will try to generate `bin/config_whole_compiler.ml` based on existing
-OCaml installation, if it fails, it will try to invoke `buildocaml.sh` to
-install an OCaml compiler from scratch, and retry again
-
+This will build and install the bspack-ed files that are in `jscomp/bin`. This command isn't really meant to be used for dev purposes. Use `make worldnative` to build during development.
 
 ## Dev mode
 
@@ -33,39 +26,14 @@ eval `opam config env`
 
 #### build BuckleScript's forked OCaml
 ```sh
-cd vendor/ocaml
-./configure -prefix `pwd`
-make world.opt
-make install
+./scripts/buildocaml.sh
 ```
 
 #### build all of Bucklescript
 ```sh
 cd ../../jscomp
-make world
+make worldnative
 ```
-
-### build the compiler (bsc.exe)
-
-If you don't change the type definition of JS IR, i.e, [j.ml](./j.ml),
-then the only dependency is the build tool:
-`make`
-
-```sh
-rm -rf core/js_map.ml core/js_fold.ml && make core/js_map.ml core/js_fold.ml bin/bsc.exe
-```
-
-If you do want to change the JS IR, you also need
-[camlp4](https://github.com/ocaml/camlp4), note that the version does
-not need match the exact the same version of compiler.
-
-### build the build system (bsb.exe)
-
-```sh
-make bin/bsb.exe && make bin/bsb_helper.ml && make -C bin bsb_helper.exe
-```
-
-Generate packed ML files for PR: `make force-snapshotml`
 
 ### build the runtime
 

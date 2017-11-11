@@ -143,10 +143,6 @@ let link link_byte_or_native
     else begin
       (* @CrossPlatform This might work on windows since we're using the Unix module which claims to
          have a windows implementation... We should double check this. *)
-      (* @Hack we assume we're inside lib/bs/nested here, this might change in the future, breaking this 
-            Ben - October 6th 2017
-      *)
-      let dir = Filename.dirname @@ Filename.dirname @@ Filename.dirname @@ cwd in
       let list_of_args = ("ocamlfind" :: compiler :: []) 
         @ (if bs_super_errors then ["-passopt"; "-bs-super-errors"] else []) 
         @ ("-linkpkg" :: ocamlfind_packages)
