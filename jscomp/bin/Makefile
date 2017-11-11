@@ -38,14 +38,14 @@ reactjs_jsx_ppx_2.exe:reactjs_jsx_ppx_v2.mli reactjs_jsx_ppx_v2.ml
 reactjs_jsx_ppx_3.exe:reactjs_jsx_ppx_v3.mli reactjs_jsx_ppx_v3.ml
 	$(NATIVE) -w -40-30 -no-alias-deps -I +compiler-libs ocamlcommon.cmxa $^ -o $@
 
-ifdef WIN32
-config_whole_compiler.ml:config_whole_compiler.mlp ../../scripts/config_compiler.js
-	node ../../scripts/config_compiler.js
+# ifdef WIN32
+# config_whole_compiler.ml:config_whole_compiler.mlp ../../scripts/config_compiler.js
+# 	node ../../scripts/config_compiler.js
 
-bsc.exe: config_whole_compiler.mli config_whole_compiler.ml  whole_compiler.mli whole_compiler.ml
-	$(NATIVE) $(OCAMLOPT_FLAGS) $^  -o $@
-endif
-ifndef WIN32
+# bsc.exe: config_whole_compiler.mli config_whole_compiler.ml  whole_compiler.mli whole_compiler.ml
+# 	$(NATIVE) $(OCAMLOPT_FLAGS) $^  -o $@
+# endif
+# ifndef WIN32
 # bsb_default_paths.mli:
 # 	cp ../bsb/bsb_default_paths.mli ./bsb_default_paths.mli
 
@@ -54,7 +54,7 @@ ifndef WIN32
 # 	cp ../bsb/bsb_default_paths.ml ./bsb_default_paths.ml
 bsc.exe:  whole_compiler.mli whole_compiler.ml
 	$(NATIVE) $(OCAMLOPT_FLAGS) config_whole_compiler.mli config_whole_compiler.ml $^  -o $@
-endif
+# endif
 
 
 bspack.exe: bspack.mli bspack.ml

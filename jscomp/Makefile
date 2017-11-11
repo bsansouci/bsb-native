@@ -328,13 +328,13 @@ OTHER_CORE_CMXS= $(addprefix core/, $(addsuffix .cmx, $(OTHER_CORE_SRCS)))
 bsb/bsb_default_paths.ml:../scripts/opam_config_compiler_packed.ml
 	../vendor/ocaml/ocamlc.opt -g -o ../scripts/opam_config_compiler.exe ../vendor/ocaml/otherlibs/unix/unix.cma ../scripts/opam_config_compiler_packed.ml
 	../scripts/opam_config_compiler.exe
-	
+
 bsb/bsb_default_paths.cmi: bsb/bsb_default_paths.mli
 	$(NATIVE) $(INCLUDES) $(COMPFLAGS) -c $<
 
 bsb/bsb_default_paths.cmx: bsb/bsb_default_paths.cmi
 	$(NATIVE) $(INCLUDES) $(COMPFLAGS) -c bsb/bsb_default_paths.ml
-	
+
 BSB_SRCS= bsb_config\
 	bsb_db\
 	bsb_exception\
@@ -455,6 +455,10 @@ bin/jscmj.exe:bs_hash.cmxa ext.cmxa common.cmxa syntax.cmxa depends.cmxa core.cm
 bin/jsgen.exe:bs_hash.cmxa ext.cmxa jsgen_main.cmx
 	$(NATIVE) -g -linkall -I +compiler-libs ocamlcommon.cmxa $^ -o $@
 
+worldnative: bsb/bsb_default_paths.ml
+	BS_NATIVE=true make bin/bsc.exe
+	BS_NATIVE=true make bin/bsb.exe
+	BS_NATIVE=true make bin/bsb_helper.exe
 
 .PHONY: check
 
@@ -539,10 +543,16 @@ themes:
 snapshotml:./bin/bspack.exe $(SNAPSHOT_SRCS)
 
 force-snapshotml:
-	rm -f $(SNAPSHOT_DEPS) $(SNAPSHOT_SRCS) ../scripts/opam_config_compiler_packed.ml 
+	rm -f $(SNAPSHOT_DEPS) $(SNAPSHOT_SRCS) ../scripts/opam_config_compiler_packed.ml
 	make snapshotml
 	echo "bundling opam_config_compiler_packed.ml"
 	./bin/bspack.exe -I ext -I ../scripts -bs-main Opam_config_compiler -o ../scripts/opam_config_compiler_packed.ml
+
+force-nativesnapshot:
+	rm -f $(SNAPSHOT_DEPS) $(SNAPSHOT_SRCS) ../scripts/opam_config_compiler_packed.ml
+	BS_NATIVE=true make snapshotml
+	echo "bundling opam_config_compiler_packed.ml"
+	BS_NATIVE=true ./bin/bspack.exe -I ext -I ../scripts -bs-main Opam_config_compiler -o ../scripts/opam_config_compiler_packed.ml
 
 
 bin/bsppx.ml:./bin/bspack.exe
