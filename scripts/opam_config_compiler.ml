@@ -79,10 +79,10 @@ let gen_bsb_default_paths ~jscomp_dir ~bin_dir ~ocaml_dir =
       end
      done
    with End_of_file -> ());
-(*   let bsb_default_paths_output = jscomp_dir // "bsb" // "bsb_default_paths.ml" in
+  let bsb_default_paths_output = jscomp_dir // "bsb" // "bsb_default_paths.ml" in
   let oc = open_out bsb_default_paths_output in
   Buffer.output_buffer oc buf;
-  close_out oc; *)
+  close_out oc;
   let bsb_default_paths_output = jscomp_dir // "bin" // "bsb_default_paths.ml" in
   let oc = open_out bsb_default_paths_output in
   Buffer.output_buffer oc buf;
