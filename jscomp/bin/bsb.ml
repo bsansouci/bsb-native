@@ -2238,6 +2238,8 @@ val errorf : loc:Ext_position.t ->  ('a, unit, string, 'b) format4 -> 'a
 val config_error : Ext_json_types.t -> string -> 'a 
 
 
+
+
 val invalid_json : string -> 'a
 
 end = struct
@@ -2273,6 +2275,7 @@ type error =
   | Json_config of Ext_position.t * string
   | Invalid_json of string
   | Conflict_module of string * string * string 
+
 
 exception Error of error 
 
@@ -2312,11 +2315,13 @@ let print (fmt : Format.formatter) (x : error) =
     Format.fprintf fmt 
     "File %S, line 1\n\
     @{<error>Error: Invalid json format@}" s 
-    
+
+
 let conflict_module modname dir1 dir2 = 
   error (Conflict_module (modname,dir1,dir2))    
 let errorf ~loc fmt =
   Format.ksprintf (fun s -> error (Json_config (loc,s))) fmt
+
 
 
 let config_error config fmt =
@@ -11807,20 +11812,6 @@ let package_sep = "-"
 let warnings = "warnings"
 
 
-let bs_super_errors = "bs_super_errors"
-let bs_super_errors_ocamlfind = "bs_super_errors_ocamlfind"
-
-let ocamlc = "ocamlc"
-let ocamlopt = "ocamlopt"
-let ocamlfind = "ocamlfind"
-let ocamlfind_dependencies = "ocamlfind_dependencies"
-let external_deps_for_linking = "external_deps_for_linking"
-let open_flag = "open_flag"
-let ocaml_flags = "ocaml_flags"
-let berror = "berror"
-let ocaml_dependencies = "ocaml_dependencies"
-let bsb_helper_warnings = "bsb_helper_warnings"
-
 
 end
 module Bsb_rule : sig 
@@ -13484,7 +13475,7 @@ end = struct
 (* The main OCaml version string has moved to ../VERSION *)
 let version = Sys.ocaml_version
 
-let standard_library_default = "/Users/benjamin/Desktop/bucklescript/vendor/ocaml/lib/ocaml"
+let standard_library_default = "/Users/jared/clone/fork/bsb-native/vendor/ocaml/lib/ocaml"
 
 let standard_library =
  
@@ -13494,7 +13485,7 @@ let standard_library =
 
     standard_library_default
 
-let standard_runtime = "/Users/benjamin/Desktop/bucklescript/vendor/ocaml/bin/ocamlrun"
+let standard_runtime = "/Users/jared/clone/fork/bsb-native/vendor/ocaml/bin/ocamlrun"
 let ccomp_type = "cc"
 let bytecomp_c_compiler = "gcc -O  -Wall -D_FILE_OFFSET_BITS=64 -D_REENTRANT -O "
 let bytecomp_c_libraries = "-lpthread"
@@ -17365,7 +17356,7 @@ let output_ninja_and_namespace_map
     | Bsb_config_types.Bytecode -> "bytecode"
   end in
   if entries = [] && is_top_level then
-    failwith @@ "Could not find an item in the entries field to compile to '" ^ nested ^ "'";
+    Bsb_exception.missing_entry nested;
   let oc = open_out_bin (cwd // Bsb_config.lib_bs // nested // Literals.build_ninja) in
   let bsc = bsc_dir // bsc_exe in   (* The path to [bsc.exe] independent of config  *)
   let bsb_helper = bsc_dir // bsb_helper_exe in (* The path to [bsb_heler.exe] *)
@@ -17450,35 +17441,6 @@ let output_ninja_and_namespace_map
           Bsb_ninja_global_vars.refmt_flags, refmt_flags;
           Bsb_ninja_global_vars.namespace , namespace_flag ; 
           
-
-          Bsb_ninja_global_vars.ocaml_flags, ocaml_flags;
-          
-          Bsb_ninja_global_vars.bs_super_errors_ocamlfind, 
-          (* Jumping through hoops. When ocamlfind is used we need to pass the argument 
-             to the underlying compiler and not ocamlfind, so we use -passopt. Otherwise we don't.
-             For bsb_helper we also don't. *)
-            if ocamlfind_dependencies <> [] && String.length bs_super_errors > 0 
-              then "-passopt " ^ bs_super_errors 
-              else bs_super_errors;
-          Bsb_ninja_global_vars.bs_super_errors, bs_super_errors;
-          
-          Bsb_ninja_global_vars.external_deps_for_linking, Bsb_build_util.flag_concat dash_i external_deps_for_linking;
-          Bsb_ninja_global_vars.ocamlc, if use_ocamlfind then ocamlc
-            else (ocaml_dir // ocamlc ^ ".opt");
-          Bsb_ninja_global_vars.ocamlopt, if use_ocamlfind then ocamlopt
-            else (ocaml_dir // ocamlopt ^ ".opt");
-          Bsb_ninja_global_vars.ocamlfind, if use_ocamlfind then ocamlfind else "";
-          Bsb_ninja_global_vars.ocamlfind_dependencies,  Bsb_build_util.flag_concat "-package" (external_ocamlfind_dependencies @ ocamlfind_dependencies);
-          Bsb_ninja_global_vars.ocaml_dependencies, Bsb_build_util.flag_concat "-add-ocaml-dependency" external_ocaml_dependencies;
-          
-          (* @HACK 
-              This might cause stale artifacts. This makes everything implicitly depend on the namespace file... 
-              
-              
-                     Ben - September 28th 2017
-          *)
-          Bsb_ninja_global_vars.open_flag, open_flag;
-
 
           (** TODO: could be removed by adding a flag
               [-bs-ns react]
