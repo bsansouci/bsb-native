@@ -2240,6 +2240,9 @@ val config_error : Ext_json_types.t -> string -> 'a
 
 val missing_main : unit -> 'a
 val missing_entry : string -> 'a
+val missing_object_file : string -> 'a
+val no_files_to_link : string -> string -> 'a
+val no_files_to_pack : string -> 'a
 
 
 
@@ -2281,6 +2284,9 @@ type error =
 
   | Missing_main
   | Missing_entry of string
+  | Missing_object_file of string
+  | No_files_to_link of string * string
+  | No_files_to_pack of string
 
 
 exception Error of error 
@@ -2329,6 +2335,18 @@ let print (fmt : Format.formatter) (x : error) =
     Format.fprintf fmt
     "Could not find an item in the entries field to compile to '%s'"
     name
+  | Missing_object_file name ->
+    Format.fprintf fmt
+    "build.ninja is missing the file '%s' that was used in the project. Try force-regenerating but this shouldn't happen."
+    name
+  | No_files_to_link (suffix, main) ->
+    Format.fprintf fmt
+    "No %s to link. Hint: is the entry point module '%s' right?"
+    suffix main
+  | No_files_to_pack suffix ->
+    Format.fprintf fmt
+    "No %s to pack into a lib."
+    suffix
 
 
 let conflict_module modname dir1 dir2 = 
@@ -2339,6 +2357,9 @@ let errorf ~loc fmt =
 
 let missing_main () = error Missing_main
 let missing_entry name = error (Missing_entry name)
+let missing_object_file name = error (Missing_object_file name)
+let no_files_to_link suffix main = error (No_files_to_link (suffix, main))
+let no_files_to_pack suffix = error (No_files_to_pack suffix)
 
 
 let config_error config fmt =
@@ -10886,7 +10907,7 @@ let (|?)  m (key, cb) =
 
 let parse_entries name (field : Ext_json_types.t array) =
   Ext_array.to_list_map (function
-      | Ext_json_types.Obj {map} ->
+      | Ext_json_types.Obj {map} as entry ->
         let backend = ref "js" in
         let main = ref None in
         let _ = map
@@ -10904,7 +10925,7 @@ let parse_entries name (field : Ext_json_types.t array) =
           (* This is technically optional when compiling to js *)
           | None when !backend = Literals.js -> "Index"
           | None -> 
-            failwith "Missing field 'main-module'. That field is required its value needs to be the main module for the target"
+            Bsb_exception.config_error entry "Missing field 'main-module'. That field is required its value needs to be the main module for the target"
           | Some main_module_name -> main_module_name
         end in
         if !backend = Literals.native then
@@ -10914,8 +10935,8 @@ let parse_entries name (field : Ext_json_types.t array) =
         else if !backend = Literals.js then
           Some (Bsb_config_types.JsTarget main_module_name)
         else
-          failwith "Missing field 'kind'. That field is required and its value be 'js', 'native' or 'bytecode'"
-      | _ -> failwith "Unrecognized object inside array 'entries' field.") 
+          Bsb_exception.config_error entry "Missing field 'kind'. That field is required and its value be 'js', 'native' or 'bytecode'"
+      | entry -> Bsb_exception.config_error entry "Unrecognized object inside array 'entries' field.") 
     field
 
 
