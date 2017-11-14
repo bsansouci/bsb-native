@@ -2238,6 +2238,9 @@ val errorf : loc:Ext_position.t ->  ('a, unit, string, 'b) format4 -> 'a
 val config_error : Ext_json_types.t -> string -> 'a 
 
 
+val missing_main : unit -> 'a
+val missing_entry : string -> 'a
+
 
 
 val invalid_json : string -> 'a
@@ -2275,6 +2278,9 @@ type error =
   | Json_config of Ext_position.t * string
   | Invalid_json of string
   | Conflict_module of string * string * string 
+
+  | Missing_main
+  | Missing_entry of string
 
 
 exception Error of error 
@@ -2316,12 +2322,23 @@ let print (fmt : Format.formatter) (x : error) =
     "File %S, line 1\n\
     @{<error>Error: Invalid json format@}" s 
 
+  | Missing_main ->
+    Format.fprintf fmt
+    "Linking needs a main module. Please add -main-module MyMainModule to the invocation."
+  | Missing_entry name ->
+    Format.fprintf fmt
+    "Could not find an item in the entries field to compile to '%s'"
+    name
+
 
 let conflict_module modname dir1 dir2 = 
   error (Conflict_module (modname,dir1,dir2))    
 let errorf ~loc fmt =
   Format.ksprintf (fun s -> error (Json_config (loc,s))) fmt
 
+
+let missing_main () = error Missing_main
+let missing_entry name = error (Missing_entry name)
 
 
 let config_error config fmt =
@@ -11812,6 +11829,20 @@ let package_sep = "-"
 let warnings = "warnings"
 
 
+let bs_super_errors = "bs_super_errors"
+let bs_super_errors_ocamlfind = "bs_super_errors_ocamlfind"
+
+let ocamlc = "ocamlc"
+let ocamlopt = "ocamlopt"
+let ocamlfind = "ocamlfind"
+let ocamlfind_dependencies = "ocamlfind_dependencies"
+let external_deps_for_linking = "external_deps_for_linking"
+let open_flag = "open_flag"
+let ocaml_flags = "ocaml_flags"
+let berror = "berror"
+let ocaml_dependencies = "ocaml_dependencies"
+let bsb_helper_warnings = "bsb_helper_warnings"
+
 
 end
 module Bsb_rule : sig 
@@ -17441,6 +17472,35 @@ let output_ninja_and_namespace_map
           Bsb_ninja_global_vars.refmt_flags, refmt_flags;
           Bsb_ninja_global_vars.namespace , namespace_flag ; 
           
+
+          Bsb_ninja_global_vars.ocaml_flags, ocaml_flags;
+          
+          Bsb_ninja_global_vars.bs_super_errors_ocamlfind, 
+          (* Jumping through hoops. When ocamlfind is used we need to pass the argument 
+             to the underlying compiler and not ocamlfind, so we use -passopt. Otherwise we don't.
+             For bsb_helper we also don't. *)
+            if ocamlfind_dependencies <> [] && String.length bs_super_errors > 0 
+              then "-passopt " ^ bs_super_errors 
+              else bs_super_errors;
+          Bsb_ninja_global_vars.bs_super_errors, bs_super_errors;
+          
+          Bsb_ninja_global_vars.external_deps_for_linking, Bsb_build_util.flag_concat dash_i external_deps_for_linking;
+          Bsb_ninja_global_vars.ocamlc, if use_ocamlfind then ocamlc
+            else (ocaml_dir // ocamlc ^ ".opt");
+          Bsb_ninja_global_vars.ocamlopt, if use_ocamlfind then ocamlopt
+            else (ocaml_dir // ocamlopt ^ ".opt");
+          Bsb_ninja_global_vars.ocamlfind, if use_ocamlfind then ocamlfind else "";
+          Bsb_ninja_global_vars.ocamlfind_dependencies,  Bsb_build_util.flag_concat "-package" (external_ocamlfind_dependencies @ ocamlfind_dependencies);
+          Bsb_ninja_global_vars.ocaml_dependencies, Bsb_build_util.flag_concat "-add-ocaml-dependency" external_ocaml_dependencies;
+          
+          (* @HACK 
+              This might cause stale artifacts. This makes everything implicitly depend on the namespace file... 
+              
+              
+                     Ben - September 28th 2017
+          *)
+          Bsb_ninja_global_vars.open_flag, open_flag;
+
 
           (** TODO: could be removed by adding a flag
               [-bs-ns react]
