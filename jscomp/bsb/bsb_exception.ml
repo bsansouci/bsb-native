@@ -32,6 +32,9 @@ type error =
 #if BS_NATIVE then
   | Missing_main
   | Missing_entry of string
+  | Missing_object_file of string
+  | No_files_to_link of string * string
+  | No_files_to_pack of string
 #end
 
 exception Error of error 
@@ -80,6 +83,18 @@ let print (fmt : Format.formatter) (x : error) =
     Format.fprintf fmt
     "Could not find an item in the entries field to compile to '%s'"
     name
+  | Missing_object_file name ->
+    Format.fprintf fmt
+    "build.ninja is missing the file '%s' that was used in the project. Try force-regenerating but this shouldn't happen."
+    name
+  | No_files_to_link (suffix, main) ->
+    Format.fprintf fmt
+    "No %s to link. Hint: is the entry point module '%s' right?"
+    suffix main
+  | No_files_to_pack suffix ->
+    Format.fprintf fmt
+    "No %s to pack into a lib."
+    suffix
 #end
 
 let conflict_module modname dir1 dir2 = 
@@ -90,6 +105,9 @@ let errorf ~loc fmt =
 #if BS_NATIVE then
 let missing_main () = error Missing_main
 let missing_entry name = error (Missing_entry name)
+let missing_object_file name = error (Missing_object_file name)
+let no_files_to_link suffix main = error (No_files_to_link (suffix, main))
+let no_files_to_pack suffix = error (No_files_to_pack suffix)
 #end
 
 let config_error config fmt =

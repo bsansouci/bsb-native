@@ -64,7 +64,7 @@ let (|?)  m (key, cb) =
 
 let parse_entries name (field : Ext_json_types.t array) =
   Ext_array.to_list_map (function
-      | Ext_json_types.Obj {map} ->
+      | Ext_json_types.Obj {map} as entry ->
         let backend = ref "js" in
         let main = ref None in
         let _ = map
@@ -82,7 +82,7 @@ let parse_entries name (field : Ext_json_types.t array) =
           (* This is technically optional when compiling to js *)
           | None when !backend = Literals.js -> "Index"
           | None -> 
-            failwith "Missing field 'main-module'. That field is required its value needs to be the main module for the target"
+            Bsb_exception.config_error entry "Missing field 'main-module'. That field is required its value needs to be the main module for the target"
           | Some main_module_name -> main_module_name
         end in
         if !backend = Literals.native then
@@ -92,8 +92,8 @@ let parse_entries name (field : Ext_json_types.t array) =
         else if !backend = Literals.js then
           Some (Bsb_config_types.JsTarget main_module_name)
         else
-          failwith "Missing field 'kind'. That field is required and its value be 'js', 'native' or 'bytecode'"
-      | _ -> failwith "Unrecognized object inside array 'entries' field.") 
+          Bsb_exception.config_error entry "Missing field 'kind'. That field is required and its value be 'js', 'native' or 'bytecode'"
+      | entry -> Bsb_exception.config_error entry "Unrecognized object inside array 'entries' field.") 
     field
 
 

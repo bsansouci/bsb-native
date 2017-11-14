@@ -2263,6 +2263,9 @@ val config_error : Ext_json_types.t -> string -> 'a
 
 val missing_main : unit -> 'a
 val missing_entry : string -> 'a
+val missing_object_file : string -> 'a
+val no_files_to_link : string -> string -> 'a
+val no_files_to_pack : string -> 'a
 
 
 
@@ -2304,6 +2307,9 @@ type error =
 
   | Missing_main
   | Missing_entry of string
+  | Missing_object_file of string
+  | No_files_to_link of string * string
+  | No_files_to_pack of string
 
 
 exception Error of error 
@@ -2352,6 +2358,18 @@ let print (fmt : Format.formatter) (x : error) =
     Format.fprintf fmt
     "Could not find an item in the entries field to compile to '%s'"
     name
+  | Missing_object_file name ->
+    Format.fprintf fmt
+    "build.ninja is missing the file '%s' that was used in the project. Try force-regenerating but this shouldn't happen."
+    name
+  | No_files_to_link (suffix, main) ->
+    Format.fprintf fmt
+    "No %s to link. Hint: is the entry point module '%s' right?"
+    suffix main
+  | No_files_to_pack suffix ->
+    Format.fprintf fmt
+    "No %s to pack into a lib."
+    suffix
 
 
 let conflict_module modname dir1 dir2 = 
@@ -2362,6 +2380,9 @@ let errorf ~loc fmt =
 
 let missing_main () = error Missing_main
 let missing_entry name = error (Missing_entry name)
+let missing_object_file name = error (Missing_object_file name)
+let no_files_to_link suffix main = error (No_files_to_link (suffix, main))
+let no_files_to_pack suffix = error (No_files_to_pack suffix)
 
 
 let config_error config fmt =
@@ -6763,7 +6784,7 @@ let link link_byte_or_native
   let list_of_object_files = Queue.fold
     (fun acc v -> match String_map.find_opt v module_to_filepath with
       | Some file -> (file ^ namespace ^ suffix_object_files) :: acc
-      | None -> failwith @@ "build.ninja is missing the file '" ^ v ^ "' that was used in the project. Try force-regenerating but this shouldn't happen."
+      | None -> Bsb_exception.missing_object_file v
       )
     []
     tasks in
@@ -6850,7 +6871,7 @@ let link link_byte_or_native
         (Array.of_list (list_of_args))
     end
   end else
-    failwith @@ "No " ^ suffix_object_files ^ " to link. Hint: is the entry point module '" ^ main_module ^ "' right?"
+    Bsb_exception.no_files_to_link suffix_object_files main_module
 
 end
 module Bsb_helper_packer : sig 
@@ -6968,7 +6989,7 @@ let pack pack_byte_or_native
   let all_object_files = List.rev (Queue.fold
     (fun acc v -> match String_map.find_opt v module_to_filepath with
       | Some file -> (file ^ suffix_object_files) :: acc
-      | None -> failwith @@ "build.ninja is missing the file '" ^ v ^ "' that was used in the project. Try force-regenerating but this shouldn't happen."
+      | None -> Bsb_exception.missing_object_file v
       )
     []
     sorted_tasks) in
@@ -7010,7 +7031,7 @@ let pack pack_byte_or_native
           (Array.of_list list_of_args)
     end
   else
-    failwith @@ "No " ^ suffix_object_files ^ " to pack into a lib."
+    Bsb_exception.no_files_to_pack suffix_object_files
 
 end
 module Bsb_helper_main : sig 
