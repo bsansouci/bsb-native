@@ -2353,22 +2353,22 @@ let print (fmt : Format.formatter) (x : error) =
 
   | Missing_main ->
     Format.fprintf fmt
-    "Linking needs a main module. Please add -main-module MyMainModule to the invocation."
+    "@{<error>Error:@} Linking needs a main module. Please add -main-module MyMainModule to the invocation."
   | Missing_entry name ->
     Format.fprintf fmt
-    "Could not find an item in the entries field to compile to '%s'"
+    "@{<error>Error:@} Could not find an item in the entries field to compile to '%s'"
     name
   | Missing_object_file name ->
     Format.fprintf fmt
-    "build.ninja is missing the file '%s' that was used in the project. Try force-regenerating but this shouldn't happen."
+    "@{<error>Error:@} build.ninja is missing the file '%s' that was used in the project. Try force-regenerating but this shouldn't happen."
     name
   | No_files_to_link (suffix, main) ->
     Format.fprintf fmt
-    "No %s to link. Hint: is the entry point module '%s' right?"
+    "@{<error>Error:@} No %s to link. Hint: is the entry point module '%s' right?"
     suffix main
   | No_files_to_pack suffix ->
     Format.fprintf fmt
-    "No %s to pack into a lib."
+    "@{<error>Error:@} No %s to pack into a lib."
     suffix
 
 
