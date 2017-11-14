@@ -67,7 +67,7 @@ let link link_byte_or_native
   let list_of_object_files = Queue.fold
     (fun acc v -> match String_map.find_opt v module_to_filepath with
       | Some file -> (file ^ namespace ^ suffix_object_files) :: acc
-      | None -> failwith @@ "build.ninja is missing the file '" ^ v ^ "' that was used in the project. Try force-regenerating but this shouldn't happen."
+      | None -> Bsb_exception.missing_object_file v
       )
     []
     tasks in
@@ -154,4 +154,4 @@ let link link_byte_or_native
         (Array.of_list (list_of_args))
     end
   end else
-    failwith @@ "No " ^ suffix_object_files ^ " to link. Hint: is the entry point module '" ^ main_module ^ "' right?"
+    Bsb_exception.no_files_to_link suffix_object_files main_module

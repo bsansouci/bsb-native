@@ -72,7 +72,7 @@ let pack pack_byte_or_native
   let all_object_files = List.rev (Queue.fold
     (fun acc v -> match String_map.find_opt v module_to_filepath with
       | Some file -> (file ^ suffix_object_files) :: acc
-      | None -> failwith @@ "build.ninja is missing the file '" ^ v ^ "' that was used in the project. Try force-regenerating but this shouldn't happen."
+      | None -> Bsb_exception.missing_object_file v
       )
     []
     sorted_tasks) in
@@ -114,4 +114,4 @@ let pack pack_byte_or_native
           (Array.of_list list_of_args)
     end
   else
-    failwith @@ "No " ^ suffix_object_files ^ " to pack into a lib."
+    Bsb_exception.no_files_to_pack suffix_object_files

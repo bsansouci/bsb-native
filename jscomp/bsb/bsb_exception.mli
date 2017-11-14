@@ -42,6 +42,9 @@ val config_error : Ext_json_types.t -> string -> 'a
 #if BS_NATIVE then
 val missing_main : unit -> 'a
 val missing_entry : string -> 'a
+val missing_object_file : string -> 'a
+val no_files_to_link : string -> string -> 'a
+val no_files_to_pack : string -> 'a
 #end
 
 
