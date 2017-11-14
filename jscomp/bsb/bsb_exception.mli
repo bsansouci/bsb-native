@@ -39,5 +39,10 @@ val errorf : loc:Ext_position.t ->  ('a, unit, string, 'b) format4 -> 'a
 
 val config_error : Ext_json_types.t -> string -> 'a 
 
+#if BS_NATIVE then
+val missing_main : unit -> 'a
+val missing_entry : string -> 'a
+#end
+
 
 val invalid_json : string -> 'a

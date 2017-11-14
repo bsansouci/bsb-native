@@ -2238,6 +2238,11 @@ val errorf : loc:Ext_position.t ->  ('a, unit, string, 'b) format4 -> 'a
 val config_error : Ext_json_types.t -> string -> 'a 
 
 
+val missing_main : unit -> 'a
+val missing_entry : string -> 'a
+
+
+
 val invalid_json : string -> 'a
 
 end = struct
@@ -2273,6 +2278,10 @@ type error =
   | Json_config of Ext_position.t * string
   | Invalid_json of string
   | Conflict_module of string * string * string 
+
+  | Missing_main
+  | Missing_entry of string
+
 
 exception Error of error 
 
@@ -2312,11 +2321,24 @@ let print (fmt : Format.formatter) (x : error) =
     Format.fprintf fmt 
     "File %S, line 1\n\
     @{<error>Error: Invalid json format@}" s 
-    
+
+  | Missing_main ->
+    Format.fprintf fmt
+    "Linking needs a main module. Please add -main-module MyMainModule to the invocation."
+  | Missing_entry name ->
+    Format.fprintf fmt
+    "Could not find an item in the entries field to compile to '%s'"
+    name
+
+
 let conflict_module modname dir1 dir2 = 
   error (Conflict_module (modname,dir1,dir2))    
 let errorf ~loc fmt =
   Format.ksprintf (fun s -> error (Json_config (loc,s))) fmt
+
+
+let missing_main () = error Missing_main
+let missing_entry name = error (Missing_entry name)
 
 
 let config_error config fmt =
@@ -13484,7 +13506,7 @@ end = struct
 (* The main OCaml version string has moved to ../VERSION *)
 let version = Sys.ocaml_version
 
-let standard_library_default = "/Users/benjamin/Desktop/bucklescript/vendor/ocaml/lib/ocaml"
+let standard_library_default = "/Users/jared/clone/fork/bsb-native/vendor/ocaml/lib/ocaml"
 
 let standard_library =
  
@@ -13494,7 +13516,7 @@ let standard_library =
 
     standard_library_default
 
-let standard_runtime = "/Users/benjamin/Desktop/bucklescript/vendor/ocaml/bin/ocamlrun"
+let standard_runtime = "/Users/jared/clone/fork/bsb-native/vendor/ocaml/bin/ocamlrun"
 let ccomp_type = "cc"
 let bytecomp_c_compiler = "gcc -O  -Wall -D_FILE_OFFSET_BITS=64 -D_REENTRANT -O "
 let bytecomp_c_libraries = "-lpthread"
@@ -17365,7 +17387,7 @@ let output_ninja_and_namespace_map
     | Bsb_config_types.Bytecode -> "bytecode"
   end in
   if entries = [] && is_top_level then
-    failwith @@ "Could not find an item in the entries field to compile to '" ^ nested ^ "'";
+    Bsb_exception.missing_entry nested;
   let oc = open_out_bin (cwd // Bsb_config.lib_bs // nested // Literals.build_ninja) in
   let bsc = bsc_dir // bsc_exe in   (* The path to [bsc.exe] independent of config  *)
   let bsb_helper = bsc_dir // bsb_helper_exe in (* The path to [bsb_heler.exe] *)

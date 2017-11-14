@@ -29,6 +29,10 @@ type error =
   | Json_config of Ext_position.t * string
   | Invalid_json of string
   | Conflict_module of string * string * string 
+#if BS_NATIVE then
+  | Missing_main
+  | Missing_entry of string
+#end
 
 exception Error of error 
 
@@ -68,12 +72,25 @@ let print (fmt : Format.formatter) (x : error) =
     Format.fprintf fmt 
     "File %S, line 1\n\
     @{<error>Error: Invalid json format@}" s 
-    
+#if BS_NATIVE then
+  | Missing_main ->
+    Format.fprintf fmt
+    "Linking needs a main module. Please add -main-module MyMainModule to the invocation."
+  | Missing_entry name ->
+    Format.fprintf fmt
+    "Could not find an item in the entries field to compile to '%s'"
+    name
+#end
+
 let conflict_module modname dir1 dir2 = 
   error (Conflict_module (modname,dir1,dir2))    
 let errorf ~loc fmt =
   Format.ksprintf (fun s -> error (Json_config (loc,s))) fmt
 
+#if BS_NATIVE then
+let missing_main () = error Missing_main
+let missing_entry name = error (Missing_entry name)
+#end
 
 let config_error config fmt =
   let loc = Ext_json.loc_of config in

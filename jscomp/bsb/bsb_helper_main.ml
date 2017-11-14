@@ -66,7 +66,7 @@ let usage = "Usage: bsb_helper.exe [options] \nOptions are:"
 #if BS_NATIVE then
 let link link_byte_or_native = 
   begin match !main_module with
-  | None -> failwith "Linking needs a main module. Please add -main-module MyMainModule to the invocation."
+  | None -> Bsb_exception.missing_main()
   | Some main_module ->
     Bsb_helper_linker.link 
       link_byte_or_native
