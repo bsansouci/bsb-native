@@ -164,6 +164,7 @@ opam install camlp4
 
 5) Build bsb-native. This command can be the only command used to build while developing.
 ```
+cd jscomp
 make worldnative
 ```
 
