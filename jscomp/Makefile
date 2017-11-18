@@ -704,6 +704,7 @@ clean:
 	rm -f bsb/bs_json.ml ext/sexp_lexer.ml core/js_fold.ml core/js_map.ml
 	rm -f common/bs_version.ml
 	rm -rf bin/config_whole_compiler.ml bin/bsb_default_paths.ml
+	rm -rf super_errors/*.cm* super_errors/*.o
 	git clean -dfx stubs ext common syntax depends core bsb
 
 DOCS_SOURCES+=$(shell ls runtime/*.ml*)
