@@ -34,6 +34,12 @@ let node_lit = "node"
 let current_theme = ref "basic"
 let set_theme s = current_theme := s 
 let generate_theme_with_path = ref None
+let regen = "-regen"
+let separator = "--"
+let watch_mode = ref false
+let make_world = ref false 
+let set_make_world () = make_world := true
+let bs_version_string = Bs_version.version
 
 let cmdline_build_kind = ref Bsb_config_types.Js
 (* Used only for "-clean" and "-clean-world" to track what artifacts should be 
@@ -66,15 +72,6 @@ let get_string_backend = function
   | Bsb_config_types.Bytecode -> "bytecode"
 
 
-let regen = "-regen"
-let separator = "--"
-
-
-let watch_mode = ref false
-let make_world = ref false 
-let set_make_world () = make_world := true
-let bs_version_string = Bs_version.version
-
 let print_version_string () = 
   print_string bs_version_string;
   print_newline (); 
@@ -97,6 +94,7 @@ let bsb_main_flags : (string * Arg.spec * string) list=
     regen, Arg.Set force_regenerate,
     " (internal) Always regenerate build.ninja no matter bsconfig.json is changed or not (for debugging purpose)"
     ;
+
     "-clean-world", Arg.Unit (fun _ -> Bsb_clean.clean_bs_deps ~is_cmdline_build_kind_set:!is_cmdline_build_kind_set ~nested:(get_string_backend (get_backend ())) bsc_dir cwd),
     " Clean all bs dependencies";
     "-clean", Arg.Unit (fun _ -> Bsb_clean.clean_self ~is_cmdline_build_kind_set:!is_cmdline_build_kind_set ~nested:(get_string_backend (get_backend ())) bsc_dir cwd),
@@ -119,9 +117,9 @@ let bsb_main_flags : (string * Arg.spec * string) list=
     "-backend", Arg.String (fun s -> 
         is_cmdline_build_kind_set := true;
         match s with
-        | "js" -> cmdline_build_kind := Bsb_config_types.Js
+        | "js"       -> cmdline_build_kind := Bsb_config_types.Js
+        | "native"   -> cmdline_build_kind := Bsb_config_types.Native
         | "bytecode" -> cmdline_build_kind := Bsb_config_types.Bytecode
-        | "native" -> cmdline_build_kind := Bsb_config_types.Native
         | _ -> failwith "-backend should be one of: 'js', 'bytecode' or 'native'."
       ),
     " Builds the entries in the bsconfig which match the given backend.";
@@ -155,8 +153,10 @@ let ninja_command_exit  vendor_ninja ninja_args nested =
     let args = 
       if ninja_args_len = 0 then ninja_common_args else 
         Array.append ninja_common_args ninja_args in 
-    Bsb_log.info_args args ;      
-    Unix.execvpe vendor_ninja args (Array.append (Unix.environment ()) [| "BSB_BACKEND=" ^ nested |])
+    Bsb_log.info_args args ;
+    let environment = Unix.environment () in
+    let environment = (Array.append environment [| "BSB_BACKEND=" ^ nested |]) in
+    Unix.execvpe vendor_ninja args environment
 
 
 
@@ -204,12 +204,14 @@ let () =
   let vendor_ninja = bsc_dir // "ninja.exe" in
   match Sys.argv with 
   (* Both of those are equivalent and the watcher will always pass in the `-backend` flag. *)
-  | [| _; "-backend"; _ |] | [| _ |] ->  (* specialize this path [bsb.exe] which is used in watcher *)
+  | [| _; "-backend"; _ |] 
+  | [| _ |] ->  (* specialize this path [bsb.exe] which is used in watcher *)
     begin
       (* Quickly parse the backend argument to make sure we're building to the right target. *)
       Arg.parse bsb_main_flags handle_anonymous_arg usage;
 
       let backend = get_backend () in
+
       (* print_endline __LOC__; *)
       (* TODO(sansouci): Optimize this. Not passing acc_libraries_for_linking 
          will cause regenerate_ninja to re-crawl the external dep graph (only 
@@ -240,6 +242,7 @@ let () =
           | Some path -> Bsb_theme_init.init_sample_project ~cwd ~theme:!current_theme path
           | None -> 
             let backend = get_backend () in
+
             (* [-make-world] should never be combined with [-package-specs] *)
             let make_world = !make_world in 
             begin match make_world, !force_regenerate with

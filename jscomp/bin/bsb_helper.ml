@@ -2260,7 +2260,6 @@ val errorf : loc:Ext_position.t ->  ('a, unit, string, 'b) format4 -> 'a
 
 val config_error : Ext_json_types.t -> string -> 'a 
 
-
 val missing_main : unit -> 'a
 val missing_entry : string -> 'a
 val missing_object_file : string -> 'a
@@ -2268,6 +2267,7 @@ val no_files_to_link : string -> string -> 'a
 val no_files_to_pack : string -> 'a
 
 
+val invalid_spec : string -> 'a
 
 val invalid_json : string -> 'a
 
@@ -2302,15 +2302,14 @@ end = struct
 type error = 
   | Package_not_found of string * string option (* json file *)
   | Json_config of Ext_position.t * string
+  | Invalid_spec of string
   | Invalid_json of string
   | Conflict_module of string * string * string 
-
   | Missing_main
   | Missing_entry of string
   | Missing_object_file of string
   | No_files_to_link of string * string
   | No_files_to_pack of string
-
 
 exception Error of error 
 
@@ -2346,11 +2345,13 @@ let print (fmt : Format.formatter) (x : error) =
                         For more details, please checkout the schema http://bucklescript.github.io/bucklescript/docson/#build-schema.json" 
                         pos.pos_lnum s 
 
+  | Invalid_spec s -> 
+    Format.fprintf fmt 
+    "@{<error>Error: Invalid bsconfig.json%s@}" s 
   | Invalid_json s ->
     Format.fprintf fmt 
     "File %S, line 1\n\
     @{<error>Error: Invalid json format@}" s 
-
   | Missing_main ->
     Format.fprintf fmt
     "@{<error>Error:@} Linking needs a main module. Please add -main-module MyMainModule to the invocation."
@@ -2371,12 +2372,10 @@ let print (fmt : Format.formatter) (x : error) =
     "@{<error>Error:@} No %s to pack into a lib."
     suffix
 
-
 let conflict_module modname dir1 dir2 = 
   error (Conflict_module (modname,dir1,dir2))    
 let errorf ~loc fmt =
   Format.ksprintf (fun s -> error (Json_config (loc,s))) fmt
-
 
 let missing_main () = error Missing_main
 let missing_entry name = error (Missing_entry name)
@@ -2384,13 +2383,14 @@ let missing_object_file name = error (Missing_object_file name)
 let no_files_to_link suffix main = error (No_files_to_link (suffix, main))
 let no_files_to_pack suffix = error (No_files_to_pack suffix)
 
-
 let config_error config fmt =
   let loc = Ext_json.loc_of config in
 
   error (Json_config (loc,fmt))
 
 let invalid_json s = error (Invalid_json s)
+
+let invalid_spec s = error (Invalid_spec s)
 
 let () = 
   Printexc.register_printer (fun x ->
@@ -4329,7 +4329,8 @@ val read_build_cache : dir:string -> ts
 val map_update : 
   dir:string -> t ->  string -> t
 
-val sanity_check : t -> unit   
+val sanity_check : t -> bool   
+
 end = struct
 #1 "bsb_db.ml"
 
@@ -4464,17 +4465,22 @@ let map_update ~dir (map : t)
 
 
 let sanity_check (map  : t ) = 
-  String_map.iter (fun k module_info ->
+  String_map.fold (fun k module_info has_re ->
       match module_info with 
-      |  { ml = Ml_source(file1,_,ml_case); 
-           mli = Mli_source(file2,_,mli_case) } ->
-        if ml_case != mli_case then 
-          Ext_pervasives.failwithf 
-            ~loc:__LOC__
-            "%S and %S have different cases"
-            file1 file2
-      | _ -> ()
-    )  map
+      |  { ml = Ml_source(file1,is_re,ml_case); 
+           mli = Mli_source(file2,is_rei,mli_case) } ->
+        (if ml_case <> mli_case then 
+           Bsb_exception.invalid_spec
+             (Printf.sprintf          
+                "%S and %S have different cases"
+                file1 file2));
+        has_re || is_re || is_rei
+      | {ml = Ml_source(_,is_re,_); mli = Mli_empty}
+        -> has_re || is_re
+      | {mli = Mli_source(_,is_rei,_); ml = Ml_empty}
+        -> has_re || is_rei
+      | {ml = Ml_empty ; mli = Mli_empty } -> has_re
+    )  map false
 
 end
 module Ext_namespace : sig 
@@ -7139,7 +7145,6 @@ let namespace = ref None
 let anonymous filename =
   collect_file filename
 let usage = "Usage: bsb_helper.exe [options] \nOptions are:"
-
 let link link_byte_or_native = 
   begin match !main_module with
   | None -> Bsb_exception.missing_main()
@@ -7171,7 +7176,6 @@ let pack link_byte_or_native =
     ~warn_error:!warn_error
     (Sys.getcwd ())
     
-  
 let () =
   Arg.parse [
     "-g", Arg.Int (fun i -> dev_group := i ),
@@ -7187,7 +7191,7 @@ let () =
     " (internal)Generate dep file for ninja format(from .ml[i]deps)";
     "-ns", Arg.String (fun s -> namespace := Some s),
     " Set namespace";
-    
+
     "-MD-bytecode", Arg.String (
       fun x -> 
         Bsb_helper_depfile_gen.emit_dep_file
@@ -7269,7 +7273,6 @@ let () =
     
     "-warn-error", (Arg.String (fun w -> warn_error := w )),
     " Turn warnings into errors for packer/linker."
-    
   ] anonymous usage
 
 end

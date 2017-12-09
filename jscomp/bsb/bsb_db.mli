@@ -89,4 +89,4 @@ val read_build_cache : dir:string -> ts
 val map_update : 
   dir:string -> t ->  string -> t
 
-val sanity_check : t -> unit   
+val sanity_check : t -> bool   

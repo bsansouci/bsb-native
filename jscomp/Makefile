@@ -336,8 +336,8 @@ bsb/bsb_default_paths.cmx: bsb/bsb_default_paths.cmi
 	$(NATIVE) $(INCLUDES) $(COMPFLAGS) -c bsb/bsb_default_paths.ml
 
 BSB_SRCS= bsb_config\
-	bsb_db\
 	bsb_exception\
+	bsb_db\
 	bsb_dir_index\
 	bsb_log\
 	bsb_pkg \
@@ -455,11 +455,6 @@ bin/jscmj.exe:bs_hash.cmxa ext.cmxa common.cmxa syntax.cmxa depends.cmxa core.cm
 bin/jsgen.exe:bs_hash.cmxa ext.cmxa jsgen_main.cmx
 	$(NATIVE) -g -linkall -I +compiler-libs ocamlcommon.cmxa $^ -o $@
 
-worldnative: bsb/bsb_default_paths.ml
-	BS_NATIVE=true make bin/bsc.exe
-	BS_NATIVE=true make bin/bsb.exe
-	BS_NATIVE=true make bin/bsb_helper.exe
-
 .PHONY: check
 
 
@@ -547,12 +542,6 @@ force-snapshotml:
 	make snapshotml
 	echo "bundling opam_config_compiler_packed.ml"
 	./bin/bspack.exe -I ext -I ../scripts -bs-main Opam_config_compiler -o ../scripts/opam_config_compiler_packed.ml
-
-force-nativesnapshot:
-	rm -f $(SNAPSHOT_DEPS) $(SNAPSHOT_SRCS) ../scripts/opam_config_compiler_packed.ml
-	BS_NATIVE=true make snapshotml
-	echo "bundling opam_config_compiler_packed.ml"
-	BS_NATIVE=true ./bin/bspack.exe -I ext -I ../scripts -bs-main Opam_config_compiler -o ../scripts/opam_config_compiler_packed.ml
 
 
 bin/bsppx.ml:./bin/bspack.exe

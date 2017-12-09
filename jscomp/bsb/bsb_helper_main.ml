@@ -63,7 +63,6 @@ let namespace = ref None
 let anonymous filename =
   collect_file filename
 let usage = "Usage: bsb_helper.exe [options] \nOptions are:"
-#if BS_NATIVE then
 let link link_byte_or_native = 
   begin match !main_module with
   | None -> Bsb_exception.missing_main()
@@ -95,7 +94,6 @@ let pack link_byte_or_native =
     ~warn_error:!warn_error
     (Sys.getcwd ())
     
-#end  
 let () =
   Arg.parse [
     "-g", Arg.Int (fun i -> dev_group := i ),
@@ -111,7 +109,7 @@ let () =
     " (internal)Generate dep file for ninja format(from .ml[i]deps)";
     "-ns", Arg.String (fun s -> namespace := Some s),
     " Set namespace";
-#if BS_NATIVE then    
+
     "-MD-bytecode", Arg.String (
       fun x -> 
         Bsb_helper_depfile_gen.emit_dep_file
@@ -193,5 +191,4 @@ let () =
     
     "-warn-error", (Arg.String (fun w -> warn_error := w )),
     " Turn warnings into errors for packer/linker."
-#end    
   ] anonymous usage

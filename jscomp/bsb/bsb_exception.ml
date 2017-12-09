@@ -27,15 +27,14 @@
 type error = 
   | Package_not_found of string * string option (* json file *)
   | Json_config of Ext_position.t * string
+  | Invalid_spec of string
   | Invalid_json of string
   | Conflict_module of string * string * string 
-#if BS_NATIVE then
   | Missing_main
   | Missing_entry of string
   | Missing_object_file of string
   | No_files_to_link of string * string
   | No_files_to_pack of string
-#end
 
 exception Error of error 
 
@@ -71,11 +70,13 @@ let print (fmt : Format.formatter) (x : error) =
                         For more details, please checkout the schema http://bucklescript.github.io/bucklescript/docson/#build-schema.json" 
                         pos.pos_lnum s 
 
+  | Invalid_spec s -> 
+    Format.fprintf fmt 
+    "@{<error>Error: Invalid bsconfig.json%s@}" s 
   | Invalid_json s ->
     Format.fprintf fmt 
     "File %S, line 1\n\
     @{<error>Error: Invalid json format@}" s 
-#if BS_NATIVE then
   | Missing_main ->
     Format.fprintf fmt
     "@{<error>Error:@} Linking needs a main module. Please add -main-module MyMainModule to the invocation."
@@ -95,20 +96,17 @@ let print (fmt : Format.formatter) (x : error) =
     Format.fprintf fmt
     "@{<error>Error:@} No %s to pack into a lib."
     suffix
-#end
 
 let conflict_module modname dir1 dir2 = 
   error (Conflict_module (modname,dir1,dir2))    
 let errorf ~loc fmt =
   Format.ksprintf (fun s -> error (Json_config (loc,s))) fmt
 
-#if BS_NATIVE then
 let missing_main () = error Missing_main
 let missing_entry name = error (Missing_entry name)
 let missing_object_file name = error (Missing_object_file name)
 let no_files_to_link suffix main = error (No_files_to_link (suffix, main))
 let no_files_to_pack suffix = error (No_files_to_pack suffix)
-#end
 
 let config_error config fmt =
   let loc = Ext_json.loc_of config in
@@ -116,6 +114,8 @@ let config_error config fmt =
   error (Json_config (loc,fmt))
 
 let invalid_json s = error (Invalid_json s)
+
+let invalid_spec s = error (Invalid_spec s)
 
 let () = 
   Printexc.register_printer (fun x ->

@@ -38,7 +38,7 @@ let ninja_clean ~nested bsc_dir proj_dir =
   with  e -> 
     Bsb_log.warn "@{<warning>ninja clean failed@} : %s @." (Printexc.to_string e)
 
-let clean_bs_garbage ~nested bsc_dir proj_dir =
+let clean_bs_garbage ?(nested="") bsc_dir proj_dir =
   Bsb_log.info "@{<info>Cleaning:@} in %s@." proj_dir ; 
   let aux x =
     let x = (proj_dir // x)  in
@@ -75,4 +75,3 @@ let clean_self ~is_cmdline_build_kind_set ~nested bsc_dir proj_dir =
     clean_bs_garbage ~nested:"bytecode" bsc_dir proj_dir;
     clean_bs_garbage ~nested:"native" bsc_dir proj_dir;
   end
-  

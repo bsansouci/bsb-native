@@ -41,7 +41,6 @@ let all_lib_artifacts =
     lib_amd_global
   ]
 let rev_lib_bs = ".."// ".."
-let findlib_conf = "findlib.conf"
 
 let rev_lib_bs_prefix p = rev_lib_bs // p 
 

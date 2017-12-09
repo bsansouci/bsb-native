@@ -53,7 +53,6 @@ let package_sep = "-"
 
 let warnings = "warnings"
 
-#if BS_NATIVE then
 let bs_super_errors = "bs_super_errors"
 let bs_super_errors_ocamlfind = "bs_super_errors_ocamlfind"
 
@@ -67,4 +66,3 @@ let ocaml_flags = "ocaml_flags"
 let berror = "berror"
 let ocaml_dependencies = "ocaml_dependencies"
 let bsb_helper_warnings = "bsb_helper_warnings"
-#end
