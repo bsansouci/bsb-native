@@ -107,6 +107,7 @@ let emit_impl_build
   ~compile_target
   js_post_build_cmd
   ~is_re
+  ~use_ocamlfind
   namespace
   filename_sans_extension
   : info =
@@ -155,9 +156,11 @@ let emit_impl_build
               else Some [{key = Bsb_build_schemas.bsb_dir_group; 
                           op = Bsb_ninja_util.Overwrite (string_of_int (group_dir_index :> int)) }])
   ;
-  let rule_name = begin match compile_target with
-  | Bytecode -> Rules.build_cmo_cmi_bytecode
-  | Native   -> Rules.build_cmx_cmi_native
+  let rule_name = begin match (compile_target, use_ocamlfind) with
+  | (Bytecode, false) -> Rules.build_cmo_cmi_bytecode
+  | (Native, false)   -> Rules.build_cmx_cmi_native
+  | (Bytecode, true) -> Rules.build_cmo_cmi_bytecode_ocamlfind
+  | (Native, true)   -> Rules.build_cmx_cmi_native_ocamlfind
   end in
   let cm_outputs, deps =
     if no_intf_file then
@@ -192,6 +195,7 @@ let emit_intf_build
     oc
     ~is_re
     ~compile_target
+    ~use_ocamlfind
     namespace
     filename_sans_extension
   : info =
@@ -228,10 +232,13 @@ let emit_intf_build
                   key = Bsb_build_schemas.bsb_dir_group; 
                   op = 
                     Overwrite (string_of_int (group_dir_index :> int )) }]);
-  let rule = begin match compile_target with
-    | Bytecode -> Rules.build_cmi_bytecode
-    | Native   -> Rules.build_cmi_native
-    end in
+    
+  let rule = begin match (compile_target, use_ocamlfind) with
+  | (Bytecode, false) -> Rules.build_cmi_bytecode
+  | (Native, false)   -> Rules.build_cmi_native
+  | (Bytecode, true) -> Rules.build_cmi_bytecode_ocamlfind
+  | (Native, true)   -> Rules.build_cmi_native_ocamlfind
+  end in
   (* TODO(sansouci): Do we need this? *)
   (* let deps = match namespace with 
     | None -> []
@@ -250,6 +257,7 @@ let handle_module_info
   js_post_build_cmd
   ~compile_target
   ~bs_suffix
+  ~use_ocamlfind
   oc  module_name 
   ( module_info : Bsb_db.module_info)
   namespace  =
@@ -264,6 +272,7 @@ let handle_module_info
       ~no_intf_file:false
       ~is_re:impl_is_re
       ~compile_target
+      ~use_ocamlfind
       js_post_build_cmd      
       namespace
       input_impl  @ 
@@ -273,6 +282,7 @@ let handle_module_info
       oc         
       ~is_re:intf_is_re
       ~compile_target
+      ~use_ocamlfind
       namespace
       input_intf 
   | Ml_source(input,is_re,_), Mli_empty ->
@@ -283,6 +293,7 @@ let handle_module_info
       ~bs_suffix
       ~no_intf_file:true
       ~compile_target
+      ~use_ocamlfind
       js_post_build_cmd      
       ~is_re
       namespace
@@ -294,6 +305,7 @@ let handle_module_info
       oc         
       ~is_re
       ~compile_target
+      ~use_ocamlfind
       namespace
       input 
   | Ml_empty, Mli_empty -> zero
@@ -306,6 +318,7 @@ let handle_file_group oc
   ~js_post_build_cmd
   ~namespace
   ~bs_suffix
+  ~use_ocamlfind
   (files_to_install : String_hash_set.t)
   acc
   (group: Bsb_parse_sources.file_group) : Bsb_ninja_file_groups.info =
@@ -323,6 +336,7 @@ let handle_file_group oc
       (handle_module_info 
         ~bs_suffix
         ~compile_target
+        ~use_ocamlfind
         group.dir_index 
         package_specs 
         js_post_build_cmd 
@@ -414,8 +428,14 @@ let pack oc ret ~backend ~file_groups ~namespace =
     begin match backend with
     (* These cases could benefit from a better error message. *)
     | Bsb_config_types.Js       -> assert false
-    | Bsb_config_types.Bytecode -> Literals.library_file ^ Literals.suffix_cma , Rules.build_cma_library , Literals.suffix_cmo
-    | Bsb_config_types.Native   -> Literals.library_file ^ Literals.suffix_cmxa, Rules.build_cmxa_library, Literals.suffix_cmx
+    | Bsb_config_types.Bytecode -> 
+      Literals.library_file ^ Literals.suffix_cma , 
+      Rules.build_cma_library , 
+      Literals.suffix_cmo
+    | Bsb_config_types.Native   -> 
+      Literals.library_file ^ Literals.suffix_cmxa, 
+      Rules.build_cmxa_library, 
+      Literals.suffix_cmx
   end in
   (* TODO(sansouci): we pack all source files of the dependency, but we could just pack the
      files that are used by the main project. *)
@@ -479,6 +499,7 @@ let handle_file_groups oc
   ~external_deps_for_linking
   ~ocaml_dir
   ~bs_suffix
+  ~use_ocamlfind
   (file_groups  :  Bsb_parse_sources.file_group list) namespace st =
   let file_groups = List.filter (fun (group : Bsb_parse_sources.file_group) ->
     match backend with 
@@ -494,6 +515,7 @@ let handle_file_groups oc
       ~js_post_build_cmd 
       ~namespace
       ~bs_suffix
+      ~use_ocamlfind
       files_to_install
   ) st file_groups in
   if is_top_level then

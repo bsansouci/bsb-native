@@ -11929,10 +11929,18 @@ val linking_native : t
 val build_cma_library : t
 val build_cmxa_library : t
 
+val build_cmo_cmi_bytecode_ocamlfind : t
+val build_cmi_bytecode_ocamlfind : t
+val build_cmx_cmi_native_ocamlfind : t
+val build_cmi_native_ocamlfind : t
+
 val build_package : t 
 val build_package_gen_mlast_simple : t
 val build_package_build_cmi_bytecode : t
 val build_package_build_cmi_native : t
+
+val build_package_build_cmi_bytecode_ocamlfind : t
+val build_package_build_cmi_native_ocamlfind : t
 
 (** rules are generally composed of built-in rules and customized rules, there are two design choices:
     1. respect custom rules with the same name, then we need adjust our built-in 
@@ -12163,44 +12171,90 @@ let build_package_gen_mlast_simple =
     
 let build_package_build_cmi_bytecode = 
   define
-    ~command:"${ocamlfind} ${ocamlc} ${bs_super_errors_ocamlfind} ${bs_package_includes} ${bsc_lib_includes} ${ocamlfind_dependencies} ${bsc_extra_includes} ${ocaml_flags} \
+    ~command:"${ocamlc} ${bs_super_errors_ocamlfind} ${bs_package_includes} ${bsc_lib_includes} ${bsc_extra_includes} ${ocaml_flags} \
               -o ${out} ${warnings} -no-alias-deps -w -49 -g -c -intf-suffix .mliast_simple -impl ${in} ${postbuild}"
     "build_package_build_cmi_bytecode"
 
 let build_package_build_cmi_native = 
   define
-    ~command:"${ocamlfind} ${ocamlopt} ${bs_super_errors_ocamlfind} ${bs_package_includes} ${bsc_lib_includes} ${ocamlfind_dependencies} ${bsc_extra_includes} ${ocaml_flags} \
+    ~command:"${ocamlopt} ${bs_super_errors_ocamlfind} ${bs_package_includes} ${bsc_lib_includes} ${bsc_extra_includes} ${ocaml_flags} \
               -o ${out} ${warnings} -no-alias-deps -w -49 -g -c -intf-suffix .mliast_simple -impl ${in} ${postbuild}"
     "build_package_build_cmi_native"
 
 
 let build_cmo_cmi_bytecode =
   define
-    ~command:"${ocamlfind} ${ocamlc} ${open_flag} ${bs_super_errors_ocamlfind} ${bs_package_includes} ${bsc_lib_includes} ${ocamlfind_dependencies} ${bsc_extra_includes} ${ocaml_flags} \
+    ~command:"${ocamlc} ${open_flag} ${bs_super_errors_ocamlfind} ${bs_package_includes} ${bsc_lib_includes} ${bsc_extra_includes} ${ocaml_flags} \
               -o ${out} ${warnings} -g -c -intf-suffix .mliast_simple -impl ${in}_simple ${postbuild}"
     ~depfile:"${in}.d"
     "build_cmo_cmi_bytecode"
     
 let build_cmi_bytecode =
   define
-    ~command:"${ocamlfind} ${ocamlc} ${open_flag} ${bs_super_errors_ocamlfind} ${bs_package_includes} ${bsc_lib_includes} ${ocamlfind_dependencies} ${bsc_extra_includes} ${ocaml_flags} \
+    ~command:"${ocamlc} ${open_flag} ${bs_super_errors_ocamlfind} ${bs_package_includes} ${bsc_lib_includes} ${bsc_extra_includes} ${ocaml_flags} \
               -o ${out} ${warnings} -g -c -intf ${in}_simple ${postbuild}"
     ~depfile:"${in}.d"
     "build_cmi_bytecode"
 
 let build_cmx_cmi_native =
   define
-    ~command:"${ocamlfind} ${ocamlopt} ${open_flag} ${bs_super_errors_ocamlfind} ${bs_package_includes} ${bsc_lib_includes} ${ocamlfind_dependencies} ${bsc_extra_includes} ${ocaml_flags} \
+    ~command:"${ocamlopt} ${open_flag} ${bs_super_errors_ocamlfind} ${bs_package_includes} ${bsc_lib_includes} ${bsc_extra_includes} ${ocaml_flags} \
               -o ${out} ${warnings} -g -c -intf-suffix .mliast_simple -impl ${in}_simple ${postbuild}"
     ~depfile:"${in}.d"
     "build_cmx_cmi_native"
 
 let build_cmi_native =
   define
-    ~command:"${ocamlfind} ${ocamlopt} ${open_flag} ${bs_super_errors_ocamlfind} ${bs_package_includes} ${bsc_lib_includes} ${ocamlfind_dependencies} ${bsc_extra_includes} ${ocaml_flags} \
+    ~command:"${ocamlopt} ${open_flag} ${bs_super_errors_ocamlfind} ${bs_package_includes} ${bsc_lib_includes} ${bsc_extra_includes} ${ocaml_flags} \
               -o ${out} ${warnings} -g -c -intf ${in}_simple ${postbuild}"
     ~depfile:"${in}.d"
     "build_cmi_native"
+    
+    
+
+
+let build_package_build_cmi_bytecode_ocamlfind = 
+  define
+    ~command:"ocamlfind ${ocamlc} ${bs_super_errors_ocamlfind} ${bs_package_includes} ${bsc_lib_includes} ${ocamlfind_dependencies} ${bsc_extra_includes} ${ocaml_flags} \
+              -o ${out} ${warnings} -no-alias-deps -w -49 -g -c -intf-suffix .mliast_simple -impl ${in} ${postbuild}"
+    "build_package_build_cmi_bytecode_ocamlfind"
+
+let build_package_build_cmi_native_ocamlfind = 
+  define
+    ~command:"ocamlfind ${ocamlopt} ${bs_super_errors_ocamlfind} ${bs_package_includes} ${bsc_lib_includes} ${ocamlfind_dependencies} ${bsc_extra_includes} ${ocaml_flags} \
+              -o ${out} ${warnings} -no-alias-deps -w -49 -g -c -intf-suffix .mliast_simple -impl ${in} ${postbuild}"
+    "build_package_build_cmi_native_ocamlfind"
+
+
+let build_cmo_cmi_bytecode_ocamlfind =
+  define
+    ~command:"ocamlfind ${ocamlc} ${open_flag} ${bs_super_errors_ocamlfind} ${bs_package_includes} ${bsc_lib_includes} ${ocamlfind_dependencies} ${bsc_extra_includes} ${ocaml_flags} \
+              -o ${out} ${warnings} -g -c -intf-suffix .mliast_simple -impl ${in}_simple ${postbuild}"
+    ~depfile:"${in}.d"
+    "build_cmo_cmi_bytecode_ocamlfind"
+    
+let build_cmi_bytecode_ocamlfind =
+  define
+    ~command:"ocamlfind ${ocamlc} ${open_flag} ${bs_super_errors_ocamlfind} ${bs_package_includes} ${bsc_lib_includes} ${ocamlfind_dependencies} ${bsc_extra_includes} ${ocaml_flags} \
+              -o ${out} ${warnings} -g -c -intf ${in}_simple ${postbuild}"
+    ~depfile:"${in}.d"
+    "build_cmi_bytecode_ocamlfind"
+
+let build_cmx_cmi_native_ocamlfind =
+  define
+    ~command:"ocamlfind ${ocamlopt} ${open_flag} ${bs_super_errors_ocamlfind} ${bs_package_includes} ${bsc_lib_includes} ${ocamlfind_dependencies} ${bsc_extra_includes} ${ocaml_flags} \
+              -o ${out} ${warnings} -g -c -intf-suffix .mliast_simple -impl ${in}_simple ${postbuild}"
+    ~depfile:"${in}.d"
+    "build_cmx_cmi_native_ocamlfind"
+
+let build_cmi_native_ocamlfind =
+  define
+    ~command:"${ocamlfind} ${ocamlopt} ${open_flag} ${bs_super_errors_ocamlfind} ${bs_package_includes} ${bsc_lib_includes} ${ocamlfind_dependencies} ${bsc_extra_includes} ${ocaml_flags} \
+              -o ${out} ${warnings} -g -c -intf ${in}_simple ${postbuild}"
+    ~depfile:"${in}.d"
+    "build_cmi_native_ocamlfind"    
+    
+
 
 
 let linking_bytecode =
@@ -12265,12 +12319,20 @@ let reset (custom_rules : string String_map.t) =
     linking_native.used <- false;
     build_cma_library.used <- false;
     build_cmxa_library.used <- false;
+    
+    build_cmo_cmi_bytecode_ocamlfind.used <- false;
+    build_cmi_bytecode_ocamlfind.used <- false;
+    build_cmx_cmi_native_ocamlfind.used <- false;
+    build_cmi_native_ocamlfind.used <- false;
 
     build_package.used <- false;
 
     build_package_gen_mlast_simple.used <- false;
     build_package_build_cmi_bytecode.used <- false;
     build_package_build_cmi_native.used <- false;
+    
+    build_package_build_cmi_bytecode_ocamlfind.used <- false;
+    build_package_build_cmi_native_ocamlfind.used <- false;
     
     String_map.mapi (fun name command -> 
         define ~command name
@@ -12939,6 +13001,7 @@ val handle_file_groups : out_channel ->
   external_deps_for_linking:string list ->
   ocaml_dir:string ->
   bs_suffix:bool ->
+  use_ocamlfind:bool ->
   Bsb_parse_sources.file_group list ->
   string option ->
   Bsb_ninja_file_groups.info -> 
@@ -13055,6 +13118,7 @@ let emit_impl_build
   ~compile_target
   js_post_build_cmd
   ~is_re
+  ~use_ocamlfind
   namespace
   filename_sans_extension
   : info =
@@ -13103,9 +13167,11 @@ let emit_impl_build
               else Some [{key = Bsb_build_schemas.bsb_dir_group; 
                           op = Bsb_ninja_util.Overwrite (string_of_int (group_dir_index :> int)) }])
   ;
-  let rule_name = begin match compile_target with
-  | Bytecode -> Rules.build_cmo_cmi_bytecode
-  | Native   -> Rules.build_cmx_cmi_native
+  let rule_name = begin match (compile_target, use_ocamlfind) with
+  | (Bytecode, false) -> Rules.build_cmo_cmi_bytecode
+  | (Native, false)   -> Rules.build_cmx_cmi_native
+  | (Bytecode, true) -> Rules.build_cmo_cmi_bytecode_ocamlfind
+  | (Native, true)   -> Rules.build_cmx_cmi_native_ocamlfind
   end in
   let cm_outputs, deps =
     if no_intf_file then
@@ -13140,6 +13206,7 @@ let emit_intf_build
     oc
     ~is_re
     ~compile_target
+    ~use_ocamlfind
     namespace
     filename_sans_extension
   : info =
@@ -13176,10 +13243,13 @@ let emit_intf_build
                   key = Bsb_build_schemas.bsb_dir_group; 
                   op = 
                     Overwrite (string_of_int (group_dir_index :> int )) }]);
-  let rule = begin match compile_target with
-    | Bytecode -> Rules.build_cmi_bytecode
-    | Native   -> Rules.build_cmi_native
-    end in
+    
+  let rule = begin match (compile_target, use_ocamlfind) with
+  | (Bytecode, false) -> Rules.build_cmi_bytecode
+  | (Native, false)   -> Rules.build_cmi_native
+  | (Bytecode, true) -> Rules.build_cmi_bytecode_ocamlfind
+  | (Native, true)   -> Rules.build_cmi_native_ocamlfind
+  end in
   (* TODO(sansouci): Do we need this? *)
   (* let deps = match namespace with 
     | None -> []
@@ -13198,6 +13268,7 @@ let handle_module_info
   js_post_build_cmd
   ~compile_target
   ~bs_suffix
+  ~use_ocamlfind
   oc  module_name 
   ( module_info : Bsb_db.module_info)
   namespace  =
@@ -13212,6 +13283,7 @@ let handle_module_info
       ~no_intf_file:false
       ~is_re:impl_is_re
       ~compile_target
+      ~use_ocamlfind
       js_post_build_cmd      
       namespace
       input_impl  @ 
@@ -13221,6 +13293,7 @@ let handle_module_info
       oc         
       ~is_re:intf_is_re
       ~compile_target
+      ~use_ocamlfind
       namespace
       input_intf 
   | Ml_source(input,is_re,_), Mli_empty ->
@@ -13231,6 +13304,7 @@ let handle_module_info
       ~bs_suffix
       ~no_intf_file:true
       ~compile_target
+      ~use_ocamlfind
       js_post_build_cmd      
       ~is_re
       namespace
@@ -13242,6 +13316,7 @@ let handle_module_info
       oc         
       ~is_re
       ~compile_target
+      ~use_ocamlfind
       namespace
       input 
   | Ml_empty, Mli_empty -> zero
@@ -13254,6 +13329,7 @@ let handle_file_group oc
   ~js_post_build_cmd
   ~namespace
   ~bs_suffix
+  ~use_ocamlfind
   (files_to_install : String_hash_set.t)
   acc
   (group: Bsb_parse_sources.file_group) : Bsb_ninja_file_groups.info =
@@ -13271,6 +13347,7 @@ let handle_file_group oc
       (handle_module_info 
         ~bs_suffix
         ~compile_target
+        ~use_ocamlfind
         group.dir_index 
         package_specs 
         js_post_build_cmd 
@@ -13362,8 +13439,14 @@ let pack oc ret ~backend ~file_groups ~namespace =
     begin match backend with
     (* These cases could benefit from a better error message. *)
     | Bsb_config_types.Js       -> assert false
-    | Bsb_config_types.Bytecode -> Literals.library_file ^ Literals.suffix_cma , Rules.build_cma_library , Literals.suffix_cmo
-    | Bsb_config_types.Native   -> Literals.library_file ^ Literals.suffix_cmxa, Rules.build_cmxa_library, Literals.suffix_cmx
+    | Bsb_config_types.Bytecode -> 
+      Literals.library_file ^ Literals.suffix_cma , 
+      Rules.build_cma_library , 
+      Literals.suffix_cmo
+    | Bsb_config_types.Native   -> 
+      Literals.library_file ^ Literals.suffix_cmxa, 
+      Rules.build_cmxa_library, 
+      Literals.suffix_cmx
   end in
   (* TODO(sansouci): we pack all source files of the dependency, but we could just pack the
      files that are used by the main project. *)
@@ -13427,6 +13510,7 @@ let handle_file_groups oc
   ~external_deps_for_linking
   ~ocaml_dir
   ~bs_suffix
+  ~use_ocamlfind
   (file_groups  :  Bsb_parse_sources.file_group list) namespace st =
   let file_groups = List.filter (fun (group : Bsb_parse_sources.file_group) ->
     match backend with 
@@ -13442,6 +13526,7 @@ let handle_file_groups oc
       ~js_post_build_cmd 
       ~namespace
       ~bs_suffix
+      ~use_ocamlfind
       files_to_install
   ) st file_groups in
   if is_top_level then
@@ -17715,6 +17800,7 @@ let output_ninja_and_namespace_map
         ~external_deps_for_linking
         ~ocaml_dir
         ~bs_suffix
+        ~use_ocamlfind
         bs_file_groups
         namespace
         Bsb_ninja_file_groups.zero,
@@ -17735,6 +17821,7 @@ let output_ninja_and_namespace_map
         ~external_deps_for_linking
         ~ocaml_dir
         ~bs_suffix
+        ~use_ocamlfind
         bs_file_groups
         namespace
         Bsb_ninja_file_groups.zero,

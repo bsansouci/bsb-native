@@ -332,6 +332,7 @@ let output_ninja_and_namespace_map
         ~external_deps_for_linking
         ~ocaml_dir
         ~bs_suffix
+        ~use_ocamlfind
         bs_file_groups
         namespace
         Bsb_ninja_file_groups.zero,
@@ -352,6 +353,7 @@ let output_ninja_and_namespace_map
         ~external_deps_for_linking
         ~ocaml_dir
         ~bs_suffix
+        ~use_ocamlfind
         bs_file_groups
         namespace
         Bsb_ninja_file_groups.zero,
