@@ -77,7 +77,7 @@ let link link_byte_or_native
         (Ext_path.combine dir (Literals.library_file ^ suffix_library_files)) :: acc)
       [] includes in
     (* This list will be reversed so we append the otherlibs object files at the end, and they'll end at the beginning. *)
-    let ocaml_dir = Bsb_default_paths.ocaml_dir in
+    let ocaml_dir = Bsb_build_util.get_ocaml_dir cwd in
     
     let suffix = begin match link_byte_or_native with
       | LinkBytecode _ -> Literals.suffix_cma

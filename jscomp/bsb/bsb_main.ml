@@ -25,7 +25,7 @@
 
 
 let cwd = Sys.getcwd ()
-let bsc_dir = Bsb_default_paths.bin_dir 
+let bsc_dir = Bsb_build_util.get_bsc_dir cwd
 let () =  Bsb_log.setup () 
 let (//) = Ext_path.combine
 let force_regenerate = ref false
@@ -178,7 +178,8 @@ let handle_anonymous_arg arg =
   raise (Arg.Bad ("Unknown arg \"" ^ arg ^ "\""))
 
 let watch_exit () =
-  Bsb_log.info "@{<info>Watching@}... @.";
+  exit 0
+  (* Bsb_log.info "@{<info>Watching@}... @.";
   (* @Incomplete windows support here. We need to pass those args to the nodejs file. 
      Didn't bother for now.
           Ben - July 23rd 2017 
@@ -195,12 +196,12 @@ let watch_exit () =
          bsb_watcher;
          backend;
          backend_kind;
-      |]
+      |] *)
 
 (* see discussion #929, if we catch the exception, we don't have stacktrace... *)
 let () =
   try begin
-  let ocaml_dir = Bsb_default_paths.ocaml_dir in
+  let ocaml_dir = Bsb_build_util.get_ocaml_dir cwd in
   let vendor_ninja = bsc_dir // "ninja.exe" in
   match Sys.argv with 
   (* Both of those are equivalent and the watcher will always pass in the `-backend` flag. *)

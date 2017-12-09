@@ -95,7 +95,7 @@ let pack pack_byte_or_native
        So if you don't care about opam dependencies you can solely rely on Bucklescript and npm, no need 
        to install ocamlfind. *)
     if ocamlfind_packages = [] then
-      let ocaml_dir = Bsb_default_paths.ocaml_dir in
+      let ocaml_dir = Bsb_build_util.get_ocaml_dir cwd in
       let compiler = ocaml_dir // compiler ^ ".opt" in
       Unix.execvp
         compiler

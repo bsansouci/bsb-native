@@ -19261,9 +19261,9 @@ let install_targets ~backend cwd (config : Bsb_config_types.t option) =
 
 
 let build_bs_deps cwd ~root_project_dir ~backend ~main_bs_super_errors deps =
-  let bsc_dir = Bsb_default_paths.bin_dir in
+  let bsc_dir = Bsb_build_util.get_bsc_dir cwd in
+  let ocaml_dir = Bsb_build_util.get_ocaml_dir cwd in
   let vendor_ninja = bsc_dir // "ninja.exe" in
-  let ocaml_dir = Bsb_default_paths.ocaml_dir in
   let all_external_deps = ref [] in
   let all_ocamlfind_dependencies = ref [] in
   let all_ocaml_dependencies = ref Depend.StringSet.empty in
@@ -19378,7 +19378,7 @@ end = struct
 
 
 let cwd = Sys.getcwd ()
-let bsc_dir = Bsb_default_paths.bin_dir 
+let bsc_dir = Bsb_build_util.get_bsc_dir cwd
 let () =  Bsb_log.setup () 
 let (//) = Ext_path.combine
 let force_regenerate = ref false
@@ -19531,7 +19531,8 @@ let handle_anonymous_arg arg =
   raise (Arg.Bad ("Unknown arg \"" ^ arg ^ "\""))
 
 let watch_exit () =
-  Bsb_log.info "@{<info>Watching@}... @.";
+  exit 0
+  (* Bsb_log.info "@{<info>Watching@}... @.";
   (* @Incomplete windows support here. We need to pass those args to the nodejs file. 
      Didn't bother for now.
           Ben - July 23rd 2017 
@@ -19548,12 +19549,12 @@ let watch_exit () =
          bsb_watcher;
          backend;
          backend_kind;
-      |]
+      |] *)
 
 (* see discussion #929, if we catch the exception, we don't have stacktrace... *)
 let () =
   try begin
-  let ocaml_dir = Bsb_default_paths.ocaml_dir in
+  let ocaml_dir = Bsb_build_util.get_ocaml_dir cwd in
   let vendor_ninja = bsc_dir // "ninja.exe" in
   match Sys.argv with 
   (* Both of those are equivalent and the watcher will always pass in the `-backend` flag. *)

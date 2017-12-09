@@ -84,9 +84,9 @@ let install_targets ~backend cwd (config : Bsb_config_types.t option) =
 
 
 let build_bs_deps cwd ~root_project_dir ~backend ~main_bs_super_errors deps =
-  let bsc_dir = Bsb_default_paths.bin_dir in
+  let bsc_dir = Bsb_build_util.get_bsc_dir cwd in
+  let ocaml_dir = Bsb_build_util.get_ocaml_dir cwd in
   let vendor_ninja = bsc_dir // "ninja.exe" in
-  let ocaml_dir = Bsb_default_paths.ocaml_dir in
   let all_external_deps = ref [] in
   let all_ocamlfind_dependencies = ref [] in
   let all_ocaml_dependencies = ref Depend.StringSet.empty in
