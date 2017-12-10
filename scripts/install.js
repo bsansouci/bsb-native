@@ -114,7 +114,7 @@ function tryToProvideOCamlCompiler() {
         matchedCompilerExn()
         console.log("config finished")
     }
-s}
+}
 
 // copy all [*.sys_extension] files into [*.exe]
 function copyBinToExe() {
