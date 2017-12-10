@@ -105,8 +105,9 @@ function tryToProvideOCamlCompiler() {
         try {
             child_process.execFileSync(path.join(__dirname, 'buildocaml.sh'))
         } catch (e) {
-            console.log(e.stdout.toString());
-            console.log(e.stderr.toString());
+            if (e.stdout)  console.log(e.stdout.toString());
+            if (e.stderr)  console.log(e.stderr.toString());
+            
             console.log('Building a local version of the OCaml compiler failed, check the output above for more information. A possible problem is that you don\'t have a compiler installed.');
             throw e;
         }
