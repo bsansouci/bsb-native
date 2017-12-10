@@ -8,10 +8,21 @@
 /*.cmx[as]
 /*.cmti
 /*.annot
-jscomp/build_tests
-jscomp/cmd_tests
-jscomp/test
+
+docs/
+site/
 .vscode/
 .github/
+<<<<<<< HEAD
 node_modules
 coverage
+=======
+odoc_gen
+coverage
+jscomp/*
+!jscomp/stdlib
+!jscomp/runtime
+!jscomp/others
+!jscomp/stubs
+!jscomp/Makefile.shared
+>>>>>>> 741aa838353353f61686312374ac650adf81c61b

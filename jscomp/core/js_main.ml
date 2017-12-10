@@ -77,9 +77,7 @@ let set_eval_string s =
 let (//) = Filename.concat
 
 
-let set_noassert () = 
-  Js_config.set_no_any_assert ();
-  Clflags.noassert := true
+
 
                        
 let define_variable s =
@@ -187,11 +185,6 @@ let buckle_script_flags : (string * Arg.spec * string) list =
     " disable warnings on unimplmented c externals"
   )
   ::
-  ("-bs-no-warn-ffi-type", 
-   Arg.Set Js_config.no_warn_ffi_type,
-   " disable warnings for ffi type"
-  ) 
-  ::
   ("-bs-no-builtin-ppx-ml", 
    Arg.Set Js_config.no_builtin_ppx_ml,
    "disable built-in ppx for ml files (internal use)")
@@ -216,9 +209,9 @@ let buckle_script_flags : (string * Arg.spec * string) list =
    Arg.Clear Js_config.check_div_by_zero, 
    " unsafe mode, don't check div by zero and mod by zero")
   ::
-  ("-bs-no-any-assert",
-   Arg.Unit set_noassert, 
-   " no code containing any assertion"
+  ("-bs-noassertfalse",
+    Arg.Set Clflags.no_assert_false,
+    " no code for assert false"
   )
   ::
   ("-bs-main",

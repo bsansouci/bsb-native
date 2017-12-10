@@ -2,7 +2,6 @@
 
 Bsb-native is a fork of [bsb](http://bucklescript.github.io/bucklescript/Manual.html#_bucklescript_build_system_code_bsb_code) that compiles to native OCaml instead.
 
-
 ## Install
 
 1) Add `"bs-platform": "bsansouci/bsb-native"` as a devDependency to your `package.json`
@@ -124,65 +123,3 @@ include
 ```
 inside a file called `MyModule` (for example). Then when you build to JS that module will use the `MyModule_Js` implementation. Same for native/bytecode. This is deeply integrated into bsb-native to make everything easier.
 
-
-# Contributing
-
-The code is inside `jscomp`.
-
-### Dev
-1) To contribute you need opam and you need to be on the right switch.
-
-OSX using [homebrew](https://brew.sh)
-```
-brew install opam
-```
-
-Linux
-```
-wget https://raw.github.com/ocaml/opam/master/shell/opam_installer.sh -O - | sh -s /usr/local/bin
-```
-
-Windows isn't figured out yet.
-
-2) Configure opam
-```
-opam init --comp=4.02.3+buckle-master
-eval `opam config env`
-
-opan switch reinstall 4.02.3+buckle-master # do this if you get errors even from a clean compilation
-```
-
-3) Install camlp4
-```
-opam install camlp4
-```
-
-4) Build ocaml. Run in the bucklescript directory
-```
-./scripts/buildocaml.sh
-```
-
-5) Build bsb-native. This command can be the only command used to build while developing.
-```
-cd jscomp
-make worldnative
-```
-
-
-Each time you make a change you can run `make worldnative`, it'll incrementally only re-build the right stuff.
-If a change isn't picked up you can `make clean` and try again.
-
-
-### Release
-Before making a PR (or at the end of a PR) you should build the release files, which are the packed files inside jscomp/bin. Each file represents one exec and contains all the ML code for that exec.
-
-To do that simply run
-```
-make force-nativesnapshot
-```
-
-You can test those generated artifacts by running 
-```
-make -C bin all
-```
-_note_: this is not the same as `make bin/all`. The former will use `./bin`'s makefile to figure out what the rule `all` means. The latter will look into the current directory's makefile for a rule called `bin/all`,

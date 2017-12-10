@@ -1,6 +1,6 @@
 include ../Makefile.shared
 
-CAMLC=../bin/bsc.exe
+CAMLC=../../lib/bsc.exe
 BSPACK=../bin/bspack.exe
 INCLUDES= -I ../stdlib  -I ../runtime -I ../others/
 
@@ -58,7 +58,7 @@ OTHERS := test_literals a test_ari test_export2 test_internalOO test_obj_simple_
 	method_chain recursive_module recursive_module_test simplify_lambda_632o\
 	div_by_zero_test unsafe_this obj_type_test polymorphism_test class_error_message\
 	test_bs_this class_setter_getter gpr496_test local_class_type test_regex ffi_array_test\
-	derive_dyntype derive_type_test nested_include simple_derive_test simple_derive_use\
+	nested_include \
 	mutual_non_recursive_type external_ppx \
 	optional_ffi_test poly_variant_test \
 	bs_rest_test infer_type_test fs_test module_as_function\
@@ -200,11 +200,27 @@ OTHERS := test_literals a test_ari test_export2 test_internalOO test_obj_simple_
 	miss_colon_test\
 	gpr_1245_test\
 	gpr_2126_test\
-	big_enum
+	big_enum\
+	ast_js_mapper_test\
+	ast_js_mapper_poly_test\
+	big_polyvar_test\
+	ast_abstract_test\
+	ast_mapper_defensive_test\
+	ast_mapper_unused_warning_test\
+	bs_MapInt_test\
+	gpr_2316_test\
+	gpr_2250_test\
+	gpr_1285_test\
+	defunctor_make_test\
+	bs_map_test\
+	bs_hashtbl_string_test\
+	console_log_test\
 # bs_uncurry_test
 # needs Lam to get rid of Uncurry arity first
-
-
+# simple_derive_test
+# simple_derive_use
+# derive_type_test 
+# derive_dyntype 
 
 
 SOURCE_LIST :=  $(OTHERS)
@@ -214,14 +230,14 @@ $(addsuffix .cmi, $(OTHERS)): ../runtime/js.cmi
 $(addsuffix .cmj, $(OTHERS)): ../runtime/js.cmj
 
 # It is okay to test deprecated API
-COMPFLAGS+=  $(MODULE_FLAGS) -w -40 -warn-error A+8-3-30-26-101-102 
+COMPFLAGS+=  $(MODULE_FLAGS) -w -40 -warn-error A+8-3-30-26+101-102-103-104 
 COMPFLAGS+=  -bs-no-version-header -absname -bs-diagnose -bs-cross-module-opt -bs-package-name  bs-platform -bs-package-output commonjs:jscomp/test
 
 
 $(TESTS): $(CAMLC)
 
 all: $(TESTS)
-
+.PHONY: all
 clean::
 	rm -f *.cm*
 	rm -f *~

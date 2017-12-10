@@ -27,8 +27,8 @@
 type error = 
   | Package_not_found of string * string option (* json file *)
   | Json_config of Ext_position.t * string
-  | Invalid_spec of string
   | Invalid_json of string
+  | Invalid_spec of string
   | Conflict_module of string * string * string 
   | Missing_main
   | Missing_entry of string
@@ -113,9 +113,9 @@ let config_error config fmt =
 
   error (Json_config (loc,fmt))
 
-let invalid_json s = error (Invalid_json s)
-
 let invalid_spec s = error (Invalid_spec s)
+
+let invalid_json s = error (Invalid_json s)
 
 let () = 
   Printexc.register_printer (fun x ->

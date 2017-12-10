@@ -12,11 +12,13 @@
     "module": "commonjs",
     "in-source": true
   }],
-  "refmt": 3,
   "suffix": ".bs.js",
   "namespace": true,
   "bs-dependencies": [
     "reason-react"
   ],
-  "refmt": 3
+  "refmt": 3,
+  "warnings": {
+    "error": "+5"
+  }
 }

@@ -537,8 +537,9 @@ let translate loc (prim_name : string)
             (Ext_list.init (Int32.to_int i) 
                (fun _ -> E.zero_int_literal)) NA
 
-        | [ tag; size] -> 
-          E.uninitialized_object tag size
+        | [ _; _] -> 
+          call Js_runtime_modules.obj_runtime
+          (* E.uninitialized_object tag size *)
         | _ -> assert false
 
 
@@ -590,8 +591,8 @@ let translate loc (prim_name : string)
     | "caml_lessequal"
     | "caml_lessthan"
       -> 
-      if Warnings.is_active Warnings.Bs_polymorphic_comparison then 
-        Location.prerr_warning loc Warnings.Bs_polymorphic_comparison ; 
+
+      Location.prerr_warning loc Warnings.Bs_polymorphic_comparison ; 
       call Js_runtime_modules.obj_runtime
     | "caml_obj_set_tag" 
       -> begin match args with 
@@ -762,6 +763,10 @@ let translate loc (prim_name : string)
       end
     | "caml_md5_string"
       -> call Js_runtime_modules.md5
+    | "caml_hash_mix_string"
+    | "caml_hash_mix_int"
+    | "caml_hash_final_mix"
+    
     | "caml_hash"
       -> call Js_runtime_modules.hash 
     | "caml_weak_set"

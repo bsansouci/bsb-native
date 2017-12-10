@@ -13,9 +13,21 @@ js_obj.cmj :
 js_vector.cmj : js_array.cmj js_vector.cmi
 js_list.cmj : js_vector.cmj js_list.cmi
 js_option.cmj : js_option.cmi
+js_console.cmj :
 js_result.cmj : js_result.cmi
-bs_dyn.cmj : bs_dyn.cmi
-bs_dyn_lib.cmj : bs_dyn.cmj bs_dyn_lib.cmi
+js_mapperRt.cmj : js_mapperRt.cmi
+bs_Array.cmj : bs_Array.cmi
+bs_internalAVLset.cmj :
+bs_internalAVLtree.cmj :
+bs_Hash.cmj : bs_Hash.cmi
+bs_HashMap.cmj : bs_Hash.cmj bs_Array.cmj bs_HashMap.cmi
+bs_Cmp.cmj : bs_Cmp.cmi
+bs_Map.cmj : bs_internalAVLtree.cmj bs_Cmp.cmj bs_Map.cmi
+bs_Set.cmj : bs_internalAVLset.cmj bs_Cmp.cmj bs_Set.cmi
+bs_MapString.cmj : bs_internalAVLtree.cmj bs_MapString.cmi
+bs_MapInt.cmj : bs_internalAVLtree.cmj bs_MapInt.cmi
+bs_SetInt.cmj : bs_internalAVLset.cmj bs_SetInt.cmi
+bs_SetString.cmj : bs_internalAVLset.cmj bs_SetString.cmi
 node_child_process.cmj : node.cmj
 js_boolean.cmj : js_boolean.cmi
 js_math.cmj :
@@ -33,8 +45,17 @@ js_vector.cmi :
 js_list.cmi : js_vector.cmi
 js_option.cmi :
 js_result.cmi :
-bs_dyn.cmi :
-bs_dyn_lib.cmi : bs_dyn.cmi
+js_mapperRt.cmi :
+bs_Array.cmi :
+bs_Hash.cmi :
+bs_HashMap.cmi : bs_Hash.cmi
+bs_Cmp.cmi :
+bs_Map.cmi : bs_Cmp.cmi
+bs_Set.cmi : bs_Cmp.cmi
+bs_MapString.cmi :
+bs_MapInt.cmi :
+bs_SetInt.cmi :
+bs_SetString.cmi :
 js_boolean.cmi :
 js_dict.cmi :
 js_cast.cmi :

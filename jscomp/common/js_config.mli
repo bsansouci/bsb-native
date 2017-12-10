@@ -63,7 +63,7 @@ val default_gen_tds : bool ref
 (** options for builtin ppx *)
 val no_builtin_ppx_ml : bool ref 
 val no_builtin_ppx_mli : bool ref 
-val no_warn_ffi_type : bool ref 
+
 
 
 val no_warn_unimplemented_external : bool ref 
@@ -72,13 +72,7 @@ val no_warn_unimplemented_external : bool ref
 val check_div_by_zero : bool ref 
 val get_check_div_by_zero : unit -> bool 
 
-(* It will imply [-noassert] be set too, note from the implementation point of view,
-   in the lambda layer, it is impossible to tell whether it is [assert (3 <> 2)] or
-   [if (3<>2) then assert false]
- *)
-val no_any_assert : bool ref 
-val set_no_any_assert : unit -> unit
-val get_no_any_assert : unit -> bool 
+
 
 
 

@@ -5,6 +5,7 @@
     "coveralls": "^2.13.1",
     "diff": "^3.2.0",
     "glob": "^7.1.2",
+    "immutable": "^3.8.2",
     "istanbul": "^0.4.5",
     "jasmine-core": "^2.6.2",
     "karma": "^1.7.0",
@@ -15,18 +16,10 @@
     "should-equal": "^1.0.1",
     "uglify-js": "^3.0.10"
   },
-  "exportedEnvVars": {
-    "PATH": {
-      "global": true,
-      "globalCollisionBehavior": "joinPath",
-      "resolveAsRelativePath": true,
-      "val": "./bin/"
-    }
-  },
   "bin": {
-    "bsb": "bin/bsb",
-    "bsc": "bin/bsc",
-    "bsrefmt": "bin/bsrefmt"
+    "bsb": "lib/bsb",
+    "bsc": "lib/bsc",
+    "bsrefmt": "lib/bsrefmt"
   },
   "scripts": {
     "test": "go build -o test.exe scripts/test.go && ./test.exe",
@@ -39,8 +32,8 @@
     "postinstall": "node scripts/install.js"
   },
   "name": "bs-platform",
-  "version": "2.0.1",
-  "description": "bsb-native is BuckleScript's bsb but for ocamlc and ocamlopt",
+  "version": "2.1.1",
+  "description": "bucklescript compiler, ocaml standard libary by bucklescript and its required runtime support",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/bucklescript/bucklescript.git"

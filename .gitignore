@@ -37,7 +37,7 @@ _build
 *.rawlambda
 *.lambda
 *.zip
-
+*.patch
 *.mlast
 *.mliast
 # special file
@@ -65,7 +65,7 @@ bin/*
 odoc_gen/*.cmxs
 
 # for npm publish
-bin/bsc.exe
+./lib/*.exe
 !bin/bsppx
 !bin/bspack
 !/bin/bsb
@@ -84,14 +84,11 @@ bin/bsc.exe
 .ninja_deps
 .bsdeps
 .bs_dir_cache
-*.d
+
 .bsbuild
 build.ninja
 jscomp/bin/bsb
 jscomp/bin/bsc
-jscomp/bin/config_whole_compiler.ml
-jscomp/bin/bsb_default_paths.ml
-jscomp/bsb/bsb_default_paths.ml
 lib/bs
 lib/js/jscomp/test
 jscomp/build_tests/*/lib/

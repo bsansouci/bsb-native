@@ -139,8 +139,8 @@ let make_block ?comment tag tag_info es mutable_flag : t =
     comment 
   }    
 
-let uninitialized_object ?comment tag size : t = 
-  { expression_desc = Caml_uninitialized_obj(tag,size); comment }
+(* let uninitialized_object ?comment tag size : t = 
+  { expression_desc = Caml_uninitialized_obj(tag,size); comment } *)
 
 let uninitialized_array ?comment (e : t) : t  = 
   match e.expression_desc with 
@@ -788,7 +788,7 @@ let rec econd ?comment (b : t) (t : t) (f : t) : t =
   (*   econd ?comment { b with expression_desc = Bin (And , b0,b1)} t f *)
   | _ -> 
     let b  = ocaml_boolean_under_condition b in 
-    (* if b' != b then *)
+    (* if b' <> b then *)
     (*   econd ?comment b' t f  *)
     (* else  *)
     if Js_analyzer.eq_expression t f then

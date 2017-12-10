@@ -229,6 +229,7 @@ let interpret_json
         Bsb_exception.config_error config "expect version 2 or 3"
       | None ->
         Refmt_none
+        
 
     in 
     (* The default situation is empty *)

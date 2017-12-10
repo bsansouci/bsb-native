@@ -162,7 +162,7 @@ let output_ninja_and_namespace_map
     in 
     if bs_suffix then Ext_string.inter2 "-bs-suffix" result else result
   in 
-  
+
   let warnings = Bsb_warning.opt_warning_to_string not_dev warning in
 
   let output_reason_config () =   
@@ -206,7 +206,6 @@ let output_ninja_and_namespace_map
           Bsb_build_schemas.bsb_dir_group, "0"  (*TODO: avoid name conflict in the future *);
           
           Bsb_ninja_global_vars.ocaml_flags, ocaml_flags;
-          
           Bsb_ninja_global_vars.bs_super_errors_ocamlfind, 
           (* Jumping through hoops. When ocamlfind is used we need to pass the argument 
              to the underlying compiler and not ocamlfind, so we use -passopt. Otherwise we don't.
@@ -258,15 +257,15 @@ let output_ninja_and_namespace_map
     let number_of_dev_groups = Bsb_dir_index.get_current_number_of_dev_groups () in
     if number_of_dev_groups = 0 then
       let bs_group, source_dirs,static_resources  =
-        List.fold_left (
-          fun (acc, dirs,acc_resources) 
+        List.fold_left 
+          (fun (acc, dirs,acc_resources) 
             ({Bsb_parse_sources.sources ; dir; resources } as x : Bsb_parse_sources.file_group) ->
             merge_module_info_map  acc  sources ,  
             (if Bsb_parse_sources.is_empty x then dirs else  dir::dirs) , 
             ( if resources = [] then acc_resources
               else Ext_list.map_append (fun x -> dir // x ) resources  acc_resources)
-        ) (String_map.empty,[],[]) bs_file_groups in
-      has_reason_files := Bsb_db.sanity_check bs_group || !has_reason_files;
+          ) (String_map.empty,[],[]) bs_file_groups in
+      has_reason_files := Bsb_db.sanity_check bs_group || !has_reason_files;     
       [|bs_group|], source_dirs, static_resources
     else
       let bs_groups = Array.init  (number_of_dev_groups + 1 ) (fun i -> String_map.empty) in
@@ -282,9 +281,10 @@ let output_ninja_and_namespace_map
       has_reason_files := Bsb_db.sanity_check lib || !has_reason_files;
       for i = 1 to number_of_dev_groups  do
         let c = bs_groups.(i) in
-        has_reason_files := Bsb_db.sanity_check c || !has_reason_files;
+        has_reason_files :=  Bsb_db.sanity_check c || !has_reason_files ;
         String_map.iter (fun k _ -> if String_map.mem k lib then failwith ("conflict files found:" ^ k)) c ;
-        Bsb_ninja_util.output_kv (Bsb_dir_index.(string_of_bsb_dev_include (of_int i)))
+        Bsb_ninja_util.output_kv 
+          (Bsb_dir_index.(string_of_bsb_dev_include (of_int i)))
           (Bsb_build_util.flag_concat dash_i @@ source_dirs.(i)) oc
       done  ;
       bs_groups,source_dirs.((Bsb_dir_index.lib_dir_index:>int)), static_resources
@@ -293,7 +293,6 @@ let output_ninja_and_namespace_map
   output_reason_config ();
   Bsb_db.write_build_cache ~dir:cwd_lib_bs bs_groups ;
   emit_bsc_lib_includes bsc_lib_dirs;
-  
   List.iter 
   (fun output -> 
      Bsb_ninja_util.output_build

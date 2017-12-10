@@ -38,7 +38,7 @@
 
 these types are not used by normal users}
 *)
-
+module MapperRt = Js_mapperRt
 module Internal = Js_internal
 
 (* {2 Types for JS objects} *)
@@ -146,3 +146,4 @@ module Option = Js_option
 module Result = Js_result
 module List = Js_list 
 module Vector = Js_vector
+module Console = Js_console

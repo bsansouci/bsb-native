@@ -20,7 +20,7 @@ open Compenv
 
 let fprintf = Format.fprintf
 
-let dummy_unused_attribute : Warnings.t = (Bs_unused_attribute "")
+
 
 let print_if ppf flag printer arg =
   if !flag then fprintf ppf "%a@." printer arg;
@@ -35,16 +35,20 @@ let after_parsing_sig ppf sourcefile outputprefix ast  =
     close_out oc ;
   end;
   if !Js_config.binary_ast then
-    Binary_ast.write_ast
-      Mli
-      ~fname:sourcefile
-      ~output:(outputprefix ^ Literals.suffix_mliast)
-      (* to support relocate to another directory *)
-      ast;
-  if !Js_config.syntax_only then () else 
     begin 
-      if Warnings.is_active dummy_unused_attribute then 
-        Bs_ast_invariant.emit_external_warnings.signature Bs_ast_invariant.emit_external_warnings ast ;
+      Binary_ast.write_ast
+        Mli
+        ~fname:sourcefile
+        ~output:(outputprefix ^ Literals.suffix_mliast)
+        (* to support relocate to another directory *)
+        ast 
+
+    end;
+  if !Js_config.syntax_only then 
+    Warnings.check_fatal()
+  else 
+    begin 
+
       if Js_config.get_diagnose () then
         Format.fprintf Format.err_formatter "Building %s@." sourcefile;    
       let modulename = module_of_filename ppf sourcefile outputprefix in
@@ -91,11 +95,11 @@ let after_parsing_impl ppf sourcefile outputprefix ast =
     Binary_ast.write_ast ~fname:sourcefile 
       Ml ~output:(outputprefix ^ Literals.suffix_mlast)
       ast ;
-  if !Js_config.syntax_only then () else 
+  if !Js_config.syntax_only then 
+    Warnings.check_fatal ()
+  else 
     begin
 
-      if Warnings.is_active dummy_unused_attribute then 
-        Bs_ast_invariant.emit_external_warnings.structure Bs_ast_invariant.emit_external_warnings ast ;
       if Js_config.get_diagnose () then
         Format.fprintf Format.err_formatter "Building %s@." sourcefile;      
       let modulename = Compenv.module_of_filename ppf sourcefile outputprefix in
@@ -116,26 +120,25 @@ let after_parsing_impl ppf sourcefile outputprefix ast =
           |> Translmod.transl_implementation modulename
           |> print_if ppf Clflags.dump_rawlambda Printlambda.lambda
           |> (fun lambda -> 
-              match           
+              try
                 Lam_compile_main.lambda_as_module
                   finalenv current_signature 
                   sourcefile  outputprefix lambda  with
-              | e -> e 
-              | exception e -> 
+              | e -> 
                 (* Save to a file instead so that it will not scare user *)
-                if Js_config.get_diagnose () then
-                  begin              
-                    let file = "bsc.dump" in
-                    Ext_pervasives.with_file_as_chan file
-                      (fun ch -> output_string ch @@             
-                        Printexc.raw_backtrace_to_string (Printexc.get_raw_backtrace ()));
-                    Ext_log.err __LOC__
-                      "Compilation fatal error, stacktrace saved into %s when compiling %s"
-                      file sourcefile;
-                  end;            
-                raise e             
+                (if Js_config.get_diagnose () then
+                   begin              
+                     let file = "bsc.dump" in
+                     Ext_pervasives.with_file_as_chan file
+                       (fun ch -> output_string ch @@             
+                         Printexc.raw_backtrace_to_string (Printexc.get_raw_backtrace ()));
+                     Ext_log.err __LOC__
+                       "Compilation fatal error, stacktrace saved into %s when compiling %s"
+                       file sourcefile;
+                   end;            
+                 raise e)             
             );
-          Warnings.check_fatal ()
+
         end;
         Stypes.dump (Some (outputprefix ^ ".annot"));
       with x ->
