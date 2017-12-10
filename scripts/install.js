@@ -95,12 +95,12 @@ function matchedCompilerExn() {
     }
 }
 function tryToProvideOCamlCompiler() {
-    try {
-        if (process.env.BS_ALWAYS_BUILD_YOUR_COMPILER) {
-            throw 'FORCED TO REBUILD'
-        }
-        matchedCompilerExn()
-    } catch (e) {
+    // try {
+    //     if (process.env.BS_ALWAYS_BUILD_YOUR_COMPILER) {
+    //         throw 'FORCED TO REBUILD'
+    //     }
+    //     matchedCompilerExn()
+    // } catch (e) {
         console.log('Build a local version of OCaml compiler, it may take a couple of minutes')
         try {
             child_process.execFileSync(path.join(__dirname, 'buildocaml.sh'))
@@ -113,7 +113,7 @@ function tryToProvideOCamlCompiler() {
         console.log('configure again with local ocaml installed')
         matchedCompilerExn()
         console.log("config finished")
-    }
+    // }
 }
 
 // copy all [*.sys_extension] files into [*.exe]
