@@ -247,4 +247,4 @@ let get_ocaml_dir cwd =
   (Filename.dirname (get_bsc_dir cwd)) // "vendor" // "ocaml"
 
 let get_ocaml_lib_dir ~is_js cwd =
-  (Filename.dirname (get_bsc_dir cwd)) // "lib" // "ocaml"
+  (get_ocaml_dir cwd) // "lib" // "ocaml"
