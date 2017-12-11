@@ -51,6 +51,7 @@ clean::
 	rm -f *~
 	rm -f  *.annot
 	rm -f *.rawlambda *.lam *.lambda *.map
+	rm -f bs_Map* bs_Set*
 
 ifndef BS_RELEASE_BUILD
 bs_MapString.ml: map.cppo.ml

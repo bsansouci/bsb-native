@@ -1,4 +1,4 @@
-NATIVE=ocamlopt.opt
+NATIVE=ocamlopt.opt$(EXE)
 
 OCAMLOPT_FLAGS= -g -w -40-30 ../jscomp/stubs/ext_basic_hash_stubs.c
 # -inline 1000 makes size too large
