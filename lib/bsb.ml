@@ -6120,7 +6120,8 @@ let get_ocaml_dir cwd =
   (Filename.dirname (get_bsc_dir cwd)) // "vendor" // "ocaml"
 
 let get_ocaml_lib_dir ~is_js cwd =
-  (Filename.dirname (get_bsc_dir cwd)) // "lib" // "ocaml"
+  if is_js then (Filename.dirname (get_bsc_dir cwd)) // "lib" // "ocaml"
+  else (get_ocaml_dir cwd) // "lib" // "ocaml"
 
 end
 module Bsb_config : sig 
@@ -17656,13 +17657,14 @@ let output_ninja_and_namespace_map
         acc 
 
   in 
+  let ocaml_lib = Bsb_build_util.get_ocaml_lib_dir ~is_js:(backend = Bsb_config_types.Js) root_project_dir in
   let emit_bsc_lib_includes source_dirs = 
     Bsb_ninja_util.output_kv
       Bsb_build_schemas.bsc_lib_includes 
       (Bsb_build_util.flag_concat dash_i @@ 
-       (all_includes 
-          (if namespace = None then source_dirs 
-           else Filename.current_dir_name :: source_dirs) ))  oc 
+       (ocaml_lib :: (all_includes 
+                 (if namespace = None then source_dirs 
+                  else Filename.current_dir_name :: source_dirs) )))  oc 
   in   
   let  bs_groups, bsc_lib_dirs, static_resources =
     let number_of_dev_groups = Bsb_dir_index.get_current_number_of_dev_groups () in
@@ -17817,7 +17819,6 @@ let output_ninja_and_namespace_map
       Bsb_log.error "`build-script` field not supported on windows yet. Coming soon (poke bsansouci on discord so he prioritize it)."
     else begin 
       let build_script = Ext_bytes.ninja_escaped build_script in
-      let ocaml_lib = Bsb_build_util.get_ocaml_lib_dir ~is_js:(backend = Bsb_config_types.Js) cwd in
       
       (* @Todo @CrossPlatform Fix this super ghetto environment variable setup... This is not cross platform! *)
       let envvars = "export OCAML_LIB=" ^ ocaml_lib ^ " && " 
