@@ -245,7 +245,7 @@ let output_ninja_and_namespace_map
         acc 
 
   in 
-  let ocaml_lib = Bsb_build_util.get_ocaml_lib_dir ~is_js:(backend = Bsb_config_types.Js) cwd in
+  let ocaml_lib = Bsb_build_util.get_ocaml_lib_dir ~is_js:(backend = Bsb_config_types.Js) root_project_dir in
   let emit_bsc_lib_includes source_dirs = 
     Bsb_ninja_util.output_kv
       Bsb_build_schemas.bsc_lib_includes 
