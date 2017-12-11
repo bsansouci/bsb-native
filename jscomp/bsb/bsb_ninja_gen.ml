@@ -402,24 +402,60 @@ let output_ninja_and_namespace_map
   let _ = 
     match build_script with
   | Some build_script when should_build ->
-    if Ext_sys.is_windows_or_cygwin then 
-      Bsb_log.error "`build-script` field not supported on windows yet. Coming soon (poke bsansouci on discord so he prioritize it)."
-    else begin 
-      let build_script = Ext_bytes.ninja_escaped build_script in
-      let ocaml_lib = Bsb_build_util.get_ocaml_lib_dir ~is_js:(backend = Bsb_config_types.Js) cwd in
+    (* @TODO(sansouci): This is pretty bad but I'm not sure what to do about it.
+       We're generating a helper script on the fly here which we'll compile with the build_script file 
+       and then we'll run both. This would allow us to not depend on shell or make, ideally. 
+       We would potentially want to expose a bsb-like API (output_build and all) and automatically
+       call ninja. That would allow people to write better cross platform makefiles. *)
+    let ocaml_lib = Bsb_build_util.get_ocaml_lib_dir ~is_js:(backend = Bsb_config_types.Js) cwd in
+    let custom_env = "let custom_env = [| \"OCAML_LIB=" ^ ocaml_lib ^ 
+      "\"; \"OCAML_SYSTHREADS=" ^ (ocaml_dir // "otherlibs" // "systhreads") ^ 
+      "\"; \"PATH=\" ^ (Unix.getenv \"PATH\") ^ \":" ^ (root_project_dir // "node_modules" // ".bin") ^ ":" ^ ocaml_dir ^ ":" ^ (root_project_dir // "node_modules" // "bs-platform" // "bin") ^ "\" |]" in
+    let helper_script = custom_env ^ {|
+      let env = Array.append (Unix.environment ()) custom_env
+      let run_command_with_env cmd env =
+        let ic, oc, err = Unix.open_process_full cmd env in
+        let buf = Buffer.create 64 in
+        (try
+           while true do
+             Buffer.add_channel buf ic 1
+           done
+         with End_of_file -> ());
+        let buf_err = Buffer.create 64 in
+        (try
+           while true do
+             Buffer.add_channel buf_err err 1
+           done
+         with End_of_file -> ());
+        let _ = Unix.close_process_full (ic, oc, err) in
+        (Buffer.contents buf, Buffer.contents buf_err)
       
-      (* @Todo @CrossPlatform Fix this super ghetto environment variable setup... This is not cross platform! *)
-      let envvars = "export OCAML_LIB=" ^ ocaml_lib ^ " && " 
-                  ^ "export OCAML_SYSTHREADS=" ^ (ocaml_dir // "otherlibs" // "systhreads") ^ " && " 
-                  ^ "export PATH=$$PATH:" ^ (root_project_dir // "node_modules" // ".bin") ^ ":" ^ ocaml_dir ^ ":" ^ (root_project_dir // "node_modules" // "bs-platform" // "bin") ^ " && " in
-      (* We move out of lib/bs/XYZ so that the command is ran from the root project. *)
-      let rule = Bsb_rule.define ~command:("cd ../../.. && " ^ envvars ^ build_script) "build_script" in
-      Bsb_ninja_util.output_build oc
-        ~order_only_deps:(static_resources @ all_info)
-        ~input:""
-        ~output:Literals.build_ninja
-        ~rule;
-    end
+      let make arg =
+        let (o, e) = run_command_with_env ("make -C ../../../ " ^ arg) env in
+    |} ^ "if (String.length e > 0) then begin print_string @@ \"Got error when running '" ^ cwd // build_script ^ "': \\n\" ^ e;\nexit 1;\nend else print_string o" in
+    let out = open_out (cwd // Bsb_config.lib_bs // nested // "helpers.ml") in
+    output_string out helper_script;
+    close_out out;
+
+    let rule = Bsb_rule.define ~command:("${ocamlopt} ${linked_internals} -o ${out} unix.cmxa ${in}") "build_script" in
+    let output = "build_script.exe" in
+    let p = root_project_dir // "node_modules" // "bs-platform" // "jscomp" in
+    Bsb_ninja_util.output_build oc
+      ~order_only_deps:(static_resources @ all_info)
+      ~input:""
+      ~inputs:["helpers.ml"; cwd // build_script]
+      ~output
+      ~shadows:[{ key = "linked_internals"; 
+        op = Bsb_ninja_util.AppendList ["-I"; p // "bsb"; p//"stubs"// "bs_hash_stubs.cmx"; p// "stubs"//"ext_basic_hash_stubs.c";"-I"; p // "ext"; p // "ext" // "ext_bytes.cmx"; p // "ext" // "map_gen.cmx";p // "ext" // "set_gen.cmx"; p // "ext" // "string_map.cmx"; p // "ext" // "string_set.cmx"; p // "ext" // "ext_string.cmx"; p // "ext" // "ext_sys.cmx"; p // "bsb" // "bsb_rule.cmx"; p //"bsb"// "bsb_ninja_util.cmx"]
+      }]
+      ~rule;
+    
+    let rule = Bsb_rule.define ~command:("./build_script.exe") "build_script_exe" in
+    Bsb_ninja_util.output_build oc
+      ~order_only_deps:["build_script.exe"]
+      ~input:""
+      ~output:Literals.build_ninja
+      ~rule
   | _ ->
     Bsb_ninja_util.phony oc ~order_only_deps:(static_resources @ all_info)
       ~inputs:[]
