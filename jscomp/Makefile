@@ -374,7 +374,8 @@ BSB_HELPER_SRCS=bsb_helper_linker\
 	bsb_helper_packer\
 	bsb_helper_extract\
 	bsb_helper_depfile_gen\
-	bsb_helper_dep_graph
+	bsb_helper_dep_graph\
+	bsb_helper_main
 
 BSB_HELPER_CMXS=$(addprefix bsb/, $(addsuffix .cmx, $(BSB_HELPER_SRCS)))
 BSB_HELPER_CMOS=$(addprefix bsb/, $(addsuffix .cmo, $(BSB_HELPER_SRCS)))

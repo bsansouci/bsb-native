@@ -1,4 +1,4 @@
-(* Copyright (C) 2015-2016 Bloomberg Finance L.P.
+ (* Copyright (C) 2015-2016 Bloomberg Finance L.P.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
@@ -89,8 +89,8 @@ let link link_byte_or_native
       | "compiler-libs" -> 
         ((ocaml_dir // "lib" // "ocaml" // "compiler-libs" // "ocamlcommon") ^ suffix) :: acc
       | "threads" -> 
-        "-thread" :: ("threads" ^ suffix) :: acc
-      | v -> (v ^ suffix) :: acc
+        "-thread" :: (ocaml_dir // "lib" // "ocaml" // "threads" // "threads" ^ suffix) :: acc
+      | v -> (ocaml_dir // "lib" // "ocaml" // v ^ suffix) :: acc
     ) [] ocaml_dependencies in 
 
     (* let (otherlibs, extra_flags) = 
@@ -130,9 +130,11 @@ let link link_byte_or_native
        So if you don't care about opam dependencies you can solely rely on Bucklescript and npm, no need 
        to install ocamlfind. 
      *)
+    let ocaml_lib = Bsb_build_util.get_ocaml_lib_dir ~is_js:false cwd in
     if ocamlfind_packages = [] then
       let compiler = ocaml_dir // compiler ^ ".opt" in
       let list_of_args = (compiler :: "-g"
+        :: "-I" :: ocaml_lib :: "-nostdlib"
         :: (if bs_super_errors then ["-bs-super-errors"] else [])) 
         @ warning_command
         @ "-o" :: output_file :: all_object_files in
