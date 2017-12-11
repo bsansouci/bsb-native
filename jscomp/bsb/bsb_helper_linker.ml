@@ -89,7 +89,7 @@ let link link_byte_or_native
       | "compiler-libs" -> 
         ((ocaml_dir // "lib" // "ocaml" // "compiler-libs" // "ocamlcommon") ^ suffix) :: acc
       | "threads" -> 
-        "-thread" :: (ocaml_dir // "lib" // "ocaml" // "threads" // "threads" ^ suffix) :: acc
+        (ocaml_dir // "lib" // "ocaml" // "threads" // "threads" ^ suffix) :: acc
       | v -> (ocaml_dir // "lib" // "ocaml" // v ^ suffix) :: acc
     ) [] ocaml_dependencies in 
 
