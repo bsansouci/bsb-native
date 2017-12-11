@@ -17822,7 +17822,10 @@ let output_ninja_and_namespace_map
     let custom_env = "let custom_env = [| \"OCAML_LIB=" ^ ocaml_lib ^ 
       "\"; \"OCAML_SYSTHREADS=" ^ (ocaml_dir // "otherlibs" // "systhreads") ^ 
       "\"; \"PATH=\" ^ (Unix.getenv \"PATH\") ^ \":" ^ (root_project_dir // "node_modules" // ".bin") ^ ":" ^ ocaml_dir ^ ":" ^ (root_project_dir // "node_modules" // "bs-platform" // "bin") ^ "\" |]" in
-    let helper_script = custom_env ^ {|
+    let print = "let print (o, e) = if (String.length e > 0) then begin print_string @@ \"Got error when running '" ^ cwd // build_script ^ "': \\n\" ^ e;\nexit 1;\nend else print_string o\n" in 
+    let vendor_ninja = "let vendor_ninja = \"" ^ (bsc_dir // "ninja.exe") ^ "\"" in
+    let helper_cwd = "let cwd = \"" ^ cwd ^ "\"\n" in
+    let helper_script = custom_env ^ print ^ vendor_ninja ^ helper_cwd ^ {|
       let env = Array.append (Unix.environment ()) custom_env
       let run_command_with_env cmd env =
         let ic, oc, err = Unix.open_process_full cmd env in
@@ -17842,28 +17845,31 @@ let output_ninja_and_namespace_map
         (Buffer.contents buf, Buffer.contents buf_err)
       
       let make arg =
-        let (o, e) = run_command_with_env ("make -C ../../../ " ^ arg) env in
-    |} ^ "if (String.length e > 0) then begin print_string @@ \"Got error when running '" ^ cwd // build_script ^ "': \\n\" ^ e;\nexit 1;\nend else print_string o" in
+        print (run_command_with_env ("make -C ../../../ " ^ arg) env)
+      
+      let ninja path =
+        print (run_command_with_env (vendor_ninja ^ " -C " ^ path) env)
+    |} in
     let out = open_out (cwd // Bsb_config.lib_bs // nested // "helpers.ml") in
     output_string out helper_script;
     close_out out;
 
     let rule = Bsb_rule.define ~command:("${ocamlopt} ${linked_internals} -o ${out} unix.cmxa ${in}") "build_script" in
-    let output = "build_script.exe" in
+    let output = cwd // "build_script.exe" in
     let p = root_project_dir // "node_modules" // "bs-platform" // "jscomp" in
     Bsb_ninja_util.output_build oc
       ~order_only_deps:(static_resources @ all_info)
       ~input:""
-      ~inputs:["helpers.ml"; cwd // build_script]
+      ~inputs:[cwd // Bsb_config.lib_bs // nested // "helpers.ml"; cwd // build_script]
       ~output
       ~shadows:[{ key = "linked_internals"; 
         op = Bsb_ninja_util.AppendList ["-I"; p // "bsb"; p//"stubs"// "bs_hash_stubs.cmx"; p// "stubs"//"ext_basic_hash_stubs.c";"-I"; p // "ext"; p // "ext" // "ext_bytes.cmx"; p // "ext" // "map_gen.cmx";p // "ext" // "set_gen.cmx"; p // "ext" // "string_map.cmx"; p // "ext" // "string_set.cmx"; p // "ext" // "ext_string.cmx"; p // "ext" // "ext_sys.cmx"; p // "bsb" // "bsb_rule.cmx"; p //"bsb"// "bsb_ninja_util.cmx"]
       }]
       ~rule;
     
-    let rule = Bsb_rule.define ~command:("./build_script.exe") "build_script_exe" in
+    let rule = Bsb_rule.define ~command:output "build_script_exe" in
     Bsb_ninja_util.output_build oc
-      ~order_only_deps:["build_script.exe"]
+      ~order_only_deps:[ output ]
       ~input:""
       ~output:Literals.build_ninja
       ~rule
