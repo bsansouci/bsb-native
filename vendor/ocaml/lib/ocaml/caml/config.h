@@ -77,6 +77,7 @@
 #define HAS_MKSTEMP
 #define HAS_NICE
 #define HAS_STACK_OVERFLOW_DETECTION
+#define HAS_SIGWAIT
 
 #ifndef CAML_NAME_SPACE
 #include "compatibility.h"
