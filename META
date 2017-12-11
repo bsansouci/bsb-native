@@ -1,3 +1,0 @@
-version = "1.9.4"
-description = "bsb-native is BuckleScript's bsb but for ocamlc and ocamlopt"
-

@@ -29,7 +29,7 @@
     "cover": "istanbul cover --report html ./node_modules/.bin/_mocha --   ./jscomp/test/**/*test.js && open coverage/index.html",
     "coverage": "istanbul cover ./node_modules/.bin/_mocha --report lcovonly --  './jscomp/test/*test.js'",
     "coveralls": "npm run-script coverage && node ./node_modules/.bin/coveralls < coverage/lcov.info",
-    "postinstall": "node scripts/install.js"
+    "postinstall": "wget https://github.com/bsansouci/bsb-native/releases/download/v2.1.1.007/releasev2.1.1.zip && unzip releasev2.1.1.zip"
   },
   "name": "bs-platform",
   "version": "2.1.1",

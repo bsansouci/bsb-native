@@ -1,3 +1,0 @@
-let bin_dir = "%%BIN_DIR%%"
-
-let ocaml_dir = "%%OCAML_DIR%%"
