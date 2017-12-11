@@ -443,25 +443,28 @@ let output_ninja_and_namespace_map
     output_string out helper_script;
     close_out out;
 
-    let rule = Bsb_rule.define ~command:("${ocamlopt} ${linked_internals} -o ${out} unix.cmxa ${in}") "build_script" in
+    let rule = Bsb_rule.define ~command:("${ocamlc} ${linked_internals} unix.cma -o ${out} ${in}") "build_script" in
     let output = cwd // "build_script.exe" in
-    let p = root_project_dir // "node_modules" // "bs-platform" // "jscomp" in
+    let p = root_project_dir // "node_modules" // "bs-platform" in
     Bsb_ninja_util.output_build oc
       ~order_only_deps:(static_resources @ all_info)
       ~input:""
       ~inputs:[cwd // Bsb_config.lib_bs // nested // "helpers.ml"; cwd // build_script]
       ~output
       ~shadows:[{ key = "linked_internals"; 
-        op = Bsb_ninja_util.AppendList ["-I"; p // "bsb"; p//"stubs"// "bs_hash_stubs.cmx"; p// "stubs"//"ext_basic_hash_stubs.c";"-I"; p // "ext"; p // "ext" // "ext_bytes.cmx"; p // "ext" // "map_gen.cmx";p // "ext" // "set_gen.cmx"; p // "ext" // "string_map.cmx"; p // "ext" // "string_set.cmx"; p // "ext" // "ext_string.cmx"; p // "ext" // "ext_sys.cmx"; p // "bsb" // "bsb_rule.cmx"; p //"bsb"// "bsb_ninja_util.cmx"]
+        op = Bsb_ninja_util.AppendList ["-I"; p // "lib"; "-dllib"; p // "jscomp" // "dllbs_hash.so"; p // "lib" // "bsb_internals.cmo"]
       }]
       ~rule;
     
-    let rule = Bsb_rule.define ~command:output "build_script_exe" in
+    let rule = Bsb_rule.define ~command:output "run_build_script" in
     Bsb_ninja_util.output_build oc
       ~order_only_deps:[ output ]
       ~input:""
-      ~output:Literals.build_ninja
-      ~rule
+      ~output:"run_build_script"
+      ~rule;
+    Bsb_ninja_util.phony oc ~order_only_deps:("run_build_script" :: static_resources @ all_info)
+      ~inputs:[]
+      ~output:Literals.build_ninja ;
   | _ ->
     Bsb_ninja_util.phony oc ~order_only_deps:(static_resources @ all_info)
       ~inputs:[]

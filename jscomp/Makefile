@@ -542,7 +542,7 @@ force-snapshotml:
 	$(MAKE) snapshotml
 
 BIN_PATH=../lib
-SNAPSHOT_SRCS=$(addprefix $(BIN_PATH)/, $(addsuffix .ml, bsppx whole_compiler bsdep bsb bsb_helper bspp ))
+SNAPSHOT_SRCS=$(addprefix $(BIN_PATH)/, $(addsuffix .ml, bsppx whole_compiler bsdep bsb bsb_helper bspp bsb_internals))
 SNAPSHOT_SRCS+=$(addprefix bin/, $(addsuffix .ml, all_ounit_tests))
 SNAPSHOT_DEPS=$(SNAPSHOT_SRCS:.ml=.d)
 
@@ -557,6 +557,9 @@ SNAPSHOT_DEPS=$(SNAPSHOT_SRCS:.ml=.d)
 
 ../lib/bsb_helper.ml:./bin/bspack.exe
 	 $< -bs-MD -U BS_DEBUG   -I stubs -I common -I ext -I syntax -I depends -I bsb  -bs-main Bsb_helper_main -o $@
+
+../lib/bsb_internals.ml:./bin/bspack.exe
+	 $< -bs-MD -U BS_DEBUG   -I stubs -I common -I ext -I syntax -I depends -I bsb  -bs-main Bsb_ninja_util -o $@
 
 ../lib/bsb.ml:./bin/bspack.exe
 	 $<  -D BS_MIN_LEX_DEPS=true -bs-MD -U BS_DEBUG -I $(OCAML_SRC_UTILS) -I $(OCAML_SRC_PARSING) -I stubs -I common -I ext -I syntax -I depends -I bsb -I ext  -bs-main Bsb_main -o $@

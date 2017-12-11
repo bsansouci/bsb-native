@@ -1,0 +1,16 @@
+../lib/bsb_internals.ml : ./ext/ext_sys.ml
+../lib/bsb_internals.ml : ./ext/map_gen.ml
+../lib/bsb_internals.ml : ./ext/set_gen.ml
+../lib/bsb_internals.ml : ./bsb/bsb_rule.ml
+../lib/bsb_internals.ml : ./ext/ext_sys.mli
+../lib/bsb_internals.ml : ./bsb/bsb_rule.mli
+../lib/bsb_internals.ml : ./ext/ext_bytes.ml
+../lib/bsb_internals.ml : ./ext/ext_bytes.mli
+../lib/bsb_internals.ml : ./ext/ext_string.ml
+../lib/bsb_internals.ml : ./ext/string_map.ml
+../lib/bsb_internals.ml : ./ext/string_set.ml
+../lib/bsb_internals.ml : ./ext/ext_string.mli
+../lib/bsb_internals.ml : ./ext/string_map.mli
+../lib/bsb_internals.ml : ./ext/string_set.mli
+../lib/bsb_internals.ml : ./bsb/bsb_ninja_util.ml
+../lib/bsb_internals.ml : ./bsb/bsb_ninja_util.mli
