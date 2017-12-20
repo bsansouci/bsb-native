@@ -8212,7 +8212,7 @@ let link link_byte_or_native
     if ocamlfind_packages = [] then
       let compiler = ocaml_dir // compiler ^ ".opt" in
       let list_of_args = (compiler :: "-g"
-        :: "-I" :: ocaml_lib :: "-nostdlib"
+        :: "-I" :: ocaml_lib :: "-I" :: (ocaml_lib // "stublibs") :: "-nostdlib"
         :: (if bs_super_errors then ["-bs-super-errors"] else [])) 
         @ warning_command
         @ "-o" :: output_file :: all_object_files in
