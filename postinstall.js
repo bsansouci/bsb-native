@@ -65,19 +65,20 @@ function handleResponse(res) {
           // An entry's fileName implicitly requires its parent directories to exist.
           fs.mkdir(entry.fileName, () => zipfile.readEntry());
         } else {
-          // file entry
-
-          process.stdout.write("Unzipped " + i + " of 3385 files                  \r");
+          // Mode roughly transcribes to the unix permissions.
+          // See https://github.com/thejoshwolfe/yauzl/issues/57#issuecomment-301847099          
+          var mode = entry.externalFileAttributes >>> 16;
+          process.stdout.write("Unzipped " + i + " of "+zipfile.entryCount+" files                  \r");
           zipfile.openReadStream(entry, function(err, readStream) {
             if (err) throw err;
             readStream.on("end", function() {
               i++;
               zipfile.readEntry();
             });
-            var writeStream = fs.createWriteStream(entry.fileName).on('error', (e) => {
-              if (e.errno === -4058){
+            var writeStream = fs.createWriteStream(entry.fileName, {mode}).on('error', (e) => {
+              if (e.errno === -4058 || e.code === 'ENOENT'){
                 mkdirp(path.dirname(entry.fileName), (e) => {
-                  readStream.pipe(fs.createWriteStream(entry.fileName));
+                  readStream.pipe(fs.createWriteStream(entry.fileName, {mode}));
                 });
               } else {
                 console.log(e);
