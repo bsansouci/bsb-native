@@ -16,6 +16,9 @@
     "should-equal": "^1.0.1",
     "uglify-js": "^3.0.10"
   },
+  "dependencies": {
+    "yauzl": "^2.9.1"
+  },
   "bin": {
     "bsb": "lib/bsb",
     "bsc": "lib/bsc",
