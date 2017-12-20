@@ -26,7 +26,7 @@ if (isWin) {
 }
 
 https.get('https://github.com/bsansouci/bsb-native/releases/download/v2.1.1.007/' + zipFilename, (resp) => {
-  var len = parseInt(response.headers['content-length'], 10);
+  var len = parseInt(resp.headers['content-length'], 10);
   
   var fileStream = fs.createWriteStream(zipFilename)
  
