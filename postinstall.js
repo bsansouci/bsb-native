@@ -4,9 +4,10 @@ var exec = require("child_process").exec;
 var path = require("path");
 var https = require('https');
 
+var isWin = process.platform === "win32";
+var isOSX = process.platform === "darwin";
 function mkdirp(path, cb){
-  console.log(path);
-  if (process.platform === "win32"){
+  if (isWin){
     exec("mkdir " + path.replace(/\//g, '\\').replace(/ /g, '\\ '), cb);
   } else {
     exec("mkdir -p " + path, cb);
@@ -14,8 +15,6 @@ function mkdirp(path, cb){
 };
 
 var zipFilename;
-var isWin = process.platform === "win32";
-var isOSX = process.platform === "darwin";
 if (isWin) {
   zipFilename = "bsb-native-win-v2.1.1.zip";
 } else if (isOSX) {
@@ -25,20 +24,35 @@ if (isWin) {
   return;
 }
 
-https.get('https://github.com/bsansouci/bsb-native/releases/download/v2.1.1.007/' + zipFilename, (resp) => {
-  var len = parseInt(resp.headers['content-length'], 10);
+https.get('https://github.com/bsansouci/bsb-native/releases/download/v2.1.1.007/' + zipFilename, function(res) {
+  if (res.statusCode === 302) {
+    https.get(res.headers.location, function(res) {
+      handleResponse(res);
+    });
+    return;
+  }
+  handleResponse(res);
+}).on("error", (err) => {
+  console.error("Error: " + err.message);
+});
+
+function handleResponse(res) {
+  res.setEncoding('binary');
+
+  var len = parseInt(res.headers['content-length'], 10);
+  var fileStream = fs.createWriteStream(zipFilename, {encoding: "binary"});
+  var downloaded = 0;
   
-  var fileStream = fs.createWriteStream(zipFilename)
- 
   // A chunk of data has been recieved.
-  resp.on('data', (chunk) => {
+  res.on('data', (chunk) => {
+    downloaded += chunk.length;
     fileStream.write(chunk);
-    process.stdout.write("Downloading " + (100.0 * downloaded / len).toFixed(2) + "% " + downloaded + " bytes\r");
+    process.stdout.write("Downloading " + (100.0 * downloaded / len).toFixed(2) + "% " + (downloaded / 1000) + " kb\r");
   });
  
   // The whole response has been received. Print out the result.
-  resp.on('end', () => {
-    file.end();
+  res.on('end', () => {
+    fileStream.end();
 
     yauzl.open(zipFilename, {lazyEntries: true}, function(err, zipfile) {
       if (err) throw err;
@@ -53,7 +67,7 @@ https.get('https://github.com/bsansouci/bsb-native/releases/download/v2.1.1.007/
         } else {
           // file entry
 
-          process.stdout.write("Unzipped " + i + " of 3385 files\r");
+          process.stdout.write("Unzipped " + i + " of 3385 files                  \r");
           zipfile.openReadStream(entry, function(err, readStream) {
             if (err) throw err;
             readStream.on("end", function() {
@@ -66,6 +80,7 @@ https.get('https://github.com/bsansouci/bsb-native/releases/download/v2.1.1.007/
                   readStream.pipe(fs.createWriteStream(entry.fileName));
                 });
               } else {
+                console.log(e);
                 throw e
               }
             });
@@ -73,10 +88,6 @@ https.get('https://github.com/bsansouci/bsb-native/releases/download/v2.1.1.007/
           });
         }
       });
-    });
-
+    })
   });
- 
-}).on("error", (err) => {
-  console.error("Error: " + err.message);
-});
+}
