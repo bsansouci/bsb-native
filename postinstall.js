@@ -16,15 +16,15 @@ function mkdirp(path, cb){
 
 var zipFilename;
 if (isWin) {
-  zipFilename = "bsb-native-win-v2.1.1.zip";
+  zipFilename = "bsb-native-win-2.1.1.zip";
 } else if (isOSX) {
-  zipFilename = "bsb-native-osx-v2.1.1.zip";
+  zipFilename = "bsb-native-osx-2.1.1.zip";
 } else {
   console.error("No linux pre-built binaries yet! Coming soon (Go ping @bsansouci on Discord so he hurries up)");
   return;
 }
 
-https.get('https://github.com/bsansouci/bsb-native/releases/download/v2.1.1.007/' + zipFilename, function(res) {
+https.get('https://github.com/bsansouci/bsb-native/releases/download/2.1.1/' + zipFilename, function(res) {
   if (res.statusCode === 302) {
     https.get(res.headers.location, function(res) {
       handleResponse(res);
