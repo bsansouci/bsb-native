@@ -138,7 +138,10 @@ let link link_byte_or_native
         :: (if bs_super_errors then ["-bs-super-errors"] else [])) 
         @ extra_args
         @ warning_command
-        @ "-o" :: output_file :: all_object_files in
+        (* We filter out -thread because that'll lead to a linker warning like 
+          "ld: warning: directory not found for option '-L/path/of/machine/where/artifacts/where/compiled" 
+        *)
+        @ "-o" :: output_file :: (List.filter (fun thing -> thing <> "-thread") all_object_files) in
         (* List.iter (fun a -> print_endline a) list_of_args; *)
       Unix.execvp
         compiler
