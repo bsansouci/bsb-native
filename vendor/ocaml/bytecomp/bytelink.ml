@@ -44,9 +44,7 @@ let lib_dllibs = ref []
 
 let add_ccobjs origin l =
   if not !Clflags.no_auto_link then begin
-    if
-      String.length !Clflags.use_runtime = 0
-      && String.length !Clflags.use_prims = 0
+    if String.length !Clflags.use_prims = 0
     then begin
       if l.lib_custom then Clflags.custom_runtime := true;
       lib_ccobjs := l.lib_ccobjs @ !lib_ccobjs;
@@ -317,7 +315,7 @@ let link_bytecode ppf tolink exec_name standalone =
     Bytesections.init_record outchan;
     (* The path to the bytecode interpreter (in use_runtime mode) *)
     if String.length !Clflags.use_runtime > 0 then begin
-      output_string outchan ("#!" ^ (make_absolute !Clflags.use_runtime));
+      output_string outchan ((make_absolute !Clflags.use_runtime));
       output_char outchan '\n';
       Bytesections.record outchan "RNTM"
     end;
