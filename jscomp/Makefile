@@ -322,16 +322,6 @@ OTHER_CORE_SRCS= bsppx_main bspack_main jsoo_main  bspp_main js_cmi_datasets \
 
 OTHER_CORE_CMXS= $(addprefix core/, $(addsuffix .cmx, $(OTHER_CORE_SRCS)))
 
-bsb/bsb_default_paths.ml:../scripts/opam_config_compiler_packed.ml
-	../vendor/ocaml/ocamlc.opt -g -o ../scripts/opam_config_compiler.exe ../vendor/ocaml/otherlibs/unix/unix.cma ../scripts/opam_config_compiler_packed.ml
-	../scripts/opam_config_compiler.exe
-
-bsb/bsb_default_paths.cmi: bsb/bsb_default_paths.mli
-	$(NATIVE) $(INCLUDES) $(COMPFLAGS) -c $<
-
-bsb/bsb_default_paths.cmx: bsb/bsb_default_paths.cmi
-	$(NATIVE) $(INCLUDES) $(COMPFLAGS) -c bsb/bsb_default_paths.ml
-
 BSB_SRCS= bsb_config\
 	bsb_exception\
 	bsb_db\
@@ -370,12 +360,12 @@ BSB_SRCS= bsb_config\
 	bsb_templates\
 	bsb_theme_init
 
-BSB_HELPER_SRCS=bsb_helper_linker\
-	bsb_helper_packer\
-	bsb_helper_extract\
-	bsb_helper_depfile_gen\
+BSB_HELPER_SRCS=\
 	bsb_helper_dep_graph\
-	bsb_helper_main
+	bsb_helper_depfile_gen\
+	bsb_helper_extract\
+  bsb_helper_linker\
+	bsb_helper_packer
 
 BSB_HELPER_CMXS=$(addprefix bsb/, $(addsuffix .cmx, $(BSB_HELPER_SRCS)))
 BSB_HELPER_CMOS=$(addprefix bsb/, $(addsuffix .cmo, $(BSB_HELPER_SRCS)))
@@ -428,7 +418,7 @@ check: $(EXT_CMXS) $(COMMON_CMXS) $(SYNTAX_CMXS) $(DEPENDS_CMXS) $(CORE_CMXS) $(
 ../lib/bsb.exe: bs_hash.cmxa ext.cmxa common.cmxa  bsb.cmxa bsb/bsb_main.cmx
 	$(NATIVE) -I +compiler-libs -g  ocamlcommon.cmxa unix.cmxa str.cmxa $^ -o $@
 
-../lib/bsb_helper.exe: bs_hash.cmxa ext.cmxa common.cmxa  bsb_helper.cmxa
+../lib/bsb_helper.exe: bs_hash.cmxa ext.cmxa common.cmxa  bsb.cmxa bsb_helper.cmxa bsb/bsb_helper_main.cmx
 	$(NATIVE) -I +compiler-libs -g  ocamlcommon.cmxa unix.cmxa str.cmxa $^ -o $@
 
 # bin/bsc:  ext.cmxa common.cmxa  depends.cmxa syntax.cmxa core.cmxa

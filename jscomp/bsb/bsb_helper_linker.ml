@@ -38,9 +38,11 @@ let link link_byte_or_native
   ~warnings 
   ~warn_error
   cwd =
-  let suffix_object_files, suffix_library_files, compiler, add_custom, output_file = begin match link_byte_or_native with
-  | LinkBytecode output_file -> Literals.suffix_cmo, Literals.suffix_cma , "ocamlc"  , true, output_file
-  | LinkNative output_file   -> Literals.suffix_cmx, Literals.suffix_cmxa, "ocamlopt", false, output_file
+  let ocaml_dir = Bsb_build_util.get_ocaml_dir cwd in
+  let ocaml_lib = Bsb_build_util.get_ocaml_lib_dir ~is_js:false cwd in
+  let suffix_object_files, suffix_library_files, compiler, add_custom, output_file, extra_args = begin match link_byte_or_native with
+  | LinkBytecode output_file -> Literals.suffix_cmo, Literals.suffix_cma , "ocamlc"  , true, output_file, [ "-use-runtime"; (ocaml_dir // "bin" // "ocamlrun"); "-dllpath"; (ocaml_lib // "stublibs") ]
+  | LinkNative output_file   -> Literals.suffix_cmx, Literals.suffix_cmxa, "ocamlopt", false, output_file, []
   end in
   (* Map used to track the path to the files as the dependency_graph that we're going to read from the mlast file only contains module names *)
   let module_to_filepath = List.fold_left
@@ -77,7 +79,6 @@ let link link_byte_or_native
         (Ext_path.combine dir (Literals.library_file ^ suffix_library_files)) :: acc)
       [] includes in
     (* This list will be reversed so we append the otherlibs object files at the end, and they'll end at the beginning. *)
-    let ocaml_dir = Bsb_build_util.get_ocaml_dir cwd in
     
     let suffix = begin match link_byte_or_native with
       | LinkBytecode _ -> Literals.suffix_cma
@@ -89,7 +90,7 @@ let link link_byte_or_native
       | "compiler-libs" -> 
         ((ocaml_dir // "lib" // "ocaml" // "compiler-libs" // "ocamlcommon") ^ suffix) :: acc
       | "threads" -> 
-        (ocaml_dir // "lib" // "ocaml" // "threads" // "threads" ^ suffix) :: acc
+        "-thread" :: (ocaml_dir // "lib" // "ocaml" // "threads" // "threads" ^ suffix) :: acc
       | v -> (ocaml_dir // "lib" // "ocaml" // v ^ suffix) :: acc
     ) [] ocaml_dependencies in 
 
@@ -130,12 +131,12 @@ let link link_byte_or_native
        So if you don't care about opam dependencies you can solely rely on Bucklescript and npm, no need 
        to install ocamlfind. 
      *)
-    let ocaml_lib = Bsb_build_util.get_ocaml_lib_dir ~is_js:false cwd in
     if ocamlfind_packages = [] then
       let compiler = ocaml_dir // compiler ^ ".opt" in
       let list_of_args = (compiler :: "-g"
         :: "-I" :: ocaml_lib :: "-I" :: (ocaml_lib // "stublibs") :: "-nostdlib"
         :: (if bs_super_errors then ["-bs-super-errors"] else [])) 
+        @ extra_args
         @ warning_command
         @ "-o" :: output_file :: all_object_files in
         (* List.iter (fun a -> print_endline a) list_of_args; *)
