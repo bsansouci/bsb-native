@@ -3,8 +3,8 @@
   "version": "${bsb:proj-version}",
   "scripts": {
     "build": "bsb -make-world",
-    "start": "bsb -make-world -w",
-    "clean": "bsb -clean-world"
+    "clean": "bsb -clean-world",
+    "start": "./lib/bs/bytecode/index.byte"
   },
   "devDependencies": {
     "bs-platform": "bsansouci/bsb-native"

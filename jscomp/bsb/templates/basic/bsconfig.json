@@ -9,5 +9,8 @@
     "backend": "native",
     "main-module": "Index"
   }],
+  "bs-dependencies": [
+    // add your bs-dependencies here
+  ],
   "refmt": 3
 }
