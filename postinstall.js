@@ -20,7 +20,7 @@ if (isWin) {
   zipFilename = "bsb-native-win-2.1.1.zip";
 } else if (isOSX) {
   zipFilename = "bsb-native-osx-2.1.1.zip";
-} else if (isOSX) {
+} else if (isLinux) {
   zipFilename = "bsb-native-linux-2.1.1.zip";
 } else {
   console.error("No pre-built binaries for " + process.platform + " yet! Please open an issue on bsansouci/bsb-native!");
