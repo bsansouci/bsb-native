@@ -6,6 +6,7 @@ var https = require('https');
 
 var isWin = process.platform === "win32";
 var isOSX = process.platform === "darwin";
+var isLinux = process.platform === "linux";
 function mkdirp(path, cb){
   if (isWin){
     exec("mkdir " + path.replace(/\//g, '\\').replace(/ /g, '\\ '), cb);
@@ -19,8 +20,10 @@ if (isWin) {
   zipFilename = "bsb-native-win-2.1.1.zip";
 } else if (isOSX) {
   zipFilename = "bsb-native-osx-2.1.1.zip";
+} else if (isOSX) {
+  zipFilename = "bsb-native-linux-2.1.1.zip";
 } else {
-  console.error("No linux pre-built binaries yet! Coming soon (Go ping @bsansouci on Discord so he hurries up)");
+  console.error("No pre-built binaries for " + process.platform + " yet! Please open an issue on bsansouci/bsb-native!");
   return;
 }
 
