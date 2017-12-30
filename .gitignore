@@ -22,6 +22,7 @@ _build
 *.bak
 *.swp
 *.swo
+.merlin
 
 *.jsx
 *.lambda
