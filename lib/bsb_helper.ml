@@ -8163,14 +8163,27 @@ let link link_byte_or_native
       | LinkNative _   -> Literals.suffix_cmxa
     end in
 
-    let ocaml_dependencies = List.fold_left (fun acc v -> 
-      match v with
-      | "compiler-libs" -> 
-        ((ocaml_dir // "lib" // "ocaml" // "compiler-libs" // "ocamlcommon") ^ suffix) :: acc
-      | "threads" -> 
-        "-thread" :: (ocaml_dir // "lib" // "ocaml" // "threads" // "threads" ^ suffix) :: acc
-      | v -> (ocaml_dir // "lib" // "ocaml" // v ^ suffix) :: acc
-    ) [] ocaml_dependencies in 
+    let ocaml_dependencies = if ocamlfind_packages = [] then 
+      List.fold_left (fun acc v -> 
+        match v with
+        | "compiler-libs" -> 
+          ((ocaml_dir // "lib" // "ocaml" // "compiler-libs" // "ocamlcommon") ^ suffix) :: acc
+        | "threads" -> 
+          "-thread" :: (ocaml_dir // "lib" // "ocaml" // "threads" // "threads" ^ suffix) :: acc
+        | v -> (ocaml_dir // "lib" // "ocaml" // v ^ suffix) :: acc
+      ) [] ocaml_dependencies 
+    else begin 
+      List.fold_left (fun acc v -> 
+        match v with
+        | "compiler-libs" -> 
+          "-package" :: "compiler-libs.common" :: acc
+        | "threads" -> 
+          "-thread" :: "-package" :: "threads" :: acc
+        | "nums" -> 
+          "-package" :: "num" :: acc
+        | v -> "-package" :: v :: acc
+      ) [] ocaml_dependencies
+    end in 
 
     (* let (otherlibs, extra_flags) = 
       let compiler_libs_requested = List.filter (fun v -> v = "compiler-libs") ocaml_flags in
