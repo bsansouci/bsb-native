@@ -52,11 +52,8 @@ function handleResponse(res) {
     fileStream.write(chunk);
     process.stdout.write("Downloading " + (100.0 * downloaded / len).toFixed(2) + "% " + (downloaded / 1000) + " kb\r");
   });
- 
-  // The whole response has been received. Print out the result.
-  res.on('end', () => {
-    fileStream.end();
-
+  
+  fileStream.on('finish', function() {
     yauzl.open(zipFilename, {lazyEntries: true}, function(err, zipfile) {
       if (err) throw err;
       var i = 0;
@@ -93,5 +90,10 @@ function handleResponse(res) {
         }
       });
     })
+  });
+
+  // The whole response has been received. Print out the result.
+  res.on('end', function() {
+    fileStream.end();
   });
 }
