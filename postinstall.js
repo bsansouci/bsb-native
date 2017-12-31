@@ -58,6 +58,9 @@ function handleResponse(res) {
       if (err) throw err;
       var i = 0;
       zipfile.readEntry();
+      zipfile.once("close", function(entry) {
+        fs.unlink(zipFilename, () => console.log("Unzip successful."));
+      });
       zipfile.on("entry", function(entry) {
         if (/\/$/.test(entry.fileName)) {
           // Directory file names end with '/'.
@@ -65,7 +68,7 @@ function handleResponse(res) {
           // An entry's fileName implicitly requires its parent directories to exist.
           fs.mkdir(entry.fileName, () => zipfile.readEntry());
         } else {
-          // Mode roughly transcribes to the unix permissions.
+          // Mode roughly translates to unix permissions.
           // See https://github.com/thejoshwolfe/yauzl/issues/57#issuecomment-301847099          
           var mode = entry.externalFileAttributes >>> 16;
           process.stdout.write("Unzipped " + i + " of "+zipfile.entryCount+" files                  \r");
