@@ -120,7 +120,7 @@ let output_ninja_and_namespace_map
     | "compiler-libs" ->
       (if use_ocamlfind then
         "-package +compiler-libs.common " else
-        "-I +compiler-lib ") ^ acc
+        "-I +compiler-libs ") ^ acc
     | "threads" -> "-thread " ^ acc
     | _ -> acc
   ) ocaml_flags ocaml_dependencies) in
