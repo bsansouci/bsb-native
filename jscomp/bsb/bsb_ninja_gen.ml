@@ -115,12 +115,14 @@ let output_ninja_and_namespace_map
       (ocaml_flags @ ["-color"; "always"])  in
 
 
+  let ocaml_lib = Bsb_build_util.get_ocaml_lib_dir ~is_js:(backend = Bsb_config_types.Js) root_project_dir in
+
   let ocaml_flags = (List.fold_left (fun acc v ->
     match v with
     | "compiler-libs" ->
       (if use_ocamlfind then
         "-package +compiler-libs.common " else
-        "-I +compiler-lib ") ^ acc
+        "-I " ^ (ocaml_lib // "compiler-libs")) ^ acc
     | "threads" -> "-thread " ^ acc
     | _ -> acc
   ) ocaml_flags ocaml_dependencies) in
@@ -251,7 +253,6 @@ let output_ninja_and_namespace_map
         acc 
 
   in 
-  let ocaml_lib = Bsb_build_util.get_ocaml_lib_dir ~is_js:(backend = Bsb_config_types.Js) root_project_dir in
   let emit_bsc_lib_includes source_dirs = 
     let common_include_flags =
       (all_includes (if namespace = None then source_dirs
