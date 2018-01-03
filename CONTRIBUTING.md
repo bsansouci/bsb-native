@@ -19,19 +19,12 @@ opam switch reinstall 4.02.3+buckle-master # do this if you get errors even from
 opam install camlp4
 eval `opam config env`
 
-# Install dev-time npm dependencies
-npm install
-
 # Build BuckleScript's forked OCaml
-cd vendor/ocaml
-./configure -prefix `pwd`
-make world.opt
-make install
+./scripts/buildocaml.sh
 
 # Build BuckleScript itself
-cd ../../
+cd jscomp
 make
-make install
 
 # install this local bs globally
 npm -g install .
