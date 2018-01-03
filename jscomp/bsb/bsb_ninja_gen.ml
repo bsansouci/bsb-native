@@ -106,19 +106,25 @@ let output_ninja_and_namespace_map
   
   let use_ocamlfind = ocamlfind_dependencies <> [] in
   
-  let ocaml_flags = (List.fold_left (fun acc  v -> 
-    match v with
-    | "compiler-libs" -> "-I" :: "+compiler-libs" :: acc
-    | "threads" -> "-thread" :: acc
-    | _ -> acc
-  ) [] ocaml_dependencies) in
   let external_ocaml_dependencies = List.fold_left (fun acc v -> Depend.StringSet.add v acc) external_ocaml_dependencies ocaml_dependencies in
   let external_ocaml_dependencies = Depend.StringSet.elements external_ocaml_dependencies in
-  
+
   let ocaml_flags =
     Bsb_build_util.flag_concat
       (if use_ocamlfind then "-passopt" else Ext_string.single_space)
       (ocaml_flags @ ["-color"; "always"])  in
+
+
+  let ocaml_flags = (List.fold_left (fun acc v ->
+    match v with
+    | "compiler-libs" ->
+      (if use_ocamlfind then
+        "-package +compiler-libs.common " else
+        "-I +compiler-lib ") ^ acc
+    | "threads" -> "-thread " ^ acc
+    | _ -> acc
+  ) ocaml_flags ocaml_dependencies) in
+
   let bs_super_errors = if main_bs_super_errors && not use_ocamlfind && backend != Bsb_config_types.Js then "-bs-super-errors" else "" in
   
   let oc = open_out_bin (cwd // Bsb_config.lib_bs // nested // Literals.build_ninja) in
@@ -247,13 +253,16 @@ let output_ninja_and_namespace_map
   in 
   let ocaml_lib = Bsb_build_util.get_ocaml_lib_dir ~is_js:(backend = Bsb_config_types.Js) root_project_dir in
   let emit_bsc_lib_includes source_dirs = 
+    let common_include_flags =
+      (all_includes (if namespace = None then source_dirs
+      else Filename.current_dir_name :: source_dirs)) in
+    let post_ocamlfind_include_flags =
+      (if use_ocamlfind then common_include_flags else
+      (ocaml_lib :: common_include_flags)) in
     Bsb_ninja_util.output_kv
-      Bsb_build_schemas.bsc_lib_includes 
-      (Bsb_build_util.flag_concat dash_i @@ 
-       (ocaml_lib :: (all_includes 
-                 (if namespace = None then source_dirs 
-                  else Filename.current_dir_name :: source_dirs) )))  oc 
-  in   
+      Bsb_build_schemas.bsc_lib_includes
+       (Bsb_build_util.flag_concat dash_i @@ post_ocamlfind_include_flags) oc
+  in
   let  bs_groups, bsc_lib_dirs, static_resources =
     let number_of_dev_groups = Bsb_dir_index.get_current_number_of_dev_groups () in
     if number_of_dev_groups = 0 then
