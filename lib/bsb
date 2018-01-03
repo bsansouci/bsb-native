@@ -20,6 +20,7 @@ var verbose = false
  * @type {string[]}
  */
 var delegate_args = []
+var backend_arg = []
 var process_argv = process.argv
 for (var i = 2; i < process_argv.length; ++i) {
     var current = process_argv[i]
@@ -28,6 +29,9 @@ for (var i = 2; i < process_argv.length; ++i) {
         watch_mode = true
     } else if (current === "-verbose"){
         verbose = true
+    } else if (current === "-backend" && i + 1 < process_argv.length) {
+        backend_arg.push(current);
+        backend_arg.push(process_argv[i + 1]);
     }
 }
 
@@ -246,7 +250,7 @@ if (watch_mode) {
             }
             reasons_to_rebuild = [];
             var p = child_process
-                .spawn(bsb_exe, [], sub_config);
+                .spawn(bsb_exe, backend_arg, sub_config);
             p.on('exit', build_finished_callback)
             p.stderr
                 .setEncoding('utf8')
