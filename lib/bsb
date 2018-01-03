@@ -101,8 +101,8 @@ if (watch_mode) {
             process.on('SIGHUP', onExit)
             process.on('uncaughtException', onExit)
             // close when stdin stops
-            process.stdin.on('end', onExit)
-            process.stdin.resume()
+            process.stdin.on('close', onExit)
+            // process.stdin.resume()
 
             return true
         } catch (exn) {
