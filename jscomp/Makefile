@@ -30,7 +30,11 @@ INCLUDES= -I +compiler-libs -I stubs -I ext -I common -I syntax -I depends -I co
 .mll.ml:
 	$(OCAMLLEX) $< -o $@ || (rm $@ && exit 2)
 
-all: ../lib/bsb.exe ../lib/bsb_helper.exe ../lib/bsc.exe libs
+all: 
+	make ../lib/bsb.exe 
+	make ../lib/bsb_helper.exe 
+	make ../lib/bsc.exe 
+	make libs
 
 install:
 	make -C ../ install

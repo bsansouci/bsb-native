@@ -19,12 +19,8 @@ opam switch reinstall 4.02.3+buckle-master # do this if you get errors even from
 opam install camlp4
 eval `opam config env`
 
-# Build BuckleScript's forked OCaml
-./scripts/buildocaml.sh
-
-# Build BuckleScript itself
-cd jscomp
-make
+# Build BuckleScript's forked OCaml and bucklescript
+node scripts/install.js
 
 # install this local bs globally
 npm -g install .
@@ -39,6 +35,10 @@ bsb -init foo
 cd foo
 npm run build
 ```
+
+All dev is done inside `jscomp`.
+Running `make` in `bsb-native` will build the packed files that are inside `bsb-native/lib`. 
+Running `make` inside `jscomp` will build using the current files, that's what you'll want to use when dev.
 
 And whenever you modify a file in bucklescript, run this inside `jscomp/`:
 
