@@ -52,10 +52,9 @@ let bsc_flags =
     "-color"; "always" 
   ]
 
-let ocaml_flags = ["-no-alias-deps"; "-thread"; "-I"; "+compiler-libs"]
+let ocaml_flags = ["-no-alias-deps"]
 
 let refmt_flags = ["--print"; "binary"]
-
 
 let main_entries = [Bsb_config_types.JsTarget "Index"]
 
