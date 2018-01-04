@@ -17581,6 +17581,14 @@ let output_ninja_and_namespace_map
     in 
     if bs_suffix then Ext_string.inter2 "-bs-suffix" result else result
   in 
+  let bsc_flags =
+    Printf.sprintf
+      "-bs-D BSB_BACKEND=\"%s\" %s"
+      (match backend with
+      | Bsb_config_types.Js -> "js"
+      | Bsb_config_types.Bytecode -> "bytecode"
+      | Bsb_config_types.Native -> "native")
+      bsc_flags in
 
   let warnings = Bsb_warning.opt_warning_to_string not_dev warning in
 
