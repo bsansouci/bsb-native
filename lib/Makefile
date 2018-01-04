@@ -34,7 +34,7 @@ bsc.exe: whole_compiler.mli whole_compiler.ml
 
 
 
-all: bsc.exe bsb.exe bsppx.exe bsb_helper.exe refmt.exe refmt3.exe reactjs_jsx_ppx_2.exe
+all: bsc.exe bsb.exe bsppx.exe bsb_helper.exe refmt.exe refmt3.exe reactjs_jsx_ppx_2.exe bsdep.exe
 #  bspp.exe bsdep.exe
 # bspack.exe
 # bsppx.exe is needed for merlin
