@@ -4,9 +4,9 @@ Bsb-native is a fork of [bsb](http://bucklescript.github.io/bucklescript/Manual.
 
 ## Install
 
-1) Add `"bs-platform": "bsansouci/bsb-native"` as a devDependency to your `package.json`
+1) Add `"bs-platform": "bsansouci/bsb-native#2.1.1"` as a devDependency to your `package.json`
 2) Add a `bsconfig.json` like you would for bsb. Bsb-native uses the same schema, located [here](http://bucklescript.github.io/bucklescript/docson/#build-schema.json) with small additions like `entries`.
-3) run `npm install` (**warning**: currently this doesn't work with npm5. You can downgrade to npm4 using `npm i -g npm@latest-4` or use yarn)
+3) run `npm install`
 
 For [example](https://github.com/bsansouci/BetterErrors/tree/bsb-support):
 ```json
