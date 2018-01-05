@@ -89,7 +89,8 @@ Yes `bsb-native` supports opam packages (see [ocamlfind example](https://github.
     "allowed-build-kinds": "js", // Can be a string or an array, with the same values as "entries".
 
     // List of relative paths (relative from library dir) to be linked at the 
-    // end. Bsb-native doesn't care how those were generated as long as they // are there at the linking stage. Generally you can use `build-script` to
+    // end. Bsb-native doesn't care how those were generated as long as they
+    // are there at the linking stage. Generally you can use `build-script` to
     // build those.
     "static-libraries": ["lib/c/my_lib.o"],
 
