@@ -8,7 +8,7 @@ Bsb-native is a fork of [bsb](http://bucklescript.github.io/bucklescript/Manual.
 2) Add a `bsconfig.json` like you would for bsb. Bsb-native uses the same schema, located [here](http://bucklescript.github.io/bucklescript/docson/#build-schema.json) with small additions like `entries`.
 3) run `npm install`
 
-For [example](https://github.com/bsansouci/BetterErrors/tree/bsb-support):
+An [example bsconfig.json](https://github.com/bsansouci/BetterErrors/tree/bsb-support):
 ```json
 {
   "name" : "NameOfLibrary",
@@ -25,6 +25,16 @@ For [example](https://github.com/bsansouci/BetterErrors/tree/bsb-support):
 
 That will pickup the first entry's `backend` and build all entries to that `backend`. e.g if you have multiple `bytecode` targets, they'll all get built but not the `js` ones nor `native` ones. If you want to build to all targets you need to run the build command multiple times with different `-backend`.
 
+## Initialize a new package
+
+Bsb-native comes with a basic init package to get you started. To create a package named Hello run:
+
+```sh
+bsb -init Hello
+```
+
+And a folder named `Hello` will be created with a basic project layout. If you want to initialize an already created folder, use `.` as the last argument.
+
 ## Useful flags
 The `-make-world` flag builds all of the dependencies and the project.
 
@@ -37,7 +47,7 @@ The `-backend [js|bytecode|native]` flag tells `bsb-native` to build all entries
 The build artifacts are put into the folder `lib/bs`. The bytecode executable would be at `lib/bs/bytecode/index.byte` and the native one at `lib/bs/native/index.native` for example.
 
 ## Opam packages
-Yes `bsb-native` supports opam packages (see [ocamlfind example](https://github.com/bsansouci/bsb-native-example/tree/opam-example)). 
+Yes `bsb-native` supports opam packages (see [ocamlfind example](https://github.com/bsansouci/bsb-native-example/tree/opam-example)).
 **BUT** you need to be on the switch `4.02.3+buckle-master` (which you can get to by running `opam switch 4.02.3+buckle-master`).
 ```js
 {
@@ -54,11 +64,11 @@ Yes `bsb-native` supports opam packages (see [ocamlfind example](https://github.
 ## bsconfig.json schema
 ```js
 {
-    // All of the bsb fields will work as expected. Here are just the added 
+    // All of the bsb fields will work as expected. Here are just the added
     // features.
 
     // Entries is an array of targets to be built.
-    // When running `bsb -backend bytecode`, bsb will filter this array for 
+    // When running `bsb -backend bytecode`, bsb will filter this array for
     // all the entries compiling to bytecode and compile _all_ of those.
     "entries": [{
       "backend": "bytecode", // can be "bytecode" (ocamlc), "js" (bsc) or "native" (ocamlopt),
@@ -67,22 +77,22 @@ Yes `bsb-native` supports opam packages (see [ocamlfind example](https://github.
 
     // Array of opam dependencies.
     "ocamlfind-dependencies": ["lwt.unix"],
-    
-    // Array of built-in ocaml dependencies that are not Pervasives (ie not 
+
+    // Array of built-in ocaml dependencies that are not Pervasives (ie not
     // linked by default).
     // This is useful for making a ppx, where you need "compiler-libs".
-    // All of these except "compiler-libs" is linked by default, so you don't 
-    // have to worry about it. That said it does increase the binary size so 
+    // All of these except "compiler-libs" is linked by default, so you don't
+    // have to worry about it. That said it does increase the binary size so
     // you can remove unused things here.
     "ocaml-dependencies": ["bigarray", "unix", "threads", "compiler-libs"],
-  
-    // Array of flags to pass the OCaml compiler. This shouldn't be needed for 
+
+    // Array of flags to pass the OCaml compiler. This shouldn't be needed for
     // most things.
     "ocaml-flags": ["-bin-annot"],
 
-    // This allows you to write JS specific packages (for example) and depend 
+    // This allows you to write JS specific packages (for example) and depend
     // on them without bsb choking on them when building to another platform.
-    // If you have `MyLibJs` which exposes a module `Bla`, and `MyLibNative` 
+    // If you have `MyLibJs` which exposes a module `Bla`, and `MyLibNative`
     // which also exposes `Bla`, the compiler will use the native `Bla` when
     // compiling to native and the JS `Bla` when compiling to JS thanks to this
     // flag.
@@ -95,7 +105,7 @@ Yes `bsb-native` supports opam packages (see [ocamlfind example](https://github.
     "static-libraries": ["lib/c/my_lib.o"],
 
     // Command invoked first, before bsb tries to build anything else.
-    // Useful for building C code linked into the exec using 
+    // Useful for building C code linked into the exec using
     // `static-libraries`.
     "build-script": "make",
 
@@ -123,4 +133,3 @@ include
    }];
 ```
 inside a file called `MyModule` (for example). Then when you build to JS that module will use the `MyModule_Js` implementation. Same for native/bytecode. This is deeply integrated into bsb-native to make everything easier.
-

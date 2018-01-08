@@ -2,16 +2,11 @@
   "name": "${bsb:name}",
   "version": "${bsb:proj-version}",
   "scripts": {
-    "clean": "bsb -clean-world",
     "build": "bsb -make-world",
-    "watch": "bsb -make-world -w"
+    "clean": "bsb -clean-world",
+    "start": "./lib/bs/bytecode/index.byte"
   },
-  "keywords": [
-    "BuckleScript"
-  ],
-  "author": "",
-  "license": "MIT",
   "devDependencies": {
-    "bs-platform": "^${bsb:bs-version}"
+    "bs-platform": "bsansouci/bsb-native"
   }
 }

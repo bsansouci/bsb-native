@@ -1,19 +1,16 @@
 {
   "name": "${bsb:name}",
   "version": "${bsb:proj-version}",
-  "sources": {
-    "dir" : "src",
-    "subdirs" : true
-  },
-  "package-specs": {
-    "module": "commonjs",
-    "in-source": true
-  },
-  "suffix": ".bs.js",
+  "sources": "src",
+  "entries": [{
+    "backend": "bytecode",
+    "main-module": "Index"
+  },{
+    "backend": "native",
+    "main-module": "Index"
+  }],
   "bs-dependencies": [
-      // add your bs-dependencies here 
+    // add your bs-dependencies here
   ],
-  "warnings": {
-    "error" : "+101"
-  }
+  "refmt": 3
 }
