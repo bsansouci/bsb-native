@@ -7,6 +7,6 @@
     "start": "./lib/bs/bytecode/index.byte"
   },
   "devDependencies": {
-    "bs-platform": "bsansouci/bsb-native"
+    "bs-platform": "bsansouci/bsb-native#2.1.1"
   }
 }
