@@ -49,7 +49,7 @@ let warnings = "-40+6+7+27+32..39+44+45"
 let bsc_flags = 
   [
     "-no-alias-deps";
-    "-color"; "always" 
+    (* "-color"; "always"  *)
   ]
 
 let ocaml_flags = ["-no-alias-deps"]

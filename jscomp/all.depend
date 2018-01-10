@@ -859,7 +859,8 @@ bsb/bsb_helper_packer.cmx : ext/string_set.cmx ext/string_map.cmx \
     bsb/bsb_helper_extract.cmx bsb/bsb_helper_dep_graph.cmx \
     bsb/bsb_exception.cmx bsb/bsb_build_util.cmx bsb/bsb_helper_packer.cmi
 bsb/bsb_log.cmx : ext/ext_string.cmx ext/ext_color.cmx bsb/bsb_log.cmi
-bsb/bsb_main.cmx : ext/ext_sys.cmx ext/ext_string.cmx ext/ext_pervasives.cmx \
+bsb/bsb_main.cmx : ../vendor/opam_of_packagejson/opam_of_packagejson.cmx \
+    ext/ext_sys.cmx ext/ext_string.cmx ext/ext_pervasives.cmx \
     ext/ext_path.cmx ext/ext_json_parse.cmx ext/ext_array.cmx \
     bsb/bsb_world.cmx bsb/bsb_theme_init.cmx bsb/bsb_query.cmx \
     bsb/bsb_ninja_regen.cmx bsb/bsb_log.cmx bsb/bsb_exception.cmx \

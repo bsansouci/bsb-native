@@ -13,11 +13,13 @@ OCAML_SRC_TYPING=../vendor/ocaml/typing
 OCAML_SRC_BYTECOMP=../vendor/ocaml/bytecomp
 OCAML_SRC_DRIVER=../vendor/ocaml/driver
 OCAML_SRC_TOOLS=../vendor/ocaml/tools
+
+OPAM_OF_PACKAGEJSON=../vendor/opam_of_packagejson/
 .SUFFIXES: .mli .ml .cmi .cmx .mll .c .o .cmo
 
 print-%  : ; @echo $* = $($*)
 
-INCLUDES= -I +compiler-libs -I stubs -I ext -I common -I syntax -I depends -I core -I bsb -I ounit -I ounit_tests -I super_errors -I outcome_printer
+INCLUDES= -I +compiler-libs -I stubs -I ext -I common -I syntax -I depends -I core -I bsb -I ounit -I ounit_tests -I super_errors -I outcome_printer -I ../vendor/opam_of_packagejson
 
 .mli.cmi:
 	$(NATIVE) $(INCLUDES) $(COMPFLAGS) -c $<
@@ -424,7 +426,7 @@ outcome_printer.cma:$(REASON_OUTCOME_PRINTER_CMOS)
 
 check: $(EXT_CMXS) $(COMMON_CMXS) $(SYNTAX_CMXS) $(DEPENDS_CMXS) $(CORE_CMXS) $(BSB_CMXS) $(OTHER_CORE_CMXS) $(MAIN_CMXS) $(SUPER_ERRORS_CMXS) $(REASON_OUTCOME_PRINTER_CMXS) $(OUNIT_CMXS) $(OUNIT_TESTS_CMXS)
 
-../lib/bsb.exe: bs_hash.cmxa ext.cmxa common.cmxa  bsb.cmxa bsb/bsb_main.cmx
+../lib/bsb.exe: bs_hash.cmxa ext.cmxa common.cmxa  bsb.cmxa ../vendor/opam_of_packagejson/opam_of_packagejson.cmx bsb/bsb_main.cmx
 	$(NATIVE) -I +compiler-libs -g  ocamlcommon.cmxa unix.cmxa str.cmxa $^ -o $@
 
 ../lib/bsb_helper.exe: bs_hash.cmxa ext.cmxa common.cmxa  bsb.cmxa bsb_helper.cmxa bsb/bsb_helper_main.cmx
@@ -457,7 +459,7 @@ bin/jsgen.exe:bs_hash.cmxa ext.cmxa jsgen_main.cmx
 .PHONY: check
 
 depend:
-	BS_DEBUG=true $(CAMLDEP) -absname -native -I stubs -I ext -I common -I syntax -I depends -I core -I ounit -I ounit_tests -I bsb -I super_errors -I outcome_printer \
+	BS_DEBUG=true $(CAMLDEP) -absname -native -I stubs -I ext -I common -I syntax -I depends -I core -I ounit -I ounit_tests -I bsb -I super_errors -I outcome_printer -I ../vendor/opam_of_packagejson/ \
 	$(addprefix stubs/, $(addsuffix .ml, $(STUB_SRCS))) \
 	$(addprefix stubs/, $(addsuffix .mli, $(STUB_SRCS))) \
 	$(addprefix ext/, $(addsuffix .ml, $(EXT_SRCS))) \
@@ -558,7 +560,7 @@ SNAPSHOT_DEPS=$(SNAPSHOT_SRCS:.ml=.d)
 	 $< -bs-MD -U BS_DEBUG   -I stubs -I common -I ext -I syntax -I depends -I bsb  -bs-main Bsb_helper_main -o $@
 
 ../lib/bsb.ml:./bin/bspack.exe
-	 $<  -D BS_MIN_LEX_DEPS=true -bs-MD -U BS_DEBUG -I $(OCAML_SRC_UTILS) -I $(OCAML_SRC_PARSING) -I stubs -I common -I ext -I syntax -I depends -I bsb -I ext  -bs-main Bsb_main -o $@
+	 $<  -D BS_MIN_LEX_DEPS=true -bs-MD -U BS_DEBUG -I $(OCAML_SRC_UTILS) -I $(OCAML_SRC_PARSING) -I $(OPAM_OF_PACKAGEJSON) -I stubs -I common -I ext -I syntax -I depends -I bsb -I ext -bs-main Bsb_main -o $@
 
 ../lib/bspp.ml:./bin/bspack.exe
 	  $< -D BS_MIN_LEX_DEPS=true -U BS_DEBUG -bs-MD -module-alias Config=Config_whole_compiler   -I $(OCAML_SRC_UTILS) -I $(OCAML_SRC_PARSING)?parser   -I common -I ext -I syntax -I depends -I bspp -I core -bs-main Bspp_main -o $@

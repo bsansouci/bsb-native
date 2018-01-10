@@ -8215,7 +8215,7 @@ let link link_byte_or_native
     let warning_command = if String.length warn_error > 0 then
       "-warn-error" :: warn_error :: warning_command
     else warning_command in 
-    
+
     let all_object_files = ocaml_dependencies @ clibs @ library_files @ List.rev (list_of_object_files) in
     (* If there are no ocamlfind packages then let's not use ocamlfind, let's use the opt compiler instead.
        This is for mainly because we'd like to offer a "sandboxed" experience for those who want it.
@@ -8240,8 +8240,8 @@ let link link_byte_or_native
     else begin
       (* @CrossPlatform This might work on windows since we're using the Unix module which claims to
          have a windows implementation... We should double check this. *)
-      let list_of_args = ("ocamlfind" :: compiler :: []) 
-        @ (if bs_super_errors then ["-passopt"; "-bs-super-errors"] else []) 
+      let list_of_args = "ocamlfind" :: compiler 
+        :: (if bs_super_errors then ["-passopt"; "-bs-super-errors"] else []) 
         @ ("-linkpkg" :: ocamlfind_packages)
         @ warning_command
         @ ("-g" :: "-o" :: output_file :: all_object_files) in
@@ -8549,7 +8549,7 @@ let pack link_byte_or_native =
     ~warnings:!warnings
     ~warn_error:!warn_error
     (Sys.getcwd ())
-    
+
 let () =
   Arg.parse [
     "-g", Arg.Int (fun i -> dev_group := i ),

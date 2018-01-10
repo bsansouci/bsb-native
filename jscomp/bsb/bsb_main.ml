@@ -54,6 +54,10 @@ let cmdline_build_kind = ref Bsb_config_types.Js
 *)
 let is_cmdline_build_kind_set = ref false
 
+let prepublish = ref false
+
+let build_library = ref false
+
 let get_backend () =
   (* If cmdline_build_kind is set we use it, otherwise we actually shadow it for the first entry. *)
   if !is_cmdline_build_kind_set then
@@ -123,6 +127,12 @@ let bsb_main_flags : (string * Arg.spec * string) list=
         | _ -> failwith "-backend should be one of: 'js', 'bytecode' or 'native'."
       ),
     " Builds the entries in the bsconfig which match the given backend.";
+
+    "-prepublish", Arg.Unit (fun () -> prepublish := true),
+    " Generates META, .install and opam files";
+
+    "-build-library", Arg.Unit (fun () -> build_library := true),
+    " Builds the current package as a library. Outputs a cmxa/cma file."
   ]
 
 
@@ -225,6 +235,7 @@ let () =
           ~generate_watch_metadata:true
           ~root_project_dir:cwd
           ~forced:true
+          ~build_library:!build_library
           ~backend
           cwd bsc_dir ocaml_dir
       in
@@ -246,17 +257,20 @@ let () =
 
             (* [-make-world] should never be combined with [-package-specs] *)
             let make_world = !make_world in 
-            begin match make_world, !force_regenerate with
-              | false, false -> 
+            begin match make_world, !force_regenerate, !build_library with
+              | false, false, false -> 
                 (* [regenerate_ninja] is not triggered in this case
                    There are several cases we wish ninja will not be triggered.
                    [bsb -clean-world]
                    [bsb -regen ]
                 *)
+                if !prepublish then begin 
+                  Opam_of_packagejson.generate cwd
+                end;
                 if !watch_mode then begin
                   watch_exit ()
-                end 
-              | make_world, force_regenerate ->
+                end
+              | make_world, force_regenerate, build_library ->
                 (* If -make-world is passed we first do that because we'll collect
                    the library files as we go. *)
                 let acc_libraries_for_linking = if make_world then
@@ -271,6 +285,7 @@ let () =
                   ~not_dev:false 
                   ~root_project_dir:cwd
                   ~forced:force_regenerate
+                  ~build_library:build_library
                   ~backend
                   cwd bsc_dir ocaml_dir in
                 if !watch_mode then begin
@@ -281,6 +296,9 @@ let () =
                        [bsb -regen ]
                     *)
                 end else begin
+                  if !prepublish then begin 
+                    Opam_of_packagejson.generate cwd
+                  end;
                   let nested = get_string_backend backend in
                   ninja_command_exit vendor_ninja [||] nested
                 end
@@ -305,10 +323,14 @@ let () =
             ~not_dev:false
             ~root_project_dir:cwd
             ~forced:!force_regenerate
+            ~build_library:!build_library
             ~backend
             cwd bsc_dir ocaml_dir in
           if !watch_mode then watch_exit ()
           else begin 
+            if !prepublish then begin 
+              Opam_of_packagejson.generate cwd
+            end;
             let nested = get_string_backend backend in
             ninja_command_exit vendor_ninja ninja_args nested
           end

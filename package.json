@@ -58,6 +58,27 @@
     "url": "https://github.com/bucklescript/bucklescript/issues"
   },
   "homepage": "https://github.com/bucklescript/bucklescript#readme",
+  "esy": {
+    "build": [
+      [ "cp", "-r", "-f", "#{self.target_dir / 'lib' }", "#{self.install}" ],
+      [ "cp", "-r", "-f", "#{self.target_dir / 'vendor' }", "#{self.install}" ]
+    ],
+    "buildsInSource": true,
+    "exportedEnv": {
+      "bs_custom_resolution": {
+        "val": "true",
+        "scope": "global"
+      },
+      "bs_platform__install": {
+        "val": "#{self.install}",
+        "scope": "global"
+      },
+      "PATH": {
+        "val": "#{bs-platform.lib : $PATH}",
+        "scope": "global"
+      }
+    }
+  },
   "opam": {
     "type": "binary",
     "installPath": "bin",

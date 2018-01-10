@@ -1,6 +1,6 @@
 opam-version: "1.2"
 name: "bsbnative"
-version: "1.9.4"
+version: "2.1.1"
 license: "SEE LICENSE IN LICENSE"
 homepage: "https://github.com/bucklescript/bucklescript#readme"
 bug-reports: "https://github.com/bucklescript/bucklescript/issues"
@@ -8,7 +8,4 @@ dev-repo: "git+https://github.com/bucklescript/bucklescript.git"
 authors: [ "Hongbo Zhang <>" ]
 maintainer: "hongbo_zhang <bobzhang1988@gmail.com>"
 tags: [ "ocaml" "bucklescript" "stdlib" "functional programming" ]
-build: [
-  [ "./scripts/opam_install.sh" "%{sbin}%"  ]
-]
 available: [ ocaml-version = "4.02.3" ]

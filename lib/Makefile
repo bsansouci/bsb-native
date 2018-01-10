@@ -27,8 +27,7 @@ refmt3.exe: refmt_main3.mli refmt_main3.ml
 
 reactjs_jsx_ppx_2.exe:reactjs_jsx_ppx_v2.mli reactjs_jsx_ppx_v2.ml
 	$(NATIVE) -w -40-30 -no-alias-deps -I +compiler-libs ocamlcommon.cmxa $^ -o $@
-
-
+	
 bsc.exe: whole_compiler.mli whole_compiler.ml
 	$(NATIVE) $(OCAMLOPT_FLAGS) $^  -o $@
 

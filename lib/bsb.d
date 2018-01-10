@@ -141,3 +141,4 @@
 ../lib/bsb.ml : ./bsb/bsb_ninja_global_vars.ml
 ../lib/bsb.ml : ./bsb/bsb_namespace_map_gen.mli
 ../lib/bsb.ml : ./bsb/bsb_ninja_file_groups.mli
+../lib/bsb.ml : ../vendor/opam_of_packagejson/opam_of_packagejson.ml
