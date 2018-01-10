@@ -9,7 +9,7 @@ Bsb-native is a fork of [bsb](https://bucklescript.github.io/docs/en/build-overv
 3) run `npm install` / `yarn`.
 
 An [example bsconfig.json](https://github.com/bsansouci/bsb-native-example/blob/master/bsconfig.json):
-```json
+```js
 {
   "name" : "NameOfLibrary",
   "sources" : "src",
