@@ -1,21 +1,21 @@
 # bsb-native
 
-Bsb-native is a fork of [bsb](http://bucklescript.github.io/bucklescript/Manual.html#_bucklescript_build_system_code_bsb_code) that compiles to native OCaml instead.
+Bsb-native is a fork of [bsb](https://bucklescript.github.io/docs/en/build-overview.html) that compiles to native OCaml instead.
 
 ## Install
 
 1) Add `"bs-platform": "bsansouci/bsb-native#2.1.1"` as a devDependency to your `package.json`
-2) Add a `bsconfig.json` like you would for bsb. Bsb-native uses the same schema, located [here](http://bucklescript.github.io/bucklescript/docson/#build-schema.json) with small additions like `entries`.
-3) run `npm install`
+2) Add a `bsconfig.json` like you would for bsb. Bsb-native uses the same schema, located [here](http://bucklescript.github.io/bucklescript/docson/#build-schema.json) with small additions like `entries` (see below for complete config schema).
+3) run `npm install` / `yarn`.
 
-An [example bsconfig.json](https://github.com/bsansouci/BetterErrors/tree/bsb-support):
+An [example bsconfig.json](https://github.com/bsansouci/bsb-native-example/blob/master/bsconfig.json):
 ```json
 {
   "name" : "NameOfLibrary",
   "sources" : "src",
   "entries": [{
     "backend": "bytecode",
-    "main-module": "Index"
+    "main-module": "Index" // Capitalized name of module (not a path)
   }]
 }
 ```
@@ -23,11 +23,13 @@ An [example bsconfig.json](https://github.com/bsansouci/BetterErrors/tree/bsb-su
 ## Run
 `./node_modules/.bin/bsb -make-world` (or add an [npm script](https://docs.npmjs.com/misc/scripts) that runs `bsb -make-world`).
 
-That will pickup the first entry's `backend` and build all entries to that `backend`. e.g if you have multiple `bytecode` targets, they'll all get built but not the `js` ones nor `native` ones. If you want to build to all targets you need to run the build command multiple times with different `-backend`.
+That will build the first entry and use its `backend` to build all other entries targetting that `backend`. 
+
+e.g if you have multiple `bytecode` targets, they'll all get built but not the `js` ones nor `native` ones. If you want to build to all targets you need to run the build command multiple times with different `-backend`.
 
 ## Initialize a new package
 
-Bsb-native comes with a basic init package to get you started. To create a package named Hello run:
+Bsb-native comes with a basic init package to get you started. To create a package named `Hello` run:
 
 ```sh
 bsb -init Hello
@@ -35,7 +37,7 @@ bsb -init Hello
 
 And a folder named `Hello` will be created with a basic project layout. If you want to initialize an already created folder, use `.` as the last argument.
 
-## Useful flags
+## Useful commandline flags
 The `-make-world` flag builds all of the dependencies and the project.
 
 The `-clean-world` flag cleans all of the build artifacts.
@@ -46,7 +48,7 @@ The `-backend [js|bytecode|native]` flag tells `bsb-native` to build all entries
 
 The build artifacts are put into the folder `lib/bs`. The bytecode executable would be at `lib/bs/bytecode/index.byte` and the native one at `lib/bs/native/index.native` for example.
 
-## Opam packages
+## Opam package support
 Yes `bsb-native` supports opam packages (see [ocamlfind example](https://github.com/bsansouci/bsb-native-example/tree/opam-example)).
 **BUT** you need to be on the switch `4.02.3+buckle-master` (which you can get to by running `opam switch 4.02.3+buckle-master`).
 ```js
@@ -64,15 +66,16 @@ Yes `bsb-native` supports opam packages (see [ocamlfind example](https://github.
 ## bsconfig.json schema
 ```js
 {
-    // All of the bsb fields will work as expected. Here are just the added
-    // features.
+    // All of the bsb fields will work as expected. 
+    // See the bucklescript schema: https://bucklescript.github.io/bucklescript/docson/#build-schema.json
+    // Below are just the bsb-native specific features.
 
     // Entries is an array of targets to be built.
     // When running `bsb -backend bytecode`, bsb will filter this array for
     // all the entries compiling to bytecode and compile _all_ of those.
     "entries": [{
       "backend": "bytecode", // can be "bytecode" (ocamlc), "js" (bsc) or "native" (ocamlopt),
-      "main-module": "MainModule",
+      "main-module": "MainModule", // This has to be 
     }],
 
     // Array of opam dependencies.
