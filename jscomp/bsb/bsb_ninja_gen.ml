@@ -427,7 +427,7 @@ let output_ninja_and_namespace_map
       let build_script = Ext_bytes.ninja_escaped build_script in
       
       (* @Todo @CrossPlatform Fix this super ghetto environment variable setup... This is not cross platform! *)
-      let envvars = "export OCAML_LIB=" ^ ocaml_lib ^ " && " 
+      let envvars = "export BSLIB=" ^ ocaml_lib ^ " && " 
                   ^ "export OCAML_SYSTHREADS=" ^ (ocaml_dir // "otherlibs" // "systhreads") ^ " && " 
                   ^ "export PATH=" ^ (root_project_dir // "node_modules" // ".bin") ^ ":" ^ ocaml_dir ^ ":" ^ (root_project_dir // "node_modules" // "bs-platform" // "bin") ^ ":$$PATH && " in
       (* We move out of lib/bs/XYZ so that the command is ran from the root project. *)
