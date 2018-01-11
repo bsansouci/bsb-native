@@ -7,13 +7,18 @@ var https = require('https');
 var isWin = process.platform === "win32";
 var isOSX = process.platform === "darwin";
 var isLinux = process.platform === "linux";
-function mkdirp(path, cb){
-  if (isWin){
-    exec("mkdir " + path.replace(/\//g, '\\').replace(/ /g, '\\ '), cb);
-  } else {
-    exec("mkdir -p " + path, cb);
-  }
-};
+function mkdirp(dir, cb) {
+  if (dir === ".") return cb();
+  fs.stat(dir, function(err) {
+    if (err == null) return cb(); // already exists
+
+    var parent = path.dirname(dir);
+    mkdirp(parent, function() {
+      // process.stdout.write(dir.replace(/\/$/, "") + "/\n");
+      fs.mkdir(dir, cb);
+    });
+  });
+}
 
 var zipFilename;
 if (isWin) {
@@ -60,36 +65,30 @@ function handleResponse(res) {
       var i = 0;
       zipfile.readEntry();
       zipfile.once("close", function(entry) {
-        fs.unlink(zipFilename, () => console.log("Unzip successful."));
+        fs.unlink(zipFilename, () => console.log("Unzip successful.                          "));
       });
       zipfile.on("entry", function(entry) {
         if (/\/$/.test(entry.fileName)) {
-          // Directory file names end with '/'.
-          // Note that entires for directories themselves are optional.
-          // An entry's fileName implicitly requires its parent directories to exist.
-          fs.mkdir(entry.fileName, () => zipfile.readEntry());
+          // directory file names end with '/'
+          mkdirp(entry.fileName, function() {
+            if (err) throw err;
+            zipfile.readEntry();
+          });
         } else {
           process.stdout.write("Unzipped " + i + " of "+zipfile.entryCount+" files                  \r");
-          zipfile.openReadStream(entry, function(err, readStream) {
-            if (err) throw err;
-            readStream.on("end", function() {
-              i++;
-              zipfile.readEntry();
+          mkdirp(path.dirname(entry.fileName), function() {
+            zipfile.openReadStream(entry, function(err, readStream) {
+              if (err) throw err;
+              readStream.on("end", function() {
+                i++;
+                zipfile.readEntry();
+              });
+              // Mode roughly translates to unix permissions.
+              // See https://github.com/thejoshwolfe/yauzl/issues/57#issuecomment-301847099          
+              var mode = entry.externalFileAttributes >>> 16;
+              var writeStream = fs.createWriteStream(entry.fileName, {mode, encoding})
+              readStream.pipe(writeStream);
             });
-            // Mode roughly translates to unix permissions.
-            // See https://github.com/thejoshwolfe/yauzl/issues/57#issuecomment-301847099          
-            var mode = entry.externalFileAttributes >>> 16;
-            var writeStream = fs.createWriteStream(entry.fileName, {mode, encoding}).on('error', (e) => {
-              if (e.errno === -4058 || e.code === 'ENOENT'){
-                mkdirp(path.dirname(entry.fileName), (e) => {
-                  readStream.pipe(fs.createWriteStream(entry.fileName, {mode, encoding}));
-                });
-              } else {
-                console.log(e);
-                throw e
-              }
-            });
-            readStream.pipe(writeStream);
           });
         }
       });
