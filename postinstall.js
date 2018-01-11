@@ -38,12 +38,13 @@ https.get('https://github.com/bsansouci/bsb-native/releases/download/2.1.1/' + z
 }).on("error", (err) => {
   console.error("Error: " + err.message);
 });
+var encoding =  'binary';
 
 function handleResponse(res) {
   res.setEncoding('binary');
 
   var len = parseInt(res.headers['content-length'], 10);
-  var fileStream = fs.createWriteStream(zipFilename, {encoding: "binary"});
+  var fileStream = fs.createWriteStream(zipFilename, { encoding });
   var downloaded = 0;
   
   // A chunk of data has been recieved.
@@ -78,10 +79,10 @@ function handleResponse(res) {
               i++;
               zipfile.readEntry();
             });
-            var writeStream = fs.createWriteStream(entry.fileName, {mode}).on('error', (e) => {
+            var writeStream = fs.createWriteStream(entry.fileName, {mode, encoding}).on('error', (e) => {
               if (e.errno === -4058 || e.code === 'ENOENT'){
                 mkdirp(path.dirname(entry.fileName), (e) => {
-                  readStream.pipe(fs.createWriteStream(entry.fileName, {mode}));
+                  readStream.pipe(fs.createWriteStream(entry.fileName, {mode, encoding}));
                 });
               } else {
                 console.log(e);
