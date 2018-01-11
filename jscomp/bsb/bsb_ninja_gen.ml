@@ -42,6 +42,7 @@ let merge_module_info_map acc sources : Bsb_db.t =
     ) acc  sources 
 
 
+let bsb_native_parse = "bsb_native_parse.exe"
 let bsc_exe = "bsc.exe"
 let bsb_helper_exe = "bsb_helper.exe"
 let dash_i = "-I"
@@ -128,14 +129,15 @@ let output_ninja_and_namespace_map
     | _ -> acc
   ) ocaml_flags ocaml_dependencies) in
 
-  let bs_super_errors = if main_bs_super_errors && not use_ocamlfind && backend != Bsb_config_types.Js then "-bs-super-errors" else "" in
-  
+  (* let bs_super_errors = if main_bs_super_errors && not use_ocamlfind && backend != Bsb_config_types.Js then "-bs-super-errors" else "" in *)
+  let bs_super_errors = "" in
   let oc = open_out_bin (cwd // Bsb_config.lib_bs // nested // Literals.build_ninja) in
   let cwd_lib_bs = cwd // Bsb_config.lib_bs // nested in
   
   let ocamlc = "ocamlc" in
   let ocamlopt = "ocamlopt" in
-
+  
+  let bsb_native_parse = bsc_dir // bsb_native_parse in
   let bsc = bsc_dir // bsc_exe in   (* The path to [bsc.exe] independent of config  *)
   let bsb_helper = bsc_dir // bsb_helper_exe in (* The path to [bsb_heler.exe] *)
   let ppx_flags = Bsb_build_util.flag_concat dash_ppx ppx_flags in
@@ -171,14 +173,14 @@ let output_ninja_and_namespace_map
     in 
     if bs_suffix then Ext_string.inter2 "-bs-suffix" result else result
   in 
-  let bsc_flags =
+  (* let bsc_flags =
     Printf.sprintf
       "-bs-D BSB_BACKEND=\"%s\" %s"
       (match backend with
       | Bsb_config_types.Js -> "js"
       | Bsb_config_types.Bytecode -> "bytecode"
       | Bsb_config_types.Native -> "native")
-      bsc_flags in
+      bsc_flags in *)
 
   let warnings = Bsb_warning.opt_warning_to_string not_dev warning in
 
@@ -192,8 +194,8 @@ let output_ninja_and_namespace_map
       in 
       Bsb_ninja_util.output_kvs
         [|
-          Bsb_ninja_global_vars.refmt, 
-            (match refmt with 
+          Bsb_ninja_global_vars.refmt, "refmt";
+            (* (match refmt with 
             | Bsb_config_types.Refmt_v2 -> 
               Bsb_log.warn "@{<warning>Warning:@} ReasonSyntax V2 is deprecated, please upgrade to V3.@.";
               bsc_dir // "refmt.exe"
@@ -202,7 +204,7 @@ let output_ninja_and_namespace_map
               bsc_dir // "refmt.exe"
             | Bsb_config_types.Refmt_v3 -> 
               bsc_dir // "refmt3.exe"
-            | Bsb_config_types.Refmt_custom x -> x );
+            | Bsb_config_types.Refmt_custom x -> x ); *)
           Bsb_ninja_global_vars.reason_react_jsx, reason_react_jsx_flag; 
           Bsb_ninja_global_vars.refmt_flags, refmt_flags;
         |] oc 
@@ -213,6 +215,7 @@ let output_ninja_and_namespace_map
           Bsb_ninja_global_vars.bs_package_flags, bs_package_flags ; 
           Bsb_ninja_global_vars.src_root_dir, cwd (* TODO: need check its integrity -- allow relocate or not? *);
           Bsb_ninja_global_vars.bsc, bsc ;
+          Bsb_ninja_global_vars.bsb_native_parse, bsb_native_parse ;
           Bsb_ninja_global_vars.bsb_helper, bsb_helper;
           Bsb_ninja_global_vars.warnings, warnings;
           Bsb_ninja_global_vars.bsc_flags, bsc_flags ;
@@ -227,16 +230,14 @@ let output_ninja_and_namespace_map
           (* Jumping through hoops. When ocamlfind is used we need to pass the argument 
              to the underlying compiler and not ocamlfind, so we use -passopt. Otherwise we don't.
              For bsb_helper we also don't. *)
-            if ocamlfind_dependencies <> [] && String.length bs_super_errors > 0 
+            if use_ocamlfind && String.length bs_super_errors > 0 
               then "-passopt " ^ bs_super_errors 
               else bs_super_errors;
           Bsb_ninja_global_vars.bs_super_errors, bs_super_errors;
           
           Bsb_ninja_global_vars.external_deps_for_linking, Bsb_build_util.flag_concat dash_i external_deps_for_linking;
-          Bsb_ninja_global_vars.ocamlc, if use_ocamlfind then ocamlc
-            else (ocaml_dir // ocamlc ^ ".opt");
-          Bsb_ninja_global_vars.ocamlopt, if use_ocamlfind then ocamlopt
-            else (ocaml_dir // ocamlopt ^ ".opt");
+          Bsb_ninja_global_vars.ocamlc, ocamlc;
+          Bsb_ninja_global_vars.ocamlopt, ocamlopt;
           Bsb_ninja_global_vars.ocamlfind, if use_ocamlfind then ocamlfind else "";
           Bsb_ninja_global_vars.ocamlfind_dependencies,  Bsb_build_util.flag_concat "-package" (external_ocamlfind_dependencies @ ocamlfind_dependencies);
           Bsb_ninja_global_vars.ocaml_dependencies, Bsb_build_util.flag_concat "-add-ocaml-dependency" external_ocaml_dependencies;
@@ -266,9 +267,10 @@ let output_ninja_and_namespace_map
     let common_include_flags =
       (all_includes (if namespace = None then source_dirs
       else Filename.current_dir_name :: source_dirs)) in
-    let post_ocamlfind_include_flags =
+    (* let post_ocamlfind_include_flags =
       (if use_ocamlfind then common_include_flags else
-      (ocaml_lib :: common_include_flags)) in
+      (ocaml_lib :: common_include_flags)) in *)
+    let post_ocamlfind_include_flags = common_include_flags in
     Bsb_ninja_util.output_kv
       Bsb_build_schemas.bsc_lib_includes
        (Bsb_build_util.flag_concat dash_i @@ post_ocamlfind_include_flags) oc
@@ -425,7 +427,7 @@ let output_ninja_and_namespace_map
     if Ext_sys.is_windows_or_cygwin then 
       Bsb_log.error "`build-script` field not supported on windows yet. Coming soon (poke bsansouci on discord so he prioritize it)."
     else begin 
-      let build_script = Ext_bytes.ninja_escaped build_script in
+      let build_script = Bytes.to_string @@ Ext_bytes.ninja_escaped (Bytes.of_string build_script) in
       
       (* @Todo @CrossPlatform Fix this super ghetto environment variable setup... This is not cross platform! *)
       let envvars = "export OCAML_LIB=" ^ ocaml_lib ^ " && " 

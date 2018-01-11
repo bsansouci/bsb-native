@@ -94,7 +94,7 @@ let pack pack_byte_or_native
        This is for mainly because we'd like to offer a "sandboxed" experience for those who want it.
        So if you don't care about opam dependencies you can solely rely on Bucklescript and npm, no need 
        to install ocamlfind. *)
-    if ocamlfind_packages = [] then
+    (* if ocamlfind_packages = [] then
       let ocaml_dir = Bsb_build_util.get_ocaml_dir cwd in
       let compiler = ocaml_dir // compiler ^ ".opt" in
       Unix.execvp
@@ -102,16 +102,16 @@ let pack pack_byte_or_native
           (Array.of_list ((compiler :: "-a" :: "-g" :: (if bs_super_errors then ["-bs-super-errors"] else []) )
             @ warning_command
             @ "-o" :: (Literals.library_file ^ suffix_library_files) :: includes @ all_object_files))
-    else begin
+    else begin *)
       (* @CrossPlatform This might work on windows since we're using the Unix module which claims to
          have a windows implementation... We should double check this. *)
       let list_of_args = ("ocamlfind" :: compiler :: "-a" :: "-g" :: ocamlfind_packages) 
-      @ ((if bs_super_errors then ["-passopt"; "-bs-super-errors"] else []))
+      (* @ ((if bs_super_errors then ["-passopt"; "-bs-super-errors"] else [])) *)
       @ warning_command
       @  ("-o" :: (Literals.library_file ^ suffix_library_files) :: includes @ all_object_files) in
       Unix.execvp
         "ocamlfind"
           (Array.of_list list_of_args)
-    end
+    (* end *)
   else
     Bsb_exception.no_files_to_pack suffix_object_files

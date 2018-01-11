@@ -31,9 +31,11 @@ reactjs_jsx_ppx_2.exe:reactjs_jsx_ppx_v2.mli reactjs_jsx_ppx_v2.ml
 bsc.exe: whole_compiler.mli whole_compiler.ml
 	$(NATIVE) $(OCAMLOPT_FLAGS) $^  -o $@
 
+bsb_native_parse.exe: bsb_native_parse.ml
+	$(NATIVE) $(OCAMLOPT_FLAGS) -I +compiler-libs ocamlcommon.cmxa -w -a $^ -o $@
 
 
-all: bsc.exe bsb.exe bsppx.exe bsb_helper.exe refmt.exe refmt3.exe reactjs_jsx_ppx_2.exe bsdep.exe
+all: bsb.exe bsb_helper.exe bsdep.exe bsb_native_parse.exe
 #  bspp.exe bsdep.exe
 # bspack.exe
 # bsppx.exe is needed for merlin

@@ -26,6 +26,7 @@
  
 let bs_package_flags = "bs_package_flags"
 
+let bsb_native_parse = "bsb_native_parse"
 let bsc = "bsc" 
 
 let src_root_dir = "src_root_dir"

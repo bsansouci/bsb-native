@@ -30,14 +30,14 @@ type 'a kind = 'a Ml_binary.kind
 
 let read_parse_and_extract (type t) (k : t kind) (ast : t) : String_set.t =
   Depend.free_structure_names := String_set.empty;
-  let bound_vars = String_set.empty in
+  let bound_vars = ref Depend.StringMap.empty in
   List.iter
     (fun modname  ->
-       Depend.open_module bound_vars (Longident.Lident modname))
+       bound_vars := Depend.open_module !bound_vars (Longident.Lident modname))
     (!Clflags.open_modules);
   (match k with
-   | Ml_binary.Ml  -> Depend.add_implementation bound_vars ast
-   | Ml_binary.Mli  -> Depend.add_signature bound_vars ast  ); 
+   | Ml_binary.Ml  -> Depend.add_implementation !bound_vars ast
+   | Ml_binary.Mli  -> Depend.add_signature !bound_vars ast  ); 
   !Depend.free_structure_names
 
 

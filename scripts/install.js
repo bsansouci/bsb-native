@@ -154,7 +154,8 @@ function non_windows_npm_release() {
     if (checkPrebuilt()) {
         child_process.execSync(make + " libs && " + make + " install", root_dir_config)
     } else {
-        tryToProvideOCamlCompiler()
+        // @Esy Assume ocaml is available!
+        // tryToProvideOCamlCompiler()
         child_process.execSync(make + " world && " + make + " install", root_dir_config)
     }
 }

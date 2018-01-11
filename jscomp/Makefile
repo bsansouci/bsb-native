@@ -543,7 +543,7 @@ force-snapshotml:
 	$(MAKE) snapshotml
 
 BIN_PATH=../lib
-SNAPSHOT_SRCS=$(addprefix $(BIN_PATH)/, $(addsuffix .ml, bsppx whole_compiler bsdep bsb bsb_helper bspp ))
+SNAPSHOT_SRCS=$(addprefix $(BIN_PATH)/, $(addsuffix .ml, bsppx whole_compiler bsdep bsb bsb_helper bspp bsb_native_parse ))
 SNAPSHOT_SRCS+=$(addprefix bin/, $(addsuffix .ml, all_ounit_tests))
 SNAPSHOT_DEPS=$(SNAPSHOT_SRCS:.ml=.d)
 
@@ -565,11 +565,15 @@ SNAPSHOT_DEPS=$(SNAPSHOT_SRCS:.ml=.d)
 ../lib/bspp.ml:./bin/bspack.exe
 	  $< -D BS_MIN_LEX_DEPS=true -U BS_DEBUG -bs-MD -module-alias Config=Config_whole_compiler   -I $(OCAML_SRC_UTILS) -I $(OCAML_SRC_PARSING)?parser   -I common -I ext -I syntax -I depends -I bspp -I core -bs-main Bspp_main -o $@
 
+../lib/bsb_native_parse.ml:./bin/bspack.exe
+	$< -bs-MD -U BS_DEBUG -I ext -I common -I bsb -I depends -I core -I stubs -I syntax -I outcome_printer   -bs-main Bsb_native_parse -o $@
+
 ../lib/bspp.exe:../lib/bspp.mli ../lib/bspp.ml
 	make -C ../lib bspp.exe
 
 ../lib/reactjs_jsx_ppx_v2.ml:./bin/reactjs_jsx_ppx_v2.bspp.ml ../lib/bspp.exe
 	../lib/bspp.exe $^ > $@
+
 
 bin/jsoo_reactjs_jsx_ppx_v2.ml:./bin/reactjs_jsx_ppx_v2.bspp.ml ../lib/bspp.exe
 	BS_COMPILER_IN_BROWSER=true ../lib/bspp.exe $^ > $@

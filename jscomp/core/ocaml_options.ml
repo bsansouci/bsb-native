@@ -190,7 +190,7 @@ let mk_where f =
   "-where", Arg.Unit f, " Print location of standard library and exit"
 ;;
 
-let mk_color f =
+(* let mk_color f =
   "-color", Arg.Symbol (["auto"; "always"; "never"], f),
   Printf.sprintf
   "  Enable or disable colors in compiler messages\n\
@@ -202,7 +202,7 @@ let mk_color f =
   \    checks that the TERM environment variable exists and is\n\
   \    not empty or \"dumb\", and that isatty(stderr) holds."
 ;;
-
+ *)
 
 let mk_nopervasives f =
   "-nopervasives", Arg.Unit f, " (undocumented)"
@@ -275,10 +275,10 @@ let ocaml_options =
   let set r () = r := true in 
   let unset r () = r := false in 
   let _absname = set Location.absname in 
-  let _color option = 
+  (* let _color option = 
       match Clflags.parse_color_setting option with
       | None -> ()
-      | Some setting -> Clflags.color := setting in 
+      | Some setting -> Clflags.color := setting in  *)
   let _annot = set annotations in 
   let _binannot = set binary_annotations in 
   let _c = set compile_only in 
@@ -333,7 +333,7 @@ let ocaml_options =
     mk_g_byt _g;
     mk_i _i;
     mk_I _I;
-    mk_color _color;
+    (* mk_color _color; *)
     (* mk_impl _impl; *)
     (* mk_intf _intf; *)
     mk_intf_suffix _intf_suffix;
@@ -364,7 +364,7 @@ let ocaml_options =
     mk_warn_error _warn_error;
     mk_warn_help _warn_help;
     mk_where _where;
-    mk_color _color;
+    (* mk_color _color; *)
     (* mk__ anonymous; *)
     mk_nopervasives _nopervasives;
     mk_dsource _dsource;

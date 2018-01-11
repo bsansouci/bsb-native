@@ -115,17 +115,17 @@ let build_ast_and_module_sets_from_rei =
 (* We need those because they'll generate the mlast_simple for us (and the previous three won't for performance reason). *)
 let build_ast_and_module_sets_gen_simple =
   define
-    ~command:"${bsc}  ${pp_flags} ${ppx_flags} ${bs_super_errors} ${warnings} ${bsc_flags} -c -o ${out} -bs-syntax-only -bs-simple-binary-ast -bs-binary-ast ${in}"
+    ~command:"${bsb_native_parse}  ${pp_flags} ${ppx_flags} ${bs_super_errors} ${warnings} ${bsc_flags} -c -o ${out} ${in}"
     "build_ast_and_module_sets_gen_simple"
     
 let build_ast_and_module_sets_from_re_gen_simple =
   define
-    ~command:"${bsc} -pp \"${refmt} ${refmt_flags}\" ${reason_react_jsx}  ${ppx_flags} ${bs_super_errors} ${warnings} ${bsc_flags} -c -o ${out} -bs-syntax-only -bs-simple-binary-ast -bs-binary-ast -impl ${in}"
+    ~command:"${bsb_native_parse} -pp \"${refmt} ${refmt_flags}\" ${reason_react_jsx}  ${ppx_flags} ${bs_super_errors} ${warnings} ${bsc_flags} -c -o ${out} -impl ${in}"
     "build_ast_and_module_sets_from_re_gen_simple"
     
 let build_ast_and_module_sets_from_rei_gen_simple =
   define
-    ~command:"${bsc} -pp \"${refmt} ${refmt_flags}\" ${reason_react_jsx} ${ppx_flags} ${bs_super_errors} ${warnings} ${bsc_flags} -c -o ${out} -bs-syntax-only -bs-simple-binary-ast -bs-binary-ast -intf ${in}"
+    ~command:"${bsb_native_parse} -pp \"${refmt} ${refmt_flags}\" ${reason_react_jsx} ${ppx_flags} ${bs_super_errors} ${warnings} ${bsc_flags} -c -o ${out} -intf ${in}"
     "build_ast_and_module_sets_from_rei_gen_simple"
 
 
@@ -200,7 +200,7 @@ let build_package =
 
 let build_package_gen_mlast_simple = 
   define
-    ~command:"${bsc} -w -49 -no-alias-deps -bs-binary-ast -bs-simple-binary-ast -c ${in}"
+    ~command:"${bsb_native_parse} -w -49 -no-alias-deps -c ${in}"
     "build_package_gen_mlast_simple"
     
 let build_package_build_cmi_bytecode = 

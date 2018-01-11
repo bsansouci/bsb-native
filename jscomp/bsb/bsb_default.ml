@@ -62,4 +62,4 @@ let allowed_build_kinds = [Bsb_config_types.Js; Bsb_config_types.Bytecode; Bsb_c
 
 let bs_super_errors = true
 
-let ocaml_dependencies = ["unix"; "bigarray"; "str"; "dynlink"; "nums"; "threads"; ]
+let ocaml_dependencies = ["unix"; "bigarray"; "str"; "dynlink"; "threads"; ]

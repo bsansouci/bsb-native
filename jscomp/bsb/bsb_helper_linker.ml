@@ -85,7 +85,7 @@ let link link_byte_or_native
       | LinkNative _   -> Literals.suffix_cmxa
     end in
 
-    let ocaml_dependencies = if ocamlfind_packages = [] then 
+    let ocaml_dependencies = (* if ocamlfind_packages = [] then 
       List.fold_left (fun acc v -> 
         match v with
         | "compiler-libs" -> 
@@ -94,7 +94,7 @@ let link link_byte_or_native
           "-thread" :: (ocaml_dir // "lib" // "ocaml" // "threads" // "threads" ^ suffix) :: acc
         | v -> (ocaml_dir // "lib" // "ocaml" // v ^ suffix) :: acc
       ) [] ocaml_dependencies 
-    else begin 
+    else begin  *)
       List.fold_left (fun acc v -> 
         match v with
         | "compiler-libs" -> 
@@ -105,7 +105,8 @@ let link link_byte_or_native
           "-package" :: "num" :: acc
         | v -> "-package" :: v :: acc
       ) [] ocaml_dependencies
-    end in 
+    (* end  *)
+  in 
 
     (* let (otherlibs, extra_flags) = 
       let compiler_libs_requested = List.filter (fun v -> v = "compiler-libs") ocaml_flags in
@@ -144,7 +145,7 @@ let link link_byte_or_native
        So if you don't care about opam dependencies you can solely rely on Bucklescript and npm, no need 
        to install ocamlfind. 
      *)
-    if ocamlfind_packages = [] then
+    (* if ocamlfind_packages = [] then
       let compiler = ocaml_dir // compiler ^ ".opt" in
       let list_of_args = (compiler :: "-g"
         :: "-I" :: ocaml_lib :: "-I" :: (ocaml_lib // "stublibs") :: "-nostdlib"
@@ -159,11 +160,11 @@ let link link_byte_or_native
       Unix.execvp
         compiler
         (Array.of_list (list_of_args))
-    else begin
+    else begin *)
       (* @CrossPlatform This might work on windows since we're using the Unix module which claims to
          have a windows implementation... We should double check this. *)
-      let list_of_args = "ocamlfind" :: compiler 
-        :: (if bs_super_errors then ["-passopt"; "-bs-super-errors"] else []) 
+      let list_of_args = "ocamlfind" :: compiler :: []
+        (* @ (if bs_super_errors then ["-passopt"; "-bs-super-errors"] else [])  *)
         @ ("-linkpkg" :: ocamlfind_packages)
         @ warning_command
         @ ("-g" :: "-o" :: output_file :: all_object_files) in
@@ -171,6 +172,6 @@ let link link_byte_or_native
       Unix.execvp
         "ocamlfind"
         (Array.of_list (list_of_args))
-    end
+    (* end *)
   end else
     Bsb_exception.no_files_to_link suffix_object_files main_module
