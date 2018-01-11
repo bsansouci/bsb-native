@@ -135,8 +135,20 @@ If you would like to have all your code in the same package, you can use BuckleS
   include MyModule_Js
 #end
 ```
-inside a file called `MyModule` (for example). Then when you build to JS that module will use the `MyModule_Js` implementation (see [example](https://github.com/Schmavery/reprocessing/blob/2ff7221789dcefff2ae927b8305c938845361d59/src/Reprocessing_Hotreload.ml)). Same for native/bytecode.
+inside a file called `MyModule` (for example). When you build to JavaScript (`BSB_BACKEND = "js"`), that module will use the `MyModule_Js` implementation (see [example](https://github.com/Schmavery/reprocessing/blob/2ff7221789dcefff2ae927b8305c938845361d59/src/Reprocessing_Hotreload.ml)). Same for `BSB_BACKEND = "native"` and `BSB_BACKEND = "bytecode"`.
 
 `BSB_BACKEND` value will be filled automatically by `bsb-native`, so you just need to use it at will with the language-level static `if` compilation.
 
-**Note**: BuckleScript's conditional compilation doesn't work with Reason yet.
+Platform specific files (like `MyModule_Native`) should be added to a folder that is only built for that specific backend (`native`, in the `MyModule_Native` case). You can do that by adding this to your `bsconfig.json` file:
+
+```json
+"sources": [{
+  "dir": "src",
+  "subdirs": [{
+    "dir": "native",
+    "backend": "native"
+  }]
+}]
+```
+
+**Note**: BuckleScript's conditional compilation doesn't work with Reason yet, so any usage of conditional compilation will have to be implemented in OCaml `.ml` files.
