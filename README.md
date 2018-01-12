@@ -124,15 +124,31 @@ For example, you can write code that depends on the module Reasongl, and bsb-nat
 
 Currently the way this works is to have each platform specific dependency expose a module with the same name and rely on the field `allowed-build-kinds` in the `bsconfig.json` to tell bsb-native which one of platform specific dep you want to build, given that you want to build the whole project to a specific target. Say you target JS, then ReasonglWeb will get built which exposes its own [Reasongl](https://github.com/bsansouci/reasongl-web/blob/bsb-support-new/src/reasongl.re) module.
 
-### matchenv
-If you would like to have all your code in the same package, you can use [matchenv](https://github.com/bsansouci/matchenv). That package allows you to write something like
+### Conditional compilation
+If you would like to have all your code in the same package, you can use BuckleScript's [conditional compilation](https://bucklescript.github.io/docs/en/conditional-compilation.html). To do so, place
+```ocaml
+#if BSB_BACKEND = "bytecode" then
+  include MyModule_Native
+#elif BSB_BACKEND = "native" then
+  include MyModule_Native
+#else
+  include MyModule_Js
+#end
 ```
-include
-  [%matchenv
-    switch (BSB_BACKEND) {
-    | "bytecode" => MyModule_Native
-    | "native" => MyModule_Native
-    | "js" => MyModule_Js
-   }];
+inside a file called `MyModule` (for example). When you build to JavaScript (`BSB_BACKEND = "js"`), that module will use the `MyModule_Js` implementation (see [example](https://github.com/Schmavery/reprocessing/blob/2ff7221789dcefff2ae927b8305c938845361d59/src/Reprocessing_Hotreload.ml)). Same for `BSB_BACKEND = "native"` and `BSB_BACKEND = "bytecode"`.
+
+`BSB_BACKEND` value will be filled automatically by `bsb-native`, so you just need to use it at will with the language-level static `if` compilation.
+
+Platform specific files (like `MyModule_Native`) should be added to a folder that is only built for that specific backend (`native`, in the `MyModule_Native` case). You can do that by adding this to your `bsconfig.json` file:
+
+```json
+"sources": [{
+  "dir": "src",
+  "subdirs": [{
+    "dir": "native",
+    "backend": "native"
+  }]
+}]
 ```
-inside a file called `MyModule` (for example). Then when you build to JS that module will use the `MyModule_Js` implementation. Same for native/bytecode. This is deeply integrated into bsb-native to make everything easier.
+
+**Note**: BuckleScript's conditional compilation doesn't work with Reason yet, so any usage of conditional compilation will have to be implemented in OCaml `.ml` files.
