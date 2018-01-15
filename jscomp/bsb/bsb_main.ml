@@ -128,9 +128,6 @@ let bsb_main_flags : (string * Arg.spec * string) list=
       ),
     " Builds the entries in the bsconfig which match the given backend.";
 
-    "-prepublish", Arg.Unit (fun () -> prepublish := true),
-    " Generates META, .install and opam files";
-
     "-build-library", Arg.Unit (fun () -> build_library := true),
     " Builds the current package as a library. Outputs a cmxa/cma file."
   ]
@@ -264,9 +261,7 @@ let () =
                    [bsb -clean-world]
                    [bsb -regen ]
                 *)
-                if !prepublish then begin 
-                  Opam_of_packagejson.generate cwd
-                end;
+                Opam_of_packagejson.generate cwd;
                 if !watch_mode then begin
                   watch_exit ()
                 end
@@ -296,9 +291,7 @@ let () =
                        [bsb -regen ]
                     *)
                 end else begin
-                  if !prepublish then begin 
-                    Opam_of_packagejson.generate cwd
-                  end;
+                  Opam_of_packagejson.generate cwd;
                   let nested = get_string_backend backend in
                   ninja_command_exit vendor_ninja [||] nested
                 end
@@ -328,9 +321,7 @@ let () =
             cwd bsc_dir ocaml_dir in
           if !watch_mode then watch_exit ()
           else begin 
-            if !prepublish then begin 
-              Opam_of_packagejson.generate cwd
-            end;
+            Opam_of_packagejson.generate cwd;
             let nested = get_string_backend backend in
             ninja_command_exit vendor_ninja ninja_args nested
           end

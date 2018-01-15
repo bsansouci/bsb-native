@@ -114,7 +114,7 @@ let output_ninja_and_namespace_map
   let ocaml_flags =
     Bsb_build_util.flag_concat
       (if use_ocamlfind then "-passopt" else Ext_string.single_space)
-      (ocaml_flags @ ["-color"; "always"])  in
+      ocaml_flags  in
 
 
   let ocaml_lib = Bsb_build_util.get_ocaml_lib_dir ~is_js:(backend = Bsb_config_types.Js) root_project_dir in

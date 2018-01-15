@@ -99,5 +99,8 @@
     "binaries": {
       "./bin/bsb.exe": "bsb"
     }
-  }
+  },
+  "peerDependencies": {
+    "ocaml": "~4.6.0000"
+  },
 }

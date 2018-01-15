@@ -14,7 +14,7 @@ bsdep.exe: bsdep.mli bsdep.ml
 	$(NATIVE) $(OCAMLOPT_FLAGS) $^ -o $@
 
 bsb.exe:  bsb.mli bsb.ml
-	$(NATIVE) $(OCAMLOPT_FLAGS) unix.cmxa str.cmxa $^ -o $@
+	$(NATIVE) $(OCAMLOPT_FLAGS) -I +compiler-libs unix.cmxa str.cmxa $^ -o $@
 
 bsb_helper.exe:  bsb_helper.mli bsb_helper.ml
 	$(NATIVE) $(OCAMLOPT_FLAGS) unix.cmxa -w -a $^ -o $@

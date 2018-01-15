@@ -12,10 +12,10 @@ world:
 
 libs:
 	@echo "Making compiler finished"
-	$(MAKE) -C jscomp/stdlib -j8 allcmis
-	$(MAKE) -C jscomp/runtime -j8 all
-	$(MAKE) -C jscomp/others -j8 all
-	$(MAKE) -C jscomp/stdlib -j8 all
+	#$(MAKE) -C jscomp/stdlib -j8 allcmis
+	#$(MAKE) -C jscomp/runtime -j8 all
+	#$(MAKE) -C jscomp/others -j8 all
+	#$(MAKE) -C jscomp/stdlib -j8 all
 	
 
 DEST=lib/ocaml

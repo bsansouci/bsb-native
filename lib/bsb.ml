@@ -17527,7 +17527,7 @@ let output_ninja_and_namespace_map
   let ocaml_flags =
     Bsb_build_util.flag_concat
       (if use_ocamlfind then "-passopt" else Ext_string.single_space)
-      (ocaml_flags @ ["-color"; "always"])  in
+      ocaml_flags  in
 
 
   let ocaml_lib = Bsb_build_util.get_ocaml_lib_dir ~is_js:(backend = Bsb_config_types.Js) root_project_dir in
@@ -20268,9 +20268,6 @@ let bsb_main_flags : (string * Arg.spec * string) list=
       ),
     " Builds the entries in the bsconfig which match the given backend.";
 
-    "-prepublish", Arg.Unit (fun () -> prepublish := true),
-    " Generates META, .install and opam files";
-
     "-build-library", Arg.Unit (fun () -> build_library := true),
     " Builds the current package as a library. Outputs a cmxa/cma file."
   ]
@@ -20404,9 +20401,7 @@ let () =
                    [bsb -clean-world]
                    [bsb -regen ]
                 *)
-                if !prepublish then begin 
-                  Opam_of_packagejson.generate cwd
-                end;
+                Opam_of_packagejson.generate cwd;
                 if !watch_mode then begin
                   watch_exit ()
                 end
@@ -20436,9 +20431,7 @@ let () =
                        [bsb -regen ]
                     *)
                 end else begin
-                  if !prepublish then begin 
-                    Opam_of_packagejson.generate cwd
-                  end;
+                  Opam_of_packagejson.generate cwd;
                   let nested = get_string_backend backend in
                   ninja_command_exit vendor_ninja [||] nested
                 end
@@ -20468,9 +20461,7 @@ let () =
             cwd bsc_dir ocaml_dir in
           if !watch_mode then watch_exit ()
           else begin 
-            if !prepublish then begin 
-              Opam_of_packagejson.generate cwd
-            end;
+            Opam_of_packagejson.generate cwd;
             let nested = get_string_backend backend in
             ninja_command_exit vendor_ninja ninja_args nested
           end
