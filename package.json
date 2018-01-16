@@ -102,5 +102,5 @@
   },
   "peerDependencies": {
     "ocaml": "~4.6.0000"
-  },
+  }
 }

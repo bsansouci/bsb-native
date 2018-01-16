@@ -17735,65 +17735,104 @@ let output_ninja_and_namespace_map
        ~output
        ~input:(Bsb_config.proj_rel output)
        ~rule:Bsb_rule.copy_resources) static_resources ;
+  
   let (all_info, should_build) =
-  match backend with
-  | Bsb_config_types.Js -> 
-    if List.mem Bsb_config_types.Js allowed_build_kinds then
-      (Bsb_ninja_file_groups.handle_file_groups oc
-        ~bs_suffix
-        ~custom_rules
-        ~package_specs
-        ~js_post_build_cmd
-        ~files_to_install
-        ~backend
-        bs_file_groups 
-        namespace
-        Bsb_ninja_file_groups.zero, 
-      true)
-    else (Bsb_ninja_file_groups.zero, false)
-  | Bsb_config_types.Bytecode ->
-    if List.mem Bsb_config_types.Bytecode allowed_build_kinds then
+    (* if build_library then
+      let native_info = Bsb_ninja_native.handle_file_groups oc
+          ~custom_rules
+          ~is_top_level:false
+          ~entries
+          ~compile_target:Bsb_ninja_native.Native
+          ~backend
+          ~package_specs
+          ~js_post_build_cmd
+          ~files_to_install
+          ~static_libraries:(external_static_libraries @ static_libraries)
+          ~external_deps_for_linking
+          ~ocaml_dir
+          ~bs_suffix
+          ~use_ocamlfind
+          bs_file_groups
+          namespace
+          Bsb_ninja_file_groups.zero in
       (Bsb_ninja_native.handle_file_groups oc
-        ~custom_rules
-        ~is_top_level:(if build_library then false else is_top_level)
-        ~entries
-        ~compile_target:Bsb_ninja_native.Bytecode
-        ~backend
-        ~package_specs
-        ~js_post_build_cmd
-        ~files_to_install
-        ~static_libraries:(external_static_libraries @ static_libraries)
-        ~external_deps_for_linking
-        ~ocaml_dir
-        ~bs_suffix
-        ~use_ocamlfind
-        bs_file_groups
-        namespace
-        Bsb_ninja_file_groups.zero,
-      true)
-    else (Bsb_ninja_file_groups.zero, false)
-  | Bsb_config_types.Native ->
-    if List.mem Bsb_config_types.Native allowed_build_kinds then
-      (Bsb_ninja_native.handle_file_groups oc
-        ~custom_rules
-        ~is_top_level:(if build_library then false else is_top_level)
-        ~entries
-        ~compile_target:Bsb_ninja_native.Native
-        ~backend
-        ~package_specs
-        ~js_post_build_cmd
-        ~files_to_install
-        ~static_libraries:(external_static_libraries @ static_libraries)
-        ~external_deps_for_linking
-        ~ocaml_dir
-        ~bs_suffix
-        ~use_ocamlfind
-        bs_file_groups
-        namespace
-        Bsb_ninja_file_groups.zero,
-      true)
-    else (Bsb_ninja_file_groups.zero, false)
-    in
+            ~custom_rules
+            ~is_top_level:false
+            ~entries
+            ~compile_target:Bsb_ninja_native.Bytecode
+            ~backend
+            ~package_specs
+            ~js_post_build_cmd
+            ~files_to_install
+            ~static_libraries:(external_static_libraries @ static_libraries)
+            ~external_deps_for_linking
+            ~ocaml_dir
+            ~bs_suffix
+            ~use_ocamlfind
+            bs_file_groups
+            namespace
+            native_info,
+          true)
+    else begin *)
+    match backend with
+    | Bsb_config_types.Js -> 
+      if List.mem Bsb_config_types.Js allowed_build_kinds then
+        (Bsb_ninja_file_groups.handle_file_groups oc
+          ~bs_suffix
+          ~custom_rules
+          ~package_specs
+          ~js_post_build_cmd
+          ~files_to_install
+          ~backend
+          bs_file_groups 
+          namespace
+          Bsb_ninja_file_groups.zero, 
+        true)
+      else (Bsb_ninja_file_groups.zero, false)
+    | Bsb_config_types.Bytecode ->
+      if List.mem Bsb_config_types.Bytecode allowed_build_kinds then
+        (Bsb_ninja_native.handle_file_groups oc
+          ~custom_rules
+          ~is_top_level
+          ~entries
+          ~compile_target:Bsb_ninja_native.Bytecode
+          ~backend
+          ~package_specs
+          ~js_post_build_cmd
+          ~files_to_install
+          ~static_libraries:(external_static_libraries @ static_libraries)
+          ~external_deps_for_linking
+          ~ocaml_dir
+          ~bs_suffix
+          ~use_ocamlfind
+          bs_file_groups
+          namespace
+          Bsb_ninja_file_groups.zero,
+        true)
+      else (Bsb_ninja_file_groups.zero, false)
+    | Bsb_config_types.Native ->
+      if List.mem Bsb_config_types.Native allowed_build_kinds then
+        (Bsb_ninja_native.handle_file_groups oc
+          ~custom_rules
+          ~is_top_level
+          ~entries
+          ~compile_target:Bsb_ninja_native.Native
+          ~backend
+          ~package_specs
+          ~js_post_build_cmd
+          ~files_to_install
+          ~static_libraries:(external_static_libraries @ static_libraries)
+          ~external_deps_for_linking
+          ~ocaml_dir
+          ~bs_suffix
+          ~use_ocamlfind
+          bs_file_groups
+          namespace
+          Bsb_ninja_file_groups.zero,
+        true)
+      else (Bsb_ninja_file_groups.zero, false)
+    (* end  *)
+  in
   let all_info =
     match namespace with 
     | None -> all_info
@@ -18079,18 +18118,48 @@ let regenerate_ninja
           | None -> config.Bsb_config_types.bs_super_errors
           | Some bs_super_errors -> bs_super_errors
         end in 
-        Bsb_ninja_gen.output_ninja_and_namespace_map 
-          ~cwd 
-          ~bsc_dir 
-          ~not_dev
-          ~acc_libraries_for_linking 
-          ~ocaml_dir 
-          ~root_project_dir 
-          ~is_top_level 
-          ~backend 
-          ~main_bs_super_errors
-          ~build_library
-          config;
+          let _ = if build_library then begin
+            Bsb_build_util.mkp (cwd // Bsb_config.lib_bs // "bytecode");
+            Bsb_ninja_gen.output_ninja_and_namespace_map 
+              ~cwd 
+              ~bsc_dir 
+              ~not_dev
+              ~acc_libraries_for_linking 
+              ~ocaml_dir 
+              ~root_project_dir 
+              ~is_top_level:false 
+              ~backend:Bsb_config_types.Bytecode
+              ~main_bs_super_errors
+              ~build_library
+              config;
+            Bsb_build_util.mkp (cwd // Bsb_config.lib_bs // "native");
+            Bsb_ninja_gen.output_ninja_and_namespace_map 
+              ~cwd 
+              ~bsc_dir 
+              ~not_dev
+              ~acc_libraries_for_linking 
+              ~ocaml_dir 
+              ~root_project_dir 
+              ~is_top_level:false 
+              ~backend:Bsb_config_types.Native
+              ~main_bs_super_errors
+              ~build_library
+              config
+        end else
+          Bsb_ninja_gen.output_ninja_and_namespace_map 
+            ~cwd 
+            ~bsc_dir 
+            ~not_dev
+            ~acc_libraries_for_linking 
+            ~ocaml_dir 
+            ~root_project_dir 
+            ~is_top_level 
+            ~backend 
+            ~main_bs_super_errors
+            ~build_library
+            config
+          in
+          
         (* PR2184: we still need record empty dir 
             since it may add files in the future *)  
         Bsb_ninja_check.record ~cwd ~file:output_deps 
@@ -19885,21 +19954,43 @@ let generate cwd =
                      pr b "available: [ %s ]\n" ocamlVersion))))))
            | _ -> assert false);
           Io.writeFile (cwd +|+ "opam") (Buffer.contents b));
-         (let bytecode_default_ext = [".cma"] in
+          
+          Io.readJSONFile "bsconfig.json"       
+         (fun bsjson  -> let bytecode_default_ext = [ ".cma" ] in
           let native_default_ext = [".cmxa"; ".a"] in
           match json with
           | ((Obj ({ map }))[@explicit_arity ]) ->
+              let (package_name, res) = begin match bsjson with 
+                | ((Obj ({ map = bsjsonmap }))[@explicit_arity ]) ->
+                  let package_name = match String_map.find_exn "name" bsjsonmap with
+                  | exception Not_found  ->
+                      failwith "Field `name` doesn't exist."
+                  | ((Str ({ str }))[@explicit_arity ]) -> str
+                  | _ -> failwith "Field `name` doesn't exist." in
+                  let res = begin match String_map.find_exn Bsb_build_schemas.sources bsjsonmap with 
+                  | exception Not_found -> failwith "Field `sources` doesn't exist."
+                  | x -> 
+                    Bsb_parse_sources.parse_sources 
+                      package_name
+                        {not_dev = true; 
+                         dir_index =
+                           Bsb_dir_index.lib_dir_index; 
+                         cwd = Filename.current_dir_name; 
+                         root = cwd;
+                         cut_generators = false;
+                         traverse = false;
+                         backend = [Bsb_parse_sources.Native; Bsb_parse_sources.Bytecode];
+                         namespace = None; (* @HACK this should probably parse the bsconfig? *) 
+                        }  x
+                      end in
+                    (package_name, res)
+                | _ -> assert false
+              end in 
               let (libraryName,installList) =
                 match String_map.find_exn "opam" map with
                 | exception Not_found  ->
-                    let name =
-                      match String_map.find_exn "name" map with
-                      | exception Not_found  ->
-                          failwith "Field `name` didn't exist."
-                      | ((Str ({ str }))[@explicit_arity ]) -> str
-                      | _ -> failwith "Field `name` didn't exist." in
                     let path = "lib" +|+ "bs" in
-                    (name,
+                    (package_name,
                       ((List.map
                           (let open Install in
                              fun str  ->
@@ -19924,12 +20015,7 @@ let generate cwd =
                 | ((Obj ({ map = innerMap }))[@explicit_arity ]) ->
                     let libraryName =
                       match String_map.find_exn "libraryName" innerMap with
-                      | exception Not_found  ->
-                          (match String_map.find_exn "name" map with
-                           | exception Not_found  ->
-                               failwith "Field `name` didn't exist."
-                           | ((Str ({ str }))[@explicit_arity ]) -> str
-                           | _ -> failwith "Field `name` didn't exist.")
+                      | exception Not_found  -> package_name
                       | ((Str ({ str }))[@explicit_arity ]) -> str
                       | _ ->
                           failwith
@@ -19953,13 +20039,7 @@ let generate cwd =
                             "Field `type` should be either \"binary\" or \"library\"." in
                     let mainModule =
                       match String_map.find_exn "mainModule" innerMap with
-                      | exception Not_found  ->
-                          (match String_map.find_exn "name" map with
-                           | exception Not_found  ->
-                               failwith "Field `name` doesn't exist."
-                           | ((Str ({ str }))[@explicit_arity ]) -> str
-                           | _ ->
-                               failwith "Field `name` isn't a simple string.")
+                      | exception Not_found  -> package_name
                       | ((Str ({ str }))[@explicit_arity ]) -> str
                       | _ ->
                           failwith
@@ -20058,6 +20138,23 @@ let generate cwd =
                       | `Bin -> installedBinaries @ localBinaries in
                     (libraryName, installList)
                 | _ -> failwith "Field `opam` was not an object." in
+                let installList = List.fold_left (fun (acc : (Install.field* Install.move) list) (group : Bsb_parse_sources.file_group) -> 
+                  String_map.fold (fun  module_name (module_info : Bsb_db.module_info)  acc ->
+                    let open Install in
+                    let path = "lib" +|+ "bs" +|+ "bytecode" in
+                    let src = Bsb_db.filename_sans_suffix_of_module_info module_info in
+                    (`Lib, {
+                      src = path +|+ src ^ ".cmi";
+                      dst = (Some ((Filename.basename src) ^ ".cmi"));
+                      maybe = false
+                    }) :: (`Lib, {
+                      src = path +|+ src ^ ".cmt";
+                      dst = (Some ((Filename.basename src) ^ ".cmt"));
+                      maybe = false
+                    }) :: acc
+                  ) group.sources acc 
+                ) installList res.files in
+                (* bs_file_groups = res.files;  *)
               let thing =
                 let open Install in
                   ((`Header (Some libraryName)),

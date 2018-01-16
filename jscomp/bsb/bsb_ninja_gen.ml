@@ -322,65 +322,66 @@ let output_ninja_and_namespace_map
        ~output
        ~input:(Bsb_config.proj_rel output)
        ~rule:Bsb_rule.copy_resources) static_resources ;
+  
   let (all_info, should_build) =
-  match backend with
-  | Bsb_config_types.Js -> 
-    if List.mem Bsb_config_types.Js allowed_build_kinds then
-      (Bsb_ninja_file_groups.handle_file_groups oc
-        ~bs_suffix
-        ~custom_rules
-        ~package_specs
-        ~js_post_build_cmd
-        ~files_to_install
-        ~backend
-        bs_file_groups 
-        namespace
-        Bsb_ninja_file_groups.zero, 
-      true)
-    else (Bsb_ninja_file_groups.zero, false)
-  | Bsb_config_types.Bytecode ->
-    if List.mem Bsb_config_types.Bytecode allowed_build_kinds then
-      (Bsb_ninja_native.handle_file_groups oc
-        ~custom_rules
-        ~is_top_level:(if build_library then false else is_top_level)
-        ~entries
-        ~compile_target:Bsb_ninja_native.Bytecode
-        ~backend
-        ~package_specs
-        ~js_post_build_cmd
-        ~files_to_install
-        ~static_libraries:(external_static_libraries @ static_libraries)
-        ~external_deps_for_linking
-        ~ocaml_dir
-        ~bs_suffix
-        ~use_ocamlfind
-        bs_file_groups
-        namespace
-        Bsb_ninja_file_groups.zero,
-      true)
-    else (Bsb_ninja_file_groups.zero, false)
-  | Bsb_config_types.Native ->
-    if List.mem Bsb_config_types.Native allowed_build_kinds then
-      (Bsb_ninja_native.handle_file_groups oc
-        ~custom_rules
-        ~is_top_level:(if build_library then false else is_top_level)
-        ~entries
-        ~compile_target:Bsb_ninja_native.Native
-        ~backend
-        ~package_specs
-        ~js_post_build_cmd
-        ~files_to_install
-        ~static_libraries:(external_static_libraries @ static_libraries)
-        ~external_deps_for_linking
-        ~ocaml_dir
-        ~bs_suffix
-        ~use_ocamlfind
-        bs_file_groups
-        namespace
-        Bsb_ninja_file_groups.zero,
-      true)
-    else (Bsb_ninja_file_groups.zero, false)
-    in
+    match backend with
+    | Bsb_config_types.Js -> 
+      if List.mem Bsb_config_types.Js allowed_build_kinds then
+        (Bsb_ninja_file_groups.handle_file_groups oc
+          ~bs_suffix
+          ~custom_rules
+          ~package_specs
+          ~js_post_build_cmd
+          ~files_to_install
+          ~backend
+          bs_file_groups 
+          namespace
+          Bsb_ninja_file_groups.zero, 
+        true)
+      else (Bsb_ninja_file_groups.zero, false)
+    | Bsb_config_types.Bytecode ->
+      if List.mem Bsb_config_types.Bytecode allowed_build_kinds then
+        (Bsb_ninja_native.handle_file_groups oc
+          ~custom_rules
+          ~is_top_level
+          ~entries
+          ~compile_target:Bsb_ninja_native.Bytecode
+          ~backend
+          ~package_specs
+          ~js_post_build_cmd
+          ~files_to_install
+          ~static_libraries:(external_static_libraries @ static_libraries)
+          ~external_deps_for_linking
+          ~ocaml_dir
+          ~bs_suffix
+          ~use_ocamlfind
+          bs_file_groups
+          namespace
+          Bsb_ninja_file_groups.zero,
+        true)
+      else (Bsb_ninja_file_groups.zero, false)
+    | Bsb_config_types.Native ->
+      if List.mem Bsb_config_types.Native allowed_build_kinds then
+        (Bsb_ninja_native.handle_file_groups oc
+          ~custom_rules
+          ~is_top_level
+          ~entries
+          ~compile_target:Bsb_ninja_native.Native
+          ~backend
+          ~package_specs
+          ~js_post_build_cmd
+          ~files_to_install
+          ~static_libraries:(external_static_libraries @ static_libraries)
+          ~external_deps_for_linking
+          ~ocaml_dir
+          ~bs_suffix
+          ~use_ocamlfind
+          bs_file_groups
+          namespace
+          Bsb_ninja_file_groups.zero,
+        true)
+      else (Bsb_ninja_file_groups.zero, false)
+  in
   let all_info =
     match namespace with 
     | None -> all_info

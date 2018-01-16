@@ -164,18 +164,48 @@ let regenerate_ninja
           | None -> config.Bsb_config_types.bs_super_errors
           | Some bs_super_errors -> bs_super_errors
         end in 
-        Bsb_ninja_gen.output_ninja_and_namespace_map 
-          ~cwd 
-          ~bsc_dir 
-          ~not_dev
-          ~acc_libraries_for_linking 
-          ~ocaml_dir 
-          ~root_project_dir 
-          ~is_top_level 
-          ~backend 
-          ~main_bs_super_errors
-          ~build_library
-          config;
+          let _ = if build_library then begin
+            Bsb_build_util.mkp (cwd // Bsb_config.lib_bs // "bytecode");
+            Bsb_ninja_gen.output_ninja_and_namespace_map 
+              ~cwd 
+              ~bsc_dir 
+              ~not_dev
+              ~acc_libraries_for_linking 
+              ~ocaml_dir 
+              ~root_project_dir 
+              ~is_top_level:false 
+              ~backend:Bsb_config_types.Bytecode
+              ~main_bs_super_errors
+              ~build_library
+              config;
+            Bsb_build_util.mkp (cwd // Bsb_config.lib_bs // "native");
+            Bsb_ninja_gen.output_ninja_and_namespace_map 
+              ~cwd 
+              ~bsc_dir 
+              ~not_dev
+              ~acc_libraries_for_linking 
+              ~ocaml_dir 
+              ~root_project_dir 
+              ~is_top_level:false 
+              ~backend:Bsb_config_types.Native
+              ~main_bs_super_errors
+              ~build_library
+              config
+        end else
+          Bsb_ninja_gen.output_ninja_and_namespace_map 
+            ~cwd 
+            ~bsc_dir 
+            ~not_dev
+            ~acc_libraries_for_linking 
+            ~ocaml_dir 
+            ~root_project_dir 
+            ~is_top_level 
+            ~backend 
+            ~main_bs_super_errors
+            ~build_library
+            config
+          in
+          
         (* PR2184: we still need record empty dir 
             since it may add files in the future *)  
         Bsb_ninja_check.record ~cwd ~file:output_deps 
