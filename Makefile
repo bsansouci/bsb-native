@@ -29,17 +29,17 @@ OCAML=vendor/ocaml
 # scripts/build_util.install
 install:
 	@echo "Installation"
-	cp $(RUNTIME)/*.cmt* $(RUNTIME)/*.cmj* $(RUNTIME)/js.ml  $(RUNTIME)/js.cmi \
-	$(RUNTIME)/js_unsafe.cmi $(RUNTIME)/js_internal.cmi \
-	$(RUNTIME)/caml_exceptions.mli $(RUNTIME)/caml_exceptions.ml $(RUNTIME)/caml_exceptions.cmi \
-	$(RUNTIME)/js_null.ml $(RUNTIME)/js_null.cmi \
-	$(RUNTIME)/js_undefined.ml $(RUNTIME)/js_undefined.cmi \
-	$(RUNTIME)/js_exn.ml $(RUNTIME)/js_exn.mli $(RUNTIME)/js_exn.cmi \
-	$(RUNTIME)/js_int.ml $(RUNTIME)/js_int.cmi \
-	$(RUNTIME)/js_float.ml $(RUNTIME)/js_float.cmi \
-	$(RUNTIME)/js_typed_array.ml $(RUNTIME)/js_typed_array.cmi  \
-	$(STDLIB)/*.cm* $(STDLIB)/*.ml $(STDLIB)/*.mli \
-	$(OTHERS)/*.ml $(OTHERS)/*.mli  $(OTHERS)/*.cm* $(DEST)
+	# cp $(RUNTIME)/*.cmt* $(RUNTIME)/*.cmj* $(RUNTIME)/js.ml  $(RUNTIME)/js.cmi \
+	# $(RUNTIME)/js_unsafe.cmi $(RUNTIME)/js_internal.cmi \
+	# $(RUNTIME)/caml_exceptions.mli $(RUNTIME)/caml_exceptions.ml $(RUNTIME)/caml_exceptions.cmi \
+	# $(RUNTIME)/js_null.ml $(RUNTIME)/js_null.cmi \
+	# $(RUNTIME)/js_undefined.ml $(RUNTIME)/js_undefined.cmi \
+	# $(RUNTIME)/js_exn.ml $(RUNTIME)/js_exn.mli $(RUNTIME)/js_exn.cmi \
+	# $(RUNTIME)/js_int.ml $(RUNTIME)/js_int.cmi \
+	# $(RUNTIME)/js_float.ml $(RUNTIME)/js_float.cmi \
+	# $(RUNTIME)/js_typed_array.ml $(RUNTIME)/js_typed_array.cmi  \
+	# $(STDLIB)/*.cm* $(STDLIB)/*.ml $(STDLIB)/*.mli \
+	# $(OTHERS)/*.ml $(OTHERS)/*.mli  $(OTHERS)/*.cm* $(DEST)
 	cp -r $(OCAML)/lib/ocaml/caml $(DEST)
 	
 
