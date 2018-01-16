@@ -20454,6 +20454,7 @@ let () =
           ~backend
           cwd bsc_dir ocaml_dir
       in
+      Opam_of_packagejson.generate cwd;
       let nested = get_string_backend backend in
       ninja_command_exit  vendor_ninja [||] nested !build_library
     end
