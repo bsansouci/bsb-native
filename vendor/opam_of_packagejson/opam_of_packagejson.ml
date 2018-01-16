@@ -648,11 +648,14 @@ let generate cwd =
                       src = path +|+ src ^ ".cmi";
                       dst = (Some ((Filename.basename src) ^ ".cmi"));
                       maybe = false
-                    }) :: (`Lib, {
+                    }) 
+                    (* @Todo Generate the .cmt files for Merlin's sake. *)
+                    (* :: (`Lib, {
                       src = path +|+ src ^ ".cmt";
                       dst = (Some ((Filename.basename src) ^ ".cmt"));
                       maybe = false
-                    }) :: acc
+                    })  *)
+                    :: acc
                   ) group.sources acc 
                 ) installList res.files in
                 (* bs_file_groups = res.files;  *)

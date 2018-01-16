@@ -17737,43 +17737,6 @@ let output_ninja_and_namespace_map
        ~rule:Bsb_rule.copy_resources) static_resources ;
   
   let (all_info, should_build) =
-    (* if build_library then
-      let native_info = Bsb_ninja_native.handle_file_groups oc
-          ~custom_rules
-          ~is_top_level:false
-          ~entries
-          ~compile_target:Bsb_ninja_native.Native
-          ~backend
-          ~package_specs
-          ~js_post_build_cmd
-          ~files_to_install
-          ~static_libraries:(external_static_libraries @ static_libraries)
-          ~external_deps_for_linking
-          ~ocaml_dir
-          ~bs_suffix
-          ~use_ocamlfind
-          bs_file_groups
-          namespace
-          Bsb_ninja_file_groups.zero in
-      (Bsb_ninja_native.handle_file_groups oc
-            ~custom_rules
-            ~is_top_level:false
-            ~entries
-            ~compile_target:Bsb_ninja_native.Bytecode
-            ~backend
-            ~package_specs
-            ~js_post_build_cmd
-            ~files_to_install
-            ~static_libraries:(external_static_libraries @ static_libraries)
-            ~external_deps_for_linking
-            ~ocaml_dir
-            ~bs_suffix
-            ~use_ocamlfind
-            bs_file_groups
-            namespace
-            native_info,
-          true)
-    else begin *)
     match backend with
     | Bsb_config_types.Js -> 
       if List.mem Bsb_config_types.Js allowed_build_kinds then
@@ -17831,7 +17794,6 @@ let output_ninja_and_namespace_map
           Bsb_ninja_file_groups.zero,
         true)
       else (Bsb_ninja_file_groups.zero, false)
-    (* end  *)
   in
   let all_info =
     match namespace with 
@@ -20147,11 +20109,14 @@ let generate cwd =
                       src = path +|+ src ^ ".cmi";
                       dst = (Some ((Filename.basename src) ^ ".cmi"));
                       maybe = false
-                    }) :: (`Lib, {
+                    }) 
+                    (* @Todo Generate the .cmt files for Merlin's sake. *)
+                    (* :: (`Lib, {
                       src = path +|+ src ^ ".cmt";
                       dst = (Some ((Filename.basename src) ^ ".cmt"));
                       maybe = false
-                    }) :: acc
+                    })  *)
+                    :: acc
                   ) group.sources acc 
                 ) installList res.files in
                 (* bs_file_groups = res.files;  *)
@@ -20378,7 +20343,7 @@ let exec_command_then_exit  command =
   exit (Sys.command command ) 
 
 (* Execute the underlying ninja build call, then exit (as opposed to keep watching) *)
-let ninja_command_exit  vendor_ninja ninja_args nested =
+let ninja_command_exit  vendor_ninja ninja_args nested build_library =
   let ninja_args_len = Array.length ninja_args in
   if Ext_sys.is_windows_or_cygwin then
     let path_ninja = Filename.quote vendor_ninja in 
@@ -20400,7 +20365,23 @@ let ninja_command_exit  vendor_ninja ninja_args nested =
     Bsb_log.info_args args ;
     let environment = Unix.environment () in
     let environment = (Array.append environment [| "BSB_BACKEND=" ^ nested |]) in
-    Unix.execvpe vendor_ninja args environment
+    if build_library then
+      if Unix.fork () = 0 then 
+        Unix.execvpe vendor_ninja args environment
+      else begin
+        let nested = "native" in
+        let ninja_common_args = [|"ninja.exe"; "-C"; Bsb_config.lib_bs // nested |] in 
+        let args = 
+          if ninja_args_len = 0 then ninja_common_args else 
+            Array.append ninja_common_args ninja_args in 
+        Bsb_log.info_args args ;
+        let environment = Unix.environment () in
+        let environment = (Array.append environment [| "BSB_BACKEND=" ^ nested |]) in
+        Unix.execvpe vendor_ninja args environment
+      end
+    else
+      Unix.execvpe vendor_ninja args environment
+        
 
 
 
@@ -20474,7 +20455,7 @@ let () =
           cwd bsc_dir ocaml_dir
       in
       let nested = get_string_backend backend in
-      ninja_command_exit  vendor_ninja [||] nested
+      ninja_command_exit  vendor_ninja [||] nested !build_library
     end
   | argv -> 
     begin
@@ -20517,7 +20498,7 @@ let () =
                   ~not_dev:false 
                   ~root_project_dir:cwd
                   ~forced:force_regenerate
-                  ~build_library:build_library
+                  ~build_library
                   ~backend
                   cwd bsc_dir ocaml_dir in
                 if !watch_mode then begin
@@ -20530,7 +20511,7 @@ let () =
                 end else begin
                   Opam_of_packagejson.generate cwd;
                   let nested = get_string_backend backend in
-                  ninja_command_exit vendor_ninja [||] nested
+                  ninja_command_exit vendor_ninja [||] nested build_library
                 end
             end;
         end
@@ -20560,7 +20541,7 @@ let () =
           else begin 
             Opam_of_packagejson.generate cwd;
             let nested = get_string_backend backend in
-            ninja_command_exit vendor_ninja ninja_args nested
+            ninja_command_exit vendor_ninja ninja_args nested !build_library
           end
         end
     end

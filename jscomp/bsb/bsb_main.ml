@@ -141,7 +141,7 @@ let exec_command_then_exit  command =
   exit (Sys.command command ) 
 
 (* Execute the underlying ninja build call, then exit (as opposed to keep watching) *)
-let ninja_command_exit  vendor_ninja ninja_args nested =
+let ninja_command_exit  vendor_ninja ninja_args nested build_library =
   let ninja_args_len = Array.length ninja_args in
   if Ext_sys.is_windows_or_cygwin then
     let path_ninja = Filename.quote vendor_ninja in 
@@ -163,7 +163,23 @@ let ninja_command_exit  vendor_ninja ninja_args nested =
     Bsb_log.info_args args ;
     let environment = Unix.environment () in
     let environment = (Array.append environment [| "BSB_BACKEND=" ^ nested |]) in
-    Unix.execvpe vendor_ninja args environment
+    if build_library then
+      if Unix.fork () = 0 then 
+        Unix.execvpe vendor_ninja args environment
+      else begin
+        let nested = "native" in
+        let ninja_common_args = [|"ninja.exe"; "-C"; Bsb_config.lib_bs // nested |] in 
+        let args = 
+          if ninja_args_len = 0 then ninja_common_args else 
+            Array.append ninja_common_args ninja_args in 
+        Bsb_log.info_args args ;
+        let environment = Unix.environment () in
+        let environment = (Array.append environment [| "BSB_BACKEND=" ^ nested |]) in
+        Unix.execvpe vendor_ninja args environment
+      end
+    else
+      Unix.execvpe vendor_ninja args environment
+        
 
 
 
@@ -237,7 +253,7 @@ let () =
           cwd bsc_dir ocaml_dir
       in
       let nested = get_string_backend backend in
-      ninja_command_exit  vendor_ninja [||] nested
+      ninja_command_exit  vendor_ninja [||] nested !build_library
     end
   | argv -> 
     begin
@@ -280,7 +296,7 @@ let () =
                   ~not_dev:false 
                   ~root_project_dir:cwd
                   ~forced:force_regenerate
-                  ~build_library:build_library
+                  ~build_library
                   ~backend
                   cwd bsc_dir ocaml_dir in
                 if !watch_mode then begin
@@ -293,7 +309,7 @@ let () =
                 end else begin
                   Opam_of_packagejson.generate cwd;
                   let nested = get_string_backend backend in
-                  ninja_command_exit vendor_ninja [||] nested
+                  ninja_command_exit vendor_ninja [||] nested build_library
                 end
             end;
         end
@@ -323,7 +339,7 @@ let () =
           else begin 
             Opam_of_packagejson.generate cwd;
             let nested = get_string_backend backend in
-            ninja_command_exit vendor_ninja ninja_args nested
+            ninja_command_exit vendor_ninja ninja_args nested !build_library
           end
         end
     end
