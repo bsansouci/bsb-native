@@ -455,21 +455,43 @@ let generate cwd =
                      pr b "available: [ %s ]\n" ocamlVersion))))))
            | _ -> assert false);
           Io.writeFile (cwd +|+ "opam") (Buffer.contents b));
-         (let bytecode_default_ext = [".cma"] in
+          
+          Io.readJSONFile "bsconfig.json"       
+         (fun bsjson  -> let bytecode_default_ext = [ ".cma" ] in
           let native_default_ext = [".cmxa"; ".a"] in
           match json with
           | ((Obj ({ map }))[@explicit_arity ]) ->
+              let (package_name, res) = begin match bsjson with 
+                | ((Obj ({ map = bsjsonmap }))[@explicit_arity ]) ->
+                  let package_name = match String_map.find_exn "name" bsjsonmap with
+                  | exception Not_found  ->
+                      failwith "Field `name` doesn't exist."
+                  | ((Str ({ str }))[@explicit_arity ]) -> str
+                  | _ -> failwith "Field `name` doesn't exist." in
+                  let res = begin match String_map.find_exn Bsb_build_schemas.sources bsjsonmap with 
+                  | exception Not_found -> failwith "Field `sources` doesn't exist."
+                  | x -> 
+                    Bsb_parse_sources.parse_sources 
+                      package_name
+                        {not_dev = true; 
+                         dir_index =
+                           Bsb_dir_index.lib_dir_index; 
+                         cwd = Filename.current_dir_name; 
+                         root = cwd;
+                         cut_generators = false;
+                         traverse = false;
+                         backend = [Bsb_parse_sources.Native; Bsb_parse_sources.Bytecode];
+                         namespace = None; (* @HACK this should probably parse the bsconfig? *) 
+                        }  x
+                      end in
+                    (package_name, res)
+                | _ -> assert false
+              end in 
               let (libraryName,installList) =
                 match String_map.find_exn "opam" map with
                 | exception Not_found  ->
-                    let name =
-                      match String_map.find_exn "name" map with
-                      | exception Not_found  ->
-                          failwith "Field `name` didn't exist."
-                      | ((Str ({ str }))[@explicit_arity ]) -> str
-                      | _ -> failwith "Field `name` didn't exist." in
                     let path = "lib" +|+ "bs" in
-                    (name,
+                    (package_name,
                       ((List.map
                           (let open Install in
                              fun str  ->
@@ -494,12 +516,7 @@ let generate cwd =
                 | ((Obj ({ map = innerMap }))[@explicit_arity ]) ->
                     let libraryName =
                       match String_map.find_exn "libraryName" innerMap with
-                      | exception Not_found  ->
-                          (match String_map.find_exn "name" map with
-                           | exception Not_found  ->
-                               failwith "Field `name` didn't exist."
-                           | ((Str ({ str }))[@explicit_arity ]) -> str
-                           | _ -> failwith "Field `name` didn't exist.")
+                      | exception Not_found  -> package_name
                       | ((Str ({ str }))[@explicit_arity ]) -> str
                       | _ ->
                           failwith
@@ -523,13 +540,7 @@ let generate cwd =
                             "Field `type` should be either \"binary\" or \"library\"." in
                     let mainModule =
                       match String_map.find_exn "mainModule" innerMap with
-                      | exception Not_found  ->
-                          (match String_map.find_exn "name" map with
-                           | exception Not_found  ->
-                               failwith "Field `name` doesn't exist."
-                           | ((Str ({ str }))[@explicit_arity ]) -> str
-                           | _ ->
-                               failwith "Field `name` isn't a simple string.")
+                      | exception Not_found  -> package_name
                       | ((Str ({ str }))[@explicit_arity ]) -> str
                       | _ ->
                           failwith
@@ -628,6 +639,23 @@ let generate cwd =
                       | `Bin -> installedBinaries @ localBinaries in
                     (libraryName, installList)
                 | _ -> failwith "Field `opam` was not an object." in
+                let installList = List.fold_left (fun (acc : (Install.field* Install.move) list) (group : Bsb_parse_sources.file_group) -> 
+                  String_map.fold (fun  module_name (module_info : Bsb_db.module_info)  acc ->
+                    let open Install in
+                    let path = "lib" +|+ "bs" +|+ "bytecode" in
+                    let src = Bsb_db.filename_sans_suffix_of_module_info module_info in
+                    (`Lib, {
+                      src = path +|+ src ^ ".cmi";
+                      dst = (Some ((Filename.basename src) ^ ".cmi"));
+                      maybe = false
+                    }) :: (`Lib, {
+                      src = path +|+ src ^ ".cmt";
+                      dst = (Some ((Filename.basename src) ^ ".cmt"));
+                      maybe = false
+                    }) :: acc
+                  ) group.sources acc 
+                ) installList res.files in
+                (* bs_file_groups = res.files;  *)
               let thing =
                 let open Install in
                   ((`Header (Some libraryName)),
