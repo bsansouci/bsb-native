@@ -420,7 +420,51 @@ let output_ninja_and_namespace_map
    We generate one simple rule that'll just call that string as a command. *)
   let _ = 
     match build_script with
-  | Some build_script when should_build ->
+  | Some (build_script, true) when should_build ->
+    let destdir = cwd // Bsb_config.lib_bs // nested in 
+    ignore @@ Bsb_file.install_if_exists ~destdir build_script;
+    let (refmt, impl) = if Filename.check_suffix build_script ".re" then 
+      let exec = (match refmt with 
+            | Bsb_config_types.Refmt_v2 -> 
+              Bsb_log.warn "@{<warning>Warning:@} ReasonSyntax V2 is deprecated, please upgrade to V3.@.";
+              bsc_dir // "refmt.exe"
+            | Bsb_config_types.Refmt_none -> 
+              Bsb_log.warn "@{<warning>Warning:@} refmt version missing. Please set it explicitly, since we may change the default in the future.@.";
+              bsc_dir // "refmt.exe"
+            | Bsb_config_types.Refmt_v3 -> 
+              bsc_dir // "refmt3.exe"
+            | Bsb_config_types.Refmt_custom x -> x ) in
+      ("-pp \"" ^ exec ^ " --print binary\"", "-impl")
+    else ("", "") in
+    let rule = Bsb_rule.define ~command:("${ocamlc} unix.cma ${linked_internals} ${refmt} -open Bsb_internals -o ${out} ${impl} ${in}") "build_script" in
+    let output = destdir // "build_script.exe" in
+    let p = root_project_dir // "node_modules" // "bs-platform" in
+    Bsb_ninja_util.output_build oc
+      ~order_only_deps:(static_resources @ all_info)
+      ~input:""
+      ~inputs:[destdir // (Filename.basename build_script)]
+      ~output
+      ~shadows:[{
+        key = "linked_internals"; 
+        op = Bsb_ninja_util.AppendList ["-I"; p // "lib"; p // "lib" // "bsb_internals.cmo"]
+      }; {
+        key = "refmt";
+        op = Bsb_ninja_util.Overwrite refmt
+      }; {
+        key = "impl";
+        op = Bsb_ninja_util.Overwrite impl 
+      }]
+      ~rule;
+    let rule = Bsb_rule.define ~command:(output ^ " " ^ (Filename.dirname ocaml_dir) ^ " " ^ ocaml_lib ^ " " ^ cwd) "run_build_script" in
+    Bsb_ninja_util.output_build oc
+      ~order_only_deps:[ output ]
+      ~input:""
+      ~output:"run_build_script"
+      ~rule;
+    Bsb_ninja_util.phony oc ~order_only_deps:("run_build_script" :: static_resources @ all_info)
+      ~inputs:[]
+      ~output:Literals.build_ninja ;
+  | Some (build_script, false) when should_build ->
     if Ext_sys.is_windows_or_cygwin then 
       Bsb_log.error "`build-script` field not supported on windows yet. Coming soon (poke bsansouci on discord so he prioritize it)."
     else begin 
@@ -437,7 +481,7 @@ let output_ninja_and_namespace_map
         ~input:""
         ~output:Literals.build_ninja
         ~rule;
-    end
+      end
   | _ ->
     Bsb_ninja_util.phony oc ~order_only_deps:(static_resources @ all_info)
       ~inputs:[]

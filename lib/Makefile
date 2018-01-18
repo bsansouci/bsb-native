@@ -1,3 +1,4 @@
+BYTE=ocamlc.opt$(EXE)
 NATIVE=ocamlopt.opt$(EXE)
 
 OCAMLOPT_FLAGS= -g -w -40-30 ../jscomp/stubs/ext_basic_hash_stubs.c
@@ -28,13 +29,15 @@ refmt3.exe: refmt_main3.mli refmt_main3.ml
 reactjs_jsx_ppx_2.exe:reactjs_jsx_ppx_v2.mli reactjs_jsx_ppx_v2.ml
 	$(NATIVE) -w -40-30 -no-alias-deps -I +compiler-libs ocamlcommon.cmxa $^ -o $@
 
-
+bsb_internals.cma: bsb_internals.ml
+	$(BYTE) -c -w -40-30 -no-alias-deps  $^
+	
 bsc.exe: whole_compiler.mli whole_compiler.ml
 	$(NATIVE) $(OCAMLOPT_FLAGS) $^  -o $@
 
 
 
-all: bsc.exe bsb.exe bsppx.exe bsb_helper.exe refmt.exe refmt3.exe reactjs_jsx_ppx_2.exe bsdep.exe
+all: bsc.exe bsb.exe bsppx.exe bsb_helper.exe refmt.exe refmt3.exe reactjs_jsx_ppx_2.exe bsdep.exe bsb_internals.cma
 #  bspp.exe bsdep.exe
 # bspack.exe
 # bsppx.exe is needed for merlin

@@ -10330,7 +10330,7 @@ type t =
     bs_super_errors : bool;
     
     static_libraries: string list;
-    build_script: string option;
+    build_script: (string * bool) option;
     allowed_build_kinds: compilation_kind_t list;
     ocamlfind_dependencies: string list;
     ocaml_flags: string list;
@@ -11152,7 +11152,18 @@ let interpret_json
           | Some config -> 
             Bsb_exception.config_error config 
               "expect .bs.js or .js string here"
-        in   
+        in
+        let build_script = begin match !build_script with 
+          | Some bs -> 
+            let is_ml_or_re = Filename.check_suffix bs ".re" || Filename.check_suffix bs ".ml" in
+            if Sys.file_exists (cwd // bs) && is_ml_or_re then 
+              Some (cwd // bs, true)
+            else begin
+              Bsb_log.warn "@{<warn>Warning@} package %s: field 'build-script' has changed. It should be a path to an ml/re file instead of a shell command.@." package_name;
+              Some (bs, false)
+            end
+          | None -> None
+        end in
         {
           bs_suffix ;
           package_name ;
@@ -11185,7 +11196,7 @@ let interpret_json
           bs_super_errors = !bs_super_errors;
           
           static_libraries = !static_libraries;
-          build_script = !build_script;
+          build_script = build_script;
           allowed_build_kinds = allowed_build_kinds;
           ocamlfind_dependencies = !ocamlfind_dependencies;
           ocaml_flags = !ocaml_flags;
@@ -11644,6 +11655,64 @@ let check ~cwd ~forced ~file cmdline_build_kind : check_result =
           Bsb_file_not_exist
         end
   end
+
+end
+module Bsb_file : sig 
+#1 "bsb_file.mli"
+
+
+
+(** return [true] if copied *)
+val install_if_exists : destdir:string -> string -> bool
+
+
+end = struct
+#1 "bsb_file.ml"
+
+
+open Unix
+
+let set_infos filename infos =
+  Unix.utimes filename infos.st_atime infos.st_mtime;
+  Unix.chmod filename infos.st_perm
+  (** it is not necessary to call [chown] since it is within the same user 
+    and {!Unix.chown} is not implemented under Windows
+   *)
+  (*
+  try
+    Unix.chown filename infos.st_uid infos.st_gid
+  with Unix_error(EPERM,_,_) -> ()
+*)
+
+let buffer_size = 8192;;
+let buffer = Bytes.create buffer_size;;
+
+let file_copy input_name output_name =
+  let fd_in = openfile input_name [O_RDONLY] 0 in
+  let fd_out = openfile output_name [O_WRONLY; O_CREAT; O_TRUNC] 0o666 in
+  let rec copy_loop () =
+    match read fd_in buffer 0 buffer_size with
+    |  0 -> ()
+    | r -> ignore (write fd_out buffer 0 r); copy_loop ()
+  in
+  copy_loop ();
+  close fd_in;
+  close fd_out;;
+
+
+let copy_with_permission input_name output_name =
+    file_copy input_name output_name ;
+    set_infos output_name (Unix.lstat input_name)  
+
+let install_if_exists ~destdir input_name = 
+    if Sys.file_exists input_name then 
+      let output_name = (Filename.concat destdir (Filename.basename input_name)) in
+      match Unix.stat output_name , Unix.stat input_name with
+      | {st_mtime = output_stamp}, {st_mtime = input_stamp} when input_stamp <= output_stamp 
+        -> false
+      | _ -> copy_with_permission input_name output_name; true 
+      | exception _ -> copy_with_permission input_name output_name; true
+    else false
 
 end
 module Bsb_namespace_map_gen : sig 
@@ -17831,7 +17900,51 @@ let output_ninja_and_namespace_map
    We generate one simple rule that'll just call that string as a command. *)
   let _ = 
     match build_script with
-  | Some build_script when should_build ->
+  | Some (build_script, true) when should_build ->
+    let destdir = cwd // Bsb_config.lib_bs // nested in 
+    ignore @@ Bsb_file.install_if_exists ~destdir build_script;
+    let (refmt, impl) = if Filename.check_suffix build_script ".re" then 
+      let exec = (match refmt with 
+            | Bsb_config_types.Refmt_v2 -> 
+              Bsb_log.warn "@{<warning>Warning:@} ReasonSyntax V2 is deprecated, please upgrade to V3.@.";
+              bsc_dir // "refmt.exe"
+            | Bsb_config_types.Refmt_none -> 
+              Bsb_log.warn "@{<warning>Warning:@} refmt version missing. Please set it explicitly, since we may change the default in the future.@.";
+              bsc_dir // "refmt.exe"
+            | Bsb_config_types.Refmt_v3 -> 
+              bsc_dir // "refmt3.exe"
+            | Bsb_config_types.Refmt_custom x -> x ) in
+      ("-pp \"" ^ exec ^ " --print binary\"", "-impl")
+    else ("", "") in
+    let rule = Bsb_rule.define ~command:("${ocamlc} unix.cma ${linked_internals} ${refmt} -open Bsb_internals -o ${out} ${impl} ${in}") "build_script" in
+    let output = destdir // "build_script.exe" in
+    let p = root_project_dir // "node_modules" // "bs-platform" in
+    Bsb_ninja_util.output_build oc
+      ~order_only_deps:(static_resources @ all_info)
+      ~input:""
+      ~inputs:[destdir // (Filename.basename build_script)]
+      ~output
+      ~shadows:[{
+        key = "linked_internals"; 
+        op = Bsb_ninja_util.AppendList ["-I"; p // "lib"; p // "lib" // "bsb_internals.cmo"]
+      }; {
+        key = "refmt";
+        op = Bsb_ninja_util.Overwrite refmt
+      }; {
+        key = "impl";
+        op = Bsb_ninja_util.Overwrite impl 
+      }]
+      ~rule;
+    let rule = Bsb_rule.define ~command:(output ^ " " ^ (Filename.dirname ocaml_dir) ^ " " ^ ocaml_lib ^ " " ^ cwd) "run_build_script" in
+    Bsb_ninja_util.output_build oc
+      ~order_only_deps:[ output ]
+      ~input:""
+      ~output:"run_build_script"
+      ~rule;
+    Bsb_ninja_util.phony oc ~order_only_deps:("run_build_script" :: static_resources @ all_info)
+      ~inputs:[]
+      ~output:Literals.build_ninja ;
+  | Some (build_script, false) when should_build ->
     if Ext_sys.is_windows_or_cygwin then 
       Bsb_log.error "`build-script` field not supported on windows yet. Coming soon (poke bsansouci on discord so he prioritize it)."
     else begin 
@@ -17848,7 +17961,7 @@ let output_ninja_and_namespace_map
         ~input:""
         ~output:Literals.build_ninja
         ~rule;
-    end
+      end
   | _ ->
     Bsb_ninja_util.phony oc ~order_only_deps:(static_resources @ all_info)
       ~inputs:[]
@@ -19146,64 +19259,6 @@ let init_sample_project ~cwd ~theme name =
 
 
 
-
-end
-module Bsb_file : sig 
-#1 "bsb_file.mli"
-
-
-
-(** return [true] if copied *)
-val install_if_exists : destdir:string -> string -> bool
-
-
-end = struct
-#1 "bsb_file.ml"
-
-
-open Unix
-
-let set_infos filename infos =
-  Unix.utimes filename infos.st_atime infos.st_mtime;
-  Unix.chmod filename infos.st_perm
-  (** it is not necessary to call [chown] since it is within the same user 
-    and {!Unix.chown} is not implemented under Windows
-   *)
-  (*
-  try
-    Unix.chown filename infos.st_uid infos.st_gid
-  with Unix_error(EPERM,_,_) -> ()
-*)
-
-let buffer_size = 8192;;
-let buffer = Bytes.create buffer_size;;
-
-let file_copy input_name output_name =
-  let fd_in = openfile input_name [O_RDONLY] 0 in
-  let fd_out = openfile output_name [O_WRONLY; O_CREAT; O_TRUNC] 0o666 in
-  let rec copy_loop () =
-    match read fd_in buffer 0 buffer_size with
-    |  0 -> ()
-    | r -> ignore (write fd_out buffer 0 r); copy_loop ()
-  in
-  copy_loop ();
-  close fd_in;
-  close fd_out;;
-
-
-let copy_with_permission input_name output_name =
-    file_copy input_name output_name ;
-    set_infos output_name (Unix.lstat input_name)  
-
-let install_if_exists ~destdir input_name = 
-    if Sys.file_exists input_name then 
-      let output_name = (Filename.concat destdir (Filename.basename input_name)) in
-      match Unix.stat output_name , Unix.stat input_name with
-      | {st_mtime = output_stamp}, {st_mtime = input_stamp} when input_stamp <= output_stamp 
-        -> false
-      | _ -> copy_with_permission input_name output_name; true 
-      | exception _ -> copy_with_permission input_name output_name; true
-    else false
 
 end
 module Bsb_world : sig 

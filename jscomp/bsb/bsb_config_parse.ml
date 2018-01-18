@@ -371,7 +371,18 @@ let interpret_json
           | Some config -> 
             Bsb_exception.config_error config 
               "expect .bs.js or .js string here"
-        in   
+        in
+        let build_script = begin match !build_script with 
+          | Some bs -> 
+            let is_ml_or_re = Filename.check_suffix bs ".re" || Filename.check_suffix bs ".ml" in
+            if Sys.file_exists (cwd // bs) && is_ml_or_re then 
+              Some (cwd // bs, true)
+            else begin
+              Bsb_log.warn "@{<warn>Warning@} package %s: field 'build-script' has changed. It should be a path to an ml/re file instead of a shell command.@." package_name;
+              Some (bs, false)
+            end
+          | None -> None
+        end in
         {
           bs_suffix ;
           package_name ;
@@ -404,7 +415,7 @@ let interpret_json
           bs_super_errors = !bs_super_errors;
           
           static_libraries = !static_libraries;
-          build_script = !build_script;
+          build_script = build_script;
           allowed_build_kinds = allowed_build_kinds;
           ocamlfind_dependencies = !ocamlfind_dependencies;
           ocaml_flags = !ocaml_flags;
