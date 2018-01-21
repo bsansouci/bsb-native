@@ -22,6 +22,14 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
 
+type level = 
+  | Debug
+  | Info 
+  | Warn
+  | Error 
+  
+val log_level : level ref
+
 val color_enabled : bool ref 
 
 val setup : unit -> unit 

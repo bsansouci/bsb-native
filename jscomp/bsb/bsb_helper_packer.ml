@@ -43,6 +43,7 @@ let pack pack_byte_or_native
   ~namespace
   ~warnings 
   ~warn_error
+  ~verbose
   cwd =
   let suffix_object_files, suffix_library_files, compiler, custom_flag = begin match pack_byte_or_native with
   | PackBytecode -> Literals.suffix_cmo, Literals.suffix_cma , "ocamlc", true
@@ -97,11 +98,19 @@ let pack pack_byte_or_native
     if ocamlfind_packages = [] then
       let ocaml_dir = Bsb_build_util.get_ocaml_dir cwd in
       let compiler = ocaml_dir // compiler ^ ".opt" in
+      
+      let list_of_args = (compiler :: "-a" :: "-g" 
+        :: (if bs_super_errors then ["-bs-super-errors"] else []) )
+        @ warning_command
+        @ "-o" :: (Literals.library_file ^ suffix_library_files) :: includes 
+        @ all_object_files in
+      
+      if verbose then
+        print_endline("Bsb_helper pack command:\n" ^ (String.concat "  " list_of_args) ^ "\n");
+        
       Unix.execvp
         compiler
-          (Array.of_list ((compiler :: "-a" :: "-g" :: (if bs_super_errors then ["-bs-super-errors"] else []) )
-            @ warning_command
-            @ "-o" :: (Literals.library_file ^ suffix_library_files) :: includes @ all_object_files))
+          (Array.of_list list_of_args)
     else begin
       (* @CrossPlatform This might work on windows since we're using the Unix module which claims to
          have a windows implementation... We should double check this. *)
@@ -109,6 +118,10 @@ let pack pack_byte_or_native
       @ ((if bs_super_errors then ["-passopt"; "-bs-super-errors"] else []))
       @ warning_command
       @  ("-o" :: (Literals.library_file ^ suffix_library_files) :: includes @ all_object_files) in
+      
+      if verbose then
+        print_endline("Bsb_helper pack command:\n" ^ (String.concat "  " list_of_args) ^ "\n");
+      
       Unix.execvp
         "ocamlfind"
           (Array.of_list list_of_args)

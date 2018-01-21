@@ -22,6 +22,8 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
 
+let verbose = ref false
+
 let main_module = ref None
 
 let set_main_module modulename =
@@ -81,13 +83,13 @@ let link link_byte_or_native =
       ~ocaml_dependencies:(List.rev !ocaml_dependencies)
       ~warnings:!warnings
       ~warn_error:!warn_error
+      ~verbose:!verbose
       (Sys.getcwd ())
   end
 
 let pack link_byte_or_native =
   Bsb_helper_packer.pack
     link_byte_or_native
-    
     ~includes:!includes
     ~batch_files:!batch_files
     ~ocamlfind_packages:!ocamlfind_packages
@@ -95,6 +97,7 @@ let pack link_byte_or_native =
     ~namespace:!namespace
     ~warnings:!warnings
     ~warn_error:!warn_error
+    ~verbose:!verbose
     (Sys.getcwd ())
     
 let () =
@@ -193,5 +196,8 @@ let () =
     " Use warnings for packer/linker.";
     
     "-warn-error", (Arg.String (fun w -> warn_error := w )),
-    " Turn warnings into errors for packer/linker."
+    " Turn warnings into errors for packer/linker.";
+    
+    "-verbose", (Arg.Unit (fun v -> verbose := true)),
+    " Turn on verbose Maude."
   ] anonymous usage

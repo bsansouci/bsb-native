@@ -37,6 +37,7 @@ let link link_byte_or_native
   ~ocaml_dependencies
   ~warnings 
   ~warn_error
+  ~verbose
   cwd =
   let ocaml_dir = Bsb_build_util.get_ocaml_dir cwd in
   let ocaml_lib = Bsb_build_util.get_ocaml_lib_dir ~is_js:false cwd in
@@ -155,7 +156,10 @@ let link link_byte_or_native
           "ld: warning: directory not found for option '-L/path/of/machine/where/artifacts/where/compiled" 
         *)
         @ "-o" :: output_file :: (List.filter (fun thing -> thing <> "-thread") all_object_files) in
-        (* List.iter (fun a -> print_endline a) list_of_args; *)
+      
+      if verbose then
+        print_endline("Bsb_helper link command:\n" ^ (String.concat "  " list_of_args) ^ "\n");
+        
       Unix.execvp
         compiler
         (Array.of_list (list_of_args))
@@ -167,7 +171,10 @@ let link link_byte_or_native
         @ ("-linkpkg" :: ocamlfind_packages)
         @ warning_command
         @ ("-g" :: "-o" :: output_file :: all_object_files) in
-      (* List.iter (fun a -> print_endline a) list_of_args; *)
+      
+      if verbose then
+        print_endline("Bsb_helper link command:\n" ^ (String.concat "  " list_of_args) ^ "\n");
+        
       Unix.execvp
         "ocamlfind"
         (Array.of_list (list_of_args))

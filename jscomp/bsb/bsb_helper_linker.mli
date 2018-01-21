@@ -35,5 +35,6 @@ val link : link_t ->
   ocaml_dependencies:string list ->
   warnings: string ->
   warn_error: string ->
+  verbose: bool ->
   string ->
   unit

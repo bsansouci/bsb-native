@@ -32,5 +32,6 @@ val pack : pack_t ->
   namespace:string option ->
   warnings: string -> 
   warn_error: string ->
+  verbose: bool ->
   string ->
   unit

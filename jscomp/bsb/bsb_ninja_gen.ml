@@ -252,6 +252,8 @@ let output_ninja_and_namespace_map
                      Ben - September 28th 2017
           *)
           Bsb_ninja_global_vars.open_flag, open_flag;
+          
+          Bsb_ninja_global_vars.bsb_helper_verbose, if !Bsb_log.log_level = Bsb_log.Debug then "-verbose" else "";
         |] oc in
   let all_includes acc  = 
     match external_includes with 

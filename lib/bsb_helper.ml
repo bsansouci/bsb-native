@@ -5236,6 +5236,14 @@ module Bsb_log : sig
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
 
+type level = 
+  | Debug
+  | Info 
+  | Warn
+  | Error 
+  
+val log_level : level ref
+
 val color_enabled : bool ref 
 
 val setup : unit -> unit 
@@ -5251,6 +5259,7 @@ val warn : 'a log
 val error : 'a log
 
 val info_args : string array -> unit
+
 end = struct
 #1 "bsb_log.ml"
 (* Copyright (C) 2017- Authors of BuckleScript
@@ -8071,6 +8080,7 @@ val link : link_t ->
   ocaml_dependencies:string list ->
   warnings: string ->
   warn_error: string ->
+  verbose: bool ->
   string ->
   unit
 
@@ -8115,6 +8125,7 @@ let link link_byte_or_native
   ~ocaml_dependencies
   ~warnings 
   ~warn_error
+  ~verbose
   cwd =
   let ocaml_dir = Bsb_build_util.get_ocaml_dir cwd in
   let ocaml_lib = Bsb_build_util.get_ocaml_lib_dir ~is_js:false cwd in
@@ -8233,7 +8244,10 @@ let link link_byte_or_native
           "ld: warning: directory not found for option '-L/path/of/machine/where/artifacts/where/compiled" 
         *)
         @ "-o" :: output_file :: (List.filter (fun thing -> thing <> "-thread") all_object_files) in
-        (* List.iter (fun a -> print_endline a) list_of_args; *)
+      
+      if verbose then
+        print_endline("Bsb_helper link command:\n" ^ (String.concat "  " list_of_args) ^ "\n");
+        
       Unix.execvp
         compiler
         (Array.of_list (list_of_args))
@@ -8245,7 +8259,10 @@ let link link_byte_or_native
         @ ("-linkpkg" :: ocamlfind_packages)
         @ warning_command
         @ ("-g" :: "-o" :: output_file :: all_object_files) in
-      (* List.iter (fun a -> print_endline a) list_of_args; *)
+      
+      if verbose then
+        print_endline("Bsb_helper link command:\n" ^ (String.concat "  " list_of_args) ^ "\n");
+        
       Unix.execvp
         "ocamlfind"
         (Array.of_list (list_of_args))
@@ -8290,6 +8307,7 @@ val pack : pack_t ->
   namespace:string option ->
   warnings: string -> 
   warn_error: string ->
+  verbose: bool ->
   string ->
   unit
 
@@ -8340,6 +8358,7 @@ let pack pack_byte_or_native
   ~namespace
   ~warnings 
   ~warn_error
+  ~verbose
   cwd =
   let suffix_object_files, suffix_library_files, compiler, custom_flag = begin match pack_byte_or_native with
   | PackBytecode -> Literals.suffix_cmo, Literals.suffix_cma , "ocamlc", true
@@ -8394,11 +8413,19 @@ let pack pack_byte_or_native
     if ocamlfind_packages = [] then
       let ocaml_dir = Bsb_build_util.get_ocaml_dir cwd in
       let compiler = ocaml_dir // compiler ^ ".opt" in
+      
+      let list_of_args = (compiler :: "-a" :: "-g" 
+        :: (if bs_super_errors then ["-bs-super-errors"] else []) )
+        @ warning_command
+        @ "-o" :: (Literals.library_file ^ suffix_library_files) :: includes 
+        @ all_object_files in
+      
+      if verbose then
+        print_endline("Bsb_helper pack command:\n" ^ (String.concat "  " list_of_args) ^ "\n");
+        
       Unix.execvp
         compiler
-          (Array.of_list ((compiler :: "-a" :: "-g" :: (if bs_super_errors then ["-bs-super-errors"] else []) )
-            @ warning_command
-            @ "-o" :: (Literals.library_file ^ suffix_library_files) :: includes @ all_object_files))
+          (Array.of_list list_of_args)
     else begin
       (* @CrossPlatform This might work on windows since we're using the Unix module which claims to
          have a windows implementation... We should double check this. *)
@@ -8406,6 +8433,10 @@ let pack pack_byte_or_native
       @ ((if bs_super_errors then ["-passopt"; "-bs-super-errors"] else []))
       @ warning_command
       @  ("-o" :: (Literals.library_file ^ suffix_library_files) :: includes @ all_object_files) in
+      
+      if verbose then
+        print_endline("Bsb_helper pack command:\n" ^ (String.concat "  " list_of_args) ^ "\n");
+      
       Unix.execvp
         "ocamlfind"
           (Array.of_list list_of_args)
@@ -8478,6 +8509,8 @@ end = struct
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
 
+let verbose = ref false
+
 let main_module = ref None
 
 let set_main_module modulename =
@@ -8537,13 +8570,13 @@ let link link_byte_or_native =
       ~ocaml_dependencies:(List.rev !ocaml_dependencies)
       ~warnings:!warnings
       ~warn_error:!warn_error
+      ~verbose:!verbose
       (Sys.getcwd ())
   end
 
 let pack link_byte_or_native =
   Bsb_helper_packer.pack
     link_byte_or_native
-    
     ~includes:!includes
     ~batch_files:!batch_files
     ~ocamlfind_packages:!ocamlfind_packages
@@ -8551,6 +8584,7 @@ let pack link_byte_or_native =
     ~namespace:!namespace
     ~warnings:!warnings
     ~warn_error:!warn_error
+    ~verbose:!verbose
     (Sys.getcwd ())
     
 let () =
@@ -8649,7 +8683,10 @@ let () =
     " Use warnings for packer/linker.";
     
     "-warn-error", (Arg.String (fun w -> warn_error := w )),
-    " Turn warnings into errors for packer/linker."
+    " Turn warnings into errors for packer/linker.";
+    
+    "-verbose", (Arg.Unit (fun v -> verbose := true)),
+    " Turn on verbose Maude."
   ] anonymous usage
 
 end

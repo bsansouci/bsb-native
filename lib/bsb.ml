@@ -3316,6 +3316,14 @@ module Bsb_log : sig
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
 
+type level = 
+  | Debug
+  | Info 
+  | Warn
+  | Error 
+  
+val log_level : level ref
+
 val color_enabled : bool ref 
 
 val setup : unit -> unit 
@@ -3331,6 +3339,7 @@ val warn : 'a log
 val error : 'a log
 
 val info_args : string array -> unit
+
 end = struct
 #1 "bsb_log.ml"
 (* Copyright (C) 2017- Authors of BuckleScript
@@ -11869,6 +11878,7 @@ let ocaml_flags = "ocaml_flags"
 let berror = "berror"
 let ocaml_dependencies = "ocaml_dependencies"
 let bsb_helper_warnings = "bsb_helper_warnings"
+let bsb_helper_verbose = "bsb_helper_verbose"
 
 end
 module Bsb_rule : sig 
@@ -12207,27 +12217,27 @@ let build_cmi_native =
 
 let linking_bytecode =
   define
-    ~command:"${bsb_helper} ${ocaml_dependencies} ${warnings} ${namespace} -bs-main ${main_module} ${bs_super_errors} ${static_libraries} \
+    ~command:"${bsb_helper} ${bsb_helper_verbose} ${ocaml_dependencies} ${warnings} ${namespace} -bs-main ${main_module} ${bs_super_errors} ${static_libraries} \
               ${ocamlfind_dependencies} ${external_deps_for_linking} ${in} -link-bytecode ${out}"
     "linking_bytecode"
 
 let linking_native =
   define
-    ~command:"${bsb_helper} ${ocaml_dependencies} ${warnings} ${namespace} -bs-main ${main_module} ${bs_super_errors} ${static_libraries} \
+    ~command:"${bsb_helper} ${bsb_helper_verbose} ${ocaml_dependencies} ${warnings} ${namespace} -bs-main ${main_module} ${bs_super_errors} ${static_libraries} \
               ${ocamlfind_dependencies} ${external_deps_for_linking} ${in} -link-native ${out}"
     "linking_native"
 
 
 let build_cma_library =
   define
-    ~command:"${bsb_helper} ${ocaml_dependencies} ${warnings} ${namespace} ${bs_super_errors} ${static_libraries} ${ocamlfind_dependencies} \
+    ~command:"${bsb_helper} ${bsb_helper_verbose} ${ocaml_dependencies} ${warnings} ${namespace} ${bs_super_errors} ${static_libraries} ${ocamlfind_dependencies} \
               ${bs_package_includes} ${bsc_lib_includes} ${bsc_extra_includes} \
               ${in} -pack-bytecode-library"
     "build_cma_library"
 
 let build_cmxa_library =
   define
-    ~command:"${bsb_helper} ${ocaml_dependencies} ${warnings} ${namespace} ${bs_super_errors} ${static_libraries} ${ocamlfind_dependencies} \
+    ~command:"${bsb_helper} ${bsb_helper_verbose} ${ocaml_dependencies} ${warnings} ${namespace} ${bs_super_errors} ${static_libraries} ${ocamlfind_dependencies} \
               ${bs_package_includes} ${bsc_lib_includes} ${bsc_extra_includes} \
               ${in} -pack-native-library"
     "build_cmxa_library"
@@ -17656,6 +17666,8 @@ let output_ninja_and_namespace_map
                      Ben - September 28th 2017
           *)
           Bsb_ninja_global_vars.open_flag, open_flag;
+          
+          Bsb_ninja_global_vars.bsb_helper_verbose, if !Bsb_log.log_level = Bsb_log.Debug then "-verbose" else "";
         |] oc in
   let all_includes acc  = 
     match external_includes with 
