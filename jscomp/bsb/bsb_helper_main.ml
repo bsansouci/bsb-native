@@ -70,6 +70,8 @@ let link link_byte_or_native =
     Bsb_helper_linker.link 
       link_byte_or_native
       ~main_module:main_module
+      (* `includes` is not reversed here because it gets reversed inside when we fold_list and 
+          prepend a new list. *)
       ~includes:!includes
       ~batch_files:!batch_files
       ~clibs:(List.rev !clibs)
@@ -85,6 +87,7 @@ let link link_byte_or_native =
 let pack link_byte_or_native =
   Bsb_helper_packer.pack
     link_byte_or_native
+    
     ~includes:!includes
     ~batch_files:!batch_files
     ~ocamlfind_packages:!ocamlfind_packages

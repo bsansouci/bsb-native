@@ -138,7 +138,7 @@ let link link_byte_or_native
       "-warn-error" :: warn_error :: warning_command
     else warning_command in 
     
-    let all_object_files = ocaml_dependencies @ clibs @ library_files @ List.rev (list_of_object_files) in
+    let all_object_files = ocaml_dependencies @ library_files @ List.rev (list_of_object_files) @ clibs in
     (* If there are no ocamlfind packages then let's not use ocamlfind, let's use the opt compiler instead.
        This is for mainly because we'd like to offer a "sandboxed" experience for those who want it.
        So if you don't care about opam dependencies you can solely rely on Bucklescript and npm, no need 
