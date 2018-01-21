@@ -104,7 +104,7 @@ let output_ninja_and_namespace_map
   if entries = [] && is_top_level then
     Bsb_exception.missing_entry nested;
   
-  let use_ocamlfind = ocamlfind_dependencies <> [] in
+  let use_ocamlfind = ocamlfind_dependencies <> [] || external_ocamlfind_dependencies <> [] in
   
   let external_ocaml_dependencies = List.fold_left (fun acc v -> Depend.StringSet.add v acc) external_ocaml_dependencies ocaml_dependencies in
   let external_ocaml_dependencies = Depend.StringSet.elements external_ocaml_dependencies in
@@ -226,7 +226,7 @@ let output_ninja_and_namespace_map
           (* Jumping through hoops. When ocamlfind is used we need to pass the argument 
              to the underlying compiler and not ocamlfind, so we use -passopt. Otherwise we don't.
              For bsb_helper we also don't. *)
-            if ocamlfind_dependencies <> [] && String.length bs_super_errors > 0 
+            if use_ocamlfind && String.length bs_super_errors > 0 
               then "-passopt " ^ bs_super_errors 
               else bs_super_errors;
           Bsb_ninja_global_vars.bs_super_errors, bs_super_errors;
@@ -236,7 +236,13 @@ let output_ninja_and_namespace_map
             else (ocaml_dir // ocamlc ^ ".opt");
           Bsb_ninja_global_vars.ocamlopt, if use_ocamlfind then ocamlopt
             else (ocaml_dir // ocamlopt ^ ".opt");
-          Bsb_ninja_global_vars.ocamlfind, if use_ocamlfind then ocamlfind else "";
+            
+          (* Add a space after "ocamlfind" so that when we're _not_ using ocamlfind there is no leading space to the command being executed. 
+             This only matters on Windows on which ninja dies if there's such space. 
+             
+                        Ben - January 20th 2018
+           *)
+          Bsb_ninja_global_vars.ocamlfind, if use_ocamlfind then ocamlfind ^ " " else "";
           Bsb_ninja_global_vars.ocamlfind_dependencies,  Bsb_build_util.flag_concat "-package" (external_ocamlfind_dependencies @ ocamlfind_dependencies);
           Bsb_ninja_global_vars.ocaml_dependencies, Bsb_build_util.flag_concat "-add-ocaml-dependency" external_ocaml_dependencies;
           
@@ -350,7 +356,6 @@ let output_ninja_and_namespace_map
         ~external_deps_for_linking
         ~ocaml_dir
         ~bs_suffix
-        ~use_ocamlfind
         bs_file_groups
         namespace
         Bsb_ninja_file_groups.zero,
@@ -371,7 +376,6 @@ let output_ninja_and_namespace_map
         ~external_deps_for_linking
         ~ocaml_dir
         ~bs_suffix
-        ~use_ocamlfind
         bs_file_groups
         namespace
         Bsb_ninja_file_groups.zero,

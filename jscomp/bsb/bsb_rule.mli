@@ -54,18 +54,11 @@ val linking_native : t
 val build_cma_library : t
 val build_cmxa_library : t
 
-val build_cmo_cmi_bytecode_ocamlfind : t
-val build_cmi_bytecode_ocamlfind : t
-val build_cmx_cmi_native_ocamlfind : t
-val build_cmi_native_ocamlfind : t
-
 val build_package : t 
 val build_package_gen_mlast_simple : t
 val build_package_build_cmi_bytecode : t
 val build_package_build_cmi_native : t
 
-val build_package_build_cmi_bytecode_ocamlfind : t
-val build_package_build_cmi_native_ocamlfind : t
 
 (** rules are generally composed of built-in rules and customized rules, there are two design choices:
     1. respect custom rules with the same name, then we need adjust our built-in 
