@@ -39,4 +39,6 @@ let gcc ?c:(c=true) ?include_ocaml:(include_ocaml=true) ?flags:(flags=[]) ?inclu
   let err = Sys.command (String.concat " " cmd) in
   if Ext_sys.is_windows_or_cygwin then
     Sys.chdir cwd;
+  if err != 0 then
+    failwith ("gcc compilation failed for: " ^ outfile);
   err
