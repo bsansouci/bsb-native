@@ -28,8 +28,7 @@
     "test-ocaml": "go run scripts/test.go -no-install-global  -no-mocha -no-theme -no-bsb",
     "cover": "istanbul cover --report html ./node_modules/.bin/_mocha --   ./jscomp/test/**/*test.js && open coverage/index.html",
     "coverage": "istanbul cover ./node_modules/.bin/_mocha --report lcovonly --  './jscomp/test/*test.js'",
-    "coveralls": "npm run-script coverage && node ./node_modules/.bin/coveralls < coverage/lcov.info",
-    "postinstall": "node scripts/install.js"
+    "coveralls": "npm run-script coverage && node ./node_modules/.bin/coveralls < coverage/lcov.info"
   },
   "name": "bs-platform",
   "version": "2.1.1",
@@ -60,6 +59,7 @@
   "homepage": "https://github.com/bucklescript/bucklescript#readme",
   "esy": {
     "build": [
+      [ "node", "scripts/install.js" ],
       [ "cp", "-r", "-f", "#{self.target_dir / 'lib' }", "#{self.install}" ],
       [ "cp", "-r", "-f", "#{self.target_dir / 'vendor' }", "#{self.install}" ]
     ],
