@@ -101,9 +101,9 @@
     }
   },
   "dependencies": {
-    "ocaml": "~4.6.0000"
+    "ocaml": "~4.6.1"
   },
   "peerDependencies": {
-    "ocaml": "~4.6.0000"
+    "ocaml": "~4.6.1"
   }
 }
