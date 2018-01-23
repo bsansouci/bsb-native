@@ -20042,11 +20042,14 @@ let generate cwd =
                 let installList = List.fold_left (fun (acc : (Install.field* Install.move) list) (group : Bsb_parse_sources.file_group) ->
                   String_map.fold (fun  module_name (module_info : Bsb_db.module_info)  acc ->
                     let open Install in
-                    let path = "lib" +|+ "bs" +|+ "bytecode" in
                     let src = Bsb_db.filename_sans_suffix_of_module_info module_info in
                     (`Lib, {
-                      src = path +|+ src ^ namespace_str ^ ".cmi";
+                      src = "lib" +|+ "bs" +|+ "bytecode" +|+ src ^ namespace_str ^ ".cmi";
                       dst = (Some ((Filename.basename src) ^ namespace_str ^ ".cmi"));
+                      maybe = false
+                    }) :: (`Lib, {
+                      src = "lib" +|+ "bs" +|+ "native" +|+ src ^ namespace_str ^ ".cmx";
+                      dst = (Some ((Filename.basename src) ^ namespace_str ^ ".cmx"));
                       maybe = false
                     })
                     (* @Todo Generate the .cmt files for Merlin's sake. *)
@@ -20058,6 +20061,7 @@ let generate cwd =
                     :: acc
                   ) group.sources acc
                 ) installList res.files in
+
                 (* bs_file_groups = res.files;  *)
               let thing =
                 let open Install in
