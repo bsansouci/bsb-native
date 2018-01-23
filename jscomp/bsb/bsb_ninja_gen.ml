@@ -108,6 +108,7 @@ let output_ninja_and_namespace_map
   
   let use_ocamlfind = ocamlfind_dependencies <> [] in
   
+  let use_ocamlfind = ocamlfind_dependencies <> [] || external_ocamlfind_dependencies <> [] in
   let external_ocaml_dependencies = List.fold_left (fun acc v -> Depend.StringSet.add v acc) external_ocaml_dependencies ocaml_dependencies in
   let external_ocaml_dependencies = Depend.StringSet.elements external_ocaml_dependencies in
 
@@ -239,6 +240,7 @@ let output_ninja_and_namespace_map
           Bsb_ninja_global_vars.ocamlc, ocamlc;
           Bsb_ninja_global_vars.ocamlopt, ocamlopt;
           Bsb_ninja_global_vars.ocamlfind, if use_ocamlfind then ocamlfind else "";
+          Bsb_ninja_global_vars.ocamlfind, if use_ocamlfind then ocamlfind ^ " " else "";
           Bsb_ninja_global_vars.ocamlfind_dependencies,  Bsb_build_util.flag_concat "-package" (external_ocamlfind_dependencies @ ocamlfind_dependencies);
           Bsb_ninja_global_vars.ocaml_dependencies, Bsb_build_util.flag_concat "-add-ocaml-dependency" external_ocaml_dependencies;
           

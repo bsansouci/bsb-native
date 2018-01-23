@@ -107,7 +107,6 @@ let emit_impl_build
   ~compile_target
   js_post_build_cmd
   ~is_re
-  ~use_ocamlfind
   namespace
   filename_sans_extension
   : info =
@@ -156,11 +155,9 @@ let emit_impl_build
               else Some [{key = Bsb_build_schemas.bsb_dir_group; 
                           op = Bsb_ninja_util.Overwrite (string_of_int (group_dir_index :> int)) }])
   ;
-  let rule_name = begin match (compile_target, use_ocamlfind) with
-  | (Bytecode, false) -> Rules.build_cmo_cmi_bytecode
-  | (Native, false)   -> Rules.build_cmx_cmi_native
-  | (Bytecode, true) -> Rules.build_cmo_cmi_bytecode_ocamlfind
-  | (Native, true)   -> Rules.build_cmx_cmi_native_ocamlfind
+  let rule_name = begin match compile_target with
+  | Bytecode -> Rules.build_cmo_cmi_bytecode
+  | Native   -> Rules.build_cmx_cmi_native
   end in
   let cm_outputs, deps =
     if no_intf_file then
@@ -195,7 +192,6 @@ let emit_intf_build
     oc
     ~is_re
     ~compile_target
-    ~use_ocamlfind
     namespace
     filename_sans_extension
   : info =
@@ -232,12 +228,10 @@ let emit_intf_build
                   key = Bsb_build_schemas.bsb_dir_group; 
                   op = 
                     Overwrite (string_of_int (group_dir_index :> int )) }]);
-    
-  let rule = begin match (compile_target, use_ocamlfind) with
-  | (Bytecode, false) -> Rules.build_cmi_bytecode
-  | (Native, false)   -> Rules.build_cmi_native
-  | (Bytecode, true) -> Rules.build_cmi_bytecode_ocamlfind
-  | (Native, true)   -> Rules.build_cmi_native_ocamlfind
+
+  let rule = begin match compile_target with
+  | Bytecode -> Rules.build_cmi_bytecode
+  | Native   -> Rules.build_cmi_native
   end in
   (* TODO(sansouci): Do we need this? *)
   (* let deps = match namespace with 
@@ -257,7 +251,6 @@ let handle_module_info
   js_post_build_cmd
   ~compile_target
   ~bs_suffix
-  ~use_ocamlfind
   oc  module_name 
   ( module_info : Bsb_db.module_info)
   namespace  =
@@ -499,7 +492,6 @@ let handle_file_groups oc
   ~external_deps_for_linking
   ~ocaml_dir
   ~bs_suffix
-  ~use_ocamlfind
   (file_groups  :  Bsb_parse_sources.file_group list) namespace st =
   let file_groups = List.filter (fun (group : Bsb_parse_sources.file_group) ->
     match backend with 
@@ -515,7 +507,6 @@ let handle_file_groups oc
       ~js_post_build_cmd 
       ~namespace
       ~bs_suffix
-      ~use_ocamlfind
       files_to_install
   ) st file_groups in
   if is_top_level then

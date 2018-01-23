@@ -39,7 +39,6 @@ val handle_file_groups : out_channel ->
   external_deps_for_linking:string list ->
   ocaml_dir:string ->
   bs_suffix:bool ->
-  use_ocamlfind:bool ->
   Bsb_parse_sources.file_group list ->
   string option ->
   Bsb_ninja_file_groups.info -> 

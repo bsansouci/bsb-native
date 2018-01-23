@@ -11832,25 +11832,25 @@ module Bsb_rule : sig
 
 
 
-type t  
+type t
 
 val get_name : t  -> out_channel -> string
 
 val build_ast_and_module_sets : t
-val build_ast_and_module_sets_from_re : t 
-val build_ast_and_module_sets_from_rei : t 
+val build_ast_and_module_sets_from_re : t
+val build_ast_and_module_sets_from_rei : t
 
 val build_ast_and_module_sets_gen_simple : t
-val build_ast_and_module_sets_from_re_gen_simple : t 
-val build_ast_and_module_sets_from_rei_gen_simple : t 
+val build_ast_and_module_sets_from_re_gen_simple : t
+val build_ast_and_module_sets_from_rei_gen_simple : t
 
-val build_bin_deps : t 
-val build_bin_deps_bytecode : t 
-val build_bin_deps_native : t 
-val reload : t 
+val build_bin_deps : t
+val build_bin_deps_bytecode : t
+val build_bin_deps_native : t
+val reload : t
 val copy_resources : t
 val build_cmj_js : t
-val build_cmj_cmi_js : t 
+val build_cmj_cmi_js : t
 val build_cmi : t
 val build_cmo_cmi_bytecode : t
 val build_cmi_bytecode : t
@@ -11861,27 +11861,20 @@ val linking_native : t
 val build_cma_library : t
 val build_cmxa_library : t
 
-val build_cmo_cmi_bytecode_ocamlfind : t
-val build_cmi_bytecode_ocamlfind : t
-val build_cmx_cmi_native_ocamlfind : t
-val build_cmi_native_ocamlfind : t
-
-val build_package : t 
+val build_package : t
 val build_package_gen_mlast_simple : t
 val build_package_build_cmi_bytecode : t
 val build_package_build_cmi_native : t
 
-val build_package_build_cmi_bytecode_ocamlfind : t
-val build_package_build_cmi_native_ocamlfind : t
 
 (** rules are generally composed of built-in rules and customized rules, there are two design choices:
-    1. respect custom rules with the same name, then we need adjust our built-in 
+    1. respect custom rules with the same name, then we need adjust our built-in
     rules dynamically in case the conflict.
     2. respect our built-in rules, then we only need re-load custom rules for each bsconfig.json
 *)
 
 
-(** Since now we generate ninja files per bsconfig.json in a single process, 
+(** Since now we generate ninja files per bsconfig.json in a single process,
     we must make sure it is re-entrant
 *)
 val reset : string String_map.t -> t String_map.t
@@ -11891,7 +11884,7 @@ val define :
     ?depfile:string ->
     ?restat:unit ->
     ?description:string ->
-    string -> 
+    string ->
     t
 
 end = struct
@@ -11924,7 +11917,7 @@ end = struct
 
 let rule_id = ref 0
 let rule_names = ref String_set.empty
-(** To make it re-entrant across multiple ninja files, 
+(** To make it re-entrant across multiple ninja files,
     We must reset [rule_id]
 *)
 let ask_name name =
@@ -11944,10 +11937,10 @@ let ask_name name =
       new_name
     end
 
-type t = { 
-  mutable used : bool; 
-  rule_name : string; 
-  name : out_channel -> string 
+type t = {
+  mutable used : bool;
+  rule_name : string;
+  name : out_channel -> string
 }
 
 let get_name (x : t) oc = x.name oc
@@ -11978,7 +11971,7 @@ let define
     ?(description = "\027[34mBuilding\027[39m \027[2m${out}\027[22m") (* blue, dim *)
     name
   =
-  let rule_name = ask_name name  in 
+  let rule_name = ask_name name  in
   let rec self = {
     used  = false;
     rule_name ;
@@ -11992,18 +11985,18 @@ let define
   } in self
 
 
-(** FIXME: We don't need set [-o ${out}] when building ast 
+(** FIXME: We don't need set [-o ${out}] when building ast
     since the default is already good -- it does not*)
 let build_ast_and_module_sets =
   define
     ~command:"${bsc}  ${pp_flags} ${ppx_flags} ${bs_super_errors} ${warnings} ${bsc_flags} -c -o ${out} -bs-syntax-only -bs-binary-ast ${in}"
     "build_ast_and_module_sets"
-    
+
 let build_ast_and_module_sets_from_re =
   define
     ~command:"${bsc} -pp \"${refmt} ${refmt_flags}\" ${reason_react_jsx}  ${ppx_flags} ${bs_super_errors} ${warnings} ${bsc_flags} -c -o ${out} -bs-syntax-only -bs-binary-ast -impl ${in}"
     "build_ast_and_module_sets_from_re"
-    
+
 let build_ast_and_module_sets_from_rei =
   define
     ~command:"${bsc} -pp \"${refmt} ${refmt_flags}\" ${reason_react_jsx} ${ppx_flags} ${bs_super_errors} ${warnings} ${bsc_flags}  -c -o ${out} -bs-syntax-only -bs-binary-ast -intf ${in}"
@@ -12015,12 +12008,12 @@ let build_ast_and_module_sets_gen_simple =
   define
     ~command:"${bsb_native_parse}  ${pp_flags} ${ppx_flags} ${bs_super_errors} ${warnings} ${bsc_flags} -c -o ${out} ${in}"
     "build_ast_and_module_sets_gen_simple"
-    
+
 let build_ast_and_module_sets_from_re_gen_simple =
   define
     ~command:"${bsb_native_parse} -pp \"${refmt} ${refmt_flags}\" ${reason_react_jsx}  ${ppx_flags} ${bs_super_errors} ${warnings} ${bsc_flags} -c -o ${out} -impl ${in}"
     "build_ast_and_module_sets_from_re_gen_simple"
-    
+
 let build_ast_and_module_sets_from_rei_gen_simple =
   define
     ~command:"${bsb_native_parse} -pp \"${refmt} ${refmt_flags}\" ${reason_react_jsx} ${ppx_flags} ${bs_super_errors} ${warnings} ${bsc_flags} -c -o ${out} -intf ${in}"
@@ -12040,7 +12033,7 @@ let build_bin_deps_native =
   define
     ~command:"${bsb_helper} ${namespace} -g ${bsb_dir_group} -MD-native ${in}"
     "build_deps_native"
-    
+
 let reload =
   define
     ~command:"${bsbuild} -init"
@@ -12091,101 +12084,59 @@ let build_cmi =
     ~depfile:"${in}.d"
     "build_cmi" (* the compiler should always consult [.cmi], current the vanilla ocaml compiler only consult [.cmi] when [.mli] found*)
 
-let build_package = 
+let build_package =
   define
     ~command:"${bsc} -w -49 -no-alias-deps -c ${in}"
     "build_package"
 
-let build_package_gen_mlast_simple = 
+let build_package_gen_mlast_simple =
   define
     ~command:"${bsb_native_parse} -w -49 -no-alias-deps -c ${in}"
     "build_package_gen_mlast_simple"
-    
-let build_package_build_cmi_bytecode = 
+
+let build_package_build_cmi_bytecode =
   define
-    ~command:"${ocamlc} ${bs_super_errors_ocamlfind} ${bs_package_includes} ${bsc_lib_includes} ${bsc_extra_includes} ${ocaml_flags} \
+    ~command:"${ocamlfind}${ocamlc} ${bs_super_errors_ocamlfind} ${bs_package_includes} ${bsc_lib_includes} ${ocamlfind_dependencies} ${bsc_extra_includes} ${ocaml_flags} \
               -o ${out} ${warnings} -no-alias-deps -w -49 -g -c -intf-suffix .mliast_simple -impl ${in} ${postbuild}"
     "build_package_build_cmi_bytecode"
 
-let build_package_build_cmi_native = 
+let build_package_build_cmi_native =
   define
-    ~command:"${ocamlopt} ${bs_super_errors_ocamlfind} ${bs_package_includes} ${bsc_lib_includes} ${bsc_extra_includes} ${ocaml_flags} \
+    ~command:"${ocamlfind}${ocamlopt} ${bs_super_errors_ocamlfind} ${bs_package_includes} ${bsc_lib_includes} ${ocamlfind_dependencies} ${bsc_extra_includes} ${ocaml_flags} \
               -o ${out} ${warnings} -no-alias-deps -w -49 -g -c -intf-suffix .mliast_simple -impl ${in} ${postbuild}"
     "build_package_build_cmi_native"
 
 
 let build_cmo_cmi_bytecode =
   define
-    ~command:"${ocamlc} ${open_flag} ${bs_super_errors_ocamlfind} ${bs_package_includes} ${bsc_lib_includes} ${bsc_extra_includes} ${ocaml_flags} \
+    ~command:"${ocamlfind}${ocamlc} ${open_flag} ${bs_super_errors_ocamlfind} ${bs_package_includes} ${bsc_lib_includes} ${ocamlfind_dependencies} ${bsc_extra_includes} ${ocaml_flags} \
               -o ${out} ${warnings} -g -c -intf-suffix .mliast_simple -impl ${in}_simple ${postbuild}"
     ~depfile:"${in}.d"
     "build_cmo_cmi_bytecode"
-    
+
 let build_cmi_bytecode =
   define
-    ~command:"${ocamlc} ${open_flag} ${bs_super_errors_ocamlfind} ${bs_package_includes} ${bsc_lib_includes} ${bsc_extra_includes} ${ocaml_flags} \
+    ~command:"${ocamlfind}${ocamlc} ${open_flag} ${bs_super_errors_ocamlfind} ${bs_package_includes} ${bsc_lib_includes} ${ocamlfind_dependencies} ${bsc_extra_includes} ${ocaml_flags} \
               -o ${out} ${warnings} -g -c -intf ${in}_simple ${postbuild}"
     ~depfile:"${in}.d"
     "build_cmi_bytecode"
 
 let build_cmx_cmi_native =
   define
-    ~command:"${ocamlopt} ${open_flag} ${bs_super_errors_ocamlfind} ${bs_package_includes} ${bsc_lib_includes} ${bsc_extra_includes} ${ocaml_flags} \
+    ~command:"${ocamlfind}${ocamlopt} ${open_flag} ${bs_super_errors_ocamlfind} ${bs_package_includes} ${bsc_lib_includes} ${ocamlfind_dependencies} ${bsc_extra_includes} ${ocaml_flags} \
               -o ${out} ${warnings} -g -c -intf-suffix .mliast_simple -impl ${in}_simple ${postbuild}"
     ~depfile:"${in}.d"
     "build_cmx_cmi_native"
 
 let build_cmi_native =
   define
-    ~command:"${ocamlopt} ${open_flag} ${bs_super_errors_ocamlfind} ${bs_package_includes} ${bsc_lib_includes} ${bsc_extra_includes} ${ocaml_flags} \
+    ~command:"${ocamlfind}${ocamlopt} ${open_flag} ${bs_super_errors_ocamlfind} ${bs_package_includes} ${bsc_lib_includes} ${ocamlfind_dependencies} ${bsc_extra_includes} ${ocaml_flags} \
               -o ${out} ${warnings} -g -c -intf ${in}_simple ${postbuild}"
     ~depfile:"${in}.d"
     "build_cmi_native"
-    
-    
 
 
-let build_package_build_cmi_bytecode_ocamlfind = 
-  define
-    ~command:"ocamlfind ${ocamlc} ${bs_super_errors_ocamlfind} ${bs_package_includes} ${bsc_lib_includes} ${ocamlfind_dependencies} ${bsc_extra_includes} ${ocaml_flags} \
-              -o ${out} ${warnings} -no-alias-deps -w -49 -g -c -intf-suffix .mliast_simple -impl ${in} ${postbuild}"
-    "build_package_build_cmi_bytecode_ocamlfind"
 
-let build_package_build_cmi_native_ocamlfind = 
-  define
-    ~command:"ocamlfind ${ocamlopt} ${bs_super_errors_ocamlfind} ${bs_package_includes} ${bsc_lib_includes} ${ocamlfind_dependencies} ${bsc_extra_includes} ${ocaml_flags} \
-              -o ${out} ${warnings} -no-alias-deps -w -49 -g -c -intf-suffix .mliast_simple -impl ${in} ${postbuild}"
-    "build_package_build_cmi_native_ocamlfind"
-
-
-let build_cmo_cmi_bytecode_ocamlfind =
-  define
-    ~command:"ocamlfind ${ocamlc} ${open_flag} ${bs_super_errors_ocamlfind} ${bs_package_includes} ${bsc_lib_includes} ${ocamlfind_dependencies} ${bsc_extra_includes} ${ocaml_flags} \
-              -o ${out} ${warnings} -g -c -intf-suffix .mliast_simple -impl ${in}_simple ${postbuild}"
-    ~depfile:"${in}.d"
-    "build_cmo_cmi_bytecode_ocamlfind"
-    
-let build_cmi_bytecode_ocamlfind =
-  define
-    ~command:"ocamlfind ${ocamlc} ${open_flag} ${bs_super_errors_ocamlfind} ${bs_package_includes} ${bsc_lib_includes} ${ocamlfind_dependencies} ${bsc_extra_includes} ${ocaml_flags} \
-              -o ${out} ${warnings} -g -c -intf ${in}_simple ${postbuild}"
-    ~depfile:"${in}.d"
-    "build_cmi_bytecode_ocamlfind"
-
-let build_cmx_cmi_native_ocamlfind =
-  define
-    ~command:"ocamlfind ${ocamlopt} ${open_flag} ${bs_super_errors_ocamlfind} ${bs_package_includes} ${bsc_lib_includes} ${ocamlfind_dependencies} ${bsc_extra_includes} ${ocaml_flags} \
-              -o ${out} ${warnings} -g -c -intf-suffix .mliast_simple -impl ${in}_simple ${postbuild}"
-    ~depfile:"${in}.d"
-    "build_cmx_cmi_native_ocamlfind"
-
-let build_cmi_native_ocamlfind =
-  define
-    ~command:"${ocamlfind} ${ocamlopt} ${open_flag} ${bs_super_errors_ocamlfind} ${bs_package_includes} ${bsc_lib_includes} ${ocamlfind_dependencies} ${bsc_extra_includes} ${ocaml_flags} \
-              -o ${out} ${warnings} -g -c -intf ${in}_simple ${postbuild}"
-    ~depfile:"${in}.d"
-    "build_cmi_native_ocamlfind"    
-    
 
 
 
@@ -12217,32 +12168,32 @@ let build_cmxa_library =
     "build_cmxa_library"
 
 (* a snapshot of rule_names environment*)
-let built_in_rule_names = !rule_names 
+let built_in_rule_names = !rule_names
 let built_in_rule_id = !rule_id
 
-let reset (custom_rules : string String_map.t) = 
-  begin 
+let reset (custom_rules : string String_map.t) =
+  begin
     rule_id := built_in_rule_id;
     rule_names := built_in_rule_names;
 
     build_ast_and_module_sets.used <- false ;
-    build_ast_and_module_sets_from_re.used <- false ;  
+    build_ast_and_module_sets_from_re.used <- false ;
     build_ast_and_module_sets_from_rei.used <- false ;
-    
+
     build_ast_and_module_sets_gen_simple.used <- false ;
-    build_ast_and_module_sets_from_re_gen_simple.used <- false ;  
+    build_ast_and_module_sets_from_re_gen_simple.used <- false ;
     build_ast_and_module_sets_from_rei_gen_simple.used <- false ;
 
     build_bin_deps.used <- false;
     build_bin_deps_bytecode.used <- false;
     build_bin_deps_native.used <- false;
-  
-    reload.used <- false; 
+
+    reload.used <- false;
     copy_resources.used <- false ;
     build_cmj_js.used <- false;
     build_cmj_cmi_js.used <- false ;
     build_cmi.used <- false ;
-    
+
     build_cmo_cmi_bytecode.used <- false;
     build_cmi_bytecode.used <- false;
     build_cmx_cmi_native.used <- false;
@@ -12251,22 +12202,14 @@ let reset (custom_rules : string String_map.t) =
     linking_native.used <- false;
     build_cma_library.used <- false;
     build_cmxa_library.used <- false;
-    
-    build_cmo_cmi_bytecode_ocamlfind.used <- false;
-    build_cmi_bytecode_ocamlfind.used <- false;
-    build_cmx_cmi_native_ocamlfind.used <- false;
-    build_cmi_native_ocamlfind.used <- false;
 
     build_package.used <- false;
 
     build_package_gen_mlast_simple.used <- false;
     build_package_build_cmi_bytecode.used <- false;
     build_package_build_cmi_native.used <- false;
-    
-    build_package_build_cmi_bytecode_ocamlfind.used <- false;
-    build_package_build_cmi_native_ocamlfind.used <- false;
-    
-    String_map.mapi (fun name command -> 
+
+    String_map.mapi (fun name command ->
         define ~command name
       ) custom_rules
   end
@@ -12893,7 +12836,7 @@ end
 module Bsb_ninja_native : sig 
 #1 "bsb_ninja_native.mli"
 (* Copyright (C) 2015-2016 Bloomberg Finance L.P.
- * 
+ *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
@@ -12911,32 +12854,31 @@ module Bsb_ninja_native : sig
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU Lesser General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU Lesser General Public License
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
 
-(* File following almost the same logic as bsb_ninja but slightly modified for 
+(* File following almost the same logic as bsb_ninja but slightly modified for
    native / bytecode compilation. *)
 type compile_target_t = Native | Bytecode
-  
+
 val handle_file_groups : out_channel ->
-  custom_rules:Bsb_rule.t String_map.t -> 
+  custom_rules:Bsb_rule.t String_map.t ->
   is_top_level:bool ->
   entries:Bsb_config_types.entries_t list ->
   compile_target:compile_target_t ->
   backend:Bsb_config_types.compilation_kind_t ->
-  package_specs:Bsb_package_specs.t ->  
-  js_post_build_cmd:string option -> 
-  files_to_install:String_hash_set.t ->  
+  package_specs:Bsb_package_specs.t ->
+  js_post_build_cmd:string option ->
+  files_to_install:String_hash_set.t ->
   static_libraries:string list ->
   external_deps_for_linking:string list ->
   ocaml_dir:string ->
   bs_suffix:bool ->
-  use_ocamlfind:bool ->
   Bsb_parse_sources.file_group list ->
   string option ->
-  Bsb_ninja_file_groups.info -> 
+  Bsb_ninja_file_groups.info ->
   Bsb_ninja_file_groups.info
 
 end = struct
@@ -12966,15 +12908,15 @@ end = struct
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
 
 
-module Rules = Bsb_rule 
+module Rules = Bsb_rule
 
 type compile_target_t = Native | Bytecode
 
 type info =
-  string list  
+  string list
 
 let zero : info =
-  [] 
+  []
 
 
 let output_build = Bsb_ninja_util.output_build
@@ -12984,40 +12926,40 @@ let (//) = Ext_path.combine
 let install_file module_info files_to_install =
   String_hash_set.add  files_to_install (Bsb_db.filename_sans_suffix_of_module_info module_info)
 
-let handle_generators oc 
-    (group : Bsb_parse_sources.file_group) custom_rules =   
-  let map_to_source_dir = 
+let handle_generators oc
+    (group : Bsb_parse_sources.file_group) custom_rules =
+  let map_to_source_dir =
     (fun x -> Bsb_config.proj_rel (group.dir //x )) in
   group.generators
-  |> List.iter (fun  ({output; input; command}  : Bsb_parse_sources.build_generator)-> 
-      begin match String_map.find_opt command custom_rules with 
+  |> List.iter (fun  ({output; input; command}  : Bsb_parse_sources.build_generator)->
+      begin match String_map.find_opt command custom_rules with
         | None -> Ext_pervasives.failwithf ~loc:__LOC__ "custom rule %s used but  not defined" command
-        | Some rule -> 
+        | Some rule ->
           begin match output, input with
-            | output::outputs, input::inputs -> 
-              Bsb_ninja_util.output_build oc 
+            | output::outputs, input::inputs ->
+              Bsb_ninja_util.output_build oc
                 ~outputs:(Ext_list.map map_to_source_dir  outputs)
-                ~inputs:(Ext_list.map map_to_source_dir inputs) 
+                ~inputs:(Ext_list.map map_to_source_dir inputs)
                 ~output:(map_to_source_dir output)
                 ~input:(map_to_source_dir input)
                 ~rule
-            | [], _ 
+            | [], _
             | _, []  -> Ext_pervasives.failwithf ~loc:__LOC__ "either output or input can not be empty in rule %s" command
           end
       end
     )
 
 
-let make_common_shadows 
+let make_common_shadows
     is_re
-    package_specs 
-    dirname 
-    dir_index 
-  : Bsb_ninja_util.shadow list 
+    package_specs
+    dirname
+    dir_index
+  : Bsb_ninja_util.shadow list
   =
-  let shadows : Bsb_ninja_util.shadow list = 
+  let shadows : Bsb_ninja_util.shadow list =
     { key = Bsb_ninja_global_vars.bs_package_flags;
-      op = 
+      op =
         Append
           (Bsb_package_specs.package_flag_of_package_specs
              package_specs dirname
@@ -13025,48 +12967,47 @@ let make_common_shadows
     } ::
     (if Bsb_dir_index.is_lib_dir dir_index  then [] else
        [{
-         key = Bsb_ninja_global_vars.bs_package_includes; 
-         op = AppendVar Bsb_ninja_global_vars.bs_package_dev_includes 
+         key = Bsb_ninja_global_vars.bs_package_includes;
+         op = AppendVar Bsb_ninja_global_vars.bs_package_dev_includes
        }
         ;
         { key = "bsc_extra_includes";
           op = OverwriteVar (Bsb_dir_index.string_of_bsb_dev_include dir_index)
         }
        ]
-    )   
-  in 
-  if is_re then 
-    { key = Bsb_ninja_global_vars.bsc_flags; 
+    )
+  in
+  if is_re then
+    { key = Bsb_ninja_global_vars.bsc_flags;
       op = AppendList ["-bs-re-out"; "-bs-super-errors"]
     } :: shadows
   else shadows
 
 let emit_impl_build
   (package_specs : Bsb_package_specs.t)
-  (group_dir_index : Bsb_dir_index.t) 
-  oc 
+  (group_dir_index : Bsb_dir_index.t)
+  oc
   ~bs_suffix
-  ~no_intf_file:(no_intf_file : bool) 
+  ~no_intf_file:(no_intf_file : bool)
   ~compile_target
   js_post_build_cmd
   ~is_re
-  ~use_ocamlfind
   namespace
   filename_sans_extension
   : info =
-  let input = 
-    Bsb_config.proj_rel 
-      (if is_re then filename_sans_extension ^ Literals.suffix_re 
+  let input =
+    Bsb_config.proj_rel
+      (if is_re then filename_sans_extension ^ Literals.suffix_re
        else filename_sans_extension ^ Literals.suffix_ml  ) in
   let output_mlast = filename_sans_extension  ^ Literals.suffix_mlast in
   let output_mlastd = filename_sans_extension ^ Literals.suffix_mlastd in
-  let output_filename_sans_extension = 
-    match namespace with 
-    | None -> 
-      filename_sans_extension 
-    | Some ns -> 
+  let output_filename_sans_extension =
+    match namespace with
+    | None ->
+      filename_sans_extension
+    | Some ns ->
       Ext_namespace.make ~ns filename_sans_extension
-  in 
+  in
   let output_cmi =  output_filename_sans_extension ^ Literals.suffix_cmi in
   let output_cmx_or_cmo =
     match compile_target with
@@ -13074,8 +13015,8 @@ let emit_impl_build
     | Native   -> output_filename_sans_extension ^ Literals.suffix_cmx
   in
   let output_js =
-    Bsb_package_specs.get_list_of_output_js package_specs bs_suffix output_filename_sans_extension in 
-  let common_shadows = 
+    Bsb_package_specs.get_list_of_output_js package_specs bs_suffix output_filename_sans_extension in
+  let common_shadows =
     make_common_shadows is_re package_specs
       (Filename.dirname output_cmi)
       group_dir_index in
@@ -13096,22 +13037,20 @@ let emit_impl_build
     ~input:output_mlast
     ~rule:bin_deps_rule
     ?shadows:(if Bsb_dir_index.is_lib_dir group_dir_index then None
-              else Some [{key = Bsb_build_schemas.bsb_dir_group; 
+              else Some [{key = Bsb_build_schemas.bsb_dir_group;
                           op = Bsb_ninja_util.Overwrite (string_of_int (group_dir_index :> int)) }])
   ;
-  let rule_name = begin match (compile_target, use_ocamlfind) with
-  | (Bytecode, false) -> Rules.build_cmo_cmi_bytecode
-  | (Native, false)   -> Rules.build_cmx_cmi_native
-  | (Bytecode, true) -> Rules.build_cmo_cmi_bytecode_ocamlfind
-  | (Native, true)   -> Rules.build_cmx_cmi_native_ocamlfind
+  let rule_name = begin match compile_target with
+  | Bytecode -> Rules.build_cmo_cmi_bytecode
+  | Native   -> Rules.build_cmx_cmi_native
   end in
   let cm_outputs, deps =
     if no_intf_file then
       [output_cmi], []
-    else    
+    else
       [], [output_cmi]
   in
-  let deps = match namespace with 
+  let deps = match namespace with
     | None -> deps
     | Some ns -> (ns ^ Literals.suffix_cmi) :: deps
   in
@@ -13132,37 +13071,36 @@ let emit_impl_build
     ~rule:rule_name ;
   [output_mlastd]
 
-let emit_intf_build 
+let emit_intf_build
     (package_specs : Bsb_package_specs.t)
     (group_dir_index : Bsb_dir_index.t)
     oc
     ~is_re
     ~compile_target
-    ~use_ocamlfind
     namespace
     filename_sans_extension
   : info =
   let output_mliast = filename_sans_extension ^ Literals.suffix_mliast in
   let output_mliastd = filename_sans_extension ^ Literals.suffix_mliastd in
-  let output_filename_sans_extension = 
-    match namespace with 
-    | None -> 
-      filename_sans_extension 
-    | Some ns -> 
+  let output_filename_sans_extension =
+    match namespace with
+    | None ->
+      filename_sans_extension
+    | Some ns ->
       Ext_namespace.make ~ns filename_sans_extension
-  in 
-  let output_cmi = output_filename_sans_extension ^ Literals.suffix_cmi in  
-  let common_shadows = 
+  in
+  let output_cmi = output_filename_sans_extension ^ Literals.suffix_cmi in
+  let common_shadows =
     make_common_shadows is_re package_specs
       (Filename.dirname output_cmi)
       group_dir_index in
   Bsb_ninja_util.output_build oc
     ~output:output_mliast
-      (* TODO: we can get rid of absloute path if we fixed the location to be 
+      (* TODO: we can get rid of absloute path if we fixed the location to be
           [lib/bs], better for testing?
       *)
-    ~input:(Bsb_config.proj_rel 
-              (if is_re then filename_sans_extension ^ Literals.suffix_rei 
+    ~input:(Bsb_config.proj_rel
+              (if is_re then filename_sans_extension ^ Literals.suffix_rei
                else filename_sans_extension ^ Literals.suffix_mli))
     ~rule:(if is_re then Bsb_rule.build_ast_and_module_sets_from_rei_gen_simple
            else Bsb_rule.build_ast_and_module_sets_gen_simple);
@@ -13172,18 +13110,16 @@ let emit_intf_build
     ~rule:Bsb_rule.build_bin_deps
     ?shadows:(if Bsb_dir_index.is_lib_dir group_dir_index  then None
               else Some [{
-                  key = Bsb_build_schemas.bsb_dir_group; 
-                  op = 
+                  key = Bsb_build_schemas.bsb_dir_group;
+                  op =
                     Overwrite (string_of_int (group_dir_index :> int )) }]);
-    
-  let rule = begin match (compile_target, use_ocamlfind) with
-  | (Bytecode, false) -> Rules.build_cmi_bytecode
-  | (Native, false)   -> Rules.build_cmi_native
-  | (Bytecode, true) -> Rules.build_cmi_bytecode_ocamlfind
-  | (Native, true)   -> Rules.build_cmi_native_ocamlfind
+
+  let rule = begin match compile_target with
+  | Bytecode -> Rules.build_cmi_bytecode
+  | Native   -> Rules.build_cmi_native
   end in
   (* TODO(sansouci): Do we need this? *)
-  (* let deps = match namespace with 
+  (* let deps = match namespace with
     | None -> []
     | Some ns -> [ns ^ Literals.suffix_cmi]
   in *)
@@ -13194,63 +13130,58 @@ let emit_intf_build
     ~rule;
   [output_mliastd]
 
-let handle_module_info  
+let handle_module_info
   (group_dir_index : Bsb_dir_index.t)
-  (package_specs : Bsb_package_specs.t) 
+  (package_specs : Bsb_package_specs.t)
   js_post_build_cmd
   ~compile_target
   ~bs_suffix
-  ~use_ocamlfind
-  oc  module_name 
+  oc  module_name
   ( module_info : Bsb_db.module_info)
   namespace  =
   match module_info.ml, module_info.mli with
-  | Ml_source (input_impl,impl_is_re,_), 
-    Mli_source(input_intf, intf_is_re,_) -> 
-    emit_impl_build 
+  | Ml_source (input_impl,impl_is_re,_),
+    Mli_source(input_intf, intf_is_re,_) ->
+    emit_impl_build
       package_specs
       group_dir_index
-      oc 
+      oc
       ~bs_suffix
       ~no_intf_file:false
       ~is_re:impl_is_re
       ~compile_target
-      ~use_ocamlfind
-      js_post_build_cmd      
+      js_post_build_cmd
       namespace
-      input_impl  @ 
-    emit_intf_build 
+      input_impl  @
+    emit_intf_build
       package_specs
       group_dir_index
-      oc         
+      oc
       ~is_re:intf_is_re
       ~compile_target
-      ~use_ocamlfind
       namespace
-      input_intf 
+      input_intf
   | Ml_source(input,is_re,_), Mli_empty ->
-    emit_impl_build 
+    emit_impl_build
       package_specs
       group_dir_index
-      oc 
+      oc
       ~bs_suffix
       ~no_intf_file:true
       ~compile_target
-      ~use_ocamlfind
-      js_post_build_cmd      
+      js_post_build_cmd
       ~is_re
       namespace
-      input 
+      input
   | Ml_empty, Mli_source(input,is_re,_) ->
-    emit_intf_build 
+    emit_intf_build
       package_specs
       group_dir_index
-      oc         
+      oc
       ~is_re
       ~compile_target
-      ~use_ocamlfind
       namespace
-      input 
+      input
   | Ml_empty, Mli_empty -> zero
 
 
@@ -13261,62 +13192,60 @@ let handle_file_group oc
   ~js_post_build_cmd
   ~namespace
   ~bs_suffix
-  ~use_ocamlfind
   (files_to_install : String_hash_set.t)
   acc
   (group: Bsb_parse_sources.file_group) : Bsb_ninja_file_groups.info =
-  
+
   handle_generators oc group custom_rules ;
   String_map.fold (fun  module_name module_info  acc ->
       let installable =
         match group.public with
         | Export_all -> true
         | Export_none -> false
-        | Export_set set ->  
+        | Export_set set ->
           String_set.mem module_name set in
-      if installable then 
+      if installable then
         String_hash_set.add files_to_install (Bsb_db.filename_sans_suffix_of_module_info module_info);
-      (handle_module_info 
+      (handle_module_info
         ~bs_suffix
         ~compile_target
-        ~use_ocamlfind
-        group.dir_index 
-        package_specs 
-        js_post_build_cmd 
-        oc 
-        module_name 
+        group.dir_index
+        package_specs
+        js_post_build_cmd
+        oc
+        module_name
         module_info
         namespace
       ) @  acc
-    ) group.sources  acc 
+    ) group.sources  acc
 
 let link oc ret ~entries ~file_groups ~static_libraries ~namespace ~external_deps_for_linking ~ocaml_dir =
   List.fold_left (fun acc project_entry ->
     let output, rule_name, library_file_name, suffix_cmo_or_cmx, main_module_name, shadows =
       begin match project_entry with
       | Bsb_config_types.JsTarget main_module_name       -> assert false
-      | Bsb_config_types.BytecodeTarget main_module_name -> 
-        (String.lowercase main_module_name) ^ ".byte" , 
-        Rules.linking_bytecode, 
-        "lib" ^ Literals.suffix_cma, 
-        Literals.suffix_cmo, 
-        main_module_name, 
+      | Bsb_config_types.BytecodeTarget main_module_name ->
+        (String.lowercase main_module_name) ^ ".byte" ,
+        Rules.linking_bytecode,
+        "lib" ^ Literals.suffix_cma,
+        Literals.suffix_cmo,
+        main_module_name,
         []
-      | Bsb_config_types.NativeTarget main_module_name   -> 
-        (String.lowercase main_module_name) ^ ".native", 
-        Rules.linking_native  , 
-        "lib" ^ Literals.suffix_cmxa, 
-        Literals.suffix_cmx, 
+      | Bsb_config_types.NativeTarget main_module_name   ->
+        (String.lowercase main_module_name) ^ ".native",
+        Rules.linking_native  ,
+        "lib" ^ Literals.suffix_cmxa,
+        Literals.suffix_cmx,
         main_module_name,
         []
       end in
     let (all_mlast_files, all_cmo_or_cmx_files, all_cmi_files) =
-      List.fold_left (fun acc group -> 
-        String_map.fold (fun _ (v : Bsb_db.module_info) (all_mlast_files, all_cmo_or_cmx_files, all_cmi_files) -> 
+      List.fold_left (fun acc group ->
+        String_map.fold (fun _ (v : Bsb_db.module_info) (all_mlast_files, all_cmo_or_cmx_files, all_cmi_files) ->
           let mlname = match v.ml with
             | Ml_source (input, _, _) ->
             let input = (Ext_path.chop_extension_if_any input)  in
-            begin match namespace with 
+            begin match namespace with
               | None    -> Some (input, input)
               | Some ns -> Some (input, (Ext_namespace.make ~ns input))
             end
@@ -13325,11 +13254,11 @@ let link oc ret ~entries ~file_groups ~static_libraries ~namespace ~external_dep
           let mliname = match v.mli with
             | Mli_source (input, _, _) ->
             let input = (Ext_path.chop_extension_if_any input)  in
-            begin match namespace with 
+            begin match namespace with
               | None    -> Some (input, input)
               | Some ns -> Some (input, (Ext_namespace.make ~ns input))
             end
-            | Mli_empty -> None 
+            | Mli_empty -> None
           in
           begin match (mlname, mliname) with
           | None, None -> failwith "Got a source file without an ml or mli file. This should not happen."
@@ -13345,8 +13274,8 @@ let link oc ret ~entries ~file_groups ~static_libraries ~namespace ~external_dep
             (all_mlast_files,
              all_cmo_or_cmx_files,
              (namespacedName ^ Literals.suffix_cmi)   :: all_cmi_files)
-          end    
-        ) group.Bsb_parse_sources.sources acc) 
+          end
+        ) group.Bsb_parse_sources.sources acc)
       ([], [], [])
       file_groups in
     let shadows = shadows @ [{
@@ -13365,30 +13294,30 @@ let link oc ret ~entries ~file_groups ~static_libraries ~namespace ~external_dep
       ~rule:rule_name;
     acc
   ) ret entries
-    
+
 let pack oc ret ~backend ~file_groups ~namespace =
   let output_cma_or_cmxa, rule_name, suffix_cmo_or_cmx =
     begin match backend with
     (* These cases could benefit from a better error message. *)
     | Bsb_config_types.Js       -> assert false
-    | Bsb_config_types.Bytecode -> 
-      Literals.library_file ^ Literals.suffix_cma , 
-      Rules.build_cma_library , 
+    | Bsb_config_types.Bytecode ->
+      Literals.library_file ^ Literals.suffix_cma ,
+      Rules.build_cma_library ,
       Literals.suffix_cmo
-    | Bsb_config_types.Native   -> 
-      Literals.library_file ^ Literals.suffix_cmxa, 
-      Rules.build_cmxa_library, 
+    | Bsb_config_types.Native   ->
+      Literals.library_file ^ Literals.suffix_cmxa,
+      Rules.build_cmxa_library,
       Literals.suffix_cmx
   end in
   (* TODO(sansouci): we pack all source files of the dependency, but we could just pack the
      files that are used by the main project. *)
   let all_cmo_or_cmx_files, all_cmi_files =
-    List.fold_left (fun acc group -> 
-      String_map.fold (fun _ (v : Bsb_db.module_info) (all_cmo_or_cmx_files, all_cmi_files) -> 
+    List.fold_left (fun acc group ->
+      String_map.fold (fun _ (v : Bsb_db.module_info) (all_cmo_or_cmx_files, all_cmi_files) ->
         let mlname = match v.ml with
             | Ml_source (input, _, _) ->
             let input = (Ext_path.chop_extension_if_any input)  in
-            begin match namespace with 
+            begin match namespace with
               | None    -> Some (input)
               | Some ns -> Some ((Ext_namespace.make ~ns input))
             end
@@ -13397,11 +13326,11 @@ let pack oc ret ~backend ~file_groups ~namespace =
           let mliname = match v.mli with
             | Mli_source (input, _, _) ->
             let input = (Ext_path.chop_extension_if_any input)  in
-            begin match namespace with 
+            begin match namespace with
               | None    -> Some (input)
               | Some ns -> Some ((Ext_namespace.make ~ns input))
             end
-            | Mli_empty -> None 
+            | Mli_empty -> None
           in
           begin match (mlname, mliname) with
           | None, None -> failwith "Got a source file without an ml or mli file. This should not happen."
@@ -13414,8 +13343,8 @@ let pack oc ret ~backend ~file_groups ~namespace =
           | None, Some name ->
             (all_cmo_or_cmx_files,
              (name ^ Literals.suffix_cmi)   :: all_cmi_files)
-          end    
-    ) group.Bsb_parse_sources.sources acc) 
+          end
+    ) group.Bsb_parse_sources.sources acc)
     ([], [])
     file_groups in
   (* In the case that a library is just an interface file, we don't do anything *)
@@ -13442,23 +13371,21 @@ let handle_file_groups oc
   ~external_deps_for_linking
   ~ocaml_dir
   ~bs_suffix
-  ~use_ocamlfind
   (file_groups  :  Bsb_parse_sources.file_group list) namespace st =
   let file_groups = List.filter (fun (group : Bsb_parse_sources.file_group) ->
-    match backend with 
+    match backend with
     | Bsb_config_types.Js       -> List.mem Bsb_parse_sources.Js group.Bsb_parse_sources.backend
     | Bsb_config_types.Native   -> List.mem Bsb_parse_sources.Native group.Bsb_parse_sources.backend
     | Bsb_config_types.Bytecode -> List.mem Bsb_parse_sources.Bytecode group.Bsb_parse_sources.backend
-  ) file_groups in 
+  ) file_groups in
   let ret = List.fold_left (
     handle_file_group oc
-      ~custom_rules 
+      ~custom_rules
       ~compile_target
       ~package_specs
-      ~js_post_build_cmd 
+      ~js_post_build_cmd
       ~namespace
       ~bs_suffix
-      ~use_ocamlfind
       files_to_install
   ) st file_groups in
   if is_top_level then
@@ -13626,7 +13553,7 @@ end = struct
 (* The main OCaml version string has moved to ../VERSION *)
 let version = Sys.ocaml_version
 
-let standard_library_default = "/Users/benjamin/Desktop/bucklescript/vendor/ocaml/lib/ocaml"
+let standard_library_default = "/Users/sansouci/Desktop/bsb-native/vendor/ocaml/lib/ocaml"
 
 let standard_library =
  
@@ -13636,7 +13563,7 @@ let standard_library =
 
     standard_library_default
 
-let standard_runtime = "/Users/benjamin/Desktop/bucklescript/vendor/ocaml/bin/ocamlrun"
+let standard_runtime = "/Users/sansouci/Desktop/bsb-native/vendor/ocaml/bin/ocamlrun"
 let ccomp_type = "cc"
 let bytecomp_c_compiler = "gcc -O  -Wall -D_FILE_OFFSET_BITS=64 -D_REENTRANT -O "
 let bytecomp_c_libraries = "-lpthread"
@@ -17447,12 +17374,12 @@ let merge_module_info_map acc sources : Bsb_db.t =
       | None , None ->
         assert false
       | Some a, Some b  ->
-        Bsb_exception.conflict_module modname 
+        Bsb_exception.conflict_module modname
           (Bsb_db.dir_of_module_info a)
-          (Bsb_db.dir_of_module_info b)     
+          (Bsb_db.dir_of_module_info b)
       | Some v, None  -> Some v
       | None, Some v ->  Some v
-    ) acc  sources 
+    ) acc  sources
 
 
 let bsb_native_parse = "bsb_native_parse.exe"
@@ -17464,11 +17391,11 @@ let dash_ppx = "-ppx"
 let ocamlfind = "ocamlfind"
 
 let output_ninja_and_namespace_map
-    ~cwd 
+    ~cwd
     ~bsc_dir
-    ~not_dev           
+    ~not_dev
     ~acc_libraries_for_linking:(external_deps_for_linking, external_static_libraries, external_ocamlfind_dependencies, external_ocaml_dependencies)
-    ~ocaml_dir         
+    ~ocaml_dir
     ~root_project_dir
     ~is_top_level
     ~backend
@@ -17479,7 +17406,7 @@ let output_ninja_and_namespace_map
       package_name;
       external_includes;
       warnings;
-      bsc_flags ; 
+      bsc_flags ;
       ppx_flags;
       bs_dependencies;
       bs_dev_dependencies;
@@ -17492,7 +17419,7 @@ let output_ninja_and_namespace_map
       built_in_dependency;
       reason_react_jsx;
       generators ;
-      namespace ; 
+      namespace ;
       warning;
 
       entries;
@@ -17504,9 +17431,9 @@ let output_ninja_and_namespace_map
       ocaml_dependencies;
     } : Bsb_config_types.t)
   =
-  let custom_rules = Bsb_rule.reset generators in 
+  let custom_rules = Bsb_rule.reset generators in
 
-  let entries = List.filter (fun e -> match e with 
+  let entries = List.filter (fun e -> match e with
     | Bsb_config_types.JsTarget _       -> backend = Bsb_config_types.Js
     | Bsb_config_types.NativeTarget _   -> backend = Bsb_config_types.Native
     | Bsb_config_types.BytecodeTarget _ -> backend = Bsb_config_types.Bytecode
@@ -17518,9 +17445,9 @@ let output_ninja_and_namespace_map
   end in
   if entries = [] && is_top_level then
     Bsb_exception.missing_entry nested;
-  
-  let use_ocamlfind = ocamlfind_dependencies <> [] in
-  
+
+  let use_ocamlfind = ocamlfind_dependencies <> [] || external_ocamlfind_dependencies <> [] in
+
   let external_ocaml_dependencies = List.fold_left (fun acc v -> Depend.StringSet.add v acc) external_ocaml_dependencies ocaml_dependencies in
   let external_ocaml_dependencies = Depend.StringSet.elements external_ocaml_dependencies in
 
@@ -17546,10 +17473,10 @@ let output_ninja_and_namespace_map
   let bs_super_errors = "" in
   let oc = open_out_bin (cwd // Bsb_config.lib_bs // nested // Literals.build_ninja) in
   let cwd_lib_bs = cwd // Bsb_config.lib_bs // nested in
-  
+
   let ocamlc = "ocamlc" in
   let ocamlopt = "ocamlopt" in
-  
+
   let bsb_native_parse = bsc_dir // bsb_native_parse in
   let bsc = bsc_dir // bsc_exe in   (* The path to [bsc.exe] independent of config  *)
   let bsb_helper = bsc_dir // bsb_helper_exe in (* The path to [bsb_heler.exe] *)
@@ -17557,35 +17484,35 @@ let output_ninja_and_namespace_map
   let bsc_flags =  String.concat Ext_string.single_space bsc_flags in
   let refmt_flags = String.concat Ext_string.single_space refmt_flags in
   (* Exclude JS because we always add -bs-super-errors for JS... *)
-  
-  let bs_package_includes = 
-    Bsb_build_util.flag_concat dash_i @@ Ext_list.map 
+
+  let bs_package_includes =
+    Bsb_build_util.flag_concat dash_i @@ Ext_list.map
       (fun (x : Bsb_config_types.dependency) -> x.package_install_path) bs_dependencies
   in
-  let bs_package_dev_includes = 
-    Bsb_build_util.flag_concat dash_i @@ Ext_list.map 
+  let bs_package_dev_includes =
+    Bsb_build_util.flag_concat dash_i @@ Ext_list.map
       (fun (x : Bsb_config_types.dependency) -> x.package_install_path) bs_dev_dependencies
-  in 
+  in
   let has_reason_files = ref false in
-  let bs_package_flags , namespace_flag, open_flag = 
+  let bs_package_flags , namespace_flag, open_flag =
     match namespace with
-    | None -> 
+    | None ->
       Ext_string.inter2 "-bs-package-name" package_name, Ext_string.empty, Ext_string.empty
-    | Some s -> 
+    | Some s ->
       Ext_string.inter2 "-bs-package-map" package_name ,
       Ext_string.inter2 "-ns" s,
       Ext_string.inter2 "-open" s
-  in  
-  let bsc_flags = 
-    let result = 
+  in
+  let bsc_flags =
+    let result =
       Ext_string.inter2  Literals.dash_nostdlib @@
-      match built_in_dependency with 
-      | None -> bsc_flags   
-      | Some {package_install_path} -> 
+      match built_in_dependency with
+      | None -> bsc_flags
+      | Some {package_install_path} ->
         Ext_string.inter3 dash_i (Filename.quote package_install_path) bsc_flags
-    in 
+    in
     if bs_suffix then Ext_string.inter2 "-bs-suffix" result else result
-  in 
+  in
   (* let bsc_flags =
     Printf.sprintf
       "-bs-D BSB_BACKEND=\"%s\" %s"
@@ -17597,35 +17524,35 @@ let output_ninja_and_namespace_map
 
   let warnings = Bsb_warning.opt_warning_to_string not_dev warning in
 
-  let output_reason_config () =   
-    if !has_reason_files then 
-      let reason_react_jsx_flag = 
-        match reason_react_jsx with 
-        | None -> Ext_string.empty          
-        | Some  s -> 
-          Ext_string.inter2 "-ppx" s 
-      in 
+  let output_reason_config () =
+    if !has_reason_files then
+      let reason_react_jsx_flag =
+        match reason_react_jsx with
+        | None -> Ext_string.empty
+        | Some  s ->
+          Ext_string.inter2 "-ppx" s
+      in
       Bsb_ninja_util.output_kvs
         [|
           Bsb_ninja_global_vars.refmt, "refmt";
-            (* (match refmt with 
-            | Bsb_config_types.Refmt_v2 -> 
+            (* (match refmt with
+            | Bsb_config_types.Refmt_v2 ->
               Bsb_log.warn "@{<warning>Warning:@} ReasonSyntax V2 is deprecated, please upgrade to V3.@.";
               bsc_dir // "refmt.exe"
-            | Bsb_config_types.Refmt_none -> 
+            | Bsb_config_types.Refmt_none ->
               Bsb_log.warn "@{<warning>Warning:@} refmt version missing. Please set it explicitly, since we may change the default in the future.@.";
               bsc_dir // "refmt.exe"
-            | Bsb_config_types.Refmt_v3 -> 
+            | Bsb_config_types.Refmt_v3 ->
               bsc_dir // "refmt3.exe"
             | Bsb_config_types.Refmt_custom x -> x ); *)
-          Bsb_ninja_global_vars.reason_react_jsx, reason_react_jsx_flag; 
+          Bsb_ninja_global_vars.reason_react_jsx, reason_react_jsx_flag;
           Bsb_ninja_global_vars.refmt_flags, refmt_flags;
-        |] oc 
+        |] oc
   in
     let () =
       Bsb_ninja_util.output_kvs
         [|
-          Bsb_ninja_global_vars.bs_package_flags, bs_package_flags ; 
+          Bsb_ninja_global_vars.bs_package_flags, bs_package_flags ;
           Bsb_ninja_global_vars.src_root_dir, cwd (* TODO: need check its integrity -- allow relocate or not? *);
           Bsb_ninja_global_vars.bsc, bsc ;
           Bsb_ninja_global_vars.bsb_native_parse, bsb_native_parse ;
@@ -17634,49 +17561,49 @@ let output_ninja_and_namespace_map
           Bsb_ninja_global_vars.bsc_flags, bsc_flags ;
           Bsb_ninja_global_vars.ppx_flags, ppx_flags;
           Bsb_ninja_global_vars.bs_package_includes, bs_package_includes;
-          Bsb_ninja_global_vars.bs_package_dev_includes, bs_package_dev_includes;  
-          Bsb_ninja_global_vars.namespace , namespace_flag ; 
+          Bsb_ninja_global_vars.bs_package_dev_includes, bs_package_dev_includes;
+          Bsb_ninja_global_vars.namespace , namespace_flag ;
           Bsb_build_schemas.bsb_dir_group, "0"  (*TODO: avoid name conflict in the future *);
-          
+
           Bsb_ninja_global_vars.ocaml_flags, ocaml_flags;
-          Bsb_ninja_global_vars.bs_super_errors_ocamlfind, 
-          (* Jumping through hoops. When ocamlfind is used we need to pass the argument 
+          Bsb_ninja_global_vars.bs_super_errors_ocamlfind,
+          (* Jumping through hoops. When ocamlfind is used we need to pass the argument
              to the underlying compiler and not ocamlfind, so we use -passopt. Otherwise we don't.
              For bsb_helper we also don't. *)
-            if use_ocamlfind && String.length bs_super_errors > 0 
-              then "-passopt " ^ bs_super_errors 
+            if use_ocamlfind && String.length bs_super_errors > 0
+              then "-passopt " ^ bs_super_errors
               else bs_super_errors;
           Bsb_ninja_global_vars.bs_super_errors, bs_super_errors;
-          
+
           Bsb_ninja_global_vars.external_deps_for_linking, Bsb_build_util.flag_concat dash_i external_deps_for_linking;
           Bsb_ninja_global_vars.ocamlc, ocamlc;
           Bsb_ninja_global_vars.ocamlopt, ocamlopt;
-          Bsb_ninja_global_vars.ocamlfind, if use_ocamlfind then ocamlfind else "";
+          Bsb_ninja_global_vars.ocamlfind, if use_ocamlfind then ocamlfind ^ " " else "";
           Bsb_ninja_global_vars.ocamlfind_dependencies,  Bsb_build_util.flag_concat "-package" (external_ocamlfind_dependencies @ ocamlfind_dependencies);
           Bsb_ninja_global_vars.ocaml_dependencies, Bsb_build_util.flag_concat "-add-ocaml-dependency" external_ocaml_dependencies;
-          
-          (* @HACK 
-              This might cause stale artifacts. This makes everything implicitly depend on the namespace file... 
-              
+
+          (* @HACK
+              This might cause stale artifacts. This makes everything implicitly depend on the namespace file...
+
                      Ben - September 28th 2017
           *)
           Bsb_ninja_global_vars.open_flag, open_flag;
         |] oc in
-  let all_includes acc  = 
-    match external_includes with 
-    | [] -> acc 
-    | _ ->  
-      (* for external includes, if it is absolute path, leave it as is 
-         for relative path './xx', we need '../.././x' since we are in 
+  let all_includes acc  =
+    match external_includes with
+    | [] -> acc
+    | _ ->
+      (* for external includes, if it is absolute path, leave it as is
+         for relative path './xx', we need '../.././x' since we are in
          [lib/bs], [build] is different from merlin though
       *)
-      Ext_list.map_append 
-        (fun x -> if Filename.is_relative x then Bsb_config.rev_lib_bs_prefix  x else x) 
+      Ext_list.map_append
+        (fun x -> if Filename.is_relative x then Bsb_config.rev_lib_bs_prefix  x else x)
         external_includes
-        acc 
+        acc
 
-  in 
-  let emit_bsc_lib_includes source_dirs = 
+  in
+  let emit_bsc_lib_includes source_dirs =
     let common_include_flags =
       (all_includes (if namespace = None then source_dirs
       else Filename.current_dir_name :: source_dirs)) in
@@ -17692,53 +17619,53 @@ let output_ninja_and_namespace_map
     let number_of_dev_groups = Bsb_dir_index.get_current_number_of_dev_groups () in
     if number_of_dev_groups = 0 then
       let bs_group, source_dirs,static_resources  =
-        List.fold_left 
-          (fun (acc, dirs,acc_resources) 
+        List.fold_left
+          (fun (acc, dirs,acc_resources)
             ({Bsb_parse_sources.sources ; dir; resources } as x : Bsb_parse_sources.file_group) ->
-            merge_module_info_map  acc  sources ,  
-            (if Bsb_parse_sources.is_empty x then dirs else  dir::dirs) , 
+            merge_module_info_map  acc  sources ,
+            (if Bsb_parse_sources.is_empty x then dirs else  dir::dirs) ,
             ( if resources = [] then acc_resources
               else Ext_list.map_append (fun x -> dir // x ) resources  acc_resources)
           ) (String_map.empty,[],[]) bs_file_groups in
-      has_reason_files := Bsb_db.sanity_check bs_group || !has_reason_files;     
+      has_reason_files := Bsb_db.sanity_check bs_group || !has_reason_files;
       [|bs_group|], source_dirs, static_resources
     else
       let bs_groups = Array.init  (number_of_dev_groups + 1 ) (fun i -> String_map.empty) in
       let source_dirs = Array.init (number_of_dev_groups + 1 ) (fun i -> []) in
       let static_resources =
         List.fold_left (fun acc_resources  ({Bsb_parse_sources.sources; dir; resources; dir_index})  ->
-            let dir_index = (dir_index :> int) in 
+            let dir_index = (dir_index :> int) in
             bs_groups.(dir_index) <- merge_module_info_map bs_groups.(dir_index) sources ;
             source_dirs.(dir_index) <- dir :: source_dirs.(dir_index);
             Ext_list.map_append (fun x -> dir//x) resources  resources
           ) [] bs_file_groups in
-      let lib = bs_groups.((Bsb_dir_index.lib_dir_index :> int)) in               
+      let lib = bs_groups.((Bsb_dir_index.lib_dir_index :> int)) in
       has_reason_files := Bsb_db.sanity_check lib || !has_reason_files;
       for i = 1 to number_of_dev_groups  do
         let c = bs_groups.(i) in
         has_reason_files :=  Bsb_db.sanity_check c || !has_reason_files ;
         String_map.iter (fun k _ -> if String_map.mem k lib then failwith ("conflict files found:" ^ k)) c ;
-        Bsb_ninja_util.output_kv 
+        Bsb_ninja_util.output_kv
           (Bsb_dir_index.(string_of_bsb_dev_include (of_int i)))
           (Bsb_build_util.flag_concat dash_i @@ source_dirs.(i)) oc
       done  ;
       bs_groups,source_dirs.((Bsb_dir_index.lib_dir_index:>int)), static_resources
   in
-  
+
   output_reason_config ();
   Bsb_db.write_build_cache ~dir:cwd_lib_bs bs_groups ;
   emit_bsc_lib_includes bsc_lib_dirs;
-  List.iter 
-  (fun output -> 
+  List.iter
+  (fun output ->
      Bsb_ninja_util.output_build
        oc
        ~output
        ~input:(Bsb_config.proj_rel output)
        ~rule:Bsb_rule.copy_resources) static_resources ;
-  
+
   let (all_info, should_build) =
     match backend with
-    | Bsb_config_types.Js -> 
+    | Bsb_config_types.Js ->
       if List.mem Bsb_config_types.Js allowed_build_kinds then
         (Bsb_ninja_file_groups.handle_file_groups oc
           ~bs_suffix
@@ -17747,9 +17674,9 @@ let output_ninja_and_namespace_map
           ~js_post_build_cmd
           ~files_to_install
           ~backend
-          bs_file_groups 
+          bs_file_groups
           namespace
-          Bsb_ninja_file_groups.zero, 
+          Bsb_ninja_file_groups.zero,
         true)
       else (Bsb_ninja_file_groups.zero, false)
     | Bsb_config_types.Bytecode ->
@@ -17767,7 +17694,6 @@ let output_ninja_and_namespace_map
           ~external_deps_for_linking
           ~ocaml_dir
           ~bs_suffix
-          ~use_ocamlfind
           bs_file_groups
           namespace
           Bsb_ninja_file_groups.zero,
@@ -17788,7 +17714,6 @@ let output_ninja_and_namespace_map
           ~external_deps_for_linking
           ~ocaml_dir
           ~bs_suffix
-          ~use_ocamlfind
           bs_file_groups
           namespace
           Bsb_ninja_file_groups.zero,
@@ -17796,56 +17721,56 @@ let output_ninja_and_namespace_map
       else (Bsb_ninja_file_groups.zero, false)
   in
   let all_info =
-    match namespace with 
+    match namespace with
     | None -> all_info
-    | Some ns -> 
-      let namespace_dir =     
+    | Some ns ->
+      let namespace_dir =
         cwd // Bsb_config.lib_bs // nested in
       Bsb_namespace_map_gen.output ~dir:namespace_dir ns
         bs_file_groups
-      ; 
+      ;
       let (rule, output) = begin match backend with
       | Bsb_config_types.Js       -> (Bsb_rule.build_package, ns ^ Literals.suffix_cmi)
       | Bsb_config_types.Native
       | Bsb_config_types.Bytecode -> (Bsb_rule.build_package_gen_mlast_simple, ns ^ Literals.suffix_mlast_simple)
-      end in 
-      Bsb_ninja_util.output_build oc 
-        (* This is what is actually needed 
-           We may fix that issue when compiling a package 
+      end in
+      Bsb_ninja_util.output_build oc
+        (* This is what is actually needed
+           We may fix that issue when compiling a package
            ns.ml explicitly does not need that package
         *)
         ~output
         ~input:(ns ^ Literals.suffix_mlmap)
         ~rule;
-        (* When building with ocamlc/ocamlopt we need to use bsc to generate an `.mlast_simple` file 
+        (* When building with ocamlc/ocamlopt we need to use bsc to generate an `.mlast_simple` file
            and then we compile it normally to generate a cmi file. *)
       if backend = Bsb_config_types.Bytecode then begin
-        Bsb_ninja_util.output_build oc 
+        Bsb_ninja_util.output_build oc
           ~output:(ns ^ Literals.suffix_cmi)
           ~input:(ns ^ Literals.suffix_mlast_simple)
           ~rule:Bsb_rule.build_package_build_cmi_bytecode;
       end else if backend = Bsb_config_types.Native then begin
-        Bsb_ninja_util.output_build oc 
+        Bsb_ninja_util.output_build oc
           ~output:(ns ^ Literals.suffix_cmi)
           ~input:(ns ^ Literals.suffix_mlast_simple)
           ~rule:Bsb_rule.build_package_build_cmi_native;
       end;
       (ns ^ Literals.suffix_cmi) :: all_info
   in
-  
-  (* If we have a build_script, we'll trust the user and use that to build the package instead. 
+
+  (* If we have a build_script, we'll trust the user and use that to build the package instead.
    We generate one simple rule that'll just call that string as a command. *)
-  let _ = 
+  let _ =
     match build_script with
   | Some build_script when should_build ->
-    if Ext_sys.is_windows_or_cygwin then 
+    if Ext_sys.is_windows_or_cygwin then
       Bsb_log.error "`build-script` field not supported on windows yet. Coming soon (poke bsansouci on discord so he prioritize it)."
-    else begin 
+    else begin
       let build_script = Bytes.to_string @@ Ext_bytes.ninja_escaped (Bytes.of_string build_script) in
-      
+
       (* @Todo @CrossPlatform Fix this super ghetto environment variable setup... This is not cross platform! *)
-      let envvars = "export OCAML_LIB=" ^ ocaml_lib ^ " && " 
-                  ^ "export OCAML_SYSTHREADS=" ^ (ocaml_dir // "otherlibs" // "systhreads") ^ " && " 
+      let envvars = "export OCAML_LIB=" ^ ocaml_lib ^ " && "
+                  ^ "export OCAML_SYSTHREADS=" ^ (ocaml_dir // "otherlibs" // "systhreads") ^ " && "
                   ^ "export PATH=$$PATH:" ^ (root_project_dir // "node_modules" // ".bin") ^ ":" ^ ocaml_dir ^ ":" ^ (root_project_dir // "node_modules" // "bs-platform" // "bin") ^ " && " in
       (* We move out of lib/bs/XYZ so that the command is ran from the root project. *)
       let rule = Bsb_rule.define ~command:("cd ../../.. && " ^ envvars ^ build_script) "build_script" in
@@ -19462,8 +19387,8 @@ module Opam_of_packagejson
 module Install =
   struct
     type field =
-      [ `Bin  | `Doc  | `Etc  | `Lib  | `Lib_root  | `Libexec 
-      | `Libexec_root  | `Man  | `Misc  | `Sbin  | `Share  | `Share_root 
+      [ `Bin  | `Doc  | `Etc  | `Lib  | `Lib_root  | `Libexec
+      | `Libexec_root  | `Man  | `Misc  | `Sbin  | `Share  | `Share_root
       | `Stublibs  | `Toplevel  | `Unknown of string ]
     let field_to_string =
       function
@@ -19916,38 +19841,43 @@ let generate cwd =
                      pr b "available: [ %s ]\n" ocamlVersion))))))
            | _ -> assert false);
           Io.writeFile (cwd +|+ "opam") (Buffer.contents b));
-          
-          Io.readJSONFile "bsconfig.json"       
+
+          Io.readJSONFile "bsconfig.json"
          (fun bsjson  -> let bytecode_default_ext = [ ".cma" ] in
           let native_default_ext = [".cmxa"; ".a"] in
           match json with
           | ((Obj ({ map }))[@explicit_arity ]) ->
-              let (package_name, res) = begin match bsjson with 
+              let (package_name, res, namespace) = begin match bsjson with
                 | ((Obj ({ map = bsjsonmap }))[@explicit_arity ]) ->
                   let package_name = match String_map.find_exn "name" bsjsonmap with
-                  | exception Not_found  ->
-                      failwith "Field `name` doesn't exist."
-                  | ((Str ({ str }))[@explicit_arity ]) -> str
-                  | _ -> failwith "Field `name` doesn't exist." in
-                  let res = begin match String_map.find_exn Bsb_build_schemas.sources bsjsonmap with 
+                    | exception Not_found  ->
+                        failwith "Field `name` doesn't exist."
+                    | ((Str ({ str }))[@explicit_arity ]) -> str
+                    | _ -> failwith "Field `name` doesn't exist." in
+                  let namespace = begin match String_map.find_exn "namespace" bsjsonmap with
+                    | exception Not_found -> None
+                    | False _ -> None
+                    | True _ -> Some package_name
+                  end in
+                  let res = begin match String_map.find_exn Bsb_build_schemas.sources bsjsonmap with
                   | exception Not_found -> failwith "Field `sources` doesn't exist."
-                  | x -> 
-                    Bsb_parse_sources.parse_sources 
+                  | x ->
+                    Bsb_parse_sources.parse_sources
                       package_name
-                        {not_dev = true; 
+                        {not_dev = true;
                          dir_index =
-                           Bsb_dir_index.lib_dir_index; 
-                         cwd = Filename.current_dir_name; 
+                           Bsb_dir_index.lib_dir_index;
+                         cwd = Filename.current_dir_name;
                          root = cwd;
                          cut_generators = false;
                          traverse = false;
                          backend = [Bsb_parse_sources.Native; Bsb_parse_sources.Bytecode];
-                         namespace = None; (* @HACK this should probably parse the bsconfig? *) 
+                         namespace = namespace; (* @HACK this should probably parse the bsconfig? *)
                         }  x
                       end in
-                    (package_name, res)
+                    (package_name, res, namespace)
                 | _ -> assert false
-              end in 
+              end in
               let (libraryName,installList) =
                 match String_map.find_exn "opam" map with
                 | exception Not_found  ->
@@ -20100,16 +20030,25 @@ let generate cwd =
                       | `Bin -> installedBinaries @ localBinaries in
                     (libraryName, installList)
                 | _ -> failwith "Field `opam` was not an object." in
-                let installList = List.fold_left (fun (acc : (Install.field* Install.move) list) (group : Bsb_parse_sources.file_group) -> 
+                let (namespace_str, installList) = begin match namespace with
+                  | None -> ("", installList)
+                  | Some name ->
+                    ("-" ^ name, (`Lib, {
+                      src = "lib" +|+ "bs" +|+ "bytecode" +|+ name ^ ".cmi";
+                      dst = (Some (name ^ ".cmi"));
+                      maybe = false
+                    }) :: installList)
+                end in
+                let installList = List.fold_left (fun (acc : (Install.field* Install.move) list) (group : Bsb_parse_sources.file_group) ->
                   String_map.fold (fun  module_name (module_info : Bsb_db.module_info)  acc ->
                     let open Install in
                     let path = "lib" +|+ "bs" +|+ "bytecode" in
                     let src = Bsb_db.filename_sans_suffix_of_module_info module_info in
                     (`Lib, {
-                      src = path +|+ src ^ ".cmi";
-                      dst = (Some ((Filename.basename src) ^ ".cmi"));
+                      src = path +|+ src ^ namespace_str ^ ".cmi";
+                      dst = (Some ((Filename.basename src) ^ namespace_str ^ ".cmi"));
                       maybe = false
-                    }) 
+                    })
                     (* @Todo Generate the .cmt files for Merlin's sake. *)
                     (* :: (`Lib, {
                       src = path +|+ src ^ ".cmt";
@@ -20117,7 +20056,7 @@ let generate cwd =
                       maybe = false
                     })  *)
                     :: acc
-                  ) group.sources acc 
+                  ) group.sources acc
                 ) installList res.files in
                 (* bs_file_groups = res.files;  *)
               let thing =

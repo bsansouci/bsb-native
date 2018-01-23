@@ -1,8 +1,8 @@
 module Install =
   struct
     type field =
-      [ `Bin  | `Doc  | `Etc  | `Lib  | `Lib_root  | `Libexec 
-      | `Libexec_root  | `Man  | `Misc  | `Sbin  | `Share  | `Share_root 
+      [ `Bin  | `Doc  | `Etc  | `Lib  | `Lib_root  | `Libexec
+      | `Libexec_root  | `Man  | `Misc  | `Sbin  | `Share  | `Share_root
       | `Stublibs  | `Toplevel  | `Unknown of string ]
     let field_to_string =
       function
@@ -455,38 +455,43 @@ let generate cwd =
                      pr b "available: [ %s ]\n" ocamlVersion))))))
            | _ -> assert false);
           Io.writeFile (cwd +|+ "opam") (Buffer.contents b));
-          
-          Io.readJSONFile "bsconfig.json"       
+
+          Io.readJSONFile "bsconfig.json"
          (fun bsjson  -> let bytecode_default_ext = [ ".cma" ] in
           let native_default_ext = [".cmxa"; ".a"] in
           match json with
           | ((Obj ({ map }))[@explicit_arity ]) ->
-              let (package_name, res) = begin match bsjson with 
+              let (package_name, res, namespace) = begin match bsjson with
                 | ((Obj ({ map = bsjsonmap }))[@explicit_arity ]) ->
                   let package_name = match String_map.find_exn "name" bsjsonmap with
-                  | exception Not_found  ->
-                      failwith "Field `name` doesn't exist."
-                  | ((Str ({ str }))[@explicit_arity ]) -> str
-                  | _ -> failwith "Field `name` doesn't exist." in
-                  let res = begin match String_map.find_exn Bsb_build_schemas.sources bsjsonmap with 
+                    | exception Not_found  ->
+                        failwith "Field `name` doesn't exist."
+                    | ((Str ({ str }))[@explicit_arity ]) -> str
+                    | _ -> failwith "Field `name` doesn't exist." in
+                  let namespace = begin match String_map.find_exn "namespace" bsjsonmap with
+                    | exception Not_found -> None
+                    | False _ -> None
+                    | True _ -> Some package_name
+                  end in
+                  let res = begin match String_map.find_exn Bsb_build_schemas.sources bsjsonmap with
                   | exception Not_found -> failwith "Field `sources` doesn't exist."
-                  | x -> 
-                    Bsb_parse_sources.parse_sources 
+                  | x ->
+                    Bsb_parse_sources.parse_sources
                       package_name
-                        {not_dev = true; 
+                        {not_dev = true;
                          dir_index =
-                           Bsb_dir_index.lib_dir_index; 
-                         cwd = Filename.current_dir_name; 
+                           Bsb_dir_index.lib_dir_index;
+                         cwd = Filename.current_dir_name;
                          root = cwd;
                          cut_generators = false;
                          traverse = false;
                          backend = [Bsb_parse_sources.Native; Bsb_parse_sources.Bytecode];
-                         namespace = None; (* @HACK this should probably parse the bsconfig? *) 
+                         namespace = namespace; (* @HACK this should probably parse the bsconfig? *)
                         }  x
                       end in
-                    (package_name, res)
+                    (package_name, res, namespace)
                 | _ -> assert false
-              end in 
+              end in
               let (libraryName,installList) =
                 match String_map.find_exn "opam" map with
                 | exception Not_found  ->
@@ -639,16 +644,25 @@ let generate cwd =
                       | `Bin -> installedBinaries @ localBinaries in
                     (libraryName, installList)
                 | _ -> failwith "Field `opam` was not an object." in
-                let installList = List.fold_left (fun (acc : (Install.field* Install.move) list) (group : Bsb_parse_sources.file_group) -> 
+                let (namespace_str, installList) = begin match namespace with
+                  | None -> ("", installList)
+                  | Some name ->
+                    ("-" ^ name, (`Lib, {
+                      src = "lib" +|+ "bs" +|+ "bytecode" +|+ name ^ ".cmi";
+                      dst = (Some (name ^ ".cmi"));
+                      maybe = false
+                    }) :: installList)
+                end in
+                let installList = List.fold_left (fun (acc : (Install.field* Install.move) list) (group : Bsb_parse_sources.file_group) ->
                   String_map.fold (fun  module_name (module_info : Bsb_db.module_info)  acc ->
                     let open Install in
                     let path = "lib" +|+ "bs" +|+ "bytecode" in
                     let src = Bsb_db.filename_sans_suffix_of_module_info module_info in
                     (`Lib, {
-                      src = path +|+ src ^ ".cmi";
-                      dst = (Some ((Filename.basename src) ^ ".cmi"));
+                      src = path +|+ src ^ namespace_str ^ ".cmi";
+                      dst = (Some ((Filename.basename src) ^ namespace_str ^ ".cmi"));
                       maybe = false
-                    }) 
+                    })
                     (* @Todo Generate the .cmt files for Merlin's sake. *)
                     (* :: (`Lib, {
                       src = path +|+ src ^ ".cmt";
@@ -656,7 +670,7 @@ let generate cwd =
                       maybe = false
                     })  *)
                     :: acc
-                  ) group.sources acc 
+                  ) group.sources acc
                 ) installList res.files in
                 (* bs_file_groups = res.files;  *)
               let thing =
