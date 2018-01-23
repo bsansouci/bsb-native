@@ -67,6 +67,73 @@ let  resolve_bs_package
   in
   aux cwd 
 
+(* ==================================== START PATCH ==========================================
+
+  copied from https://github.com/esy-ocaml/bs-platform/blob/8135e74e37caabefb9f38611369e18fd5c6e4973/packageInfo/upstreamPatches/2.1.0/lib/bsb.ml.patch
+
+*)
+
+(* Some package managers will implement "postinstall" caches, that do not
+ * keep their build artifacts in the local node_modules. Similar to
+ * npm_config_prefix, bs_custom_resolution allows these to specify the
+ * exact location of build cache, but on a per-package basis. Implemented as
+ * environment lookup to avoid invasive changes to bsconfig and mandates. *)
+let custom_resolution =
+ match Sys.getenv "bs_custom_resolution" with
+  | exception Not_found  -> false
+  | "true"  -> true
+  | _ -> false
+
+let regex_at = Str.regexp "@"
+let regex_unders = Str.regexp "_+"
+let regex_slash = Str.regexp "\\/"
+let regex_dot = Str.regexp "\\."
+let regex_hyphen = Str.regexp "-"
+let pkg_name_as_variable pkg =
+  let pkg = Str.replace_first regex_at "" pkg in
+  let pkg = Str.global_replace regex_unders "\\0_" pkg in
+  let pkg = Str.global_replace regex_slash "__slash__" pkg in
+  let pkg = Str.global_replace regex_dot "__dot__" pkg in
+  let pkg = Str.global_replace regex_hyphen "_" pkg in
+  pkg
+
+let resolve_bs_package ~cwd pkg =
+  if custom_resolution then
+    begin
+      Bsb_log.info "@{<error>Using Custom Resolution@}@.";
+      let custom_pkg_loc = pkg_name_as_variable pkg ^ "__install" in
+      match Sys.getenv custom_pkg_loc with
+      | exception Not_found ->
+          begin
+            Bsb_log.error
+              "@{<error>Custom resolution of package %s does not exist in var %s @}@."
+              pkg
+              custom_pkg_loc;
+            Bsb_exception.package_not_found ~pkg ~json:None
+          end
+      | path when not (Sys.file_exists path) ->
+         begin
+           Bsb_log.error
+             "@{<error>Custom resolution of package %s does not exist on disk: %s=%s @}@."
+             pkg
+             custom_pkg_loc
+             path;
+           Bsb_exception.package_not_found ~pkg ~json:None
+         end
+      | path ->
+        begin
+          Bsb_log.info
+            "@{<error>Custom Resolution of package %s in var %s found at %s@}@."
+            pkg
+            custom_pkg_loc
+            path;
+          path
+        end
+    end
+  else
+    resolve_bs_package ~cwd pkg
+
+(* ====================================== END OF PATCH ====================================== *)
 
 let cache = String_hashtbl.create 0 
 
