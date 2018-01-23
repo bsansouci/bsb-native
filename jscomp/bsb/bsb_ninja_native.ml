@@ -404,7 +404,7 @@ let link oc ret ~entries ~file_groups ~static_libraries ~namespace ~external_dep
       ~output
       ~input:""
       ~inputs:all_mlast_files
-      ~implicit_deps:((List.map (fun dep -> dep // library_file_name) external_deps_for_linking) @ all_cmi_files @ all_cmo_or_cmx_files)
+      ~implicit_deps:((List.map (fun dep -> (Ext_bytes.ninja_escaped dep) // library_file_name) external_deps_for_linking) @ all_cmi_files @ all_cmo_or_cmx_files)
       ~shadows
       ~rule:rule_name;
     acc

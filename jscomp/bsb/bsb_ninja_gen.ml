@@ -429,6 +429,7 @@ let output_ninja_and_namespace_map
   | Some (build_script, true) when should_build ->
     let destdir = cwd // Bsb_config.lib_bs // nested in 
     ignore @@ Bsb_file.install_if_exists ~destdir build_script;
+    let destdir = Ext_bytes.ninja_escaped destdir in
     let (refmt, impl) = if Filename.check_suffix build_script ".re" then 
       let exec = (match refmt with 
             | Bsb_config_types.Refmt_v2 -> 
@@ -444,7 +445,7 @@ let output_ninja_and_namespace_map
     else ("", "") in
     let rule = Bsb_rule.define ~command:("${ocamlc} unix.cma ${linked_internals} ${refmt} -open Bsb_internals -o ${out} ${impl} ${in}") "build_script" in
     let output = destdir // "build_script.exe" in
-    let p = root_project_dir // "node_modules" // "bs-platform" in
+    let p = Ext_bytes.ninja_escaped root_project_dir // "node_modules" // "bs-platform" in
     Bsb_ninja_util.output_build oc
       ~order_only_deps:(static_resources @ all_info)
       ~input:""
@@ -461,7 +462,13 @@ let output_ninja_and_namespace_map
         op = Bsb_ninja_util.Overwrite impl 
       }]
       ~rule;
-    let rule = Bsb_rule.define ~command:(output ^ " " ^ (Filename.dirname ocaml_dir) ^ " " ^ ocaml_lib ^ " " ^ cwd) "run_build_script" in
+    let command = output ^ " " 
+      ^ (Ext_bytes.ninja_escaped (Filename.dirname ocaml_dir)) ^ " " 
+      ^ (Ext_bytes.ninja_escaped ocaml_lib) ^ " " 
+      ^ (Ext_bytes.ninja_escaped cwd) ^ " " 
+      ^ (Ext_bytes.ninja_escaped root_project_dir) 
+      ^ (if !Bsb_log.log_level = Bsb_log.Debug then " -verbose" else "") in
+    let rule = Bsb_rule.define ~command "run_build_script" in
     Bsb_ninja_util.output_build oc
       ~order_only_deps:[ output ]
       ~input:""

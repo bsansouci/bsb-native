@@ -23274,7 +23274,7 @@ let ninja_escaped s =
   for i = 0 to Bytes.length s - 1 do
     n := !n +
       (match Bytes.unsafe_get s i with
-       | '$' -> 2
+       | '$' | ':' -> 2
        | ' ' .. '~' -> 1
        | _ -> 4)
   done;
@@ -23285,6 +23285,8 @@ let ninja_escaped s =
       begin match Bytes.unsafe_get s i with
       | '$' ->
           Bytes.unsafe_set s' !n '$'; incr n; Bytes.unsafe_set s' !n '$'
+      | ':' ->
+          Bytes.unsafe_set s' !n '$'; incr n; Bytes.unsafe_set s' !n ':'
       | (' ' .. '~') as c -> Bytes.unsafe_set s' !n c
       | c ->
           let a = char_code c in

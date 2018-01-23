@@ -146,7 +146,8 @@ let link link_byte_or_native
        to install ocamlfind. 
      *)
     if ocamlfind_packages = [] then
-      let compiler = ocaml_dir // compiler ^ ".opt" in
+      let compiler_extension = if Ext_sys.is_windows_or_cygwin then ".opt.exe" else ".opt" in
+      let compiler = ocaml_dir // compiler ^ compiler_extension in
       let list_of_args = (compiler :: "-g"
         :: "-I" :: ocaml_lib :: "-I" :: (ocaml_lib // "stublibs") :: "-nostdlib"
         :: (if bs_super_errors then ["-bs-super-errors"] else [])) 
