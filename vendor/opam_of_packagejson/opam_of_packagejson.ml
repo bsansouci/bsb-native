@@ -383,7 +383,7 @@ let generate cwd =
                          pr b "  \"reason\" { build & >=  \"1.13.3\" }\n";
                          pr b "]\n"));
                    (let defaultBuildCommand =
-                      "bsb -build-library -make-world -backend bytecode && -build-library -make-world -backend native" in
+                      "bsb.exe -build-library" in
                     let buildCommand =
                       match opamMap with
                       | ((Some (opamMap))[@explicit_arity ]) ->
@@ -472,6 +472,7 @@ let generate cwd =
                     | exception Not_found -> None
                     | False _ -> None
                     | True _ -> Some package_name
+                    | _ -> failwith "Field `namespace` in bsconfig.json should be true or false."
                   end in
                   let res = begin match String_map.find_exn Bsb_build_schemas.sources bsjsonmap with
                   | exception Not_found -> failwith "Field `sources` doesn't exist."
