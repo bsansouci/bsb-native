@@ -27,17 +27,23 @@ let checkInputTimestamps outfile_mtime includes srcs =
     | [] -> false
     | file :: rest ->
       let path = if Filename.is_relative file then cwd // file else file in
-      let {Unix.st_mtime} = Unix.stat path in 
-      if st_mtime > outfile_mtime then 
-        true
-      else 
-        should_build rest 
+      match (Unix.stat path) with
+      | exception (Unix.Unix_error (Unix.ENOENT, _, _)) -> should_build rest
+      | {Unix.st_mtime} -> 
+        if st_mtime > outfile_mtime then 
+          true
+        else 
+          should_build rest  
   in
   should_build srcs || should_build includes
 
 let gcc ?c:(c=true) ?include_ocaml:(include_ocaml=true) ?flags:(flags=[]) ?includes:(includes=[]) outfile srcs = 
   let output = if Filename.is_relative outfile then cwd // outfile else outfile in
-  if checkInputTimestamps Unix.(stat output).st_mtime includes srcs then begin
+  let should_build = match (Unix.(stat output)) with
+    | exception (Unix.Unix_error (Unix.ENOENT, _, _)) -> true
+    | {Unix.st_mtime} -> checkInputTimestamps st_mtime includes srcs
+  in
+  if should_build then begin
     let dash_c = if c then "-c" else "" in
     let all_includes = if List.length includes > 0 then 
       "-I " ^ (String.concat " -I " (List.map (fun i -> 
