@@ -91,6 +91,7 @@ let build_bs_deps cwd ~root_project_dir ~backend ~main_bs_super_errors deps =
   let all_ocamlfind_dependencies = ref [] in
   let all_ocaml_dependencies = ref Depend.StringSet.empty in
   let all_clibs = ref [] in
+  let all_c_linker_flags = ref [] in
   
   (* @Idea could this be parallelized? We're not taking advantage of ninja here 
      and it seems like we're just going one dep at a time when we could parallelize 
@@ -125,6 +126,7 @@ let build_bs_deps cwd ~root_project_dir ~backend ~main_bs_super_errors deps =
               walk_all_deps does a simple DFS, so all we need to do is to append at the head of 
               a list to build a topologically sorted list of external deps.*)
             if List.mem backend Bsb_config_types.(config.allowed_build_kinds) then begin
+              all_c_linker_flags := (Bsb_config_types.(config.c_linker_flags)) @ !all_c_linker_flags;
               all_clibs := (Bsb_config_types.(config.static_libraries)) @ !all_clibs;
               all_ocamlfind_dependencies := Bsb_config_types.(config.ocamlfind_dependencies) @ !all_ocamlfind_dependencies;
               all_ocaml_dependencies := List.fold_left (fun acc v -> Depend.StringSet.add v acc) !all_ocaml_dependencies Bsb_config_types.(config.ocaml_dependencies);
@@ -159,7 +161,7 @@ let build_bs_deps cwd ~root_project_dir ~backend ~main_bs_super_errors deps =
          end
     );
   (* Reverse order here so the leaf deps are at the beginning *)
-  (List.rev !all_external_deps, !all_clibs, List.rev !all_ocamlfind_dependencies, !all_ocaml_dependencies)
+  (List.rev !all_external_deps, !all_clibs, !all_c_linker_flags, List.rev !all_ocamlfind_dependencies, !all_ocaml_dependencies)
 
 
 let make_world_deps cwd ~root_project_dir ~backend =

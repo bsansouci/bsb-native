@@ -53,7 +53,7 @@ let output_ninja_and_namespace_map
     ~cwd 
     ~bsc_dir
     ~not_dev           
-    ~acc_libraries_for_linking:(external_deps_for_linking, external_static_libraries, external_ocamlfind_dependencies, external_ocaml_dependencies)
+    ~acc_libraries_for_linking:(external_deps_for_linking, external_static_libraries, external_c_linker_flags, external_ocamlfind_dependencies, external_ocaml_dependencies)
     ~ocaml_dir         
     ~root_project_dir
     ~is_top_level
@@ -82,6 +82,7 @@ let output_ninja_and_namespace_map
 
       entries;
       static_libraries;
+      c_linker_flags;
       build_script;
       allowed_build_kinds;
       ocamlfind_dependencies;
@@ -355,6 +356,7 @@ let output_ninja_and_namespace_map
         ~js_post_build_cmd
         ~files_to_install
         ~static_libraries:(external_static_libraries @ static_libraries)
+        ~c_linker_flags:(external_c_linker_flags @ c_linker_flags)
         ~external_deps_for_linking
         ~ocaml_dir
         ~bs_suffix
@@ -375,6 +377,7 @@ let output_ninja_and_namespace_map
         ~js_post_build_cmd
         ~files_to_install
         ~static_libraries:(external_static_libraries @ static_libraries)
+        ~c_linker_flags:(external_c_linker_flags @ c_linker_flags)
         ~external_deps_for_linking
         ~ocaml_dir
         ~bs_suffix

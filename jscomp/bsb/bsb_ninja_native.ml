@@ -334,7 +334,7 @@ let handle_file_group oc
       ) @  acc
     ) group.sources  acc 
 
-let link oc ret ~entries ~file_groups ~static_libraries ~namespace ~external_deps_for_linking ~ocaml_dir =
+let link oc ret ~entries ~file_groups ~static_libraries ~c_linker_flags ~namespace ~external_deps_for_linking ~ocaml_dir =
   List.fold_left (fun acc project_entry ->
     let output, rule_name, library_file_name, suffix_cmo_or_cmx, main_module_name, shadows =
       begin match project_entry with
@@ -398,13 +398,13 @@ let link oc ret ~entries ~file_groups ~static_libraries ~namespace ~external_dep
       op = Bsb_ninja_util.Overwrite main_module_name
     }; {
       key = "static_libraries";
-      op = Bsb_ninja_util.Overwrite (Bsb_build_util.flag_concat "-add-clib" static_libraries)
+      op = Bsb_ninja_util.Overwrite (Bsb_build_util.flag_concat "-add-clib" (c_linker_flags @ static_libraries))
     }] in
     output_build oc
       ~output
       ~input:""
       ~inputs:all_mlast_files
-      ~implicit_deps:((List.map (fun dep -> (Ext_bytes.ninja_escaped dep) // library_file_name) external_deps_for_linking) @ all_cmi_files @ all_cmo_or_cmx_files)
+      ~implicit_deps:((List.map (fun dep -> (Ext_bytes.ninja_escaped dep) // library_file_name) external_deps_for_linking) @ all_cmi_files @ all_cmo_or_cmx_files @ static_libraries)
       ~shadows
       ~rule:rule_name;
     acc
@@ -483,6 +483,7 @@ let handle_file_groups oc
   ~js_post_build_cmd
   ~files_to_install
   ~static_libraries
+  ~c_linker_flags
   ~external_deps_for_linking
   ~ocaml_dir
   ~bs_suffix
@@ -504,6 +505,6 @@ let handle_file_groups oc
       files_to_install
   ) st file_groups in
   if is_top_level then
-    link oc ret ~entries ~file_groups ~static_libraries ~namespace ~external_deps_for_linking ~ocaml_dir
+    link oc ret ~entries ~file_groups ~static_libraries ~c_linker_flags ~namespace ~external_deps_for_linking ~ocaml_dir
   else
     pack oc ret ~backend ~file_groups ~namespace

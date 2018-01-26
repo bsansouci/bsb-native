@@ -174,6 +174,7 @@ let interpret_json
   let refmt_flags = ref Bsb_default.refmt_flags in
   let build_script = ref None in
   let static_libraries = ref [] in
+  let c_linker_flags = ref [] in
   let bs_external_includes = ref [] in 
   let bs_super_errors = ref Bsb_default.bs_super_errors in
   (** we should not resolve it too early,
@@ -320,7 +321,7 @@ let interpret_json
     |? (Bsb_build_schemas.refmt_flags, `Arr (fun s -> refmt_flags := get_list_string s))
     |? (Bsb_build_schemas.entries, `Arr (fun s -> entries := parse_entries package_name s))
     |? (Bsb_build_schemas.static_libraries, `Arr (fun s -> static_libraries := (List.map (fun v -> cwd // v) (get_list_string s))))
-    |? (Bsb_build_schemas.c_linker_flags, `Arr (fun s -> static_libraries := (List.fold_left (fun acc v -> "-ccopt" :: v :: acc) [] (List.rev (get_list_string s))) @ !static_libraries))
+    |? (Bsb_build_schemas.c_linker_flags, `Arr (fun s -> c_linker_flags := (List.fold_left (fun acc v -> "-ccopt" :: v :: acc) [] (List.rev (get_list_string s))) @ !c_linker_flags))
     |? (Bsb_build_schemas.build_script, `Str (fun s -> build_script := Some s))
     |? (Bsb_build_schemas.ocamlfind_dependencies, `Arr (fun s -> ocamlfind_dependencies := get_list_string s))
     |? (Bsb_build_schemas.bs_super_errors, `Bool (fun b -> bs_super_errors := b))
@@ -415,6 +416,7 @@ let interpret_json
           bs_super_errors = !bs_super_errors;
           
           static_libraries = !static_libraries;
+          c_linker_flags = !c_linker_flags;
           build_script = build_script;
           allowed_build_kinds = allowed_build_kinds;
           ocamlfind_dependencies = !ocamlfind_dependencies;

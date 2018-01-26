@@ -94,11 +94,11 @@ let regenerate_ninja
              If we're aiming at building Native or Bytecode, we do walk the external 
              dep graph and build a topologically sorted list of all of them. *)
           begin match backend with
-          | Bsb_config_types.Js -> ([], [], [], Depend.StringSet.empty) (* No work for the JS flow! *)
+          | Bsb_config_types.Js -> ([], [], [], [], Depend.StringSet.empty) (* No work for the JS flow! *)
           | Bsb_config_types.Bytecode
           | Bsb_config_types.Native ->
             if not is_top_level then 
-              ([], [], [], Depend.StringSet.empty)
+              ([], [], [], [], Depend.StringSet.empty)
             else begin
               (* @Speed Manually walk the external dep graph. Optimize this. 
                 
@@ -120,6 +120,7 @@ let regenerate_ninja
               *)
               let all_external_deps = ref [] in 
               let all_clibs = ref [] in
+              let all_c_linker_flags = ref [] in
               let all_ocamlfind_dependencies = ref [] in
               let all_ocaml_dependencies = ref Depend.StringSet.empty in
               Bsb_build_util.walk_all_deps cwd
@@ -140,14 +141,20 @@ let regenerate_ninja
                     | Bsb_config_types.Bytecode 
                       when List.mem Bsb_config_types.Bytecode Bsb_config_types.(innerConfig.allowed_build_kinds) -> 
                         all_external_deps := (cwd // Bsb_config.lib_ocaml // "bytecode") :: !all_external_deps;
-                        all_clibs := (List.rev Bsb_config_types.(innerConfig.static_libraries)) @ !all_clibs;
+                        all_c_linker_flags := (List.rev Bsb_config_types.(innerConfig.c_linker_flags)) 
+                          @ !all_c_linker_flags;
+                        all_clibs := (List.rev Bsb_config_types.(innerConfig.static_libraries)) 
+                          @ !all_clibs;
                         all_ocamlfind_dependencies := Bsb_config_types.(config.ocamlfind_dependencies) @ !all_ocamlfind_dependencies;
                         all_ocaml_dependencies := List.fold_left (fun acc v -> Depend.StringSet.add v acc) !all_ocaml_dependencies Bsb_config_types.(config.ocaml_dependencies);
                         
                     | Bsb_config_types.Native 
                       when List.mem Bsb_config_types.Native Bsb_config_types.(innerConfig.allowed_build_kinds) -> 
                         all_external_deps := (cwd // Bsb_config.lib_ocaml // "native") :: !all_external_deps;
-                        all_clibs := (List.rev Bsb_config_types.(innerConfig.static_libraries)) @ !all_clibs;
+                        all_c_linker_flags := (List.rev Bsb_config_types.(innerConfig.c_linker_flags)) 
+                          @ !all_c_linker_flags;
+                        all_clibs := (List.rev Bsb_config_types.(innerConfig.static_libraries)) 
+                          @ !all_clibs;
                         all_ocamlfind_dependencies := Bsb_config_types.(config.ocamlfind_dependencies) @ !all_ocamlfind_dependencies;
                         all_ocaml_dependencies := List.fold_left (fun acc v -> Depend.StringSet.add v acc) !all_ocaml_dependencies Bsb_config_types.(config.ocaml_dependencies);
                         
@@ -155,7 +162,7 @@ let regenerate_ninja
                     end;
                   end
                 );
-              (List.rev !all_external_deps, List.rev !all_clibs, List.rev !all_ocamlfind_dependencies, !all_ocaml_dependencies)
+              (List.rev !all_external_deps, List.rev !all_clibs, List.rev !all_c_linker_flags, List.rev !all_ocamlfind_dependencies, !all_ocaml_dependencies)
             end
           end
         | Some all_deps -> all_deps in

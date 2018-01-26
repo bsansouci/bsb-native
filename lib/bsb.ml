@@ -10341,6 +10341,7 @@ type t =
     bs_super_errors : bool;
     
     static_libraries: string list;
+    c_linker_flags: string list;
     build_script: (string * bool) option;
     allowed_build_kinds: compilation_kind_t list;
     ocamlfind_dependencies: string list;
@@ -10966,6 +10967,7 @@ let interpret_json
   let refmt_flags = ref Bsb_default.refmt_flags in
   let build_script = ref None in
   let static_libraries = ref [] in
+  let c_linker_flags = ref [] in
   let bs_external_includes = ref [] in 
   let bs_super_errors = ref Bsb_default.bs_super_errors in
   (** we should not resolve it too early,
@@ -11112,7 +11114,7 @@ let interpret_json
     |? (Bsb_build_schemas.refmt_flags, `Arr (fun s -> refmt_flags := get_list_string s))
     |? (Bsb_build_schemas.entries, `Arr (fun s -> entries := parse_entries package_name s))
     |? (Bsb_build_schemas.static_libraries, `Arr (fun s -> static_libraries := (List.map (fun v -> cwd // v) (get_list_string s))))
-    |? (Bsb_build_schemas.c_linker_flags, `Arr (fun s -> static_libraries := (List.fold_left (fun acc v -> "-ccopt" :: v :: acc) [] (List.rev (get_list_string s))) @ !static_libraries))
+    |? (Bsb_build_schemas.c_linker_flags, `Arr (fun s -> c_linker_flags := (List.fold_left (fun acc v -> "-ccopt" :: v :: acc) [] (List.rev (get_list_string s))) @ !c_linker_flags))
     |? (Bsb_build_schemas.build_script, `Str (fun s -> build_script := Some s))
     |? (Bsb_build_schemas.ocamlfind_dependencies, `Arr (fun s -> ocamlfind_dependencies := get_list_string s))
     |? (Bsb_build_schemas.bs_super_errors, `Bool (fun b -> bs_super_errors := b))
@@ -11207,6 +11209,7 @@ let interpret_json
           bs_super_errors = !bs_super_errors;
           
           static_libraries = !static_libraries;
+          c_linker_flags = !c_linker_flags;
           build_script = build_script;
           allowed_build_kinds = allowed_build_kinds;
           ocamlfind_dependencies = !ocamlfind_dependencies;
@@ -12950,6 +12953,7 @@ val handle_file_groups : out_channel ->
   js_post_build_cmd:string option -> 
   files_to_install:String_hash_set.t ->  
   static_libraries:string list ->
+  c_linker_flags:string list ->
   external_deps_for_linking:string list ->
   ocaml_dir:string ->
   bs_suffix:bool ->
@@ -13296,7 +13300,7 @@ let handle_file_group oc
       ) @  acc
     ) group.sources  acc 
 
-let link oc ret ~entries ~file_groups ~static_libraries ~namespace ~external_deps_for_linking ~ocaml_dir =
+let link oc ret ~entries ~file_groups ~static_libraries ~c_linker_flags ~namespace ~external_deps_for_linking ~ocaml_dir =
   List.fold_left (fun acc project_entry ->
     let output, rule_name, library_file_name, suffix_cmo_or_cmx, main_module_name, shadows =
       begin match project_entry with
@@ -13360,13 +13364,13 @@ let link oc ret ~entries ~file_groups ~static_libraries ~namespace ~external_dep
       op = Bsb_ninja_util.Overwrite main_module_name
     }; {
       key = "static_libraries";
-      op = Bsb_ninja_util.Overwrite (Bsb_build_util.flag_concat "-add-clib" static_libraries)
+      op = Bsb_ninja_util.Overwrite (Bsb_build_util.flag_concat "-add-clib" (c_linker_flags @ static_libraries))
     }] in
     output_build oc
       ~output
       ~input:""
       ~inputs:all_mlast_files
-      ~implicit_deps:((List.map (fun dep -> (Ext_bytes.ninja_escaped dep) // library_file_name) external_deps_for_linking) @ all_cmi_files @ all_cmo_or_cmx_files)
+      ~implicit_deps:((List.map (fun dep -> (Ext_bytes.ninja_escaped dep) // library_file_name) external_deps_for_linking) @ all_cmi_files @ all_cmo_or_cmx_files @ static_libraries)
       ~shadows
       ~rule:rule_name;
     acc
@@ -13445,6 +13449,7 @@ let handle_file_groups oc
   ~js_post_build_cmd
   ~files_to_install
   ~static_libraries
+  ~c_linker_flags
   ~external_deps_for_linking
   ~ocaml_dir
   ~bs_suffix
@@ -13466,7 +13471,7 @@ let handle_file_groups oc
       files_to_install
   ) st file_groups in
   if is_top_level then
-    link oc ret ~entries ~file_groups ~static_libraries ~namespace ~external_deps_for_linking ~ocaml_dir
+    link oc ret ~entries ~file_groups ~static_libraries ~c_linker_flags ~namespace ~external_deps_for_linking ~ocaml_dir
   else
     pack oc ret ~backend ~file_groups ~namespace
 
@@ -17404,7 +17409,7 @@ val output_ninja_and_namespace_map :
   cwd:string ->
   bsc_dir:string ->  
   not_dev:bool -> 
-  acc_libraries_for_linking:string list * string list * string list * Depend.StringSet.t ->
+  acc_libraries_for_linking:string list * string list * string list * string list * Depend.StringSet.t ->
   ocaml_dir:string ->
   root_project_dir:string ->
   is_top_level: bool ->
@@ -17469,7 +17474,7 @@ let output_ninja_and_namespace_map
     ~cwd 
     ~bsc_dir
     ~not_dev           
-    ~acc_libraries_for_linking:(external_deps_for_linking, external_static_libraries, external_ocamlfind_dependencies, external_ocaml_dependencies)
+    ~acc_libraries_for_linking:(external_deps_for_linking, external_static_libraries, external_c_linker_flags, external_ocamlfind_dependencies, external_ocaml_dependencies)
     ~ocaml_dir         
     ~root_project_dir
     ~is_top_level
@@ -17498,6 +17503,7 @@ let output_ninja_and_namespace_map
 
       entries;
       static_libraries;
+      c_linker_flags;
       build_script;
       allowed_build_kinds;
       ocamlfind_dependencies;
@@ -17771,6 +17777,7 @@ let output_ninja_and_namespace_map
         ~js_post_build_cmd
         ~files_to_install
         ~static_libraries:(external_static_libraries @ static_libraries)
+        ~c_linker_flags:(external_c_linker_flags @ c_linker_flags)
         ~external_deps_for_linking
         ~ocaml_dir
         ~bs_suffix
@@ -17791,6 +17798,7 @@ let output_ninja_and_namespace_map
         ~js_post_build_cmd
         ~files_to_install
         ~static_libraries:(external_static_libraries @ static_libraries)
+        ~c_linker_flags:(external_c_linker_flags @ c_linker_flags)
         ~external_deps_for_linking
         ~ocaml_dir
         ~bs_suffix
@@ -17955,7 +17963,7 @@ module Bsb_ninja_regen : sig
 
   
 val regenerate_ninja :
-  ?acc_libraries_for_linking:(string list) * (string list) * (string list) * Depend.StringSet.t ->
+  ?acc_libraries_for_linking:(string list) * (string list) * (string list) * (string list) * Depend.StringSet.t ->
   ?main_bs_super_errors:bool ->
   is_top_level:bool ->
   not_dev:bool ->
@@ -18065,11 +18073,11 @@ let regenerate_ninja
              If we're aiming at building Native or Bytecode, we do walk the external 
              dep graph and build a topologically sorted list of all of them. *)
           begin match backend with
-          | Bsb_config_types.Js -> ([], [], [], Depend.StringSet.empty) (* No work for the JS flow! *)
+          | Bsb_config_types.Js -> ([], [], [], [], Depend.StringSet.empty) (* No work for the JS flow! *)
           | Bsb_config_types.Bytecode
           | Bsb_config_types.Native ->
             if not is_top_level then 
-              ([], [], [], Depend.StringSet.empty)
+              ([], [], [], [], Depend.StringSet.empty)
             else begin
               (* @Speed Manually walk the external dep graph. Optimize this. 
                 
@@ -18091,6 +18099,7 @@ let regenerate_ninja
               *)
               let all_external_deps = ref [] in 
               let all_clibs = ref [] in
+              let all_c_linker_flags = ref [] in
               let all_ocamlfind_dependencies = ref [] in
               let all_ocaml_dependencies = ref Depend.StringSet.empty in
               Bsb_build_util.walk_all_deps cwd
@@ -18111,14 +18120,20 @@ let regenerate_ninja
                     | Bsb_config_types.Bytecode 
                       when List.mem Bsb_config_types.Bytecode Bsb_config_types.(innerConfig.allowed_build_kinds) -> 
                         all_external_deps := (cwd // Bsb_config.lib_ocaml // "bytecode") :: !all_external_deps;
-                        all_clibs := (List.rev Bsb_config_types.(innerConfig.static_libraries)) @ !all_clibs;
+                        all_c_linker_flags := (List.rev Bsb_config_types.(innerConfig.c_linker_flags)) 
+                          @ !all_c_linker_flags;
+                        all_clibs := (List.rev Bsb_config_types.(innerConfig.static_libraries)) 
+                          @ !all_clibs;
                         all_ocamlfind_dependencies := Bsb_config_types.(config.ocamlfind_dependencies) @ !all_ocamlfind_dependencies;
                         all_ocaml_dependencies := List.fold_left (fun acc v -> Depend.StringSet.add v acc) !all_ocaml_dependencies Bsb_config_types.(config.ocaml_dependencies);
                         
                     | Bsb_config_types.Native 
                       when List.mem Bsb_config_types.Native Bsb_config_types.(innerConfig.allowed_build_kinds) -> 
                         all_external_deps := (cwd // Bsb_config.lib_ocaml // "native") :: !all_external_deps;
-                        all_clibs := (List.rev Bsb_config_types.(innerConfig.static_libraries)) @ !all_clibs;
+                        all_c_linker_flags := (List.rev Bsb_config_types.(innerConfig.c_linker_flags)) 
+                          @ !all_c_linker_flags;
+                        all_clibs := (List.rev Bsb_config_types.(innerConfig.static_libraries)) 
+                          @ !all_clibs;
                         all_ocamlfind_dependencies := Bsb_config_types.(config.ocamlfind_dependencies) @ !all_ocamlfind_dependencies;
                         all_ocaml_dependencies := List.fold_left (fun acc v -> Depend.StringSet.add v acc) !all_ocaml_dependencies Bsb_config_types.(config.ocaml_dependencies);
                         
@@ -18126,7 +18141,7 @@ let regenerate_ninja
                     end;
                   end
                 );
-              (List.rev !all_external_deps, List.rev !all_clibs, List.rev !all_ocamlfind_dependencies, !all_ocaml_dependencies)
+              (List.rev !all_external_deps, List.rev !all_clibs, List.rev !all_c_linker_flags, List.rev !all_ocamlfind_dependencies, !all_ocaml_dependencies)
             end
           end
         | Some all_deps -> all_deps in
@@ -19246,7 +19261,7 @@ val make_world_deps:
   string ->
   root_project_dir:string ->
   backend:Bsb_config_types.compilation_kind_t ->
-  (string list) * (string list) * (string list) * Depend.StringSet.t
+  (string list) * (string list) * (string list) * (string list) * Depend.StringSet.t
 
 end = struct
 #1 "bsb_world.ml"
@@ -19343,6 +19358,7 @@ let build_bs_deps cwd ~root_project_dir ~backend ~main_bs_super_errors deps =
   let all_ocamlfind_dependencies = ref [] in
   let all_ocaml_dependencies = ref Depend.StringSet.empty in
   let all_clibs = ref [] in
+  let all_c_linker_flags = ref [] in
   
   (* @Idea could this be parallelized? We're not taking advantage of ninja here 
      and it seems like we're just going one dep at a time when we could parallelize 
@@ -19377,6 +19393,7 @@ let build_bs_deps cwd ~root_project_dir ~backend ~main_bs_super_errors deps =
               walk_all_deps does a simple DFS, so all we need to do is to append at the head of 
               a list to build a topologically sorted list of external deps.*)
             if List.mem backend Bsb_config_types.(config.allowed_build_kinds) then begin
+              all_c_linker_flags := (Bsb_config_types.(config.c_linker_flags)) @ !all_c_linker_flags;
               all_clibs := (Bsb_config_types.(config.static_libraries)) @ !all_clibs;
               all_ocamlfind_dependencies := Bsb_config_types.(config.ocamlfind_dependencies) @ !all_ocamlfind_dependencies;
               all_ocaml_dependencies := List.fold_left (fun acc v -> Depend.StringSet.add v acc) !all_ocaml_dependencies Bsb_config_types.(config.ocaml_dependencies);
@@ -19411,7 +19428,7 @@ let build_bs_deps cwd ~root_project_dir ~backend ~main_bs_super_errors deps =
          end
     );
   (* Reverse order here so the leaf deps are at the beginning *)
-  (List.rev !all_external_deps, !all_clibs, List.rev !all_ocamlfind_dependencies, !all_ocaml_dependencies)
+  (List.rev !all_external_deps, !all_clibs, !all_c_linker_flags, List.rev !all_ocamlfind_dependencies, !all_ocaml_dependencies)
 
 
 let make_world_deps cwd ~root_project_dir ~backend =

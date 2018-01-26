@@ -90,34 +90,50 @@ let _ = if Ext_sys.is_windows_or_cygwin then
   Unix.putenv "Path" (mingw_dir ^ ";" ^ Unix.getenv("Path"))
  else ()
 
+let checkInputTimestamps outfile_mtime includes srcs =
+  let rec should_build = function 
+    | [] -> false
+    | file :: rest ->
+      let path = if Filename.is_relative file then cwd // file else file in
+      let {Unix.st_mtime} = Unix.stat path in 
+      if st_mtime > outfile_mtime then 
+        true
+      else 
+        should_build rest 
+  in
+  should_build srcs || should_build includes
+
 let gcc ?c:(c=true) ?include_ocaml:(include_ocaml=true) ?flags:(flags=[]) ?includes:(includes=[]) outfile srcs = 
-  let dash_c = if c then "-c" else "" in
-  let all_includes = if List.length includes > 0 then 
-    "-I " ^ (String.concat " -I " (List.map (fun i -> 
-      if Filename.is_relative i then cwd // i else i
-    ) includes)) 
-  else "" in
-  let include_ocaml_flag = if include_ocaml then "-I " ^ ocaml_lib else "" in
-  let compiler = if Ext_sys.is_windows_or_cygwin then "gcc.exe" else "gcc" in
-  if Ext_sys.is_windows_or_cygwin then
-    Sys.chdir mingw_dir;
-  let cmd = compiler
-    :: dash_c
-    :: ("-o " ^ cwd // outfile)
-    :: all_includes
-    :: include_ocaml_flag
-    :: (flags @ (List.map (fun s -> cwd // s) srcs)) in
-  
-  if verbose then begin
-    print_endline "Bsb_internal command:";
-    print_endline ((String.concat " " cmd) ^ "\n");
-  end;
-  
-  let err = Sys.command (String.concat " " cmd) in
-  if Ext_sys.is_windows_or_cygwin then
-    Sys.chdir cwd;
-  if err != 0 then
-    failwith ("gcc compilation failed for: " ^ outfile);
-  err
+  let output = if Filename.is_relative outfile then cwd // outfile else outfile in
+  if checkInputTimestamps Unix.(stat output).st_mtime includes srcs then begin
+    let dash_c = if c then "-c" else "" in
+    let all_includes = if List.length includes > 0 then 
+      "-I " ^ (String.concat " -I " (List.map (fun i -> 
+        if Filename.is_relative i then cwd // i else i
+      ) includes)) 
+    else "" in
+    let include_ocaml_flag = if include_ocaml then "-I " ^ ocaml_lib else "" in
+    let compiler = if Ext_sys.is_windows_or_cygwin then "gcc.exe" else "gcc" in
+    if Ext_sys.is_windows_or_cygwin then
+      Sys.chdir mingw_dir;
+    let cmd = compiler
+      :: dash_c
+      :: ("-o " ^ output)
+      :: all_includes
+      :: include_ocaml_flag
+      :: (flags @ (List.map (fun s -> if Filename.is_relative s then cwd // s else s) srcs)) in
+    
+    if verbose then begin
+      print_endline "Bsb_internal command:";
+      print_endline ((String.concat " " cmd) ^ "\n");
+    end;
+    
+    let err = Sys.command (String.concat " " cmd) in
+    if Ext_sys.is_windows_or_cygwin then
+      Sys.chdir cwd;
+    if err != 0 then
+      failwith ("gcc compilation failed for: " ^ outfile);
+    err
+  end else 0
 
 end

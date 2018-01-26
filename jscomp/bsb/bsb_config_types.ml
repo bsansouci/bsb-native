@@ -82,6 +82,7 @@ type t =
     bs_super_errors : bool;
     
     static_libraries: string list;
+    c_linker_flags: string list;
     build_script: (string * bool) option;
     allowed_build_kinds: compilation_kind_t list;
     ocamlfind_dependencies: string list;
