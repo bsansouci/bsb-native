@@ -13370,7 +13370,10 @@ let link oc ret ~entries ~file_groups ~static_libraries ~c_linker_flags ~namespa
       ~output
       ~input:""
       ~inputs:all_mlast_files
-      ~implicit_deps:((List.map (fun dep -> (Ext_bytes.ninja_escaped dep) // library_file_name) external_deps_for_linking) @ all_cmi_files @ all_cmo_or_cmx_files @ static_libraries)
+      ~implicit_deps:((List.map 
+                (fun dep -> (Ext_bytes.ninja_escaped dep) // library_file_name)
+                external_deps_for_linking)
+        @ (List.map (fun path -> Ext_bytes.ninja_escaped path) (all_cmi_files @ all_cmo_or_cmx_files @ static_libraries)))
       ~shadows
       ~rule:rule_name;
     acc
