@@ -44,7 +44,8 @@ let lib_dllibs = ref []
 
 let add_ccobjs origin l =
   if not !Clflags.no_auto_link then begin
-    if String.length !Clflags.use_prims = 0
+    if String.length !Clflags.use_runtime = 0 
+      && String.length !Clflags.use_prims = 0
     then begin
       if l.lib_custom then Clflags.custom_runtime := true;
       lib_ccobjs := l.lib_ccobjs @ !lib_ccobjs;
@@ -318,6 +319,11 @@ let link_bytecode ppf tolink exec_name standalone =
       output_string outchan ((make_absolute !Clflags.use_runtime));
       output_char outchan '\n';
       Bytesections.record outchan "RNTM"
+    end else begin
+      let extension = if Sys.win32 || Sys.cygwin then ".exe" else "" in
+      output_string outchan (Filename.concat (Filename.concat (Filename.dirname Sys.executable_name) "bin") ("ocamlrun" ^ extension));
+      output_char outchan '\n';
+      Bytesections.record outchan "RNTM"
     end;
     (* The bytecode *)
     let start_code = pos_out outchan in
@@ -343,8 +349,9 @@ let link_bytecode ppf tolink exec_name standalone =
     (* DLL stuff *)
     if standalone then begin
       (* The extra search path for DLLs *)
-      output_stringlist outchan !Clflags.dllpaths;
-      Bytesections.record outchan "DLPT";
+      output_string outchan (make_absolute (Filename.concat (Filename.concat (Filename.concat (Filename.dirname Sys.executable_name) "lib") "ocaml") "stublibs"));
+      (* output_stringlist outchan !Clflags.dllpaths;
+      Bytesections.record outchan "DLPT"; *)
       (* The names of the DLLs *)
       output_stringlist outchan sharedobjs;
       Bytesections.record outchan "DLLS"
