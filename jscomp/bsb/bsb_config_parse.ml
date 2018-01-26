@@ -67,6 +67,7 @@ let parse_entries name (field : Ext_json_types.t array) =
       | Ext_json_types.Obj {map} as entry ->
         let backend = ref "js" in
         let main = ref None in
+        let output_name = ref None in
         let _ = map
                 |? (Bsb_build_schemas.kind, `Str (fun x -> 
                   Bsb_log.warn "@{<warn>Warning@} package %s: 'kind' field in 'entries' is deprecated and will be removed in the next release. Please use 'backend'.@." name;
@@ -76,6 +77,7 @@ let parse_entries name (field : Ext_json_types.t array) =
                   Bsb_log.warn "@{<warn>Warning@} package %s: 'main' field in 'entries' is deprecated and will be removed in the next release. Please use 'main-module'.@." name;
                   main := Some x))
                 |? (Bsb_build_schemas.main_module, `Str (fun x -> main := Some x))
+                |? (Bsb_build_schemas.output_name, `Str (fun x -> output_name := Some x))
         in
           
         let main_module_name = begin match !main with
@@ -86,11 +88,11 @@ let parse_entries name (field : Ext_json_types.t array) =
           | Some main_module_name -> main_module_name
         end in
         if !backend = Literals.native then
-          Some (Bsb_config_types.NativeTarget main_module_name)
+          Some (Bsb_config_types.NativeTarget {main_module_name; output_name=(!output_name)})
         else if !backend = Literals.bytecode then
-          Some (Bsb_config_types.BytecodeTarget main_module_name)
+          Some (Bsb_config_types.BytecodeTarget {main_module_name; output_name=(!output_name)})
         else if !backend = Literals.js then
-          Some (Bsb_config_types.JsTarget main_module_name)
+          Some (Bsb_config_types.JsTarget {main_module_name; output_name=None})
         else
           Bsb_exception.config_error entry "Missing field 'kind'. That field is required and its value be 'js', 'native' or 'bytecode'"
       | entry -> Bsb_exception.config_error entry "Unrecognized object inside array 'entries' field.") 

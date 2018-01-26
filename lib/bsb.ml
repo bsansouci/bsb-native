@@ -158,6 +158,7 @@ let allowed_build_kinds = "allowed-build-kinds"
 let ocamlfind_dependencies = "ocamlfind-dependencies"
 let ocaml_flags = "ocaml-flags"
 let ocaml_dependencies = "ocaml-dependencies"
+let output_name = "output-name"
 
 end
 module Ext_array : sig 
@@ -10289,11 +10290,15 @@ type dependency =
   }
 type dependencies = dependency list 
 
+type entries_record_t = {
+    main_module_name: string;
+    output_name: string option;
+}
 
 type entries_t = 
-    | JsTarget of string 
-    | NativeTarget of string 
-    | BytecodeTarget of string 
+    | JsTarget of entries_record_t 
+    | NativeTarget of entries_record_t 
+    | BytecodeTarget of entries_record_t 
 
 type reason_react_jsx = string option 
 
@@ -10454,7 +10459,7 @@ let ocaml_flags = ["-no-alias-deps"]
 
 let refmt_flags = ["--print"; "binary"]
 
-let main_entries = [Bsb_config_types.JsTarget "Index"]
+let main_entries = [Bsb_config_types.JsTarget { main_module_name="Index"; output_name=None}]
 
 let allowed_build_kinds = [Bsb_config_types.Js; Bsb_config_types.Bytecode; Bsb_config_types.Native]
 
@@ -10860,6 +10865,7 @@ let parse_entries name (field : Ext_json_types.t array) =
       | Ext_json_types.Obj {map} as entry ->
         let backend = ref "js" in
         let main = ref None in
+        let output_name = ref None in
         let _ = map
                 |? (Bsb_build_schemas.kind, `Str (fun x -> 
                   Bsb_log.warn "@{<warn>Warning@} package %s: 'kind' field in 'entries' is deprecated and will be removed in the next release. Please use 'backend'.@." name;
@@ -10869,6 +10875,7 @@ let parse_entries name (field : Ext_json_types.t array) =
                   Bsb_log.warn "@{<warn>Warning@} package %s: 'main' field in 'entries' is deprecated and will be removed in the next release. Please use 'main-module'.@." name;
                   main := Some x))
                 |? (Bsb_build_schemas.main_module, `Str (fun x -> main := Some x))
+                |? (Bsb_build_schemas.output_name, `Str (fun x -> output_name := Some x))
         in
           
         let main_module_name = begin match !main with
@@ -10879,11 +10886,11 @@ let parse_entries name (field : Ext_json_types.t array) =
           | Some main_module_name -> main_module_name
         end in
         if !backend = Literals.native then
-          Some (Bsb_config_types.NativeTarget main_module_name)
+          Some (Bsb_config_types.NativeTarget {main_module_name; output_name=(!output_name)})
         else if !backend = Literals.bytecode then
-          Some (Bsb_config_types.BytecodeTarget main_module_name)
+          Some (Bsb_config_types.BytecodeTarget {main_module_name; output_name=(!output_name)})
         else if !backend = Literals.js then
-          Some (Bsb_config_types.JsTarget main_module_name)
+          Some (Bsb_config_types.JsTarget {main_module_name; output_name=None})
         else
           Bsb_exception.config_error entry "Missing field 'kind'. That field is required and its value be 'js', 'native' or 'bytecode'"
       | entry -> Bsb_exception.config_error entry "Unrecognized object inside array 'entries' field.") 
@@ -11432,7 +11439,11 @@ let merlin_file_gen ~cwd ~backend
         Buffer.add_string buffer merlin_b;
         Buffer.add_string buffer path ;
       );
-    
+
+    let x = Bsb_pkg.resolve_bs_package ~cwd Bs_version.package_name  in
+    Buffer.add_string buffer merlin_b;
+    Buffer.add_string buffer (x // "lib");
+
     let nested = match backend with
       | Bsb_config_types.Js       -> "js"
       | Bsb_config_types.Native   -> "native"
@@ -13304,16 +13315,26 @@ let link oc ret ~entries ~file_groups ~static_libraries ~c_linker_flags ~namespa
   List.fold_left (fun acc project_entry ->
     let output, rule_name, library_file_name, suffix_cmo_or_cmx, main_module_name, shadows =
       begin match project_entry with
-      | Bsb_config_types.JsTarget main_module_name       -> assert false
-      | Bsb_config_types.BytecodeTarget main_module_name -> 
-        (String.lowercase main_module_name) ^ ".byte" , 
+      | Bsb_config_types.JsTarget {main_module_name}       -> assert false
+      | Bsb_config_types.BytecodeTarget {main_module_name; output_name} -> 
+        (match output_name with 
+          | None -> 
+            let extension = if Ext_sys.is_windows_or_cygwin then ".exe" else "" in
+            (String.lowercase main_module_name) ^ ".byte" ^ extension
+          | Some name -> name
+        ), 
         Rules.linking_bytecode, 
         "lib" ^ Literals.suffix_cma, 
         Literals.suffix_cmo, 
         main_module_name, 
         []
-      | Bsb_config_types.NativeTarget main_module_name   -> 
-        (String.lowercase main_module_name) ^ ".native", 
+      | Bsb_config_types.NativeTarget {main_module_name; output_name}   -> 
+        (match output_name with 
+          | None -> 
+            let extension = if Ext_sys.is_windows_or_cygwin then ".exe" else "" in
+            (String.lowercase main_module_name) ^ ".native" ^ extension
+          | Some name -> name
+        ), 
         Rules.linking_native  , 
         "lib" ^ Literals.suffix_cmxa, 
         Literals.suffix_cmx, 

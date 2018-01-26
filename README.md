@@ -75,7 +75,8 @@ Yes `bsb-native` supports opam packages (see [ocamlfind example](https://github.
     // all the entries compiling to bytecode and compile _all_ of those.
     "entries": [{
       "backend": "bytecode", // can be "bytecode" (ocamlc), "js" (bsc) or "native" (ocamlopt),
-      "main-module": "MainModule", // This has to be 
+      "main-module": "MainModule", // This has to be capitalized
+      "output-name": "snake.exe", // Custom executable name.
     }],
 
     // Array of opam dependencies.

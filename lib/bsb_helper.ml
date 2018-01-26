@@ -5060,6 +5060,7 @@ let allowed_build_kinds = "allowed-build-kinds"
 let ocamlfind_dependencies = "ocamlfind-dependencies"
 let ocaml_flags = "ocaml-flags"
 let ocaml_dependencies = "ocaml-dependencies"
+let output_name = "output-name"
 
 end
 module Ext_color : sig 

@@ -338,16 +338,26 @@ let link oc ret ~entries ~file_groups ~static_libraries ~c_linker_flags ~namespa
   List.fold_left (fun acc project_entry ->
     let output, rule_name, library_file_name, suffix_cmo_or_cmx, main_module_name, shadows =
       begin match project_entry with
-      | Bsb_config_types.JsTarget main_module_name       -> assert false
-      | Bsb_config_types.BytecodeTarget main_module_name -> 
-        (String.lowercase main_module_name) ^ ".byte" , 
+      | Bsb_config_types.JsTarget {main_module_name}       -> assert false
+      | Bsb_config_types.BytecodeTarget {main_module_name; output_name} -> 
+        (match output_name with 
+          | None -> 
+            let extension = if Ext_sys.is_windows_or_cygwin then ".exe" else "" in
+            (String.lowercase main_module_name) ^ ".byte" ^ extension
+          | Some name -> name
+        ), 
         Rules.linking_bytecode, 
         "lib" ^ Literals.suffix_cma, 
         Literals.suffix_cmo, 
         main_module_name, 
         []
-      | Bsb_config_types.NativeTarget main_module_name   -> 
-        (String.lowercase main_module_name) ^ ".native", 
+      | Bsb_config_types.NativeTarget {main_module_name; output_name}   -> 
+        (match output_name with 
+          | None -> 
+            let extension = if Ext_sys.is_windows_or_cygwin then ".exe" else "" in
+            (String.lowercase main_module_name) ^ ".native" ^ extension
+          | Some name -> name
+        ), 
         Rules.linking_native  , 
         "lib" ^ Literals.suffix_cmxa, 
         Literals.suffix_cmx, 

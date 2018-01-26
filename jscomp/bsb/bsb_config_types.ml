@@ -30,11 +30,15 @@ type dependency =
   }
 type dependencies = dependency list 
 
+type entries_record_t = {
+    main_module_name: string;
+    output_name: string option;
+}
 
 type entries_t = 
-    | JsTarget of string 
-    | NativeTarget of string 
-    | BytecodeTarget of string 
+    | JsTarget of entries_record_t 
+    | NativeTarget of entries_record_t 
+    | BytecodeTarget of entries_record_t 
 
 type reason_react_jsx = string option 
 

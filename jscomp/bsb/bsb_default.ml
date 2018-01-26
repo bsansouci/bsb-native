@@ -56,7 +56,7 @@ let ocaml_flags = ["-no-alias-deps"]
 
 let refmt_flags = ["--print"; "binary"]
 
-let main_entries = [Bsb_config_types.JsTarget "Index"]
+let main_entries = [Bsb_config_types.JsTarget { main_module_name="Index"; output_name=None}]
 
 let allowed_build_kinds = [Bsb_config_types.Js; Bsb_config_types.Bytecode; Bsb_config_types.Native]
 
