@@ -8131,7 +8131,6 @@ let link link_byte_or_native
   ~verbose
   cwd =
   let ocaml_dir = Bsb_build_util.get_ocaml_dir cwd in
-  let ocaml_lib = Bsb_build_util.get_ocaml_lib_dir ~is_js:false cwd in
   let suffix_object_files, suffix_library_files, compiler, add_custom, output_file = begin match link_byte_or_native with
   | LinkBytecode output_file -> Literals.suffix_cmo, Literals.suffix_cma , "ocamlc"  , true, output_file
   | LinkNative output_file   -> Literals.suffix_cmx, Literals.suffix_cmxa, "ocamlopt", false, output_file
@@ -8240,7 +8239,6 @@ let link link_byte_or_native
       let compiler_extension = if Ext_sys.is_windows_or_cygwin then ".opt.exe" else ".opt" in
       let compiler = ocaml_dir // compiler ^ compiler_extension in
       let list_of_args = (compiler :: "-g"
-        :: "-I" :: ocaml_lib :: "-nostdlib"
         :: (if bs_super_errors then ["-bs-super-errors"] else [])) 
         @ warning_command
         (* We filter out -thread because that'll lead to a linker warning like 

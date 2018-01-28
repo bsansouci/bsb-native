@@ -13655,11 +13655,12 @@ end = struct
 (**                                                                   **)
 (***********************************************************************)
 
+let ( // ) = Filename.concat
 
 (* The main OCaml version string has moved to ../VERSION *)
 let version = Sys.ocaml_version
 
-let standard_library_default = "/Users/benjamin/Desktop/bucklescript/vendor/ocaml/lib/ocaml"
+let standard_library_default = (Filename.dirname Sys.executable_name) // "lib" // "ocaml"
 
 let standard_library =
  
@@ -13669,7 +13670,8 @@ let standard_library =
 
     standard_library_default
 
-let standard_runtime = "/Users/benjamin/Desktop/bucklescript/vendor/ocaml/bin/ocamlrun"
+let extension = if Sys.win32 || Sys.cygwin then ".exe" else ""
+let standard_runtime = (Filename.dirname Sys.executable_name) // "bin" // "ocamlrun" ^ extension
 let ccomp_type = "cc"
 let bytecomp_c_compiler = "gcc -O  -Wall -D_FILE_OFFSET_BITS=64 -D_REENTRANT -O "
 let bytecomp_c_libraries = "-lpthread"
@@ -17891,7 +17893,7 @@ let output_ninja_and_namespace_map
             | Bsb_config_types.Refmt_custom x -> x ) in
       ("-pp \"" ^ exec ^ " --print binary\"", "-impl")
     else ("", "") in
-    let rule = Bsb_rule.define ~command:("${ocamlc} -nostdlib -I ${build_script_stdlib} unix.cma ${linked_internals} ${refmt} -open Bsb_internals -o ${out} ${impl} ${in}") "build_script" in
+    let rule = Bsb_rule.define ~command:("${ocamlc} unix.cma ${linked_internals} ${refmt} -open Bsb_internals -o ${out} ${impl} ${in}") "build_script" in
     let output = destdir // "build_script.exe" in
     let p = Ext_bytes.ninja_escaped root_project_dir // "node_modules" // "bs-platform" in
     Bsb_ninja_util.output_build oc
@@ -17908,9 +17910,6 @@ let output_ninja_and_namespace_map
       }; {
         key = "impl";
         op = Bsb_ninja_util.Overwrite impl 
-      }; {
-        key = "build_script_stdlib";
-        op = Bsb_ninja_util.Overwrite ocaml_lib
       }]
       ~rule;
     let command = output ^ " " 

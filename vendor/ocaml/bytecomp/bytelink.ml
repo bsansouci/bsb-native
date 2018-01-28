@@ -305,23 +305,22 @@ let link_bytecode ppf tolink exec_name standalone =
     if standalone then begin
       (* Copy the header *)
       try
-        let header =
-          if String.length !Clflags.use_runtime > 0
-          then "camlheader_ur" else "camlheader" ^ !Clflags.runtime_variant in
+      if String.length !Clflags.use_runtime > 0 then
+        let header = "camlheader_ur"  in
+        (* else "camlheader" ^ !Clflags.runtime_variant in *)
         let inchan = open_in_bin (find_in_path !load_path header) in
         copy_file inchan outchan;
         close_in inchan
+      else begin 
+        output_string outchan ("#!" ^ (make_absolute standard_runtime));
+        output_char outchan '\n';
+      end;
       with Not_found | Sys_error _ -> ()
     end;
     Bytesections.init_record outchan;
     (* The path to the bytecode interpreter (in use_runtime mode) *)
     if String.length !Clflags.use_runtime > 0 then begin
       output_string outchan ((make_absolute !Clflags.use_runtime));
-      output_char outchan '\n';
-      Bytesections.record outchan "RNTM"
-    end else begin
-      let extension = if Sys.win32 || Sys.cygwin then ".exe" else "" in
-      output_string outchan (Filename.concat (Filename.concat (Filename.dirname Sys.executable_name) "bin") ("ocamlrun" ^ extension));
       output_char outchan '\n';
       Bytesections.record outchan "RNTM"
     end;
@@ -346,13 +345,12 @@ let link_bytecode ppf tolink exec_name standalone =
     output_byte outchan Opcodes.opSTOP;
     output_byte outchan 0; output_byte outchan 0; output_byte outchan 0;
     Bytesections.record outchan "CODE";
+    let ( // ) = Filename.concat in
     (* DLL stuff *)
     if standalone then begin
       (* The extra search path for DLLs *)
-      output_string outchan ((Filename.concat (Filename.concat (Filename.concat (Filename.dirname Sys.executable_name) "lib") "ocaml") "stublibs") ^ Filename.dir_sep);
+      output_stringlist outchan (((Filename.dirname Sys.executable_name) // "lib" // "ocaml" // "stublibs") :: !Clflags.dllpaths);
       Bytesections.record outchan "DLPT";
-      (* output_stringlist outchan !Clflags.dllpaths;
-      Bytesections.record outchan "DLPT"; *)
       (* The names of the DLLs *)
       output_stringlist outchan sharedobjs;
       Bytesections.record outchan "DLLS"

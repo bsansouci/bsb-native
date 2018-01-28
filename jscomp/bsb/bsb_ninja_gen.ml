@@ -446,7 +446,7 @@ let output_ninja_and_namespace_map
             | Bsb_config_types.Refmt_custom x -> x ) in
       ("-pp \"" ^ exec ^ " --print binary\"", "-impl")
     else ("", "") in
-    let rule = Bsb_rule.define ~command:("${ocamlc} -nostdlib -I ${build_script_stdlib} unix.cma ${linked_internals} ${refmt} -open Bsb_internals -o ${out} ${impl} ${in}") "build_script" in
+    let rule = Bsb_rule.define ~command:("${ocamlc} unix.cma ${linked_internals} ${refmt} -open Bsb_internals -o ${out} ${impl} ${in}") "build_script" in
     let output = destdir // "build_script.exe" in
     let p = Ext_bytes.ninja_escaped root_project_dir // "node_modules" // "bs-platform" in
     Bsb_ninja_util.output_build oc
@@ -463,9 +463,6 @@ let output_ninja_and_namespace_map
       }; {
         key = "impl";
         op = Bsb_ninja_util.Overwrite impl 
-      }; {
-        key = "build_script_stdlib";
-        op = Bsb_ninja_util.Overwrite ocaml_lib
       }]
       ~rule;
     let command = output ^ " " 
