@@ -349,7 +349,7 @@ let link_bytecode ppf tolink exec_name standalone =
     (* DLL stuff *)
     if standalone then begin
       (* The extra search path for DLLs *)
-      output_string outchan (make_absolute (Filename.concat (Filename.concat (Filename.concat (Filename.dirname Sys.executable_name) "lib") "ocaml") "stublibs"));
+      output_string outchan ((Filename.concat (Filename.concat (Filename.concat (Filename.dirname Sys.executable_name) "lib") "ocaml") "stublibs") ^ Filename.dir_sep);
       (* output_stringlist outchan !Clflags.dllpaths;
       Bytesections.record outchan "DLPT"; *)
       (* The names of the DLLs *)
