@@ -30,7 +30,7 @@ process.env.BS_RELEASE_BUILD = 'true'
 // Add vendor bin path
 // So that second try will work
 process.env.PATH =
-    path.join(__dirname, '..', 'vendor', 'ocaml', 'bin') +
+    path.join(__dirname, '..', 'vendor', 'ocaml') +
     path.delimiter +
     process.env.PATH
 
