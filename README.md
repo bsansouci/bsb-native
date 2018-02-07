@@ -67,7 +67,8 @@ Yes `bsb-native` supports opam packages (see [ocamlfind example](https://github.
 ```js
 {
     // All of the bsb fields will work as expected. 
-    // See the bucklescript schema: https://bucklescript.github.io/bucklescript/docson/#build-schema.json
+    // See the bucklescript schema:
+    // https://bucklescript.github.io/bucklescript/docson/#build-schema.json
     // Below are just the bsb-native specific features.
 
     // Entries is an array of targets to be built.
@@ -108,7 +109,8 @@ Yes `bsb-native` supports opam packages (see [ocamlfind example](https://github.
     // build those.
     "static-libraries": ["lib/c/my_lib.o"],
 
-    // File built and ran at compile time. Very useful for generating object files that are then linked into the app.
+    // File built and ran at compile time. Very useful for generating object files
+    // that are then linked into the app.
     // See the C compilation section below for more details about the API exposed.
     "build-script": "build_script.re",
 
