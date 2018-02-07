@@ -108,15 +108,41 @@ Yes `bsb-native` supports opam packages (see [ocamlfind example](https://github.
     // build those.
     "static-libraries": ["lib/c/my_lib.o"],
 
-    // Command invoked first, before bsb tries to build anything else.
-    // Useful for building C code linked into the exec using
-    // `static-libraries`.
-    "build-script": "make",
+    // File built and ran at compile time. Very useful for generating object files that are then linked into the app.
+    // See the C compilation section below for more details about the API exposed.
+    "build-script": "build_script.re",
 
     // List of flags to be passed to the C linker at the linking stage.
     "c-linker-flags": ["-L/path/to/folder/with/linker/stuff"],
 }
 ```
+
+## C compilation
+bsb-native allows C compilation through an OCaml/Reason file. To expose that file to bsb you can add `"build-script": "build_script.re"` to your `bsconfig.json`. 
+
+Bsb expose to that file a module called `Bsb_internals` which contains helpers to compile C code.
+```reason
+/* Command that'll synchronously compile a C file to an object file (or not if `c=false` is passed).  
+   c:bool                 Equivalent to the `-c` flag passed to gcc. true by default.
+   include_ocaml:bool     Automatically add an include flag for the ocaml runtime. true by default. 
+   flags:array(string)    Array of flags passed directly to gcc.
+   includes:array(string) Array of paths to folders that will be included during compilation.
+   string                 The output file.
+   array(string)          The input files. 
+*/
+let gcc : (?c:bool, ?include_ocaml:bool, ?flags:array(string), ?includes:array(string), string, array(string)) => unit;
+
+/* Contains an absolute path to the current project's node_modules. */
+let node_modules : string;
+```
+
+Here is a [simple example](https://github.com/bsansouci/reasongl/blob/2364bc0de0dc0d89b85c6bc1fc64b0ceb169038f/build_script.re) of a `build_script.re` file.
+
+The generated artifacts need to be added to the `"static-libraries": []` array inside the `bsconfig.json` in order to be added at the linking phase.
+
+Here's the same [simple example](https://github.com/bsansouci/reasongl/blob/2364bc0de0dc0d89b85c6bc1fc64b0ceb169038f/bsconfig.json#L16)'s `bsconfig.json`.
+
+The `gcc` function exposed to the `build-script` file uses a vendored mingw compiler, which works on all platforms (linux, osx, windows). 
 
 ## Multi-target
 `bsb-native` actually supports building Reason/OCaml to JS as well as to native/bytecode. What that enables is cross platform code that depends only on an interface, and bsb-native will choose the right implementation depending on what you target.
