@@ -129,9 +129,9 @@ let output_ninja_and_namespace_map
   ) ocaml_flags ocaml_dependencies) in
 
   let bs_super_errors = if main_bs_super_errors && not use_ocamlfind && backend != Bsb_config_types.Js then "-bs-super-errors" else "" in
-  
-  let oc = open_out_bin (cwd // Bsb_config.lib_bs // nested // Literals.build_ninja) in
-  let cwd_lib_bs = cwd // Bsb_config.lib_bs // nested in
+  let build_artifacts_dir = Bsb_build_util.get_build_artifacts_location cwd in
+  let oc = open_out_bin (build_artifacts_dir // Bsb_config.lib_bs // nested // Literals.build_ninja) in
+  let cwd_lib_bs = build_artifacts_dir // Bsb_config.lib_bs // nested in
   
   let ocamlc = "ocamlc" in
   let ocamlopt = "ocamlopt" in
@@ -221,6 +221,7 @@ let output_ninja_and_namespace_map
           Bsb_ninja_global_vars.bs_package_dev_includes, bs_package_dev_includes;  
           Bsb_ninja_global_vars.namespace , namespace_flag ; 
           Bsb_build_schemas.bsb_dir_group, "0"  (*TODO: avoid name conflict in the future *);
+          Bsb_ninja_global_vars.build_artifacts_dir, build_artifacts_dir;
           
           Bsb_ninja_global_vars.ocaml_flags, ocaml_flags;
           Bsb_ninja_global_vars.bs_super_errors_ocamlfind, 
@@ -392,7 +393,7 @@ let output_ninja_and_namespace_map
     | None -> all_info
     | Some ns -> 
       let namespace_dir =     
-        cwd // Bsb_config.lib_bs // nested in
+        build_artifacts_dir // Bsb_config.lib_bs // nested in
       Bsb_namespace_map_gen.output ~dir:namespace_dir ns
         bs_file_groups
       ; 
@@ -430,7 +431,7 @@ let output_ninja_and_namespace_map
   let _ = 
     match build_script with
   | Some (build_script, true) when should_build ->
-    let destdir = cwd // Bsb_config.lib_bs // nested in 
+    let destdir = build_artifacts_dir // Bsb_config.lib_bs // nested in 
     ignore @@ Bsb_file.install_if_exists ~destdir build_script;
     let destdir = Ext_bytes.ninja_escaped destdir in
     let (refmt, impl) = if Filename.check_suffix build_script ".re" then 
@@ -469,7 +470,8 @@ let output_ninja_and_namespace_map
       ^ (Ext_bytes.ninja_escaped (Filename.dirname ocaml_dir)) ^ " " 
       ^ (Ext_bytes.ninja_escaped ocaml_lib) ^ " " 
       ^ (Ext_bytes.ninja_escaped cwd) ^ " " 
-      ^ (Ext_bytes.ninja_escaped root_project_dir) 
+      ^ (Ext_bytes.ninja_escaped root_project_dir) ^ " "
+      ^ (Ext_bytes.ninja_escaped build_artifacts_dir) 
       ^ (if !Bsb_log.log_level = Bsb_log.Debug then " -verbose" else "") in
     let rule = Bsb_rule.define ~command "run_build_script" in
     Bsb_ninja_util.output_build oc

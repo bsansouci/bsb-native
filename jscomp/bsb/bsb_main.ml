@@ -123,6 +123,9 @@ let bsb_main_flags : (string * Arg.spec * string) list=
         | _ -> failwith "-backend should be one of: 'js', 'bytecode' or 'native'."
       ),
     " Builds the entries in the bsconfig which match the given backend.";
+    
+    "-build-artifacts-dir", Arg.String (fun s -> Bsb_build_util.build_artifacts_dir := Some (cwd // s)),
+    " Sets the directory in which all the build artifacts will go into.";
   ]
 
 
@@ -134,22 +137,22 @@ let exec_command_then_exit  command =
   exit (Sys.command command ) 
 
 (* Execute the underlying ninja build call, then exit (as opposed to keep watching) *)
-let ninja_command_exit  vendor_ninja ninja_args nested =
+let ninja_command_exit  cwd vendor_ninja ninja_args nested =
   let ninja_args_len = Array.length ninja_args in
   if Ext_sys.is_windows_or_cygwin then
     let path_ninja = Filename.quote vendor_ninja in 
     exec_command_then_exit @@ 
-    (if ninja_args_len = 0 then      
+    (if ninja_args_len = 0 then
        Ext_string.inter3
-         path_ninja "-C" Bsb_config.lib_bs // nested
+         path_ninja "-C" (cwd // Bsb_config.lib_bs // nested)
      else   
        let args = 
          Array.append 
-           [| path_ninja ; "-C"; Bsb_config.lib_bs // nested|]
+           [| path_ninja ; "-C"; cwd // Bsb_config.lib_bs // nested|]
            ninja_args in 
        Ext_string.concat_array Ext_string.single_space args)
   else
-    let ninja_common_args = [|"ninja.exe"; "-C"; Bsb_config.lib_bs // nested |] in 
+    let ninja_common_args = [|"ninja.exe"; "-C"; cwd // Bsb_config.lib_bs // nested |] in 
     let args = 
       if ninja_args_len = 0 then ninja_common_args else 
         Array.append ninja_common_args ninja_args in 
@@ -229,7 +232,7 @@ let () =
           cwd bsc_dir ocaml_dir
       in
       let nested = get_string_backend backend in
-      ninja_command_exit  vendor_ninja [||] nested
+      ninja_command_exit (Bsb_build_util.get_build_artifacts_location cwd) vendor_ninja [||] nested
     end
   | argv -> 
     begin
@@ -282,7 +285,7 @@ let () =
                     *)
                 end else begin
                   let nested = get_string_backend backend in
-                  ninja_command_exit vendor_ninja [||] nested
+                  ninja_command_exit (Bsb_build_util.get_build_artifacts_location cwd) vendor_ninja [||] nested
                 end
             end;
         end
@@ -310,7 +313,7 @@ let () =
           if !watch_mode then watch_exit ()
           else begin 
             let nested = get_string_backend backend in
-            ninja_command_exit vendor_ninja ninja_args nested
+            ninja_command_exit (Bsb_build_util.get_build_artifacts_location cwd) vendor_ninja ninja_args nested
           end
         end
     end

@@ -53,6 +53,8 @@ let package_sep = "-"
 
 let warnings = "warnings"
 
+let build_artifacts_dir = "build_artifacts_dir"
+
 let bs_super_errors = "bs_super_errors"
 let bs_super_errors_ocamlfind = "bs_super_errors_ocamlfind"
 

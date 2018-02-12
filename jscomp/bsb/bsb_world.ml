@@ -100,6 +100,7 @@ let build_bs_deps cwd ~root_project_dir ~backend ~main_bs_super_errors deps =
     (fun {top; cwd} ->
        if not top then
          begin 
+           let build_artifacts_dir = Bsb_build_util.get_build_artifacts_location cwd in
            let config_opt = Bsb_ninja_regen.regenerate_ninja 
              ~is_top_level:false
              ~not_dev:true
@@ -134,15 +135,15 @@ let build_bs_deps cwd ~root_project_dir ~backend ~main_bs_super_errors deps =
               let nested = begin match backend with 
               | Bsb_config_types.Js -> "js"
               | Bsb_config_types.Bytecode -> 
-                all_external_deps := (cwd // Bsb_config.lib_ocaml // "bytecode") :: !all_external_deps;
+                all_external_deps := (build_artifacts_dir // Bsb_config.lib_ocaml // "bytecode") :: !all_external_deps;
                 "bytecode"
               | Bsb_config_types.Native -> 
-                all_external_deps := (cwd // Bsb_config.lib_ocaml // "native") :: !all_external_deps;
+                all_external_deps := (build_artifacts_dir // Bsb_config.lib_ocaml // "native") :: !all_external_deps;
                 "native"
               end in
              let command = 
               {Bsb_unix.cmd = vendor_ninja;
-                cwd = cwd // Bsb_config.lib_bs // nested;
+                cwd = build_artifacts_dir // Bsb_config.lib_bs // nested;
                 args  = [|vendor_ninja|] ;
                 env = Array.append (Unix.environment ()) [| "BSB_BACKEND=" ^ nested |] ;
                } in     
@@ -151,12 +152,30 @@ let build_bs_deps cwd ~root_project_dir ~backend ~main_bs_super_errors deps =
                command in 
              if eid <> 0 then   
               Bsb_unix.command_fatal_error command eid;
+            
+             if Bsb_config_types.(config.build_script) <> None then begin
+               let filename = build_artifacts_dir // ".static_libraries" in
+               if not (Sys.file_exists filename) then 
+                  Bsb_exception.missing_static_libraries_file (Bsb_config_types.(config.package_name)) 
+               else begin
+                 let artifacts_installed = ref [] in
+                 let ic = open_in_bin filename in
+                 (try
+                   while true do
+                     artifacts_installed := (input_line ic) :: !artifacts_installed
+                   done
+                 with End_of_file -> ());
+                 close_in ic;
+                 all_clibs := !artifacts_installed @ !all_clibs;
+                end
+             end;
+             
              (* When ninja is not regenerated, ninja will still do the build, 
                 still need reinstall check
                 Note that we can check if ninja print "no work to do", 
                 then don't need reinstall more
              *)
-             install_targets ~backend cwd config_opt;
+             install_targets ~backend build_artifacts_dir config_opt;
            end
          end
     );

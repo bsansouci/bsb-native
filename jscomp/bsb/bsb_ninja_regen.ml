@@ -44,10 +44,11 @@ let regenerate_ninja
   ~backend
   cwd bsc_dir ocaml_dir 
   : _ option =
-  let output_deps = cwd // Bsb_config.lib_bs // bsdeps in
+  let build_artifacts_dir = Bsb_build_util.get_build_artifacts_location cwd in
+  let output_deps = build_artifacts_dir // Bsb_config.lib_bs // bsdeps in
   let check_result  =
     Bsb_ninja_check.check 
-      ~cwd  
+      ~cwd:build_artifacts_dir
       ~forced ~file:output_deps backend in
   let () = 
     Bsb_log.info
@@ -68,10 +69,10 @@ let regenerate_ninja
       end in
       if check_result = Bsb_bsc_version_mismatch then begin 
         Bsb_log.info "@{<info>Different compiler version@}: clean current repo";
-        Bsb_clean.clean_self ~is_cmdline_build_kind_set:true ~nested bsc_dir cwd; 
+        Bsb_clean.clean_self ~is_cmdline_build_kind_set:true ~nested bsc_dir build_artifacts_dir; 
       end ; 
       (* Generate the nested folder before anything else... *)
-      Bsb_build_util.mkp (cwd // Bsb_config.lib_bs // nested);
+      Bsb_build_util.mkp (build_artifacts_dir // Bsb_config.lib_bs // nested);
       
       let config = 
         Bsb_config_parse.interpret_json 
@@ -126,6 +127,7 @@ let regenerate_ninja
               Bsb_build_util.walk_all_deps cwd
                 (fun {top; cwd} ->
                   if not top then begin
+                    let build_artifacts_dir = Bsb_build_util.get_build_artifacts_location cwd in
                     (* @Speed We don't need to read the full config, just the right fields.
                        Then again we also should cache this info so we don't have to crawl anything. *)
                     let innerConfig = 
@@ -140,7 +142,7 @@ let regenerate_ninja
                     | Bsb_config_types.Js ->  assert false
                     | Bsb_config_types.Bytecode 
                       when List.mem Bsb_config_types.Bytecode Bsb_config_types.(innerConfig.allowed_build_kinds) -> 
-                        all_external_deps := (cwd // Bsb_config.lib_ocaml // "bytecode") :: !all_external_deps;
+                        all_external_deps := (build_artifacts_dir // Bsb_config.lib_ocaml // "bytecode") :: !all_external_deps;
                         all_c_linker_flags := (List.rev Bsb_config_types.(innerConfig.c_linker_flags)) 
                           @ !all_c_linker_flags;
                         all_clibs := (List.rev Bsb_config_types.(innerConfig.static_libraries)) 
@@ -150,7 +152,7 @@ let regenerate_ninja
                         
                     | Bsb_config_types.Native 
                       when List.mem Bsb_config_types.Native Bsb_config_types.(innerConfig.allowed_build_kinds) -> 
-                        all_external_deps := (cwd // Bsb_config.lib_ocaml // "native") :: !all_external_deps;
+                        all_external_deps := (build_artifacts_dir // Bsb_config.lib_ocaml // "native") :: !all_external_deps;
                         all_c_linker_flags := (List.rev Bsb_config_types.(innerConfig.c_linker_flags)) 
                           @ !all_c_linker_flags;
                         all_clibs := (List.rev Bsb_config_types.(innerConfig.static_libraries)) 
@@ -160,7 +162,24 @@ let regenerate_ninja
                         
                     | _ -> ()
                     end;
-                  end
+                    if List.mem backend Bsb_config_types.(innerConfig.allowed_build_kinds)
+                       && Bsb_config_types.(config.build_script) <> None then begin
+                      let artifacts_installed = ref [] in
+                      let filename = build_artifacts_dir // ".static_libraries"in
+                      if not (Sys.file_exists filename) then 
+                        Bsb_exception.missing_static_libraries_file (Bsb_config_types.(innerConfig.package_name)) 
+                      else begin
+                        let ic = open_in_bin filename in
+                        (try
+                           while true do
+                             artifacts_installed := (input_line ic) :: !artifacts_installed
+                           done
+                         with End_of_file -> ());
+                        close_in ic;
+                        all_clibs := !artifacts_installed @ !all_clibs;
+                      end
+                    end
+                   end
                 );
               (List.rev !all_external_deps, List.rev !all_clibs, List.rev !all_c_linker_flags, List.rev !all_ocamlfind_dependencies, !all_ocaml_dependencies)
             end
