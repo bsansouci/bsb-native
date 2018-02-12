@@ -44,7 +44,7 @@ val missing_entry : string -> 'a
 val missing_object_file : string -> 'a
 val no_files_to_link : string -> string -> 'a
 val no_files_to_pack : string -> 'a
-
+val missing_static_libraries_file : string -> 'a
 
 val invalid_spec : string -> 'a
 

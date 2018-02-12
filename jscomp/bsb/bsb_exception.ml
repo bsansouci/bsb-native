@@ -35,6 +35,7 @@ type error =
   | Missing_object_file of string
   | No_files_to_link of string * string
   | No_files_to_pack of string
+  | Missing_static_libraries_file of string
 
 exception Error of error 
 
@@ -96,6 +97,9 @@ let print (fmt : Format.formatter) (x : error) =
     Format.fprintf fmt
     "@{<error>Error:@} No %s to pack into a lib."
     suffix
+  | Missing_static_libraries_file name ->
+    Format.fprintf fmt  
+    "@{<error>Error:@} No .static_library file found for project '%s' but had a build_script. Did that build_script exit normally?" name
 
 let conflict_module modname dir1 dir2 = 
   error (Conflict_module (modname,dir1,dir2))    
@@ -107,6 +111,7 @@ let missing_entry name = error (Missing_entry name)
 let missing_object_file name = error (Missing_object_file name)
 let no_files_to_link suffix main = error (No_files_to_link (suffix, main))
 let no_files_to_pack suffix = error (No_files_to_pack suffix)
+let missing_static_libraries_file name = error (Missing_static_libraries_file name)
 
 let config_error config fmt =
   let loc = Ext_json.loc_of config in

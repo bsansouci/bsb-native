@@ -73,13 +73,6 @@ let make_common_shadows
   : Bsb_ninja_util.shadow list 
   =
   let shadows : Bsb_ninja_util.shadow list = 
-    { key = Bsb_ninja_global_vars.bs_package_flags;
-      op = 
-        Append
-          (Bsb_package_specs.package_flag_of_package_specs
-             package_specs dirname
-          )
-    } ::
     (if Bsb_dir_index.is_lib_dir dir_index  then [] else
        [{
          key = Bsb_ninja_global_vars.bs_package_includes; 

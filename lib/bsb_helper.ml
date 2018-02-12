@@ -2267,7 +2267,7 @@ val missing_entry : string -> 'a
 val missing_object_file : string -> 'a
 val no_files_to_link : string -> string -> 'a
 val no_files_to_pack : string -> 'a
-
+val missing_static_libraries_file : string -> 'a
 
 val invalid_spec : string -> 'a
 
@@ -2312,6 +2312,7 @@ type error =
   | Missing_object_file of string
   | No_files_to_link of string * string
   | No_files_to_pack of string
+  | Missing_static_libraries_file of string
 
 exception Error of error 
 
@@ -2373,6 +2374,9 @@ let print (fmt : Format.formatter) (x : error) =
     Format.fprintf fmt
     "@{<error>Error:@} No %s to pack into a lib."
     suffix
+  | Missing_static_libraries_file name ->
+    Format.fprintf fmt  
+    "@{<error>Error:@} No .static_library file found for project '%s' but had a build_script. Did that build_script exit normally?" name
 
 let conflict_module modname dir1 dir2 = 
   error (Conflict_module (modname,dir1,dir2))    
@@ -2384,6 +2388,7 @@ let missing_entry name = error (Missing_entry name)
 let missing_object_file name = error (Missing_object_file name)
 let no_files_to_link suffix main = error (No_files_to_link (suffix, main))
 let no_files_to_pack suffix = error (No_files_to_pack suffix)
+let missing_static_libraries_file name = error (Missing_static_libraries_file name)
 
 let config_error config fmt =
   let loc = Ext_json.loc_of config in
@@ -4071,6 +4076,7 @@ let concat dirname filename =
 
 let check_suffix_case =
   Ext_string.ends_with
+
 end
 module Ext_modulename : sig 
 #1 "ext_modulename.mli"
@@ -5061,6 +5067,123 @@ let ocamlfind_dependencies = "ocamlfind-dependencies"
 let ocaml_flags = "ocaml-flags"
 let ocaml_dependencies = "ocaml-dependencies"
 let output_name = "output-name"
+
+end
+module Bsb_config : sig 
+#1 "bsb_config.mli"
+(* Copyright (C) 2015-2016 Bloomberg Finance L.P.
+ * 
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * In addition to the permissions granted to you by the LGPL, you may combine
+ * or link a "work that uses the Library" with a publicly distributed version
+ * of this file to produce a combined library or application, then distribute
+ * that combined work under the terms of your choosing, with no requirement
+ * to comply with the obligations normally placed on you by section 4 of the
+ * LGPL version 3 (or the corresponding section of a later version of the LGPL
+ * should you choose to use a later version).
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ * 
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
+
+
+val ocaml_bin_install_prefix : string -> string
+val proj_rel : string -> string
+val build_artifacts_dir : string -> string
+
+val lib_lit : string
+val lib_js : string 
+val lib_amd : string 
+val lib_bs : string
+val lib_es6 : string 
+val lib_es6_global : string 
+val lib_amd_global : string 
+val lib_ocaml : string
+val all_lib_artifacts : string list 
+(* we need generate path relative to [lib/bs] directory in the opposite direction *)
+val rev_lib_bs_prefix : string -> string
+
+(** default not install, only when -make-world, its dependencies will be installed  *)
+
+val node_modules : string
+
+end = struct
+#1 "bsb_config.ml"
+(* Copyright (C) 2015-2016 Bloomberg Finance L.P.
+ * 
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * In addition to the permissions granted to you by the LGPL, you may combine
+ * or link a "work that uses the Library" with a publicly distributed version
+ * of this file to produce a combined library or application, then distribute
+ * that combined work under the terms of your choosing, with no requirement
+ * to comply with the obligations normally placed on you by section 4 of the
+ * LGPL version 3 (or the corresponding section of a later version of the LGPL
+ * should you choose to use a later version).
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ * 
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
+let (//) = Ext_path.combine 
+
+let lib_lit = "lib"
+let lib_js = lib_lit //"js"
+let lib_amd = lib_lit //"amdjs"
+let lib_ocaml = lib_lit // "ocaml"
+let lib_bs = lib_lit // "bs"
+let lib_es6 = lib_lit // "es6"
+let lib_es6_global = lib_lit // "es6_global"
+let lib_amd_global = lib_lit // "amdjs_global"
+let all_lib_artifacts = 
+  [ lib_js ; 
+    lib_amd ;
+    lib_ocaml;
+    lib_bs ; 
+    lib_es6 ; 
+    lib_es6_global;
+    lib_amd_global
+  ]
+let rev_lib_bs = ".."// ".."
+
+let rev_lib_bs_prefix p = rev_lib_bs // p 
+
+let ocaml_bin_install_prefix p = lib_ocaml // p
+
+let lazy_build_artifacts_dir = "$build_artifacts_dir"
+let build_artifacts_dir path = lazy_build_artifacts_dir // path
+
+let lazy_src_root_dir = "$src_root_dir" 
+let proj_rel path = lazy_src_root_dir // path
+
+(** it may not be a bad idea to hard code the binary path 
+    of bsb in configuration time
+*)
+
+
+
+
+
+
+let cmd_package_specs = ref None 
+
+let node_modules = "node_modules"
 
 end
 module Ext_color : sig 
@@ -6894,6 +7017,10 @@ val get_ocaml_dir: string -> string
 
 val get_ocaml_lib_dir : is_js:bool -> string -> string
 
+val build_artifacts_dir : (string option) ref
+
+val get_build_artifacts_location : string -> string
+
 end = struct
 #1 "bsb_build_util.ml"
 (* Copyright (C) 2015-2016 Bloomberg Finance L.P.
@@ -7147,6 +7274,23 @@ let get_ocaml_dir cwd =
 let get_ocaml_lib_dir ~is_js cwd =
   if is_js then (Filename.dirname (get_bsc_dir cwd)) // "lib" // "ocaml"
   else (get_ocaml_dir cwd) // "lib" // "ocaml"
+
+let build_artifacts_dir = ref None
+
+let get_build_artifacts_location cwd =
+  (* If the project's parent folder is not node_modules, we know it's the top level one. *)
+  if (Filename.basename (Filename.dirname cwd)) <> "node_modules" then 
+    match !build_artifacts_dir with 
+    | None -> cwd
+    | Some dir -> dir
+  else begin
+    match !build_artifacts_dir with 
+    | None -> cwd
+      (* (Filename.dirname (Filename.dirname cwd)) // Bsb_config.lib_lit // Bsb_config.node_modules // project_name *)
+    | Some dir -> 
+      let project_name = Filename.basename cwd in
+      dir // Bsb_config.lib_lit // Bsb_config.node_modules // project_name
+  end
 
 end
 module Set_gen

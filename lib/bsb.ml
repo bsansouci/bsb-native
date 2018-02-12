@@ -161,322 +161,6 @@ let ocaml_dependencies = "ocaml-dependencies"
 let output_name = "output-name"
 
 end
-module Ext_array : sig 
-#1 "ext_array.mli"
-(* Copyright (C) 2015-2016 Bloomberg Finance L.P.
- * 
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Lesser General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * In addition to the permissions granted to you by the LGPL, you may combine
- * or link a "work that uses the Library" with a publicly distributed version
- * of this file to produce a combined library or application, then distribute
- * that combined work under the terms of your choosing, with no requirement
- * to comply with the obligations normally placed on you by section 4 of the
- * LGPL version 3 (or the corresponding section of a later version of the LGPL
- * should you choose to use a later version).
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Lesser General Public License for more details.
- * 
- * You should have received a copy of the GNU Lesser General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
-
-
-
-
-
-
-(** Some utilities for {!Array} operations *)
-val reverse_range : 'a array -> int -> int -> unit
-val reverse_in_place : 'a array -> unit
-val reverse : 'a array -> 'a array 
-val reverse_of_list : 'a list -> 'a array
-
-val filter : ('a -> bool) -> 'a array -> 'a array
-
-val filter_map : ('a -> 'b option) -> 'a array -> 'b array
-
-val range : int -> int -> int array
-
-val map2i : (int -> 'a -> 'b -> 'c ) -> 'a array -> 'b array -> 'c array
-
-val to_list_map : ('a -> 'b option) -> 'a array -> 'b list 
-
-val to_list_map_acc : 
-  ('a -> 'b option) -> 
-  'a array -> 
-  'b list -> 
-  'b list 
-
-val of_list_map : ('a -> 'b) -> 'a list -> 'b array 
-
-val rfind_with_index : 'a array -> ('a -> 'b -> bool) -> 'b -> int
-
-
-type 'a split = [ `No_split | `Split of 'a array * 'a array ]
-
-val rfind_and_split : 
-  'a array ->
-  ('a -> 'b -> bool) ->
-  'b -> 'a split
-
-val find_and_split : 
-  'a array ->
-  ('a -> 'b -> bool) ->
-  'b -> 'a split
-
-val exists : ('a -> bool) -> 'a array -> bool 
-
-val is_empty : 'a array -> bool 
-
-val for_all2_no_exn : 
-  ('a -> 'b -> bool) -> 
-  'a array ->
-  'b array -> 
-  bool
-end = struct
-#1 "ext_array.ml"
-(* Copyright (C) 2015-2016 Bloomberg Finance L.P.
- * 
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Lesser General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * In addition to the permissions granted to you by the LGPL, you may combine
- * or link a "work that uses the Library" with a publicly distributed version
- * of this file to produce a combined library or application, then distribute
- * that combined work under the terms of your choosing, with no requirement
- * to comply with the obligations normally placed on you by section 4 of the
- * LGPL version 3 (or the corresponding section of a later version of the LGPL
- * should you choose to use a later version).
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Lesser General Public License for more details.
- * 
- * You should have received a copy of the GNU Lesser General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
-
-
-
-
-
-let reverse_range a i len =
-  if len = 0 then ()
-  else
-    for k = 0 to (len-1)/2 do
-      let t = Array.unsafe_get a (i+k) in
-      Array.unsafe_set a (i+k) ( Array.unsafe_get a (i+len-1-k));
-      Array.unsafe_set a (i+len-1-k) t;
-    done
-
-
-let reverse_in_place a =
-  reverse_range a 0 (Array.length a)
-
-let reverse a =
-  let b_len = Array.length a in
-  if b_len = 0 then [||] else  
-    let b = Array.copy a in  
-    for i = 0 to  b_len - 1 do
-      Array.unsafe_set b i (Array.unsafe_get a (b_len - 1 -i )) 
-    done;
-    b  
-
-let reverse_of_list =  function
-  | [] -> [||]
-  | hd::tl as l ->
-    let len = List.length l in
-    let a = Array.make len hd in
-    let rec fill i = function
-      | [] -> a
-      | hd::tl -> Array.unsafe_set a (len - i - 2) hd; fill (i+1) tl in
-    fill 0 tl
-
-let filter f a =
-  let arr_len = Array.length a in
-  let rec aux acc i =
-    if i = arr_len 
-    then reverse_of_list acc 
-    else
-      let v = Array.unsafe_get a i in
-      if f  v then 
-        aux (v::acc) (i+1)
-      else aux acc (i + 1) 
-  in aux [] 0
-
-
-let filter_map (f : _ -> _ option) a =
-  let arr_len = Array.length a in
-  let rec aux acc i =
-    if i = arr_len 
-    then reverse_of_list acc 
-    else
-      let v = Array.unsafe_get a i in
-      match f  v with 
-      | Some v -> 
-        aux (v::acc) (i+1)
-      | None -> 
-        aux acc (i + 1) 
-  in aux [] 0
-
-let range from to_ =
-  if from > to_ then invalid_arg "Ext_array.range"  
-  else Array.init (to_ - from + 1) (fun i -> i + from)
-
-let map2i f a b = 
-  let len = Array.length a in 
-  if len <> Array.length b then 
-    invalid_arg "Ext_array.map2i"  
-  else
-    Array.mapi (fun i a -> f i  a ( Array.unsafe_get b i )) a 
-
-
-let rec tolist_aux a f  i res =
-  if i < 0 then res else
-    let v = Array.unsafe_get a i in
-    tolist_aux a f  (i - 1)
-      (match f v with
-       | Some v -> v :: res
-       | None -> res) 
-
-let to_list_map f a = 
-  tolist_aux a f (Array.length a - 1) []
-
-let to_list_map_acc f a acc = 
-  tolist_aux a f (Array.length a - 1) acc
-
-
-let of_list_map f a = 
-  match a with 
-  | [] -> [||]
-  | [a0] -> 
-    let b0 = f a0 in
-    [|b0|]
-  | [a0;a1] -> 
-    let b0 = f a0 in  
-    let b1 = f a1 in 
-    [|b0;b1|]
-  | [a0;a1;a2] -> 
-    let b0 = f a0 in  
-    let b1 = f a1 in 
-    let b2 = f a2 in  
-    [|b0;b1;b2|]
-  | [a0;a1;a2;a3] -> 
-    let b0 = f a0 in  
-    let b1 = f a1 in 
-    let b2 = f a2 in  
-    let b3 = f a3 in 
-    [|b0;b1;b2;b3|]
-  | [a0;a1;a2;a3;a4] -> 
-    let b0 = f a0 in  
-    let b1 = f a1 in 
-    let b2 = f a2 in  
-    let b3 = f a3 in 
-    let b4 = f a4 in 
-    [|b0;b1;b2;b3;b4|]
-
-  | a0::a1::a2::a3::a4::tl -> 
-    let b0 = f a0 in  
-    let b1 = f a1 in 
-    let b2 = f a2 in  
-    let b3 = f a3 in 
-    let b4 = f a4 in 
-    let len = List.length tl + 5 in 
-    let arr = Array.make len b0  in
-    Array.unsafe_set arr 1 b1 ;  
-    Array.unsafe_set arr 2 b2 ;
-    Array.unsafe_set arr 3 b3 ; 
-    Array.unsafe_set arr 4 b4 ; 
-    let rec fill i = function
-      | [] -> arr 
-      | hd :: tl -> 
-        Array.unsafe_set arr i (f hd); 
-        fill (i + 1) tl in 
-    fill 5 tl
-
-(**
-   {[
-     # rfind_with_index [|1;2;3|] (=) 2;;
-     - : int = 1
-               # rfind_with_index [|1;2;3|] (=) 1;;
-     - : int = 0
-               # rfind_with_index [|1;2;3|] (=) 3;;
-     - : int = 2
-               # rfind_with_index [|1;2;3|] (=) 4;;
-     - : int = -1
-   ]}
-*)
-let rfind_with_index arr cmp v = 
-  let len = Array.length arr in 
-  let rec aux i = 
-    if i < 0 then i
-    else if  cmp (Array.unsafe_get arr i) v then i
-    else aux (i - 1) in 
-  aux (len - 1)
-
-type 'a split = [ `No_split | `Split of 'a array * 'a array ]
-let rfind_and_split arr cmp v : _ split = 
-  let i = rfind_with_index arr cmp v in 
-  if  i < 0 then 
-    `No_split 
-  else 
-    `Split (Array.sub arr 0 i , Array.sub arr  (i + 1 ) (Array.length arr - i - 1 ))
-
-
-let find_with_index arr cmp v = 
-  let len  = Array.length arr in 
-  let rec aux i len = 
-    if i >= len then -1 
-    else if cmp (Array.unsafe_get arr i ) v then i 
-    else aux (i + 1) len in 
-  aux 0 len
-
-let find_and_split arr cmp v : _ split = 
-  let i = find_with_index arr cmp v in 
-  if i < 0 then 
-    `No_split
-  else
-    `Split (Array.sub arr 0 i, Array.sub arr (i + 1 ) (Array.length arr - i - 1))        
-
-(** TODO: available since 4.03, use {!Array.exists} *)
-
-let exists p a =
-  let n = Array.length a in
-  let rec loop i =
-    if i = n then false
-    else if p (Array.unsafe_get a i) then true
-    else loop (succ i) in
-  loop 0
-
-
-let is_empty arr =
-  Array.length arr = 0
-
-
-let rec unsafe_loop index len p xs ys  = 
-  if index >= len then true
-  else 
-    p 
-      (Array.unsafe_get xs index)
-      (Array.unsafe_get ys index) &&
-    unsafe_loop (succ index) len p xs ys 
-
-let for_all2_no_exn p xs ys = 
-  let len_xs = Array.length xs in 
-  let len_ys = Array.length ys in 
-  len_xs = len_ys &&    
-  unsafe_loop 0 len_xs p xs ys
-end
 module Ext_bytes : sig 
 #1 "ext_bytes.mli"
 (* Copyright (C) 2015-2016 Bloomberg Finance L.P.
@@ -1250,6 +934,2109 @@ let capitalize_ascii (s : string) : string =
 
 
 
+end
+module Ext_list : sig 
+#1 "ext_list.mli"
+(* Copyright (C) 2015-2016 Bloomberg Finance L.P.
+ * 
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * In addition to the permissions granted to you by the LGPL, you may combine
+ * or link a "work that uses the Library" with a publicly distributed version
+ * of this file to produce a combined library or application, then distribute
+ * that combined work under the terms of your choosing, with no requirement
+ * to comply with the obligations normally placed on you by section 4 of the
+ * LGPL version 3 (or the corresponding section of a later version of the LGPL
+ * should you choose to use a later version).
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ * 
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
+
+
+val map : ('a -> 'b) -> 'a list -> 'b list 
+
+(** [map_last f xs ]
+    will pass [true] to [f] for the last element, 
+    [false] otherwise. 
+    For empty list, it returns empty
+*)
+val map_last : (bool -> 'a -> 'b) -> 'a list -> 'b list
+
+(** [last l]
+    return the last element
+    raise if the list is empty
+*)
+val last : 'a list -> 'a
+
+val append : 'a list -> 'a list -> 'a list 
+
+val map_append :  ('b -> 'a) -> 'b list -> 'a list -> 'a list
+
+val fold_right : ('a -> 'b -> 'b) -> 'a list -> 'b -> 'b
+
+val fold_right2 : ('a -> 'b -> 'c -> 'c) -> 'a list -> 'b list -> 'c -> 'c
+
+val map2 : 
+  ('a -> 'b -> 'c) ->
+  'a list ->
+  'b list ->
+  'c list
+
+val fold_left_with_offset : 
+  (int -> 'acc -> 'a -> 'acc) -> 
+  int -> 
+  'acc -> 
+  'a list -> 'acc 
+
+
+(** @unused *)
+val filter_map : ('a -> 'b option) -> 'a list -> 'b list  
+
+(** [exclude p l] is the opposite of [filter p l] *)
+val exclude : ('a -> bool) -> 'a list -> 'a list 
+
+(** [excludes p l]
+    return a tuple [excluded,newl]
+    where [exluded] is true indicates that at least one  
+    element is removed,[newl] is the new list where all [p x] for [x] is false
+
+*)
+val exclude_with_val : ('a -> bool) -> 'a list -> bool * 'a list 
+
+
+val same_length : 'a list -> 'b list -> bool
+
+val init : int -> (int -> 'a) -> 'a list
+
+(** [split_at n l]
+    will split [l] into two lists [a,b], [a] will be of length [n], 
+    otherwise, it will raise
+*)
+val split_at : int -> 'a list -> 'a list * 'a list
+
+
+(** [split_at_last l]
+    It is equivalent to [split_at (List.length l - 1) l ]
+*)
+val split_at_last : 'a list -> 'a list * 'a
+
+val filter_mapi : 
+  (int -> 'a -> 'b option) -> 'a list -> 'b list
+
+val filter_map2 : 
+  ('a -> 'b -> 'c option) -> 'a list -> 'b list -> 'c list
+
+
+val length_compare : 'a list -> int -> [`Gt | `Eq | `Lt ]
+
+val length_ge : 'a list -> int -> bool
+(**
+
+   {[length xs = length ys + n ]}
+   input n should be positive 
+   TODO: input checking
+*)
+
+val length_larger_than_n : 
+  int -> 'a list -> 'a list -> bool
+
+
+(**
+   [rev_map_append f l1 l2]
+   [map f l1] and reverse it to append [l2]
+   This weird semantics is due to it is the most efficient operation
+   we can do
+*)
+val rev_map_append : ('a -> 'b) -> 'a list -> 'b list -> 'b list
+
+
+val flat_map : 
+  ('a -> 'b list) -> 
+  'a list -> 
+  'b list
+
+val flat_map_append : 
+  ('a -> 'b list) -> 
+  'a list -> 
+  'b list  ->
+  'b list
+
+
+(**
+    [stable_group eq lst]
+    Example:
+    Input:
+   {[
+     stable_group (=) [1;2;3;4;3]
+   ]}
+    Output:
+   {[
+     [[1];[2];[4];[3;3]]
+   ]}
+    TODO: this is O(n^2) behavior 
+    which could be improved later
+*)
+val stable_group : ('a -> 'a -> bool) -> 'a list -> 'a list list 
+
+(** [drop n list]
+    raise when [n] is negative
+    raise when list's length is less than [n]
+*)
+val drop : int -> 'a list -> 'a list 
+
+(** [find_first_not p lst ]
+    if all elements in [lst] pass, return [None] 
+    otherwise return the first element [e] as [Some e] which
+    fails the predicate
+*)
+val find_first_not : ('a -> bool) -> 'a list -> 'a option 
+
+(** [find_opt f l] returns [None] if all return [None],  
+    otherwise returns the first one. 
+*)
+
+val find_opt : ('a -> 'b option) -> 'a list -> 'b option 
+
+
+val rev_iter : ('a -> unit) -> 'a list -> unit 
+
+(** [for_all2_no_exn p xs ys]
+    return [true] if all satisfied,
+    [false] otherwise or length not equal
+*)
+val for_all2_no_exn : ('a -> 'b -> bool) -> 'a list -> 'b list -> bool
+
+
+
+(** [f] is applied follow the list order *)
+val split_map : ('a -> 'b * 'c) -> 'a list -> 'b list * 'c list       
+
+(** [fn] is applied from left to right *)
+val reduce_from_left : 
+  ('a -> 'a -> 'a) -> 'a list -> 'a
+
+val sort_via_array :
+  ('a -> 'a -> int) -> 'a list -> 'a list  
+
+
+
+
+(** [assoc_by_string default key lst]
+    if  [key] is found in the list  return that val,
+    other unbox the [default], 
+    otherwise [assert false ]
+*)
+val assoc_by_string : 
+  'a  option -> string -> (string * 'a) list -> 'a  
+
+val assoc_by_int : 
+  'a  option -> int -> (int * 'a) list -> 'a   
+
+
+val nth_opt : 'a list -> int -> 'a option  
+end = struct
+#1 "ext_list.ml"
+(* Copyright (C) 2015-2016 Bloomberg Finance L.P.
+ * 
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * In addition to the permissions granted to you by the LGPL, you may combine
+ * or link a "work that uses the Library" with a publicly distributed version
+ * of this file to produce a combined library or application, then distribute
+ * that combined work under the terms of your choosing, with no requirement
+ * to comply with the obligations normally placed on you by section 4 of the
+ * LGPL version 3 (or the corresponding section of a later version of the LGPL
+ * should you choose to use a later version).
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ * 
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
+
+
+
+
+let rec map f l =
+  match l with
+  | [] ->
+    []
+  | [x1] ->
+    let y1 = f x1 in
+    [y1]
+  | [x1; x2] ->
+    let y1 = f x1 in
+    let y2 = f x2 in
+    [y1; y2]
+  | [x1; x2; x3] ->
+    let y1 = f x1 in
+    let y2 = f x2 in
+    let y3 = f x3 in
+    [y1; y2; y3]
+  | [x1; x2; x3; x4] ->
+    let y1 = f x1 in
+    let y2 = f x2 in
+    let y3 = f x3 in
+    let y4 = f x4 in
+    [y1; y2; y3; y4]
+  | x1::x2::x3::x4::x5::tail ->
+    let y1 = f x1 in
+    let y2 = f x2 in
+    let y3 = f x3 in
+    let y4 = f x4 in
+    let y5 = f x5 in
+    y1::y2::y3::y4::y5::(map f tail)
+
+
+let rec map_last f l =
+  match l with
+  | [] ->
+    []
+  | [x1] ->
+    let y1 = f true x1 in
+    [y1]
+  | [x1; x2] ->
+    let y1 = f false x1 in
+    let y2 = f true x2 in
+    [y1; y2]
+  | [x1; x2; x3] ->
+    let y1 = f false x1 in
+    let y2 = f false x2 in
+    let y3 = f true x3 in
+    [y1; y2; y3]
+  | [x1; x2; x3; x4] ->
+    let y1 = f false x1 in
+    let y2 = f false x2 in
+    let y3 = f false x3 in
+    let y4 = f true x4 in
+    [y1; y2; y3; y4]
+  | x1::x2::x3::x4::tail ->
+    (* make sure that tail is not empty *)    
+    let y1 = f false x1 in
+    let y2 = f false x2 in
+    let y3 = f false x3 in
+    let y4 = f false x4 in
+    y1::y2::y3::y4::(map_last f tail)
+
+let rec last xs =
+  match xs with 
+  | [x] -> x 
+  | _ :: tl -> last tl 
+  | [] -> invalid_arg "Ext_list.last"    
+
+
+
+let rec append_aux l1 l2 = 
+  match l1 with
+  | [] -> l2
+  | [a0] -> a0::l2
+  | [a0;a1] -> a0::a1::l2
+  | [a0;a1;a2] -> a0::a1::a2::l2
+  | [a0;a1;a2;a3] -> a0::a1::a2::a3::l2
+  | [a0;a1;a2;a3;a4] -> a0::a1::a2::a3::a4::l2
+  | a0::a1::a2::a3::a4::rest -> a0::a1::a2::a3::a4::append_aux rest l2
+
+let append l1 l2 =   
+  match l2 with 
+  | [] -> l1 
+  | _ -> append_aux l1 l2  
+
+
+let rec map_append  f l1 l2 =   
+  match l1 with
+  | [] -> l2
+  | [a0] -> f a0::l2
+  | [a0;a1] -> 
+    let b0 = f a0 in 
+    let b1 = f a1 in 
+    b0::b1::l2
+  | [a0;a1;a2] -> 
+    let b0 = f a0 in 
+    let b1 = f a1 in  
+    let b2 = f a2 in 
+    b0::b1::b2::l2
+  | [a0;a1;a2;a3] -> 
+    let b0 = f a0 in 
+    let b1 = f a1 in 
+    let b2 = f a2 in 
+    let b3 = f a3 in 
+    b0::b1::b2::b3::l2
+  | [a0;a1;a2;a3;a4] -> 
+    let b0 = f a0 in 
+    let b1 = f a1 in 
+    let b2 = f a2 in 
+    let b3 = f a3 in 
+    let b4 = f a4 in 
+    b0::b1::b2::b3::b4::l2
+
+  | a0::a1::a2::a3::a4::rest ->
+    let b0 = f a0 in 
+    let b1 = f a1 in 
+    let b2 = f a2 in 
+    let b3 = f a3 in 
+    let b4 = f a4 in 
+    b0::b1::b2::b3::b4::map_append f rest l2 
+
+
+
+let rec fold_right f l acc = 
+  match l with  
+  | [] -> acc 
+  | [a0] -> f a0 acc 
+  | [a0;a1] -> f a0 (f a1 acc)
+  | [a0;a1;a2] -> f a0 (f a1 (f a2 acc))
+  | [a0;a1;a2;a3] -> f a0 (f a1 (f a2 (f a3 acc))) 
+  | [a0;a1;a2;a3;a4] -> 
+    f a0 (f a1 (f a2 (f a3 (f a4 acc))))
+  | a0::a1::a2::a3::a4::rest -> 
+    f a0 (f a1 (f a2 (f a3 (f a4 (fold_right f rest acc)))))  
+
+let rec fold_right2 f l r acc = 
+  match l,r  with  
+  | [],[] -> acc 
+  | [a0],[b0] -> f a0 b0 acc 
+  | [a0;a1],[b0;b1] -> f a0 b0 (f a1 b1 acc)
+  | [a0;a1;a2],[b0;b1;b2] -> f a0 b0 (f a1 b1 (f a2 b2 acc))
+  | [a0;a1;a2;a3],[b0;b1;b2;b3] ->
+    f a0 b0 (f a1 b1 (f a2 b2 (f a3 b3 acc))) 
+  | [a0;a1;a2;a3;a4], [b0;b1;b2;b3;b4] -> 
+    f a0 b0 (f a1 b1 (f a2 b2 (f a3 b3 (f a4 b4 acc))))
+  | a0::a1::a2::a3::a4::arest, b0::b1::b2::b3::b4::brest -> 
+    f a0 b0 (f a1 b1 (f a2 b2 (f a3 b3 (f a4 b4 (fold_right2 f arest brest acc)))))  
+  | _, _ -> invalid_arg "Ext_list.fold_right2"
+
+let rec map2 f l r = 
+  match l,r  with  
+  | [],[] -> []
+  | [a0],[b0] -> [f a0 b0]
+  | [a0;a1],[b0;b1] -> 
+    let c0 = f a0 b0 in 
+    let c1 = f a1 b1 in 
+    [c0; c1]
+  | [a0;a1;a2],[b0;b1;b2] -> 
+    let c0 = f a0 b0 in 
+    let c1 = f a1 b1 in 
+    let c2 = f a2 b2 in 
+    [c0;c1;c2]
+  | [a0;a1;a2;a3],[b0;b1;b2;b3] ->
+    let c0 = f a0 b0 in 
+    let c1 = f a1 b1 in 
+    let c2 = f a2 b2 in 
+    let c3 = f a3 b3 in 
+    [c0;c1;c2;c3]
+  | [a0;a1;a2;a3;a4], [b0;b1;b2;b3;b4] -> 
+    let c0 = f a0 b0 in 
+    let c1 = f a1 b1 in 
+    let c2 = f a2 b2 in 
+    let c3 = f a3 b3 in 
+    let c4 = f a4 b4 in 
+    [c0;c1;c2;c3;c4]
+  | a0::a1::a2::a3::a4::arest, b0::b1::b2::b3::b4::brest -> 
+    let c0 = f a0 b0 in 
+    let c1 = f a1 b1 in 
+    let c2 = f a2 b2 in 
+    let c3 = f a3 b3 in 
+    let c4 = f a4 b4 in 
+    c0::c1::c2::c3::c4::map2 f arest brest
+  | _, _ -> invalid_arg "Ext_list.map2"
+
+let rec fold_left_with_offset f i accu l =
+  match l with
+  | [] -> accu
+  | a::l -> fold_left_with_offset f (succ i) (f i accu a) l
+
+
+let rec filter_map (f: 'a -> 'b option) xs = 
+  match xs with 
+  | [] -> []
+  | y :: ys -> 
+    begin match f y with 
+      | None -> filter_map f ys
+      | Some z -> z :: filter_map f ys
+    end
+
+let rec exclude p xs =   
+  match xs with 
+  | [] ->  []
+  | x::xs -> 
+    if p x then exclude p xs 
+    else x:: exclude p xs  
+
+let rec exclude_with_val p l =
+  match l with 
+  | [] ->  false, l
+  | a0::xs -> 
+    if p a0 then true, exclude p xs 
+    else 
+      match xs with 
+      | [] -> false, l 
+      | a1::rest -> 
+        if p a1 then 
+          true, a0:: exclude p rest 
+        else 
+          let st,rest = exclude_with_val p rest in 
+          if st then 
+            st, a0::a1::rest
+          else st, l 
+
+
+
+let rec same_length xs ys = 
+  match xs, ys with 
+  | [], [] -> true
+  | _::xs, _::ys -> same_length xs ys 
+  | _, _ -> false 
+
+
+let init n f = 
+  match n with 
+  | 0 -> []
+  | 1 -> 
+    let a0 = f 0 in  
+    [a0]
+  | 2 -> 
+    let a0 = f 0 in 
+    let a1 = f 1 in 
+    [a0; a1]
+  | 3 -> 
+    let a0 = f 0 in 
+    let a1 = f 1 in 
+    let a2 = f 2 in 
+    [a0; a1; a2]
+  | 4 -> 
+    let a0 = f 0 in 
+    let a1 = f 1 in 
+    let a2 = f 2 in 
+    let a3 = f 3 in 
+    [a0; a1; a2; a3]
+  | 5 -> 
+    let a0 = f 0 in 
+    let a1 = f 1 in 
+    let a2 = f 2 in 
+    let a3 = f 3 in 
+    let a4 = f 4 in  
+    [a0; a1; a2; a3; a4]
+  | _ ->
+    Array.to_list (Array.init n f)
+
+let rec small_split_at n acc l = 
+  if n <= 0 then List.rev acc , l 
+  else 
+    match l with 
+    | x::xs -> small_split_at (n - 1) (x ::acc) xs 
+    | _ -> invalid_arg "Ext_list.split_at"
+
+let split_at n l = 
+  small_split_at n [] l 
+
+let rec split_at_last_aux acc x = 
+  match x with 
+  | [] -> invalid_arg "Ext_list.split_at_last"
+  | [ x] -> List.rev acc, x
+  | y0::ys -> split_at_last_aux (y0::acc) ys   
+
+let split_at_last (x : 'a list) = 
+  match x with 
+  | [] -> invalid_arg "Ext_list.split_at_last"
+  | [a0] -> 
+    [], a0
+  | [a0;a1] -> 
+    [a0], a1  
+  | [a0;a1;a2] -> 
+    [a0;a1], a2 
+  | [a0;a1;a2;a3] -> 
+    [a0;a1;a2], a3 
+  | [a0;a1;a2;a3;a4] ->
+    [a0;a1;a2;a3], a4 
+  | a0::a1::a2::a3::a4::rest  ->  
+    let rev, last = split_at_last_aux [] rest
+    in 
+    a0::a1::a2::a3::a4::  rev , last
+
+(**
+   can not do loop unroll due to state combination
+*)  
+let  filter_mapi (f: int -> 'a -> 'b option) xs = 
+  let rec aux i xs = 
+    match xs with 
+    | [] -> []
+    | y :: ys -> 
+      begin match f i y with 
+        | None -> aux (i + 1) ys
+        | Some z -> z :: aux (i + 1) ys
+      end in
+  aux 0 xs 
+
+let rec filter_map2 (f: 'a -> 'b -> 'c option) xs ys = 
+  match xs,ys with 
+  | [],[] -> []
+  | u::us, v :: vs -> 
+    begin match f u v with 
+      | None -> filter_map2 f us vs (* idea: rec f us vs instead? *)
+      | Some z -> z :: filter_map2 f us vs
+    end
+  | _ -> invalid_arg "Ext_list.filter_map2"
+
+
+let rec rev_map_append  f l1 l2 =
+  match l1 with
+  | [] -> l2
+  | a :: l -> rev_map_append f l (f a :: l2)
+
+
+let rec rev_append l1 l2 =
+  match l1 with
+    [] -> l2
+  | a :: l -> rev_append l   (a :: l2)
+
+(** It is not worth loop unrolling, 
+    it is already tail-call, and we need to be careful 
+    about evaluation order when unroll
+*)
+let rec flat_map_aux f acc append lx =
+  match lx with
+  | [] -> rev_append acc  append
+  | a0::rest -> flat_map_aux f (rev_append (f a0)  acc ) append rest 
+
+let flat_map f lx =
+  flat_map_aux f [] [] lx
+
+let flat_map_append f lx append  =
+  flat_map_aux f [] append lx  
+
+
+let rec length_compare l n = 
+  if n < 0 then `Gt 
+  else 
+    begin match l with 
+      | _ ::xs -> length_compare xs (n - 1)
+      | [] ->  
+        if n = 0 then `Eq 
+        else `Lt 
+    end
+
+let rec length_ge l n =   
+  if n > 0 then
+    match l with 
+    | _ :: tl -> length_ge tl (n - 1)
+    | [] -> false
+  else true
+(**
+
+   {[length xs = length ys + n ]}
+*)
+let rec length_larger_than_n n xs ys =
+  match xs, ys with 
+  | _, [] -> length_compare xs n = `Eq   
+  | _::xs, _::ys -> 
+    length_larger_than_n n xs ys
+  | [], _ -> false 
+
+
+
+
+let rec group (eq : 'a -> 'a -> bool) lst =
+  match lst with 
+  | [] -> []
+  | x::xs -> 
+    aux eq x (group eq xs )
+
+and aux eq (x : 'a)  (xss : 'a list list) : 'a list list = 
+  match xss with 
+  | [] -> [[x]]
+  | (y0::_ as y)::ys -> (* cannot be empty *) 
+    if eq x y0 then
+      (x::y) :: ys 
+    else
+      y :: aux eq x ys                                 
+  | _ :: _ -> assert false    
+
+let stable_group eq lst =  group eq lst |> List.rev  
+
+let rec drop n h = 
+  if n < 0 then invalid_arg "Ext_list.drop"
+  else
+  if n = 0 then h 
+  else 
+    match h with 
+    | [] ->
+      invalid_arg "Ext_list.drop"
+    | _ :: tl ->   
+      drop (n - 1) tl
+
+let rec find_first_not  p = function
+  | [] -> None
+  | a::l -> 
+    if p a 
+    then find_first_not p l
+    else Some a 
+
+
+let rec rev_iter f l = 
+  match l with
+  | [] -> ()    
+  | [x1] ->
+    f x1 
+  | [x1; x2] ->
+    f x2 ; f x1 
+  | [x1; x2; x3] ->
+    f x3 ; f x2 ; f x1 
+  | [x1; x2; x3; x4] ->
+    f x4; f x3; f x2; f x1 
+  | x1::x2::x3::x4::x5::tail ->
+    rev_iter f tail;
+    f x5; f x4 ; f x3; f x2 ; f x1
+
+
+let rec for_all2_no_exn p l1 l2 = 
+  match (l1, l2) with
+  | ([], []) -> true
+  | (a1::l1, a2::l2) -> p a1 a2 && for_all2_no_exn p l1 l2
+  | (_, _) -> false
+
+
+let rec find_opt p = function
+  | [] -> None
+  | x :: l -> 
+    match  p x with 
+    | Some _ as v  ->  v
+    | None -> find_opt p l 
+
+
+
+let rec split_map f l = 
+  match l with
+  | [] ->
+    [],[]
+  | [x1] ->
+    let a0,b0 = f x1 in
+    [a0],[b0]
+  | [x1; x2] ->
+    let a1,b1 = f x1 in
+    let a2,b2 = f x2 in
+    [a1;a2],[b1;b2]
+  | [x1; x2; x3] ->
+    let a1,b1 = f x1 in
+    let a2,b2 = f x2 in
+    let a3,b3 = f x3 in
+    [a1;a2;a3], [b1;b2;b3]
+  | [x1; x2; x3; x4] ->
+    let a1,b1 = f x1 in
+    let a2,b2 = f x2 in
+    let a3,b3 = f x3 in
+    let a4,b4 = f x4 in
+    [a1;a2;a3;a4], [b1;b2;b3;b4] 
+  | x1::x2::x3::x4::x5::tail ->
+    let a1,b1 = f x1 in
+    let a2,b2 = f x2 in
+    let a3,b3 = f x3 in
+    let a4,b4 = f x4 in
+    let a5,b5 = f x5 in
+    let ass,bss = split_map f tail in 
+    a1::a2::a3::a4::a5::ass,
+    b1::b2::b3::b4::b5::bss
+
+
+let reduce_from_left fn lst = 
+  match lst with 
+  | first :: rest ->  List.fold_left fn first rest 
+  | _ -> invalid_arg "Ext_list.reduce_from_left"
+
+
+let sort_via_array cmp lst =
+  let arr = Array.of_list lst  in
+  Array.sort cmp arr;
+  Array.to_list arr
+
+
+
+
+let rec assoc_by_string def (k : string) lst = 
+  match lst with 
+  | [] -> 
+    begin match def with 
+      | None -> assert false 
+      | Some x -> x end
+  | (k1,v1)::rest -> 
+    if Ext_string.equal k1 k then v1 else 
+      assoc_by_string def k rest 
+
+let rec assoc_by_int def (k : int) lst = 
+  match lst with 
+  | [] -> 
+    begin match def with
+      | None -> assert false 
+      | Some x -> x end
+  | (k1,v1)::rest -> 
+    if k1 = k then v1 else 
+      assoc_by_int def k rest     
+
+
+let rec nth_aux l n =
+  match l with
+  | [] -> None
+  | a::l -> if n = 0 then Some a else nth_aux l (n-1)
+
+let nth_opt l n =
+  if n < 0 then None 
+  else
+    nth_aux l n
+end
+module Ext_pervasives : sig 
+#1 "ext_pervasives.mli"
+(* Copyright (C) 2015-2016 Bloomberg Finance L.P.
+ * 
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * In addition to the permissions granted to you by the LGPL, you may combine
+ * or link a "work that uses the Library" with a publicly distributed version
+ * of this file to produce a combined library or application, then distribute
+ * that combined work under the terms of your choosing, with no requirement
+ * to comply with the obligations normally placed on you by section 4 of the
+ * LGPL version 3 (or the corresponding section of a later version of the LGPL
+ * should you choose to use a later version).
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ * 
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
+
+
+
+
+
+
+
+
+(** Extension to standard library [Pervavives] module, safe to open 
+  *)
+
+external reraise: exn -> 'a = "%reraise"
+
+val finally : 'a -> ('a -> 'c) -> ('a -> 'b) -> 'b
+
+val with_file_as_chan : string -> (out_channel -> 'a) -> 'a
+
+val with_file_as_pp : string -> (Format.formatter -> 'a) -> 'a
+
+val is_pos_pow : Int32.t -> int
+
+val failwithf : loc:string -> ('a, unit, string, 'b) format4 -> 'a
+
+val invalid_argf : ('a, unit, string, 'b) format4 -> 'a
+
+val bad_argf : ('a, unit, string, 'b) format4 -> 'a
+
+
+
+val dump : 'a -> string 
+val pp_any : Format.formatter -> 'a -> unit 
+external id : 'a -> 'a = "%identity"
+
+(** Copied from {!Btype.hash_variant}:
+    need sync up and add test case
+ *)
+val hash_variant : string -> int
+
+end = struct
+#1 "ext_pervasives.ml"
+(* Copyright (C) 2015-2016 Bloomberg Finance L.P.
+ * 
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * In addition to the permissions granted to you by the LGPL, you may combine
+ * or link a "work that uses the Library" with a publicly distributed version
+ * of this file to produce a combined library or application, then distribute
+ * that combined work under the terms of your choosing, with no requirement
+ * to comply with the obligations normally placed on you by section 4 of the
+ * LGPL version 3 (or the corresponding section of a later version of the LGPL
+ * should you choose to use a later version).
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ * 
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
+
+
+
+
+
+
+external reraise: exn -> 'a = "%reraise"
+
+let finally v action f   = 
+  match f v with
+  | exception e -> 
+      action v ;
+      reraise e 
+  | e ->  action v ; e 
+
+let with_file_as_chan filename f = 
+  finally (open_out_bin filename) close_out f 
+
+let with_file_as_pp filename f = 
+  finally (open_out_bin filename) close_out
+    (fun chan -> 
+      let fmt = Format.formatter_of_out_channel chan in
+      let v = f  fmt in
+      Format.pp_print_flush fmt ();
+      v
+    ) 
+
+
+let  is_pos_pow n = 
+  let module M = struct exception E end in 
+  let rec aux c (n : Int32.t) = 
+    if n <= 0l then -2 
+    else if n = 1l then c 
+    else if Int32.logand n 1l =  0l then   
+      aux (c + 1) (Int32.shift_right n 1 )
+    else raise M.E in 
+  try aux 0 n  with M.E -> -1
+
+let failwithf ~loc fmt = Format.ksprintf (fun s -> failwith (loc ^ s))
+    fmt
+    
+let invalid_argf fmt = Format.ksprintf invalid_arg fmt
+
+let bad_argf fmt = Format.ksprintf (fun x -> raise (Arg.Bad x ) ) fmt
+
+
+let rec dump r =
+  if Obj.is_int r then
+    string_of_int (Obj.magic r : int)
+  else (* Block. *)
+    let rec get_fields acc = function
+      | 0 -> acc
+      | n -> let n = n-1 in get_fields (Obj.field r n :: acc) n
+    in
+    let rec is_list r =
+      if Obj.is_int r then
+        r = Obj.repr 0 (* [] *)
+      else
+        let s = Obj.size r and t = Obj.tag r in
+        t = 0 && s = 2 && is_list (Obj.field r 1) (* h :: t *)
+    in
+    let rec get_list r =
+      if Obj.is_int r then
+        []
+      else
+        let h = Obj.field r 0 and t = get_list (Obj.field r 1) in
+        h :: t
+    in
+    let opaque name =
+      (* XXX In future, print the address of value 'r'.  Not possible
+       * in pure OCaml at the moment.  *)
+      "<" ^ name ^ ">"
+    in
+    let s = Obj.size r and t = Obj.tag r in
+    (* From the tag, determine the type of block. *)
+    match t with
+    | _ when is_list r ->
+      let fields = get_list r in
+      "[" ^ String.concat "; " (Ext_list.map dump fields) ^ "]"
+    | 0 ->
+      let fields = get_fields [] s in
+      "(" ^ String.concat ", " (Ext_list.map dump fields) ^ ")"
+    | x when x = Obj.lazy_tag ->
+      (* Note that [lazy_tag .. forward_tag] are < no_scan_tag.  Not
+         * clear if very large constructed values could have the same
+         * tag. XXX *)
+      opaque "lazy"
+    | x when x = Obj.closure_tag ->
+      opaque "closure"
+    | x when x = Obj.object_tag ->
+      let fields = get_fields [] s in
+      let _clasz, id, slots =
+        match fields with
+        | h::h'::t -> h, h', t
+        | _ -> assert false
+      in
+      (* No information on decoding the class (first field).  So just print
+         * out the ID and the slots. *)
+      "Object #" ^ dump id ^ " (" ^ String.concat ", " (Ext_list.map dump slots) ^ ")"
+    | x when x = Obj.infix_tag ->
+      opaque "infix"
+    | x when x = Obj.forward_tag ->
+      opaque "forward"
+    | x when x < Obj.no_scan_tag ->
+      let fields = get_fields [] s in
+      "Tag" ^ string_of_int t ^
+      " (" ^ String.concat ", " (Ext_list.map dump fields) ^ ")"
+    | x when x = Obj.string_tag ->
+      "\"" ^ String.escaped (Obj.magic r : string) ^ "\""
+    | x when x = Obj.double_tag ->
+      string_of_float (Obj.magic r : float)
+    | x when x = Obj.abstract_tag ->
+      opaque "abstract"
+    | x when x = Obj.custom_tag ->
+      opaque "custom"
+    | x when x = Obj.custom_tag ->
+      opaque "final"
+    | x when x = Obj.double_array_tag ->
+      "[|"^
+      String.concat ";"
+        (Array.to_list (Array.map string_of_float (Obj.magic r : float array))) ^
+      "|]"
+    | _ ->
+      opaque (Printf.sprintf "unknown: tag %d size %d" t s)
+
+let dump v = dump (Obj.repr v)
+
+let pp_any fmt v = 
+  Format.fprintf fmt "@[%s@]"
+  (dump v )
+external id : 'a -> 'a = "%identity"
+
+
+let hash_variant s =
+  let accu = ref 0 in
+  for i = 0 to String.length s - 1 do
+    accu := 223 * !accu + Char.code s.[i]
+  done;
+  (* reduce to 31 bits *)
+  accu := !accu land (1 lsl 31 - 1);
+  (* make it signed for 64 bits architectures *)
+  if !accu > 0x3FFFFFFF then !accu - (1 lsl 31) else !accu
+
+
+end
+module Literals : sig 
+#1 "literals.mli"
+(* Copyright (C) 2015-2016 Bloomberg Finance L.P.
+ * 
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * In addition to the permissions granted to you by the LGPL, you may combine
+ * or link a "work that uses the Library" with a publicly distributed version
+ * of this file to produce a combined library or application, then distribute
+ * that combined work under the terms of your choosing, with no requirement
+ * to comply with the obligations normally placed on you by section 4 of the
+ * LGPL version 3 (or the corresponding section of a later version of the LGPL
+ * should you choose to use a later version).
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ * 
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
+
+
+
+
+
+
+val js_array_ctor : string 
+val js_type_number : string
+val js_type_string : string
+val js_type_object : string
+val js_undefined : string
+val js_prop_length : string
+
+val param : string
+val partial_arg : string
+val prim : string
+
+(**temporary varaible used in {!Js_ast_util} *)
+val tmp : string 
+
+val create : string 
+
+val app : string
+val app_array : string
+
+val runtime : string
+val stdlib : string
+val imul : string
+
+val setter_suffix : string
+val setter_suffix_len : int
+
+
+val debugger : string
+val raw_expr : string
+val raw_stmt : string
+val unsafe_downgrade : string
+val fn_run : string
+val method_run : string
+val fn_method : string
+val fn_mk : string
+
+(** callback actually, not exposed to user yet *)
+(* val js_fn_runmethod : string *)
+
+val bs_deriving : string
+val bs_deriving_dot : string
+val bs_type : string
+
+(** nodejs *)
+
+val node_modules : string
+val node_modules_length : int
+val package_json : string
+val bsconfig_json : string
+val build_ninja : string
+
+(* Name of the library file created for each external dependency. *)
+val library_file : string
+
+val suffix_a : string
+val suffix_cmj : string
+val suffix_cmo : string
+val suffix_cma : string
+val suffix_cmi : string
+val suffix_cmx : string
+val suffix_cmxa : string
+val suffix_ml : string
+val suffix_mlast : string 
+val suffix_mlast_simple : string
+val suffix_mliast : string
+val suffix_mliast_simple : string
+val suffix_mlmap : string
+val suffix_mll : string
+val suffix_re : string
+val suffix_rei : string 
+
+val suffix_d : string
+val suffix_mlastd : string
+val suffix_mliastd : string
+
+val suffix_mli : string 
+val suffix_cmt : string 
+val suffix_cmti : string 
+
+val commonjs : string 
+val amdjs : string 
+val es6 : string 
+val es6_global : string
+val amdjs_global : string 
+val unused_attribute : string 
+val dash_nostdlib : string
+
+val reactjs_jsx_ppx_2_exe : string 
+val reactjs_jsx_ppx_3_exe : string 
+val unescaped_j_delimiter : string 
+val escaped_j_delimiter : string 
+
+val unescaped_js_delimiter : string 
+
+val native : string
+val bytecode : string
+val js : string
+
+val node_sep : string 
+val node_parent : string 
+val node_current : string 
+
+end = struct
+#1 "literals.ml"
+(* Copyright (C) 2015-2016 Bloomberg Finance L.P.
+ * 
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * In addition to the permissions granted to you by the LGPL, you may combine
+ * or link a "work that uses the Library" with a publicly distributed version
+ * of this file to produce a combined library or application, then distribute
+ * that combined work under the terms of your choosing, with no requirement
+ * to comply with the obligations normally placed on you by section 4 of the
+ * LGPL version 3 (or the corresponding section of a later version of the LGPL
+ * should you choose to use a later version).
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ * 
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
+
+
+
+
+
+
+
+let js_array_ctor = "Array"
+let js_type_number = "number"
+let js_type_string = "string"
+let js_type_object = "object" 
+let js_undefined = "undefined"
+let js_prop_length = "length"
+
+let prim = "prim"
+let param = "param"
+let partial_arg = "partial_arg"
+let tmp = "tmp"
+
+let create = "create" (* {!Caml_exceptions.create}*)
+
+let app = "_"
+let app_array = "app" (* arguments are an array*)
+
+let runtime = "runtime" (* runtime directory *)
+
+let stdlib = "stdlib"
+
+let imul = "imul" (* signed int32 mul *)
+
+let setter_suffix = "#="
+let setter_suffix_len = String.length setter_suffix
+
+let debugger = "debugger"
+let raw_expr = "raw_expr"
+let raw_stmt = "raw_stmt"
+let unsafe_downgrade = "unsafe_downgrade"
+let fn_run = "fn_run"
+let method_run = "method_run"
+
+let fn_method = "fn_method"
+let fn_mk = "fn_mk"
+(*let js_fn_runmethod = "js_fn_runmethod"*)
+
+let bs_deriving = "bs.deriving"
+let bs_deriving_dot = "bs.deriving."
+let bs_type = "bs.type"
+
+
+(** nodejs *)
+let node_modules = "node_modules"
+let node_modules_length = String.length "node_modules"
+let package_json = "package.json"
+let bsconfig_json = "bsconfig.json"
+let build_ninja = "build.ninja"
+
+(* Name of the library file created for each external dependency. *)
+let library_file = "lib"
+
+let suffix_a = ".a"
+let suffix_cmj = ".cmj"
+let suffix_cmo = ".cmo"
+let suffix_cma = ".cma"
+let suffix_cmi = ".cmi"
+let suffix_cmx = ".cmx"
+let suffix_cmxa = ".cmxa"
+let suffix_mll = ".mll"
+let suffix_ml = ".ml"
+let suffix_mli = ".mli"
+let suffix_re = ".re"
+let suffix_rei = ".rei"
+let suffix_mlmap = ".mlmap"
+
+let suffix_cmt = ".cmt" 
+let suffix_cmti = ".cmti" 
+let suffix_mlast = ".mlast"
+let suffix_mlast_simple = ".mlast_simple"
+let suffix_mliast = ".mliast"
+let suffix_mliast_simple = ".mliast_simple"
+let suffix_d = ".d"
+let suffix_mlastd = ".mlast.d"
+let suffix_mliastd = ".mliast.d"
+
+
+let commonjs = "commonjs" 
+let amdjs = "amdjs"
+let es6 = "es6"
+let es6_global = "es6-global"
+let amdjs_global = "amdjs-global"
+let unused_attribute = "Unused attribute " 
+let dash_nostdlib = "-nostdlib"
+
+let reactjs_jsx_ppx_2_exe = "reactjs_jsx_ppx_2.exe"
+let reactjs_jsx_ppx_3_exe  = "reactjs_jsx_ppx_3.exe"
+let unescaped_j_delimiter = "j"
+let unescaped_js_delimiter = "js"
+let escaped_j_delimiter =  "*j" (* not user level syntax allowed *)
+
+let native = "native"
+let bytecode = "bytecode"
+let js = "js"
+
+
+
+(** Used when produce node compatible paths *)
+let node_sep = "/"
+let node_parent = ".."
+let node_current = "."
+
+
+end
+module Ext_path : sig 
+#1 "ext_path.mli"
+(* Copyright (C) 2017 Authors of BuckleScript
+ * 
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * In addition to the permissions granted to you by the LGPL, you may combine
+ * or link a "work that uses the Library" with a publicly distributed version
+ * of this file to produce a combined library or application, then distribute
+ * that combined work under the terms of your choosing, with no requirement
+ * to comply with the obligations normally placed on you by section 4 of the
+ * LGPL version 3 (or the corresponding section of a later version of the LGPL
+ * should you choose to use a later version).
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ * 
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
+
+type t 
+
+
+
+
+
+(**
+   [combine path1 path2]
+   1. add some simplifications when concatenating
+   2. when [path2] is absolute, return [path2]
+*)  
+val combine : 
+  string -> 
+  string -> 
+  string    
+
+
+
+val chop_extension : ?loc:string -> string -> string 
+
+
+val chop_extension_if_any : string -> string
+
+val chop_all_extensions_if_any : 
+  string -> string 
+
+(**
+   {[
+     get_extension "a.txt" = ".txt"
+       get_extension "a" = ""
+   ]}
+*)
+val get_extension : string -> string
+
+
+
+
+val node_rebase_file :
+  from:string -> 
+  to_:string ->
+  string -> 
+  string 
+
+(** 
+   TODO: could be highly optimized
+   if [from] and [to] resolve to the same path, a zero-length string is returned 
+   Given that two paths are directory
+
+   A typical use case is 
+   {[
+     Filename.concat 
+       (rel_normalized_absolute_path cwd (Filename.dirname a))
+       (Filename.basename a)
+   ]}
+*)
+val rel_normalized_absolute_path : from:string -> string -> string 
+
+
+val normalize_absolute_path : string -> string 
+
+val absolute_path : string Lazy.t -> string -> string
+
+(** [concat dirname filename]
+    The same as {!Filename.concat} except a tiny optimization 
+    for current directory simplification
+*)
+val concat : string -> string -> string 
+
+val check_suffix_case : 
+  string -> string -> bool
+end = struct
+#1 "ext_path.ml"
+(* Copyright (C) 2017 Authors of BuckleScript
+ * 
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * In addition to the permissions granted to you by the LGPL, you may combine
+ * or link a "work that uses the Library" with a publicly distributed version
+ * of this file to produce a combined library or application, then distribute
+ * that combined work under the terms of your choosing, with no requirement
+ * to comply with the obligations normally placed on you by section 4 of the
+ * LGPL version 3 (or the corresponding section of a later version of the LGPL
+ * should you choose to use a later version).
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ * 
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
+
+type t = 
+  | File of string 
+  | Dir of string 
+
+
+
+
+
+let sep_char = String.unsafe_get Filename.dir_sep 0 
+
+
+(** example
+    {[
+      "/bb/mbigc/mbig2899/bgit/bucklescript/jscomp/stdlib/external/pervasives.cmj"
+        "/bb/mbigc/mbig2899/bgit/bucklescript/jscomp/stdlib/ocaml_array.ml"
+    ]}
+
+    The other way
+    {[
+
+      "/bb/mbigc/mbig2899/bgit/bucklescript/jscomp/stdlib/ocaml_array.ml"
+        "/bb/mbigc/mbig2899/bgit/bucklescript/jscomp/stdlib/external/pervasives.cmj"
+    ]}
+    {[
+      "/bb/mbigc/mbig2899/bgit/bucklescript/jscomp/stdlib//ocaml_array.ml"
+    ]}
+    {[
+      /a/b
+      /c/d
+    ]}
+*)
+let node_relative_path 
+    ~from:(file_or_dir_2 : t )
+    (file_or_dir_1 : t) 
+  = 
+  let relevant_dir1 = 
+    match file_or_dir_1 with 
+    | Dir x -> x 
+    | File file1 ->  Filename.dirname file1 in
+  let relevant_dir2 = 
+    match file_or_dir_2 with 
+    | Dir x -> x 
+    | File file2 -> Filename.dirname file2  in
+  let dir1 = Ext_string.split relevant_dir1 sep_char   in
+  let dir2 = Ext_string.split relevant_dir2 sep_char  in
+  let rec go (dir1 : string list) (dir2 : string list) = 
+    match dir1, dir2 with 
+    | "." :: xs, ys -> go xs ys 
+    | xs , "." :: ys -> go xs ys 
+    | x::xs , y :: ys when x = y
+      -> go xs ys 
+    | _, _ -> 
+      Ext_list.map_append (fun _ ->  Literals.node_parent) dir2  dir1 
+  in
+  match go dir1 dir2 with
+  | (x :: _ ) as ys when x = Literals.node_parent -> 
+    String.concat Literals.node_sep ys
+  | ys -> 
+    String.concat Literals.node_sep  
+    @@ Literals.node_current :: ys
+
+
+let node_concat ~dir base =
+  dir ^ Literals.node_sep ^ base 
+
+let node_rebase_file ~from ~to_ file = 
+  
+  node_concat
+    ~dir:(
+      if from = to_ then Literals.node_current
+      else node_relative_path ~from:(Dir from) (Dir to_)) 
+    file
+    
+    
+(***
+   {[
+     Filename.concat "." "";;
+     "./"
+   ]}
+*)
+let combine path1 path2 =  
+  if Filename.is_relative path2 then
+    if Ext_string.is_empty path2 then 
+      path1
+    else 
+    if path1 = Filename.current_dir_name then 
+      path2
+    else
+    if path2 = Filename.current_dir_name 
+    then path1
+    else
+      Filename.concat path1 path2 
+  else
+    path2
+
+
+let chop_extension ?(loc="") name =
+  try Filename.chop_extension name 
+  with Invalid_argument _ -> 
+    Ext_pervasives.invalid_argf 
+      "Filename.chop_extension ( %s : %s )"  loc name
+
+let chop_extension_if_any fname =
+  try Filename.chop_extension fname with Invalid_argument _ -> fname
+
+let rec chop_all_extensions_if_any fname =
+  match Filename.chop_extension fname with 
+  | x -> chop_all_extensions_if_any x 
+  | exception _ -> fname
+
+let get_extension x =
+  let pos = Ext_string.rindex_neg x '.' in 
+  if pos < 0 then ""
+  else Ext_string.tail_from x pos 
+
+
+let (//) x y =
+  if x = Filename.current_dir_name then y
+  else if y = Filename.current_dir_name then x 
+  else Filename.concat x y 
+
+(**
+   {[
+     split_aux "//ghosg//ghsogh/";;
+     - : string * string list = ("/", ["ghosg"; "ghsogh"])
+   ]}
+   Note that 
+   {[
+     Filename.dirname "/a/" = "/"
+       Filename.dirname "/a/b/" = Filename.dirname "/a/b" = "/a"
+   ]}
+   Special case:
+   {[
+     basename "//" = "/"
+       basename "///"  = "/"
+   ]}
+   {[
+     basename "" =  "."
+       basename "" = "."
+       dirname "" = "."
+       dirname "" =  "."
+   ]}  
+*)
+let split_aux p =
+  let rec go p acc =
+    let dir = Filename.dirname p in
+    if dir = p then dir, acc
+    else
+      let new_path = Filename.basename p in 
+      if Ext_string.equal new_path Filename.dir_sep then 
+        go dir acc 
+        (* We could do more path simplification here
+           leave to [rel_normalized_absolute_path]
+        *)
+      else 
+        go dir (new_path :: acc)
+
+  in go p []
+
+
+
+
+
+(** 
+   TODO: optimization
+   if [from] and [to] resolve to the same path, a zero-length string is returned 
+
+   This function is useed in [es6-global] and 
+   [amdjs-global] format and tailored for `rollup`
+*)
+let rel_normalized_absolute_path ~from to_ =
+  let root1, paths1 = split_aux from in 
+  let root2, paths2 = split_aux to_ in 
+  if root1 <> root2 then root2
+  else
+    let rec go xss yss =
+      match xss, yss with 
+      | x::xs, y::ys -> 
+        if Ext_string.equal x  y then go xs ys 
+        else if x = Filename.current_dir_name then go xs yss 
+        else if y = Filename.current_dir_name then go xss ys
+        else 
+          let start = 
+            List.fold_left (fun acc _ -> acc // Ext_string.parent_dir_lit )
+              Ext_string.parent_dir_lit  xs in 
+          List.fold_left (fun acc v -> acc // v) start yss
+      | [], [] -> Ext_string.empty
+      | [], y::ys -> List.fold_left (fun acc x -> acc // x) y ys
+      | x::xs, [] ->
+        List.fold_left (fun acc _ -> acc // Ext_string.parent_dir_lit )
+          Ext_string.parent_dir_lit xs in
+    let v =  go paths1 paths2  in 
+
+    if Ext_string.is_empty v then  Literals.node_current
+    else 
+    if
+      v = "."
+      || v = ".."
+      || Ext_string.starts_with v "./"  
+      || Ext_string.starts_with v "../" 
+    then v 
+    else "./" ^ v 
+
+(*TODO: could be hgighly optimized later 
+  {[
+    normalize_absolute_path "/gsho/./..";;
+
+    normalize_absolute_path "/a/b/../c../d/e/f";;
+
+    normalize_absolute_path "/gsho/./..";;
+
+    normalize_absolute_path "/gsho/./../..";;
+
+    normalize_absolute_path "/a/b/c/d";;
+
+    normalize_absolute_path "/a/b/c/d/";;
+
+    normalize_absolute_path "/a/";;
+
+    normalize_absolute_path "/a";;
+  ]}
+*)
+(** See tests in {!Ounit_path_tests} *)
+let normalize_absolute_path x =
+  let drop_if_exist xs =
+    match xs with 
+    | [] -> []
+    | _ :: xs -> xs in 
+  let rec normalize_list acc paths =
+    match paths with 
+    | [] -> acc 
+    | x :: xs -> 
+      if Ext_string.equal x Ext_string.current_dir_lit then 
+        normalize_list acc xs 
+      else if Ext_string.equal x Ext_string.parent_dir_lit then 
+        normalize_list (drop_if_exist acc ) xs 
+      else   
+        normalize_list (x::acc) xs 
+  in
+  let root, paths = split_aux x in
+  let rev_paths =  normalize_list [] paths in 
+  let rec go acc rev_paths =
+    match rev_paths with 
+    | [] -> Filename.concat root acc 
+    | last::rest ->  go (Filename.concat last acc ) rest  in 
+  match rev_paths with 
+  | [] -> root 
+  | last :: rest -> go last rest 
+
+
+
+
+let absolute_path cwd s = 
+  let process s = 
+    let s = 
+      if Filename.is_relative s then
+        Lazy.force cwd // s 
+      else s in
+    (* Now simplify . and .. components *)
+    let rec aux s =
+      let base,dir  = Filename.basename s, Filename.dirname s  in
+      if dir = s then dir
+      else if base = Filename.current_dir_name then aux dir
+      else if base = Filename.parent_dir_name then Filename.dirname (aux dir)
+      else aux dir // base
+    in aux s  in 
+  process s 
+
+
+let absolute cwd s =   
+  match s with 
+  | File x -> File (absolute_path cwd x )
+  | Dir x -> Dir (absolute_path cwd x)
+
+let concat dirname filename =
+  if filename = Filename.current_dir_name then dirname
+  else if dirname = Filename.current_dir_name then filename
+  else Filename.concat dirname filename
+  
+
+let check_suffix_case =
+  Ext_string.ends_with
+
+end
+module Bsb_config : sig 
+#1 "bsb_config.mli"
+(* Copyright (C) 2015-2016 Bloomberg Finance L.P.
+ * 
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * In addition to the permissions granted to you by the LGPL, you may combine
+ * or link a "work that uses the Library" with a publicly distributed version
+ * of this file to produce a combined library or application, then distribute
+ * that combined work under the terms of your choosing, with no requirement
+ * to comply with the obligations normally placed on you by section 4 of the
+ * LGPL version 3 (or the corresponding section of a later version of the LGPL
+ * should you choose to use a later version).
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ * 
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
+
+
+val ocaml_bin_install_prefix : string -> string
+val proj_rel : string -> string
+val build_artifacts_dir : string -> string
+
+val lib_lit : string
+val lib_js : string 
+val lib_amd : string 
+val lib_bs : string
+val lib_es6 : string 
+val lib_es6_global : string 
+val lib_amd_global : string 
+val lib_ocaml : string
+val all_lib_artifacts : string list 
+(* we need generate path relative to [lib/bs] directory in the opposite direction *)
+val rev_lib_bs_prefix : string -> string
+
+(** default not install, only when -make-world, its dependencies will be installed  *)
+
+val node_modules : string
+
+end = struct
+#1 "bsb_config.ml"
+(* Copyright (C) 2015-2016 Bloomberg Finance L.P.
+ * 
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * In addition to the permissions granted to you by the LGPL, you may combine
+ * or link a "work that uses the Library" with a publicly distributed version
+ * of this file to produce a combined library or application, then distribute
+ * that combined work under the terms of your choosing, with no requirement
+ * to comply with the obligations normally placed on you by section 4 of the
+ * LGPL version 3 (or the corresponding section of a later version of the LGPL
+ * should you choose to use a later version).
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ * 
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
+let (//) = Ext_path.combine 
+
+let lib_lit = "lib"
+let lib_js = lib_lit //"js"
+let lib_amd = lib_lit //"amdjs"
+let lib_ocaml = lib_lit // "ocaml"
+let lib_bs = lib_lit // "bs"
+let lib_es6 = lib_lit // "es6"
+let lib_es6_global = lib_lit // "es6_global"
+let lib_amd_global = lib_lit // "amdjs_global"
+let all_lib_artifacts = 
+  [ lib_js ; 
+    lib_amd ;
+    lib_ocaml;
+    lib_bs ; 
+    lib_es6 ; 
+    lib_es6_global;
+    lib_amd_global
+  ]
+let rev_lib_bs = ".."// ".."
+
+let rev_lib_bs_prefix p = rev_lib_bs // p 
+
+let ocaml_bin_install_prefix p = lib_ocaml // p
+
+let lazy_build_artifacts_dir = "$build_artifacts_dir"
+let build_artifacts_dir path = lazy_build_artifacts_dir // path
+
+let lazy_src_root_dir = "$src_root_dir" 
+let proj_rel path = lazy_src_root_dir // path
+
+(** it may not be a bad idea to hard code the binary path 
+    of bsb in configuration time
+*)
+
+
+
+
+
+
+let cmd_package_specs = ref None 
+
+let node_modules = "node_modules"
+
+end
+module Ext_array : sig 
+#1 "ext_array.mli"
+(* Copyright (C) 2015-2016 Bloomberg Finance L.P.
+ * 
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * In addition to the permissions granted to you by the LGPL, you may combine
+ * or link a "work that uses the Library" with a publicly distributed version
+ * of this file to produce a combined library or application, then distribute
+ * that combined work under the terms of your choosing, with no requirement
+ * to comply with the obligations normally placed on you by section 4 of the
+ * LGPL version 3 (or the corresponding section of a later version of the LGPL
+ * should you choose to use a later version).
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ * 
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
+
+
+
+
+
+
+(** Some utilities for {!Array} operations *)
+val reverse_range : 'a array -> int -> int -> unit
+val reverse_in_place : 'a array -> unit
+val reverse : 'a array -> 'a array 
+val reverse_of_list : 'a list -> 'a array
+
+val filter : ('a -> bool) -> 'a array -> 'a array
+
+val filter_map : ('a -> 'b option) -> 'a array -> 'b array
+
+val range : int -> int -> int array
+
+val map2i : (int -> 'a -> 'b -> 'c ) -> 'a array -> 'b array -> 'c array
+
+val to_list_map : ('a -> 'b option) -> 'a array -> 'b list 
+
+val to_list_map_acc : 
+  ('a -> 'b option) -> 
+  'a array -> 
+  'b list -> 
+  'b list 
+
+val of_list_map : ('a -> 'b) -> 'a list -> 'b array 
+
+val rfind_with_index : 'a array -> ('a -> 'b -> bool) -> 'b -> int
+
+
+type 'a split = [ `No_split | `Split of 'a array * 'a array ]
+
+val rfind_and_split : 
+  'a array ->
+  ('a -> 'b -> bool) ->
+  'b -> 'a split
+
+val find_and_split : 
+  'a array ->
+  ('a -> 'b -> bool) ->
+  'b -> 'a split
+
+val exists : ('a -> bool) -> 'a array -> bool 
+
+val is_empty : 'a array -> bool 
+
+val for_all2_no_exn : 
+  ('a -> 'b -> bool) -> 
+  'a array ->
+  'b array -> 
+  bool
+end = struct
+#1 "ext_array.ml"
+(* Copyright (C) 2015-2016 Bloomberg Finance L.P.
+ * 
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * In addition to the permissions granted to you by the LGPL, you may combine
+ * or link a "work that uses the Library" with a publicly distributed version
+ * of this file to produce a combined library or application, then distribute
+ * that combined work under the terms of your choosing, with no requirement
+ * to comply with the obligations normally placed on you by section 4 of the
+ * LGPL version 3 (or the corresponding section of a later version of the LGPL
+ * should you choose to use a later version).
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ * 
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
+
+
+
+
+
+let reverse_range a i len =
+  if len = 0 then ()
+  else
+    for k = 0 to (len-1)/2 do
+      let t = Array.unsafe_get a (i+k) in
+      Array.unsafe_set a (i+k) ( Array.unsafe_get a (i+len-1-k));
+      Array.unsafe_set a (i+len-1-k) t;
+    done
+
+
+let reverse_in_place a =
+  reverse_range a 0 (Array.length a)
+
+let reverse a =
+  let b_len = Array.length a in
+  if b_len = 0 then [||] else  
+    let b = Array.copy a in  
+    for i = 0 to  b_len - 1 do
+      Array.unsafe_set b i (Array.unsafe_get a (b_len - 1 -i )) 
+    done;
+    b  
+
+let reverse_of_list =  function
+  | [] -> [||]
+  | hd::tl as l ->
+    let len = List.length l in
+    let a = Array.make len hd in
+    let rec fill i = function
+      | [] -> a
+      | hd::tl -> Array.unsafe_set a (len - i - 2) hd; fill (i+1) tl in
+    fill 0 tl
+
+let filter f a =
+  let arr_len = Array.length a in
+  let rec aux acc i =
+    if i = arr_len 
+    then reverse_of_list acc 
+    else
+      let v = Array.unsafe_get a i in
+      if f  v then 
+        aux (v::acc) (i+1)
+      else aux acc (i + 1) 
+  in aux [] 0
+
+
+let filter_map (f : _ -> _ option) a =
+  let arr_len = Array.length a in
+  let rec aux acc i =
+    if i = arr_len 
+    then reverse_of_list acc 
+    else
+      let v = Array.unsafe_get a i in
+      match f  v with 
+      | Some v -> 
+        aux (v::acc) (i+1)
+      | None -> 
+        aux acc (i + 1) 
+  in aux [] 0
+
+let range from to_ =
+  if from > to_ then invalid_arg "Ext_array.range"  
+  else Array.init (to_ - from + 1) (fun i -> i + from)
+
+let map2i f a b = 
+  let len = Array.length a in 
+  if len <> Array.length b then 
+    invalid_arg "Ext_array.map2i"  
+  else
+    Array.mapi (fun i a -> f i  a ( Array.unsafe_get b i )) a 
+
+
+let rec tolist_aux a f  i res =
+  if i < 0 then res else
+    let v = Array.unsafe_get a i in
+    tolist_aux a f  (i - 1)
+      (match f v with
+       | Some v -> v :: res
+       | None -> res) 
+
+let to_list_map f a = 
+  tolist_aux a f (Array.length a - 1) []
+
+let to_list_map_acc f a acc = 
+  tolist_aux a f (Array.length a - 1) acc
+
+
+let of_list_map f a = 
+  match a with 
+  | [] -> [||]
+  | [a0] -> 
+    let b0 = f a0 in
+    [|b0|]
+  | [a0;a1] -> 
+    let b0 = f a0 in  
+    let b1 = f a1 in 
+    [|b0;b1|]
+  | [a0;a1;a2] -> 
+    let b0 = f a0 in  
+    let b1 = f a1 in 
+    let b2 = f a2 in  
+    [|b0;b1;b2|]
+  | [a0;a1;a2;a3] -> 
+    let b0 = f a0 in  
+    let b1 = f a1 in 
+    let b2 = f a2 in  
+    let b3 = f a3 in 
+    [|b0;b1;b2;b3|]
+  | [a0;a1;a2;a3;a4] -> 
+    let b0 = f a0 in  
+    let b1 = f a1 in 
+    let b2 = f a2 in  
+    let b3 = f a3 in 
+    let b4 = f a4 in 
+    [|b0;b1;b2;b3;b4|]
+
+  | a0::a1::a2::a3::a4::tl -> 
+    let b0 = f a0 in  
+    let b1 = f a1 in 
+    let b2 = f a2 in  
+    let b3 = f a3 in 
+    let b4 = f a4 in 
+    let len = List.length tl + 5 in 
+    let arr = Array.make len b0  in
+    Array.unsafe_set arr 1 b1 ;  
+    Array.unsafe_set arr 2 b2 ;
+    Array.unsafe_set arr 3 b3 ; 
+    Array.unsafe_set arr 4 b4 ; 
+    let rec fill i = function
+      | [] -> arr 
+      | hd :: tl -> 
+        Array.unsafe_set arr i (f hd); 
+        fill (i + 1) tl in 
+    fill 5 tl
+
+(**
+   {[
+     # rfind_with_index [|1;2;3|] (=) 2;;
+     - : int = 1
+               # rfind_with_index [|1;2;3|] (=) 1;;
+     - : int = 0
+               # rfind_with_index [|1;2;3|] (=) 3;;
+     - : int = 2
+               # rfind_with_index [|1;2;3|] (=) 4;;
+     - : int = -1
+   ]}
+*)
+let rfind_with_index arr cmp v = 
+  let len = Array.length arr in 
+  let rec aux i = 
+    if i < 0 then i
+    else if  cmp (Array.unsafe_get arr i) v then i
+    else aux (i - 1) in 
+  aux (len - 1)
+
+type 'a split = [ `No_split | `Split of 'a array * 'a array ]
+let rfind_and_split arr cmp v : _ split = 
+  let i = rfind_with_index arr cmp v in 
+  if  i < 0 then 
+    `No_split 
+  else 
+    `Split (Array.sub arr 0 i , Array.sub arr  (i + 1 ) (Array.length arr - i - 1 ))
+
+
+let find_with_index arr cmp v = 
+  let len  = Array.length arr in 
+  let rec aux i len = 
+    if i >= len then -1 
+    else if cmp (Array.unsafe_get arr i ) v then i 
+    else aux (i + 1) len in 
+  aux 0 len
+
+let find_and_split arr cmp v : _ split = 
+  let i = find_with_index arr cmp v in 
+  if i < 0 then 
+    `No_split
+  else
+    `Split (Array.sub arr 0 i, Array.sub arr (i + 1 ) (Array.length arr - i - 1))        
+
+(** TODO: available since 4.03, use {!Array.exists} *)
+
+let exists p a =
+  let n = Array.length a in
+  let rec loop i =
+    if i = n then false
+    else if p (Array.unsafe_get a i) then true
+    else loop (succ i) in
+  loop 0
+
+
+let is_empty arr =
+  Array.length arr = 0
+
+
+let rec unsafe_loop index len p xs ys  = 
+  if index >= len then true
+  else 
+    p 
+      (Array.unsafe_get xs index)
+      (Array.unsafe_get ys index) &&
+    unsafe_loop (succ index) len p xs ys 
+
+let for_all2_no_exn p xs ys = 
+  let len_xs = Array.length xs in 
+  let len_ys = Array.length ys in 
+  len_xs = len_ys &&    
+  unsafe_loop 0 len_xs p xs ys
 end
 module Map_gen
 = struct
@@ -2245,7 +4032,7 @@ val missing_entry : string -> 'a
 val missing_object_file : string -> 'a
 val no_files_to_link : string -> string -> 'a
 val no_files_to_pack : string -> 'a
-
+val missing_static_libraries_file : string -> 'a
 
 val invalid_spec : string -> 'a
 
@@ -2290,6 +4077,7 @@ type error =
   | Missing_object_file of string
   | No_files_to_link of string * string
   | No_files_to_pack of string
+  | Missing_static_libraries_file of string
 
 exception Error of error 
 
@@ -2351,6 +4139,9 @@ let print (fmt : Format.formatter) (x : error) =
     Format.fprintf fmt
     "@{<error>Error:@} No %s to pack into a lib."
     suffix
+  | Missing_static_libraries_file name ->
+    Format.fprintf fmt  
+    "@{<error>Error:@} No .static_library file found for project '%s' but had a build_script. Did that build_script exit normally?" name
 
 let conflict_module modname dir1 dir2 = 
   error (Conflict_module (modname,dir1,dir2))    
@@ -2362,6 +4153,7 @@ let missing_entry name = error (Missing_entry name)
 let missing_object_file name = error (Missing_object_file name)
 let no_files_to_link suffix main = error (No_files_to_link (suffix, main))
 let no_files_to_pack suffix = error (No_files_to_pack suffix)
+let missing_static_libraries_file name = error (Missing_static_libraries_file name)
 
 let config_error config fmt =
   let loc = Ext_json.loc_of config in
@@ -2380,768 +4172,6 @@ let () =
       | _ -> None
     )
 
-end
-module Ext_list : sig 
-#1 "ext_list.mli"
-(* Copyright (C) 2015-2016 Bloomberg Finance L.P.
- * 
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Lesser General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * In addition to the permissions granted to you by the LGPL, you may combine
- * or link a "work that uses the Library" with a publicly distributed version
- * of this file to produce a combined library or application, then distribute
- * that combined work under the terms of your choosing, with no requirement
- * to comply with the obligations normally placed on you by section 4 of the
- * LGPL version 3 (or the corresponding section of a later version of the LGPL
- * should you choose to use a later version).
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Lesser General Public License for more details.
- * 
- * You should have received a copy of the GNU Lesser General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
-
-
-val map : ('a -> 'b) -> 'a list -> 'b list 
-
-(** [map_last f xs ]
-    will pass [true] to [f] for the last element, 
-    [false] otherwise. 
-    For empty list, it returns empty
-*)
-val map_last : (bool -> 'a -> 'b) -> 'a list -> 'b list
-
-(** [last l]
-    return the last element
-    raise if the list is empty
-*)
-val last : 'a list -> 'a
-
-val append : 'a list -> 'a list -> 'a list 
-
-val map_append :  ('b -> 'a) -> 'b list -> 'a list -> 'a list
-
-val fold_right : ('a -> 'b -> 'b) -> 'a list -> 'b -> 'b
-
-val fold_right2 : ('a -> 'b -> 'c -> 'c) -> 'a list -> 'b list -> 'c -> 'c
-
-val map2 : 
-  ('a -> 'b -> 'c) ->
-  'a list ->
-  'b list ->
-  'c list
-
-val fold_left_with_offset : 
-  (int -> 'acc -> 'a -> 'acc) -> 
-  int -> 
-  'acc -> 
-  'a list -> 'acc 
-
-
-(** @unused *)
-val filter_map : ('a -> 'b option) -> 'a list -> 'b list  
-
-(** [exclude p l] is the opposite of [filter p l] *)
-val exclude : ('a -> bool) -> 'a list -> 'a list 
-
-(** [excludes p l]
-    return a tuple [excluded,newl]
-    where [exluded] is true indicates that at least one  
-    element is removed,[newl] is the new list where all [p x] for [x] is false
-
-*)
-val exclude_with_val : ('a -> bool) -> 'a list -> bool * 'a list 
-
-
-val same_length : 'a list -> 'b list -> bool
-
-val init : int -> (int -> 'a) -> 'a list
-
-(** [split_at n l]
-    will split [l] into two lists [a,b], [a] will be of length [n], 
-    otherwise, it will raise
-*)
-val split_at : int -> 'a list -> 'a list * 'a list
-
-
-(** [split_at_last l]
-    It is equivalent to [split_at (List.length l - 1) l ]
-*)
-val split_at_last : 'a list -> 'a list * 'a
-
-val filter_mapi : 
-  (int -> 'a -> 'b option) -> 'a list -> 'b list
-
-val filter_map2 : 
-  ('a -> 'b -> 'c option) -> 'a list -> 'b list -> 'c list
-
-
-val length_compare : 'a list -> int -> [`Gt | `Eq | `Lt ]
-
-val length_ge : 'a list -> int -> bool
-(**
-
-   {[length xs = length ys + n ]}
-   input n should be positive 
-   TODO: input checking
-*)
-
-val length_larger_than_n : 
-  int -> 'a list -> 'a list -> bool
-
-
-(**
-   [rev_map_append f l1 l2]
-   [map f l1] and reverse it to append [l2]
-   This weird semantics is due to it is the most efficient operation
-   we can do
-*)
-val rev_map_append : ('a -> 'b) -> 'a list -> 'b list -> 'b list
-
-
-val flat_map : 
-  ('a -> 'b list) -> 
-  'a list -> 
-  'b list
-
-val flat_map_append : 
-  ('a -> 'b list) -> 
-  'a list -> 
-  'b list  ->
-  'b list
-
-
-(**
-    [stable_group eq lst]
-    Example:
-    Input:
-   {[
-     stable_group (=) [1;2;3;4;3]
-   ]}
-    Output:
-   {[
-     [[1];[2];[4];[3;3]]
-   ]}
-    TODO: this is O(n^2) behavior 
-    which could be improved later
-*)
-val stable_group : ('a -> 'a -> bool) -> 'a list -> 'a list list 
-
-(** [drop n list]
-    raise when [n] is negative
-    raise when list's length is less than [n]
-*)
-val drop : int -> 'a list -> 'a list 
-
-(** [find_first_not p lst ]
-    if all elements in [lst] pass, return [None] 
-    otherwise return the first element [e] as [Some e] which
-    fails the predicate
-*)
-val find_first_not : ('a -> bool) -> 'a list -> 'a option 
-
-(** [find_opt f l] returns [None] if all return [None],  
-    otherwise returns the first one. 
-*)
-
-val find_opt : ('a -> 'b option) -> 'a list -> 'b option 
-
-
-val rev_iter : ('a -> unit) -> 'a list -> unit 
-
-(** [for_all2_no_exn p xs ys]
-    return [true] if all satisfied,
-    [false] otherwise or length not equal
-*)
-val for_all2_no_exn : ('a -> 'b -> bool) -> 'a list -> 'b list -> bool
-
-
-
-(** [f] is applied follow the list order *)
-val split_map : ('a -> 'b * 'c) -> 'a list -> 'b list * 'c list       
-
-(** [fn] is applied from left to right *)
-val reduce_from_left : 
-  ('a -> 'a -> 'a) -> 'a list -> 'a
-
-val sort_via_array :
-  ('a -> 'a -> int) -> 'a list -> 'a list  
-
-
-
-
-(** [assoc_by_string default key lst]
-    if  [key] is found in the list  return that val,
-    other unbox the [default], 
-    otherwise [assert false ]
-*)
-val assoc_by_string : 
-  'a  option -> string -> (string * 'a) list -> 'a  
-
-val assoc_by_int : 
-  'a  option -> int -> (int * 'a) list -> 'a   
-
-
-val nth_opt : 'a list -> int -> 'a option  
-end = struct
-#1 "ext_list.ml"
-(* Copyright (C) 2015-2016 Bloomberg Finance L.P.
- * 
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Lesser General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * In addition to the permissions granted to you by the LGPL, you may combine
- * or link a "work that uses the Library" with a publicly distributed version
- * of this file to produce a combined library or application, then distribute
- * that combined work under the terms of your choosing, with no requirement
- * to comply with the obligations normally placed on you by section 4 of the
- * LGPL version 3 (or the corresponding section of a later version of the LGPL
- * should you choose to use a later version).
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Lesser General Public License for more details.
- * 
- * You should have received a copy of the GNU Lesser General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
-
-
-
-
-let rec map f l =
-  match l with
-  | [] ->
-    []
-  | [x1] ->
-    let y1 = f x1 in
-    [y1]
-  | [x1; x2] ->
-    let y1 = f x1 in
-    let y2 = f x2 in
-    [y1; y2]
-  | [x1; x2; x3] ->
-    let y1 = f x1 in
-    let y2 = f x2 in
-    let y3 = f x3 in
-    [y1; y2; y3]
-  | [x1; x2; x3; x4] ->
-    let y1 = f x1 in
-    let y2 = f x2 in
-    let y3 = f x3 in
-    let y4 = f x4 in
-    [y1; y2; y3; y4]
-  | x1::x2::x3::x4::x5::tail ->
-    let y1 = f x1 in
-    let y2 = f x2 in
-    let y3 = f x3 in
-    let y4 = f x4 in
-    let y5 = f x5 in
-    y1::y2::y3::y4::y5::(map f tail)
-
-
-let rec map_last f l =
-  match l with
-  | [] ->
-    []
-  | [x1] ->
-    let y1 = f true x1 in
-    [y1]
-  | [x1; x2] ->
-    let y1 = f false x1 in
-    let y2 = f true x2 in
-    [y1; y2]
-  | [x1; x2; x3] ->
-    let y1 = f false x1 in
-    let y2 = f false x2 in
-    let y3 = f true x3 in
-    [y1; y2; y3]
-  | [x1; x2; x3; x4] ->
-    let y1 = f false x1 in
-    let y2 = f false x2 in
-    let y3 = f false x3 in
-    let y4 = f true x4 in
-    [y1; y2; y3; y4]
-  | x1::x2::x3::x4::tail ->
-    (* make sure that tail is not empty *)    
-    let y1 = f false x1 in
-    let y2 = f false x2 in
-    let y3 = f false x3 in
-    let y4 = f false x4 in
-    y1::y2::y3::y4::(map_last f tail)
-
-let rec last xs =
-  match xs with 
-  | [x] -> x 
-  | _ :: tl -> last tl 
-  | [] -> invalid_arg "Ext_list.last"    
-
-
-
-let rec append_aux l1 l2 = 
-  match l1 with
-  | [] -> l2
-  | [a0] -> a0::l2
-  | [a0;a1] -> a0::a1::l2
-  | [a0;a1;a2] -> a0::a1::a2::l2
-  | [a0;a1;a2;a3] -> a0::a1::a2::a3::l2
-  | [a0;a1;a2;a3;a4] -> a0::a1::a2::a3::a4::l2
-  | a0::a1::a2::a3::a4::rest -> a0::a1::a2::a3::a4::append_aux rest l2
-
-let append l1 l2 =   
-  match l2 with 
-  | [] -> l1 
-  | _ -> append_aux l1 l2  
-
-
-let rec map_append  f l1 l2 =   
-  match l1 with
-  | [] -> l2
-  | [a0] -> f a0::l2
-  | [a0;a1] -> 
-    let b0 = f a0 in 
-    let b1 = f a1 in 
-    b0::b1::l2
-  | [a0;a1;a2] -> 
-    let b0 = f a0 in 
-    let b1 = f a1 in  
-    let b2 = f a2 in 
-    b0::b1::b2::l2
-  | [a0;a1;a2;a3] -> 
-    let b0 = f a0 in 
-    let b1 = f a1 in 
-    let b2 = f a2 in 
-    let b3 = f a3 in 
-    b0::b1::b2::b3::l2
-  | [a0;a1;a2;a3;a4] -> 
-    let b0 = f a0 in 
-    let b1 = f a1 in 
-    let b2 = f a2 in 
-    let b3 = f a3 in 
-    let b4 = f a4 in 
-    b0::b1::b2::b3::b4::l2
-
-  | a0::a1::a2::a3::a4::rest ->
-    let b0 = f a0 in 
-    let b1 = f a1 in 
-    let b2 = f a2 in 
-    let b3 = f a3 in 
-    let b4 = f a4 in 
-    b0::b1::b2::b3::b4::map_append f rest l2 
-
-
-
-let rec fold_right f l acc = 
-  match l with  
-  | [] -> acc 
-  | [a0] -> f a0 acc 
-  | [a0;a1] -> f a0 (f a1 acc)
-  | [a0;a1;a2] -> f a0 (f a1 (f a2 acc))
-  | [a0;a1;a2;a3] -> f a0 (f a1 (f a2 (f a3 acc))) 
-  | [a0;a1;a2;a3;a4] -> 
-    f a0 (f a1 (f a2 (f a3 (f a4 acc))))
-  | a0::a1::a2::a3::a4::rest -> 
-    f a0 (f a1 (f a2 (f a3 (f a4 (fold_right f rest acc)))))  
-
-let rec fold_right2 f l r acc = 
-  match l,r  with  
-  | [],[] -> acc 
-  | [a0],[b0] -> f a0 b0 acc 
-  | [a0;a1],[b0;b1] -> f a0 b0 (f a1 b1 acc)
-  | [a0;a1;a2],[b0;b1;b2] -> f a0 b0 (f a1 b1 (f a2 b2 acc))
-  | [a0;a1;a2;a3],[b0;b1;b2;b3] ->
-    f a0 b0 (f a1 b1 (f a2 b2 (f a3 b3 acc))) 
-  | [a0;a1;a2;a3;a4], [b0;b1;b2;b3;b4] -> 
-    f a0 b0 (f a1 b1 (f a2 b2 (f a3 b3 (f a4 b4 acc))))
-  | a0::a1::a2::a3::a4::arest, b0::b1::b2::b3::b4::brest -> 
-    f a0 b0 (f a1 b1 (f a2 b2 (f a3 b3 (f a4 b4 (fold_right2 f arest brest acc)))))  
-  | _, _ -> invalid_arg "Ext_list.fold_right2"
-
-let rec map2 f l r = 
-  match l,r  with  
-  | [],[] -> []
-  | [a0],[b0] -> [f a0 b0]
-  | [a0;a1],[b0;b1] -> 
-    let c0 = f a0 b0 in 
-    let c1 = f a1 b1 in 
-    [c0; c1]
-  | [a0;a1;a2],[b0;b1;b2] -> 
-    let c0 = f a0 b0 in 
-    let c1 = f a1 b1 in 
-    let c2 = f a2 b2 in 
-    [c0;c1;c2]
-  | [a0;a1;a2;a3],[b0;b1;b2;b3] ->
-    let c0 = f a0 b0 in 
-    let c1 = f a1 b1 in 
-    let c2 = f a2 b2 in 
-    let c3 = f a3 b3 in 
-    [c0;c1;c2;c3]
-  | [a0;a1;a2;a3;a4], [b0;b1;b2;b3;b4] -> 
-    let c0 = f a0 b0 in 
-    let c1 = f a1 b1 in 
-    let c2 = f a2 b2 in 
-    let c3 = f a3 b3 in 
-    let c4 = f a4 b4 in 
-    [c0;c1;c2;c3;c4]
-  | a0::a1::a2::a3::a4::arest, b0::b1::b2::b3::b4::brest -> 
-    let c0 = f a0 b0 in 
-    let c1 = f a1 b1 in 
-    let c2 = f a2 b2 in 
-    let c3 = f a3 b3 in 
-    let c4 = f a4 b4 in 
-    c0::c1::c2::c3::c4::map2 f arest brest
-  | _, _ -> invalid_arg "Ext_list.map2"
-
-let rec fold_left_with_offset f i accu l =
-  match l with
-  | [] -> accu
-  | a::l -> fold_left_with_offset f (succ i) (f i accu a) l
-
-
-let rec filter_map (f: 'a -> 'b option) xs = 
-  match xs with 
-  | [] -> []
-  | y :: ys -> 
-    begin match f y with 
-      | None -> filter_map f ys
-      | Some z -> z :: filter_map f ys
-    end
-
-let rec exclude p xs =   
-  match xs with 
-  | [] ->  []
-  | x::xs -> 
-    if p x then exclude p xs 
-    else x:: exclude p xs  
-
-let rec exclude_with_val p l =
-  match l with 
-  | [] ->  false, l
-  | a0::xs -> 
-    if p a0 then true, exclude p xs 
-    else 
-      match xs with 
-      | [] -> false, l 
-      | a1::rest -> 
-        if p a1 then 
-          true, a0:: exclude p rest 
-        else 
-          let st,rest = exclude_with_val p rest in 
-          if st then 
-            st, a0::a1::rest
-          else st, l 
-
-
-
-let rec same_length xs ys = 
-  match xs, ys with 
-  | [], [] -> true
-  | _::xs, _::ys -> same_length xs ys 
-  | _, _ -> false 
-
-
-let init n f = 
-  match n with 
-  | 0 -> []
-  | 1 -> 
-    let a0 = f 0 in  
-    [a0]
-  | 2 -> 
-    let a0 = f 0 in 
-    let a1 = f 1 in 
-    [a0; a1]
-  | 3 -> 
-    let a0 = f 0 in 
-    let a1 = f 1 in 
-    let a2 = f 2 in 
-    [a0; a1; a2]
-  | 4 -> 
-    let a0 = f 0 in 
-    let a1 = f 1 in 
-    let a2 = f 2 in 
-    let a3 = f 3 in 
-    [a0; a1; a2; a3]
-  | 5 -> 
-    let a0 = f 0 in 
-    let a1 = f 1 in 
-    let a2 = f 2 in 
-    let a3 = f 3 in 
-    let a4 = f 4 in  
-    [a0; a1; a2; a3; a4]
-  | _ ->
-    Array.to_list (Array.init n f)
-
-let rec small_split_at n acc l = 
-  if n <= 0 then List.rev acc , l 
-  else 
-    match l with 
-    | x::xs -> small_split_at (n - 1) (x ::acc) xs 
-    | _ -> invalid_arg "Ext_list.split_at"
-
-let split_at n l = 
-  small_split_at n [] l 
-
-let rec split_at_last_aux acc x = 
-  match x with 
-  | [] -> invalid_arg "Ext_list.split_at_last"
-  | [ x] -> List.rev acc, x
-  | y0::ys -> split_at_last_aux (y0::acc) ys   
-
-let split_at_last (x : 'a list) = 
-  match x with 
-  | [] -> invalid_arg "Ext_list.split_at_last"
-  | [a0] -> 
-    [], a0
-  | [a0;a1] -> 
-    [a0], a1  
-  | [a0;a1;a2] -> 
-    [a0;a1], a2 
-  | [a0;a1;a2;a3] -> 
-    [a0;a1;a2], a3 
-  | [a0;a1;a2;a3;a4] ->
-    [a0;a1;a2;a3], a4 
-  | a0::a1::a2::a3::a4::rest  ->  
-    let rev, last = split_at_last_aux [] rest
-    in 
-    a0::a1::a2::a3::a4::  rev , last
-
-(**
-   can not do loop unroll due to state combination
-*)  
-let  filter_mapi (f: int -> 'a -> 'b option) xs = 
-  let rec aux i xs = 
-    match xs with 
-    | [] -> []
-    | y :: ys -> 
-      begin match f i y with 
-        | None -> aux (i + 1) ys
-        | Some z -> z :: aux (i + 1) ys
-      end in
-  aux 0 xs 
-
-let rec filter_map2 (f: 'a -> 'b -> 'c option) xs ys = 
-  match xs,ys with 
-  | [],[] -> []
-  | u::us, v :: vs -> 
-    begin match f u v with 
-      | None -> filter_map2 f us vs (* idea: rec f us vs instead? *)
-      | Some z -> z :: filter_map2 f us vs
-    end
-  | _ -> invalid_arg "Ext_list.filter_map2"
-
-
-let rec rev_map_append  f l1 l2 =
-  match l1 with
-  | [] -> l2
-  | a :: l -> rev_map_append f l (f a :: l2)
-
-
-let rec rev_append l1 l2 =
-  match l1 with
-    [] -> l2
-  | a :: l -> rev_append l   (a :: l2)
-
-(** It is not worth loop unrolling, 
-    it is already tail-call, and we need to be careful 
-    about evaluation order when unroll
-*)
-let rec flat_map_aux f acc append lx =
-  match lx with
-  | [] -> rev_append acc  append
-  | a0::rest -> flat_map_aux f (rev_append (f a0)  acc ) append rest 
-
-let flat_map f lx =
-  flat_map_aux f [] [] lx
-
-let flat_map_append f lx append  =
-  flat_map_aux f [] append lx  
-
-
-let rec length_compare l n = 
-  if n < 0 then `Gt 
-  else 
-    begin match l with 
-      | _ ::xs -> length_compare xs (n - 1)
-      | [] ->  
-        if n = 0 then `Eq 
-        else `Lt 
-    end
-
-let rec length_ge l n =   
-  if n > 0 then
-    match l with 
-    | _ :: tl -> length_ge tl (n - 1)
-    | [] -> false
-  else true
-(**
-
-   {[length xs = length ys + n ]}
-*)
-let rec length_larger_than_n n xs ys =
-  match xs, ys with 
-  | _, [] -> length_compare xs n = `Eq   
-  | _::xs, _::ys -> 
-    length_larger_than_n n xs ys
-  | [], _ -> false 
-
-
-
-
-let rec group (eq : 'a -> 'a -> bool) lst =
-  match lst with 
-  | [] -> []
-  | x::xs -> 
-    aux eq x (group eq xs )
-
-and aux eq (x : 'a)  (xss : 'a list list) : 'a list list = 
-  match xss with 
-  | [] -> [[x]]
-  | (y0::_ as y)::ys -> (* cannot be empty *) 
-    if eq x y0 then
-      (x::y) :: ys 
-    else
-      y :: aux eq x ys                                 
-  | _ :: _ -> assert false    
-
-let stable_group eq lst =  group eq lst |> List.rev  
-
-let rec drop n h = 
-  if n < 0 then invalid_arg "Ext_list.drop"
-  else
-  if n = 0 then h 
-  else 
-    match h with 
-    | [] ->
-      invalid_arg "Ext_list.drop"
-    | _ :: tl ->   
-      drop (n - 1) tl
-
-let rec find_first_not  p = function
-  | [] -> None
-  | a::l -> 
-    if p a 
-    then find_first_not p l
-    else Some a 
-
-
-let rec rev_iter f l = 
-  match l with
-  | [] -> ()    
-  | [x1] ->
-    f x1 
-  | [x1; x2] ->
-    f x2 ; f x1 
-  | [x1; x2; x3] ->
-    f x3 ; f x2 ; f x1 
-  | [x1; x2; x3; x4] ->
-    f x4; f x3; f x2; f x1 
-  | x1::x2::x3::x4::x5::tail ->
-    rev_iter f tail;
-    f x5; f x4 ; f x3; f x2 ; f x1
-
-
-let rec for_all2_no_exn p l1 l2 = 
-  match (l1, l2) with
-  | ([], []) -> true
-  | (a1::l1, a2::l2) -> p a1 a2 && for_all2_no_exn p l1 l2
-  | (_, _) -> false
-
-
-let rec find_opt p = function
-  | [] -> None
-  | x :: l -> 
-    match  p x with 
-    | Some _ as v  ->  v
-    | None -> find_opt p l 
-
-
-
-let rec split_map f l = 
-  match l with
-  | [] ->
-    [],[]
-  | [x1] ->
-    let a0,b0 = f x1 in
-    [a0],[b0]
-  | [x1; x2] ->
-    let a1,b1 = f x1 in
-    let a2,b2 = f x2 in
-    [a1;a2],[b1;b2]
-  | [x1; x2; x3] ->
-    let a1,b1 = f x1 in
-    let a2,b2 = f x2 in
-    let a3,b3 = f x3 in
-    [a1;a2;a3], [b1;b2;b3]
-  | [x1; x2; x3; x4] ->
-    let a1,b1 = f x1 in
-    let a2,b2 = f x2 in
-    let a3,b3 = f x3 in
-    let a4,b4 = f x4 in
-    [a1;a2;a3;a4], [b1;b2;b3;b4] 
-  | x1::x2::x3::x4::x5::tail ->
-    let a1,b1 = f x1 in
-    let a2,b2 = f x2 in
-    let a3,b3 = f x3 in
-    let a4,b4 = f x4 in
-    let a5,b5 = f x5 in
-    let ass,bss = split_map f tail in 
-    a1::a2::a3::a4::a5::ass,
-    b1::b2::b3::b4::b5::bss
-
-
-let reduce_from_left fn lst = 
-  match lst with 
-  | first :: rest ->  List.fold_left fn first rest 
-  | _ -> invalid_arg "Ext_list.reduce_from_left"
-
-
-let sort_via_array cmp lst =
-  let arr = Array.of_list lst  in
-  Array.sort cmp arr;
-  Array.to_list arr
-
-
-
-
-let rec assoc_by_string def (k : string) lst = 
-  match lst with 
-  | [] -> 
-    begin match def with 
-      | None -> assert false 
-      | Some x -> x end
-  | (k1,v1)::rest -> 
-    if Ext_string.equal k1 k then v1 else 
-      assoc_by_string def k rest 
-
-let rec assoc_by_int def (k : int) lst = 
-  match lst with 
-  | [] -> 
-    begin match def with
-      | None -> assert false 
-      | Some x -> x end
-  | (k1,v1)::rest -> 
-    if k1 = k then v1 else 
-      assoc_by_int def k rest     
-
-
-let rec nth_aux l n =
-  match l with
-  | [] -> None
-  | a::l -> if n = 0 then Some a else nth_aux l (n-1)
-
-let nth_opt l n =
-  if n < 0 then None 
-  else
-    nth_aux l n
 end
 module Ext_color : sig 
 #1 "ext_color.mli"
@@ -3436,275 +4466,6 @@ let info_args (args : string array) =
     end
   else ()
   
-
-end
-module Literals : sig 
-#1 "literals.mli"
-(* Copyright (C) 2015-2016 Bloomberg Finance L.P.
- * 
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Lesser General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * In addition to the permissions granted to you by the LGPL, you may combine
- * or link a "work that uses the Library" with a publicly distributed version
- * of this file to produce a combined library or application, then distribute
- * that combined work under the terms of your choosing, with no requirement
- * to comply with the obligations normally placed on you by section 4 of the
- * LGPL version 3 (or the corresponding section of a later version of the LGPL
- * should you choose to use a later version).
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Lesser General Public License for more details.
- * 
- * You should have received a copy of the GNU Lesser General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
-
-
-
-
-
-
-val js_array_ctor : string 
-val js_type_number : string
-val js_type_string : string
-val js_type_object : string
-val js_undefined : string
-val js_prop_length : string
-
-val param : string
-val partial_arg : string
-val prim : string
-
-(**temporary varaible used in {!Js_ast_util} *)
-val tmp : string 
-
-val create : string 
-
-val app : string
-val app_array : string
-
-val runtime : string
-val stdlib : string
-val imul : string
-
-val setter_suffix : string
-val setter_suffix_len : int
-
-
-val debugger : string
-val raw_expr : string
-val raw_stmt : string
-val unsafe_downgrade : string
-val fn_run : string
-val method_run : string
-val fn_method : string
-val fn_mk : string
-
-(** callback actually, not exposed to user yet *)
-(* val js_fn_runmethod : string *)
-
-val bs_deriving : string
-val bs_deriving_dot : string
-val bs_type : string
-
-(** nodejs *)
-
-val node_modules : string
-val node_modules_length : int
-val package_json : string
-val bsconfig_json : string
-val build_ninja : string
-
-(* Name of the library file created for each external dependency. *)
-val library_file : string
-
-val suffix_a : string
-val suffix_cmj : string
-val suffix_cmo : string
-val suffix_cma : string
-val suffix_cmi : string
-val suffix_cmx : string
-val suffix_cmxa : string
-val suffix_ml : string
-val suffix_mlast : string 
-val suffix_mlast_simple : string
-val suffix_mliast : string
-val suffix_mliast_simple : string
-val suffix_mlmap : string
-val suffix_mll : string
-val suffix_re : string
-val suffix_rei : string 
-
-val suffix_d : string
-val suffix_mlastd : string
-val suffix_mliastd : string
-
-val suffix_mli : string 
-val suffix_cmt : string 
-val suffix_cmti : string 
-
-val commonjs : string 
-val amdjs : string 
-val es6 : string 
-val es6_global : string
-val amdjs_global : string 
-val unused_attribute : string 
-val dash_nostdlib : string
-
-val reactjs_jsx_ppx_2_exe : string 
-val reactjs_jsx_ppx_3_exe : string 
-val unescaped_j_delimiter : string 
-val escaped_j_delimiter : string 
-
-val unescaped_js_delimiter : string 
-
-val native : string
-val bytecode : string
-val js : string
-
-val node_sep : string 
-val node_parent : string 
-val node_current : string 
-
-end = struct
-#1 "literals.ml"
-(* Copyright (C) 2015-2016 Bloomberg Finance L.P.
- * 
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Lesser General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * In addition to the permissions granted to you by the LGPL, you may combine
- * or link a "work that uses the Library" with a publicly distributed version
- * of this file to produce a combined library or application, then distribute
- * that combined work under the terms of your choosing, with no requirement
- * to comply with the obligations normally placed on you by section 4 of the
- * LGPL version 3 (or the corresponding section of a later version of the LGPL
- * should you choose to use a later version).
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Lesser General Public License for more details.
- * 
- * You should have received a copy of the GNU Lesser General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
-
-
-
-
-
-
-
-let js_array_ctor = "Array"
-let js_type_number = "number"
-let js_type_string = "string"
-let js_type_object = "object" 
-let js_undefined = "undefined"
-let js_prop_length = "length"
-
-let prim = "prim"
-let param = "param"
-let partial_arg = "partial_arg"
-let tmp = "tmp"
-
-let create = "create" (* {!Caml_exceptions.create}*)
-
-let app = "_"
-let app_array = "app" (* arguments are an array*)
-
-let runtime = "runtime" (* runtime directory *)
-
-let stdlib = "stdlib"
-
-let imul = "imul" (* signed int32 mul *)
-
-let setter_suffix = "#="
-let setter_suffix_len = String.length setter_suffix
-
-let debugger = "debugger"
-let raw_expr = "raw_expr"
-let raw_stmt = "raw_stmt"
-let unsafe_downgrade = "unsafe_downgrade"
-let fn_run = "fn_run"
-let method_run = "method_run"
-
-let fn_method = "fn_method"
-let fn_mk = "fn_mk"
-(*let js_fn_runmethod = "js_fn_runmethod"*)
-
-let bs_deriving = "bs.deriving"
-let bs_deriving_dot = "bs.deriving."
-let bs_type = "bs.type"
-
-
-(** nodejs *)
-let node_modules = "node_modules"
-let node_modules_length = String.length "node_modules"
-let package_json = "package.json"
-let bsconfig_json = "bsconfig.json"
-let build_ninja = "build.ninja"
-
-(* Name of the library file created for each external dependency. *)
-let library_file = "lib"
-
-let suffix_a = ".a"
-let suffix_cmj = ".cmj"
-let suffix_cmo = ".cmo"
-let suffix_cma = ".cma"
-let suffix_cmi = ".cmi"
-let suffix_cmx = ".cmx"
-let suffix_cmxa = ".cmxa"
-let suffix_mll = ".mll"
-let suffix_ml = ".ml"
-let suffix_mli = ".mli"
-let suffix_re = ".re"
-let suffix_rei = ".rei"
-let suffix_mlmap = ".mlmap"
-
-let suffix_cmt = ".cmt" 
-let suffix_cmti = ".cmti" 
-let suffix_mlast = ".mlast"
-let suffix_mlast_simple = ".mlast_simple"
-let suffix_mliast = ".mliast"
-let suffix_mliast_simple = ".mliast_simple"
-let suffix_d = ".d"
-let suffix_mlastd = ".mlast.d"
-let suffix_mliastd = ".mliast.d"
-
-
-let commonjs = "commonjs" 
-let amdjs = "amdjs"
-let es6 = "es6"
-let es6_global = "es6-global"
-let amdjs_global = "amdjs-global"
-let unused_attribute = "Unused attribute " 
-let dash_nostdlib = "-nostdlib"
-
-let reactjs_jsx_ppx_2_exe = "reactjs_jsx_ppx_2.exe"
-let reactjs_jsx_ppx_3_exe  = "reactjs_jsx_ppx_3.exe"
-let unescaped_j_delimiter = "j"
-let unescaped_js_delimiter = "js"
-let escaped_j_delimiter =  "*j" (* not user level syntax allowed *)
-
-let native = "native"
-let bytecode = "bytecode"
-let js = "js"
-
-
-
-(** Used when produce node compatible paths *)
-let node_sep = "/"
-let node_parent = ".."
-let node_current = "."
-
 
 end
 module Bs_hash_stubs
@@ -5100,644 +5861,6 @@ let parse_json_from_file s =
 # 688 "ext/ext_json_parse.ml"
 
 end
-module Ext_pervasives : sig 
-#1 "ext_pervasives.mli"
-(* Copyright (C) 2015-2016 Bloomberg Finance L.P.
- * 
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Lesser General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * In addition to the permissions granted to you by the LGPL, you may combine
- * or link a "work that uses the Library" with a publicly distributed version
- * of this file to produce a combined library or application, then distribute
- * that combined work under the terms of your choosing, with no requirement
- * to comply with the obligations normally placed on you by section 4 of the
- * LGPL version 3 (or the corresponding section of a later version of the LGPL
- * should you choose to use a later version).
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Lesser General Public License for more details.
- * 
- * You should have received a copy of the GNU Lesser General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
-
-
-
-
-
-
-
-
-(** Extension to standard library [Pervavives] module, safe to open 
-  *)
-
-external reraise: exn -> 'a = "%reraise"
-
-val finally : 'a -> ('a -> 'c) -> ('a -> 'b) -> 'b
-
-val with_file_as_chan : string -> (out_channel -> 'a) -> 'a
-
-val with_file_as_pp : string -> (Format.formatter -> 'a) -> 'a
-
-val is_pos_pow : Int32.t -> int
-
-val failwithf : loc:string -> ('a, unit, string, 'b) format4 -> 'a
-
-val invalid_argf : ('a, unit, string, 'b) format4 -> 'a
-
-val bad_argf : ('a, unit, string, 'b) format4 -> 'a
-
-
-
-val dump : 'a -> string 
-val pp_any : Format.formatter -> 'a -> unit 
-external id : 'a -> 'a = "%identity"
-
-(** Copied from {!Btype.hash_variant}:
-    need sync up and add test case
- *)
-val hash_variant : string -> int
-
-end = struct
-#1 "ext_pervasives.ml"
-(* Copyright (C) 2015-2016 Bloomberg Finance L.P.
- * 
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Lesser General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * In addition to the permissions granted to you by the LGPL, you may combine
- * or link a "work that uses the Library" with a publicly distributed version
- * of this file to produce a combined library or application, then distribute
- * that combined work under the terms of your choosing, with no requirement
- * to comply with the obligations normally placed on you by section 4 of the
- * LGPL version 3 (or the corresponding section of a later version of the LGPL
- * should you choose to use a later version).
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Lesser General Public License for more details.
- * 
- * You should have received a copy of the GNU Lesser General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
-
-
-
-
-
-
-external reraise: exn -> 'a = "%reraise"
-
-let finally v action f   = 
-  match f v with
-  | exception e -> 
-      action v ;
-      reraise e 
-  | e ->  action v ; e 
-
-let with_file_as_chan filename f = 
-  finally (open_out_bin filename) close_out f 
-
-let with_file_as_pp filename f = 
-  finally (open_out_bin filename) close_out
-    (fun chan -> 
-      let fmt = Format.formatter_of_out_channel chan in
-      let v = f  fmt in
-      Format.pp_print_flush fmt ();
-      v
-    ) 
-
-
-let  is_pos_pow n = 
-  let module M = struct exception E end in 
-  let rec aux c (n : Int32.t) = 
-    if n <= 0l then -2 
-    else if n = 1l then c 
-    else if Int32.logand n 1l =  0l then   
-      aux (c + 1) (Int32.shift_right n 1 )
-    else raise M.E in 
-  try aux 0 n  with M.E -> -1
-
-let failwithf ~loc fmt = Format.ksprintf (fun s -> failwith (loc ^ s))
-    fmt
-    
-let invalid_argf fmt = Format.ksprintf invalid_arg fmt
-
-let bad_argf fmt = Format.ksprintf (fun x -> raise (Arg.Bad x ) ) fmt
-
-
-let rec dump r =
-  if Obj.is_int r then
-    string_of_int (Obj.magic r : int)
-  else (* Block. *)
-    let rec get_fields acc = function
-      | 0 -> acc
-      | n -> let n = n-1 in get_fields (Obj.field r n :: acc) n
-    in
-    let rec is_list r =
-      if Obj.is_int r then
-        r = Obj.repr 0 (* [] *)
-      else
-        let s = Obj.size r and t = Obj.tag r in
-        t = 0 && s = 2 && is_list (Obj.field r 1) (* h :: t *)
-    in
-    let rec get_list r =
-      if Obj.is_int r then
-        []
-      else
-        let h = Obj.field r 0 and t = get_list (Obj.field r 1) in
-        h :: t
-    in
-    let opaque name =
-      (* XXX In future, print the address of value 'r'.  Not possible
-       * in pure OCaml at the moment.  *)
-      "<" ^ name ^ ">"
-    in
-    let s = Obj.size r and t = Obj.tag r in
-    (* From the tag, determine the type of block. *)
-    match t with
-    | _ when is_list r ->
-      let fields = get_list r in
-      "[" ^ String.concat "; " (Ext_list.map dump fields) ^ "]"
-    | 0 ->
-      let fields = get_fields [] s in
-      "(" ^ String.concat ", " (Ext_list.map dump fields) ^ ")"
-    | x when x = Obj.lazy_tag ->
-      (* Note that [lazy_tag .. forward_tag] are < no_scan_tag.  Not
-         * clear if very large constructed values could have the same
-         * tag. XXX *)
-      opaque "lazy"
-    | x when x = Obj.closure_tag ->
-      opaque "closure"
-    | x when x = Obj.object_tag ->
-      let fields = get_fields [] s in
-      let _clasz, id, slots =
-        match fields with
-        | h::h'::t -> h, h', t
-        | _ -> assert false
-      in
-      (* No information on decoding the class (first field).  So just print
-         * out the ID and the slots. *)
-      "Object #" ^ dump id ^ " (" ^ String.concat ", " (Ext_list.map dump slots) ^ ")"
-    | x when x = Obj.infix_tag ->
-      opaque "infix"
-    | x when x = Obj.forward_tag ->
-      opaque "forward"
-    | x when x < Obj.no_scan_tag ->
-      let fields = get_fields [] s in
-      "Tag" ^ string_of_int t ^
-      " (" ^ String.concat ", " (Ext_list.map dump fields) ^ ")"
-    | x when x = Obj.string_tag ->
-      "\"" ^ String.escaped (Obj.magic r : string) ^ "\""
-    | x when x = Obj.double_tag ->
-      string_of_float (Obj.magic r : float)
-    | x when x = Obj.abstract_tag ->
-      opaque "abstract"
-    | x when x = Obj.custom_tag ->
-      opaque "custom"
-    | x when x = Obj.custom_tag ->
-      opaque "final"
-    | x when x = Obj.double_array_tag ->
-      "[|"^
-      String.concat ";"
-        (Array.to_list (Array.map string_of_float (Obj.magic r : float array))) ^
-      "|]"
-    | _ ->
-      opaque (Printf.sprintf "unknown: tag %d size %d" t s)
-
-let dump v = dump (Obj.repr v)
-
-let pp_any fmt v = 
-  Format.fprintf fmt "@[%s@]"
-  (dump v )
-external id : 'a -> 'a = "%identity"
-
-
-let hash_variant s =
-  let accu = ref 0 in
-  for i = 0 to String.length s - 1 do
-    accu := 223 * !accu + Char.code s.[i]
-  done;
-  (* reduce to 31 bits *)
-  accu := !accu land (1 lsl 31 - 1);
-  (* make it signed for 64 bits architectures *)
-  if !accu > 0x3FFFFFFF then !accu - (1 lsl 31) else !accu
-
-
-end
-module Ext_path : sig 
-#1 "ext_path.mli"
-(* Copyright (C) 2017 Authors of BuckleScript
- * 
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Lesser General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * In addition to the permissions granted to you by the LGPL, you may combine
- * or link a "work that uses the Library" with a publicly distributed version
- * of this file to produce a combined library or application, then distribute
- * that combined work under the terms of your choosing, with no requirement
- * to comply with the obligations normally placed on you by section 4 of the
- * LGPL version 3 (or the corresponding section of a later version of the LGPL
- * should you choose to use a later version).
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Lesser General Public License for more details.
- * 
- * You should have received a copy of the GNU Lesser General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
-
-type t 
-
-
-
-
-
-(**
-   [combine path1 path2]
-   1. add some simplifications when concatenating
-   2. when [path2] is absolute, return [path2]
-*)  
-val combine : 
-  string -> 
-  string -> 
-  string    
-
-
-
-val chop_extension : ?loc:string -> string -> string 
-
-
-val chop_extension_if_any : string -> string
-
-val chop_all_extensions_if_any : 
-  string -> string 
-
-(**
-   {[
-     get_extension "a.txt" = ".txt"
-       get_extension "a" = ""
-   ]}
-*)
-val get_extension : string -> string
-
-
-
-
-val node_rebase_file :
-  from:string -> 
-  to_:string ->
-  string -> 
-  string 
-
-(** 
-   TODO: could be highly optimized
-   if [from] and [to] resolve to the same path, a zero-length string is returned 
-   Given that two paths are directory
-
-   A typical use case is 
-   {[
-     Filename.concat 
-       (rel_normalized_absolute_path cwd (Filename.dirname a))
-       (Filename.basename a)
-   ]}
-*)
-val rel_normalized_absolute_path : from:string -> string -> string 
-
-
-val normalize_absolute_path : string -> string 
-
-val absolute_path : string Lazy.t -> string -> string
-
-(** [concat dirname filename]
-    The same as {!Filename.concat} except a tiny optimization 
-    for current directory simplification
-*)
-val concat : string -> string -> string 
-
-val check_suffix_case : 
-  string -> string -> bool
-end = struct
-#1 "ext_path.ml"
-(* Copyright (C) 2017 Authors of BuckleScript
- * 
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Lesser General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * In addition to the permissions granted to you by the LGPL, you may combine
- * or link a "work that uses the Library" with a publicly distributed version
- * of this file to produce a combined library or application, then distribute
- * that combined work under the terms of your choosing, with no requirement
- * to comply with the obligations normally placed on you by section 4 of the
- * LGPL version 3 (or the corresponding section of a later version of the LGPL
- * should you choose to use a later version).
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Lesser General Public License for more details.
- * 
- * You should have received a copy of the GNU Lesser General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
-
-type t = 
-  | File of string 
-  | Dir of string 
-
-
-
-
-
-let sep_char = String.unsafe_get Filename.dir_sep 0 
-
-
-(** example
-    {[
-      "/bb/mbigc/mbig2899/bgit/bucklescript/jscomp/stdlib/external/pervasives.cmj"
-        "/bb/mbigc/mbig2899/bgit/bucklescript/jscomp/stdlib/ocaml_array.ml"
-    ]}
-
-    The other way
-    {[
-
-      "/bb/mbigc/mbig2899/bgit/bucklescript/jscomp/stdlib/ocaml_array.ml"
-        "/bb/mbigc/mbig2899/bgit/bucklescript/jscomp/stdlib/external/pervasives.cmj"
-    ]}
-    {[
-      "/bb/mbigc/mbig2899/bgit/bucklescript/jscomp/stdlib//ocaml_array.ml"
-    ]}
-    {[
-      /a/b
-      /c/d
-    ]}
-*)
-let node_relative_path 
-    ~from:(file_or_dir_2 : t )
-    (file_or_dir_1 : t) 
-  = 
-  let relevant_dir1 = 
-    match file_or_dir_1 with 
-    | Dir x -> x 
-    | File file1 ->  Filename.dirname file1 in
-  let relevant_dir2 = 
-    match file_or_dir_2 with 
-    | Dir x -> x 
-    | File file2 -> Filename.dirname file2  in
-  let dir1 = Ext_string.split relevant_dir1 sep_char   in
-  let dir2 = Ext_string.split relevant_dir2 sep_char  in
-  let rec go (dir1 : string list) (dir2 : string list) = 
-    match dir1, dir2 with 
-    | "." :: xs, ys -> go xs ys 
-    | xs , "." :: ys -> go xs ys 
-    | x::xs , y :: ys when x = y
-      -> go xs ys 
-    | _, _ -> 
-      Ext_list.map_append (fun _ ->  Literals.node_parent) dir2  dir1 
-  in
-  match go dir1 dir2 with
-  | (x :: _ ) as ys when x = Literals.node_parent -> 
-    String.concat Literals.node_sep ys
-  | ys -> 
-    String.concat Literals.node_sep  
-    @@ Literals.node_current :: ys
-
-
-let node_concat ~dir base =
-  dir ^ Literals.node_sep ^ base 
-
-let node_rebase_file ~from ~to_ file = 
-  
-  node_concat
-    ~dir:(
-      if from = to_ then Literals.node_current
-      else node_relative_path ~from:(Dir from) (Dir to_)) 
-    file
-    
-    
-(***
-   {[
-     Filename.concat "." "";;
-     "./"
-   ]}
-*)
-let combine path1 path2 =  
-  if Filename.is_relative path2 then
-    if Ext_string.is_empty path2 then 
-      path1
-    else 
-    if path1 = Filename.current_dir_name then 
-      path2
-    else
-    if path2 = Filename.current_dir_name 
-    then path1
-    else
-      Filename.concat path1 path2 
-  else
-    path2
-
-
-let chop_extension ?(loc="") name =
-  try Filename.chop_extension name 
-  with Invalid_argument _ -> 
-    Ext_pervasives.invalid_argf 
-      "Filename.chop_extension ( %s : %s )"  loc name
-
-let chop_extension_if_any fname =
-  try Filename.chop_extension fname with Invalid_argument _ -> fname
-
-let rec chop_all_extensions_if_any fname =
-  match Filename.chop_extension fname with 
-  | x -> chop_all_extensions_if_any x 
-  | exception _ -> fname
-
-let get_extension x =
-  let pos = Ext_string.rindex_neg x '.' in 
-  if pos < 0 then ""
-  else Ext_string.tail_from x pos 
-
-
-let (//) x y =
-  if x = Filename.current_dir_name then y
-  else if y = Filename.current_dir_name then x 
-  else Filename.concat x y 
-
-(**
-   {[
-     split_aux "//ghosg//ghsogh/";;
-     - : string * string list = ("/", ["ghosg"; "ghsogh"])
-   ]}
-   Note that 
-   {[
-     Filename.dirname "/a/" = "/"
-       Filename.dirname "/a/b/" = Filename.dirname "/a/b" = "/a"
-   ]}
-   Special case:
-   {[
-     basename "//" = "/"
-       basename "///"  = "/"
-   ]}
-   {[
-     basename "" =  "."
-       basename "" = "."
-       dirname "" = "."
-       dirname "" =  "."
-   ]}  
-*)
-let split_aux p =
-  let rec go p acc =
-    let dir = Filename.dirname p in
-    if dir = p then dir, acc
-    else
-      let new_path = Filename.basename p in 
-      if Ext_string.equal new_path Filename.dir_sep then 
-        go dir acc 
-        (* We could do more path simplification here
-           leave to [rel_normalized_absolute_path]
-        *)
-      else 
-        go dir (new_path :: acc)
-
-  in go p []
-
-
-
-
-
-(** 
-   TODO: optimization
-   if [from] and [to] resolve to the same path, a zero-length string is returned 
-
-   This function is useed in [es6-global] and 
-   [amdjs-global] format and tailored for `rollup`
-*)
-let rel_normalized_absolute_path ~from to_ =
-  let root1, paths1 = split_aux from in 
-  let root2, paths2 = split_aux to_ in 
-  if root1 <> root2 then root2
-  else
-    let rec go xss yss =
-      match xss, yss with 
-      | x::xs, y::ys -> 
-        if Ext_string.equal x  y then go xs ys 
-        else if x = Filename.current_dir_name then go xs yss 
-        else if y = Filename.current_dir_name then go xss ys
-        else 
-          let start = 
-            List.fold_left (fun acc _ -> acc // Ext_string.parent_dir_lit )
-              Ext_string.parent_dir_lit  xs in 
-          List.fold_left (fun acc v -> acc // v) start yss
-      | [], [] -> Ext_string.empty
-      | [], y::ys -> List.fold_left (fun acc x -> acc // x) y ys
-      | x::xs, [] ->
-        List.fold_left (fun acc _ -> acc // Ext_string.parent_dir_lit )
-          Ext_string.parent_dir_lit xs in
-    let v =  go paths1 paths2  in 
-
-    if Ext_string.is_empty v then  Literals.node_current
-    else 
-    if
-      v = "."
-      || v = ".."
-      || Ext_string.starts_with v "./"  
-      || Ext_string.starts_with v "../" 
-    then v 
-    else "./" ^ v 
-
-(*TODO: could be hgighly optimized later 
-  {[
-    normalize_absolute_path "/gsho/./..";;
-
-    normalize_absolute_path "/a/b/../c../d/e/f";;
-
-    normalize_absolute_path "/gsho/./..";;
-
-    normalize_absolute_path "/gsho/./../..";;
-
-    normalize_absolute_path "/a/b/c/d";;
-
-    normalize_absolute_path "/a/b/c/d/";;
-
-    normalize_absolute_path "/a/";;
-
-    normalize_absolute_path "/a";;
-  ]}
-*)
-(** See tests in {!Ounit_path_tests} *)
-let normalize_absolute_path x =
-  let drop_if_exist xs =
-    match xs with 
-    | [] -> []
-    | _ :: xs -> xs in 
-  let rec normalize_list acc paths =
-    match paths with 
-    | [] -> acc 
-    | x :: xs -> 
-      if Ext_string.equal x Ext_string.current_dir_lit then 
-        normalize_list acc xs 
-      else if Ext_string.equal x Ext_string.parent_dir_lit then 
-        normalize_list (drop_if_exist acc ) xs 
-      else   
-        normalize_list (x::acc) xs 
-  in
-  let root, paths = split_aux x in
-  let rev_paths =  normalize_list [] paths in 
-  let rec go acc rev_paths =
-    match rev_paths with 
-    | [] -> Filename.concat root acc 
-    | last::rest ->  go (Filename.concat last acc ) rest  in 
-  match rev_paths with 
-  | [] -> root 
-  | last :: rest -> go last rest 
-
-
-
-
-let absolute_path cwd s = 
-  let process s = 
-    let s = 
-      if Filename.is_relative s then
-        Lazy.force cwd // s 
-      else s in
-    (* Now simplify . and .. components *)
-    let rec aux s =
-      let base,dir  = Filename.basename s, Filename.dirname s  in
-      if dir = s then dir
-      else if base = Filename.current_dir_name then aux dir
-      else if base = Filename.parent_dir_name then Filename.dirname (aux dir)
-      else aux dir // base
-    in aux s  in 
-  process s 
-
-
-let absolute cwd s =   
-  match s with 
-  | File x -> File (absolute_path cwd x )
-  | Dir x -> Dir (absolute_path cwd x)
-
-let concat dirname filename =
-  if filename = Filename.current_dir_name then dirname
-  else if dirname = Filename.current_dir_name then filename
-  else Filename.concat dirname filename
-  
-
-let check_suffix_case =
-  Ext_string.ends_with
-end
 module Ext_sys : sig 
 #1 "ext_sys.mli"
 (* Copyright (C) 2015-2016 Bloomberg Finance L.P.
@@ -5880,6 +6003,10 @@ val walk_all_deps : string -> (package_context -> unit) -> unit
 val get_ocaml_dir: string -> string
 
 val get_ocaml_lib_dir : is_js:bool -> string -> string
+
+val build_artifacts_dir : (string option) ref
+
+val get_build_artifacts_location : string -> string
 
 end = struct
 #1 "bsb_build_util.ml"
@@ -6135,115 +6262,22 @@ let get_ocaml_lib_dir ~is_js cwd =
   if is_js then (Filename.dirname (get_bsc_dir cwd)) // "lib" // "ocaml"
   else (get_ocaml_dir cwd) // "lib" // "ocaml"
 
-end
-module Bsb_config : sig 
-#1 "bsb_config.mli"
-(* Copyright (C) 2015-2016 Bloomberg Finance L.P.
- * 
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Lesser General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * In addition to the permissions granted to you by the LGPL, you may combine
- * or link a "work that uses the Library" with a publicly distributed version
- * of this file to produce a combined library or application, then distribute
- * that combined work under the terms of your choosing, with no requirement
- * to comply with the obligations normally placed on you by section 4 of the
- * LGPL version 3 (or the corresponding section of a later version of the LGPL
- * should you choose to use a later version).
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Lesser General Public License for more details.
- * 
- * You should have received a copy of the GNU Lesser General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
+let build_artifacts_dir = ref None
 
-
-val ocaml_bin_install_prefix : string -> string
-val proj_rel : string -> string
-
-val lib_js : string 
-val lib_amd : string 
-val lib_bs : string
-val lib_es6 : string 
-val lib_es6_global : string 
-val lib_amd_global : string 
-val lib_ocaml : string
-val all_lib_artifacts : string list 
-(* we need generate path relative to [lib/bs] directory in the opposite direction *)
-val rev_lib_bs_prefix : string -> string
-
-(** default not install, only when -make-world, its dependencies will be installed  *)
-
-
-end = struct
-#1 "bsb_config.ml"
-(* Copyright (C) 2015-2016 Bloomberg Finance L.P.
- * 
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Lesser General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * In addition to the permissions granted to you by the LGPL, you may combine
- * or link a "work that uses the Library" with a publicly distributed version
- * of this file to produce a combined library or application, then distribute
- * that combined work under the terms of your choosing, with no requirement
- * to comply with the obligations normally placed on you by section 4 of the
- * LGPL version 3 (or the corresponding section of a later version of the LGPL
- * should you choose to use a later version).
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Lesser General Public License for more details.
- * 
- * You should have received a copy of the GNU Lesser General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
-let (//) = Ext_path.combine 
-
-let lib_lit = "lib"
-let lib_js = lib_lit //"js"
-let lib_amd = lib_lit //"amdjs"
-let lib_ocaml = lib_lit // "ocaml"
-let lib_bs = lib_lit // "bs"
-let lib_es6 = lib_lit // "es6"
-let lib_es6_global = lib_lit // "es6_global"
-let lib_amd_global = lib_lit // "amdjs_global"
-let all_lib_artifacts = 
-  [ lib_js ; 
-    lib_amd ;
-    lib_ocaml;
-    lib_bs ; 
-    lib_es6 ; 
-    lib_es6_global;
-    lib_amd_global
-  ]
-let rev_lib_bs = ".."// ".."
-
-let rev_lib_bs_prefix p = rev_lib_bs // p 
-
-let ocaml_bin_install_prefix p = lib_ocaml // p
-
-let lazy_src_root_dir = "$src_root_dir" 
-let proj_rel path = lazy_src_root_dir // path
-
-(** it may not be a bad idea to hard code the binary path 
-    of bsb in configuration time
-*)
-
-
-
-
-
-
-let cmd_package_specs = ref None 
-
+let get_build_artifacts_location cwd =
+  (* If the project's parent folder is not node_modules, we know it's the top level one. *)
+  if (Filename.basename (Filename.dirname cwd)) <> "node_modules" then 
+    match !build_artifacts_dir with 
+    | None -> cwd
+    | Some dir -> dir
+  else begin
+    match !build_artifacts_dir with 
+    | None -> cwd
+      (* (Filename.dirname (Filename.dirname cwd)) // Bsb_config.lib_lit // Bsb_config.node_modules // project_name *)
+    | Some dir -> 
+      let project_name = Filename.basename cwd in
+      dir // Bsb_config.lib_lit // Bsb_config.node_modules // project_name
+  end
 
 end
 module Bsb_unix : sig 
@@ -6510,24 +6544,26 @@ let clean_bs_deps ~is_cmdline_build_kind_set ~nested bsc_dir proj_dir =
   if is_cmdline_build_kind_set then
     Bsb_build_util.walk_all_deps  proj_dir  (fun { cwd} ->
         (* whether top or not always do the cleaning *)
-        clean_bs_garbage ~nested bsc_dir cwd
+        clean_bs_garbage ~nested bsc_dir (Bsb_build_util.get_build_artifacts_location cwd)
       )
   else begin
     Bsb_build_util.walk_all_deps  proj_dir  (fun { cwd} ->
+        let build_artifacts_cwd = Bsb_build_util.get_build_artifacts_location cwd in
         (* whether top or not always do the cleaning *)
-        clean_bs_garbage ~nested:"js" bsc_dir cwd;
-        clean_bs_garbage ~nested:"bytecode" bsc_dir cwd;
-        clean_bs_garbage ~nested:"native" bsc_dir cwd;
+        clean_bs_garbage ~nested:"js" bsc_dir build_artifacts_cwd;
+        clean_bs_garbage ~nested:"bytecode" bsc_dir build_artifacts_cwd;
+        clean_bs_garbage ~nested:"native" bsc_dir build_artifacts_cwd;
       )
   end
 
 let clean_self ~is_cmdline_build_kind_set ~nested bsc_dir proj_dir = 
+  let build_artifacts_cwd = Bsb_build_util.get_build_artifacts_location proj_dir in
   if is_cmdline_build_kind_set then
-    clean_bs_garbage ~nested bsc_dir proj_dir
+    clean_bs_garbage ~nested bsc_dir build_artifacts_cwd
   else begin
-    clean_bs_garbage ~nested:"js" bsc_dir proj_dir;
-    clean_bs_garbage ~nested:"bytecode" bsc_dir proj_dir;
-    clean_bs_garbage ~nested:"native" bsc_dir proj_dir;
+    clean_bs_garbage ~nested:"js" bsc_dir build_artifacts_cwd;
+    clean_bs_garbage ~nested:"bytecode" bsc_dir build_artifacts_cwd;
+    clean_bs_garbage ~nested:"native" bsc_dir build_artifacts_cwd;
   end
 
 end
@@ -6920,12 +6956,7 @@ let bs_package_output = "-bs-package-output"
     {[ -bs-package-output commonjs:lib/js/jscomp/test ]}
 *)
 let package_flag ({format; in_source } : spec) dir =
-  Ext_string.inter2
-    bs_package_output 
-    (Ext_string.concat3
-       format
-       Ext_string.single_colon
-       (if in_source then dir else
+  let dir = Bsb_config.build_artifacts_dir (if in_source then dir else
           (if format = Literals.amdjs then 
              amd_js_prefix dir 
            else if format = Literals.commonjs then 
@@ -6936,7 +6967,13 @@ let package_flag ({format; in_source } : spec) dir =
              es6_global_prefix dir   
            else if format = Literals.amdjs_global then 
              amdjs_global_prefix dir 
-           else assert false))
+           else assert false)) in
+  Ext_string.inter2
+    bs_package_output 
+    (Ext_string.concat3
+       format
+       Ext_string.single_colon
+       dir
     )
 
 let package_flag_of_package_specs (package_specs : t) 
@@ -6967,7 +7004,7 @@ let package_output ({format; in_source } : spec) output=
          amdjs_global_prefix
        else assert false)
   in
-  (Bsb_config.proj_rel @@ prefix output )
+  (Bsb_config.build_artifacts_dir @@ prefix output )
 
 (**
     [get_list_of_output_js specs "src/hi/hello"]
@@ -8458,7 +8495,6 @@ val package_dir : string Lazy.t
 
 val simple_convert_node_path_to_os_path : string -> string
 
-
 end = struct
 #1 "ext_filename.ml"
 (* Copyright (C) 2015-2016 Bloomberg Finance L.P.
@@ -9738,7 +9774,7 @@ let rec
          let parent = Filename.concat cxt.root cxt.cwd in 
          let lib_parent = 
            Filename.concat (Filename.concat cxt.root Bsb_config.lib_bs) 
-             cxt.cwd in 
+             (Bsb_build_util.get_build_artifacts_location cxt.cwd) in 
          if not (String_map.mem (Ext_string.capitalize_ascii basename) cur_sources) then 
            begin 
              Unix.unlink (Filename.concat parent f);
@@ -10835,7 +10871,7 @@ let resolve_package backend cwd  package_name =
   in
   {
     Bsb_config_types.package_name ;
-    package_install_path = x // Bsb_config.lib_ocaml // nested
+    package_install_path = (Bsb_build_util.get_build_artifacts_location x) // Bsb_config.lib_ocaml // nested
   }
 
 let parse_allowed_build_kinds map =
@@ -11143,7 +11179,7 @@ let interpret_json
              namespace; 
             }  x in 
         if generate_watch_metadata then
-          Bsb_watcher_gen.generate_sourcedirs_meta cwd res ;     
+          Bsb_watcher_gen.generate_sourcedirs_meta (Bsb_build_util.get_build_artifacts_location cwd) res ;     
         begin match List.sort Ext_file_pp.interval_compare  res.intervals with
           | [] -> ()
           | queue ->
@@ -11439,11 +11475,7 @@ let merlin_file_gen ~cwd ~backend
         Buffer.add_string buffer merlin_b;
         Buffer.add_string buffer path ;
       );
-
-    let x = Bsb_pkg.resolve_bs_package ~cwd Bs_version.package_name  in
-    Buffer.add_string buffer merlin_b;
-    Buffer.add_string buffer (x // "lib");
-
+    
     let nested = match backend with
       | Bsb_config_types.Js       -> "js"
       | Bsb_config_types.Native   -> "native"
@@ -11880,6 +11912,8 @@ let namespace = "namespace"
 let package_sep = "-"
 
 let warnings = "warnings"
+
+let build_artifacts_dir = "build_artifacts_dir"
 
 let bs_super_errors = "bs_super_errors"
 let bs_super_errors_ocamlfind = "bs_super_errors_ocamlfind"
@@ -13050,13 +13084,6 @@ let make_common_shadows
   : Bsb_ninja_util.shadow list 
   =
   let shadows : Bsb_ninja_util.shadow list = 
-    { key = Bsb_ninja_global_vars.bs_package_flags;
-      op = 
-        Append
-          (Bsb_package_specs.package_flag_of_package_specs
-             package_specs dirname
-          )
-    } ::
     (if Bsb_dir_index.is_lib_dir dir_index  then [] else
        [{
          key = Bsb_ninja_global_vars.bs_package_includes; 
@@ -17576,9 +17603,9 @@ let output_ninja_and_namespace_map
   ) ocaml_flags ocaml_dependencies) in
 
   let bs_super_errors = if main_bs_super_errors && not use_ocamlfind && backend != Bsb_config_types.Js then "-bs-super-errors" else "" in
-  
-  let oc = open_out_bin (cwd // Bsb_config.lib_bs // nested // Literals.build_ninja) in
-  let cwd_lib_bs = cwd // Bsb_config.lib_bs // nested in
+  let build_artifacts_dir = Bsb_build_util.get_build_artifacts_location cwd in
+  let oc = open_out_bin (build_artifacts_dir // Bsb_config.lib_bs // nested // Literals.build_ninja) in
+  let cwd_lib_bs = build_artifacts_dir // Bsb_config.lib_bs // nested in
   
   let ocamlc = "ocamlc" in
   let ocamlopt = "ocamlopt" in
@@ -17668,6 +17695,7 @@ let output_ninja_and_namespace_map
           Bsb_ninja_global_vars.bs_package_dev_includes, bs_package_dev_includes;  
           Bsb_ninja_global_vars.namespace , namespace_flag ; 
           Bsb_build_schemas.bsb_dir_group, "0"  (*TODO: avoid name conflict in the future *);
+          Bsb_ninja_global_vars.build_artifacts_dir, build_artifacts_dir;
           
           Bsb_ninja_global_vars.ocaml_flags, ocaml_flags;
           Bsb_ninja_global_vars.bs_super_errors_ocamlfind, 
@@ -17839,7 +17867,7 @@ let output_ninja_and_namespace_map
     | None -> all_info
     | Some ns -> 
       let namespace_dir =     
-        cwd // Bsb_config.lib_bs // nested in
+        build_artifacts_dir // Bsb_config.lib_bs // nested in
       Bsb_namespace_map_gen.output ~dir:namespace_dir ns
         bs_file_groups
       ; 
@@ -17877,7 +17905,7 @@ let output_ninja_and_namespace_map
   let _ = 
     match build_script with
   | Some (build_script, true) when should_build ->
-    let destdir = cwd // Bsb_config.lib_bs // nested in 
+    let destdir = build_artifacts_dir // Bsb_config.lib_bs // nested in 
     ignore @@ Bsb_file.install_if_exists ~destdir build_script;
     let destdir = Ext_bytes.ninja_escaped destdir in
     let (refmt, impl) = if Filename.check_suffix build_script ".re" then 
@@ -17916,7 +17944,8 @@ let output_ninja_and_namespace_map
       ^ (Ext_bytes.ninja_escaped (Filename.dirname ocaml_dir)) ^ " " 
       ^ (Ext_bytes.ninja_escaped ocaml_lib) ^ " " 
       ^ (Ext_bytes.ninja_escaped cwd) ^ " " 
-      ^ (Ext_bytes.ninja_escaped root_project_dir) 
+      ^ (Ext_bytes.ninja_escaped root_project_dir) ^ " "
+      ^ (Ext_bytes.ninja_escaped build_artifacts_dir) 
       ^ (if !Bsb_log.log_level = Bsb_log.Debug then " -verbose" else "") in
     let rule = Bsb_rule.define ~command "run_build_script" in
     Bsb_ninja_util.output_build oc
@@ -18049,10 +18078,11 @@ let regenerate_ninja
   ~backend
   cwd bsc_dir ocaml_dir 
   : _ option =
-  let output_deps = cwd // Bsb_config.lib_bs // bsdeps in
+  let build_artifacts_dir = Bsb_build_util.get_build_artifacts_location cwd in
+  let output_deps = build_artifacts_dir // Bsb_config.lib_bs // bsdeps in
   let check_result  =
     Bsb_ninja_check.check 
-      ~cwd  
+      ~cwd:build_artifacts_dir
       ~forced ~file:output_deps backend in
   let () = 
     Bsb_log.info
@@ -18073,10 +18103,10 @@ let regenerate_ninja
       end in
       if check_result = Bsb_bsc_version_mismatch then begin 
         Bsb_log.info "@{<info>Different compiler version@}: clean current repo";
-        Bsb_clean.clean_self ~is_cmdline_build_kind_set:true ~nested bsc_dir cwd; 
+        Bsb_clean.clean_self ~is_cmdline_build_kind_set:true ~nested bsc_dir build_artifacts_dir; 
       end ; 
       (* Generate the nested folder before anything else... *)
-      Bsb_build_util.mkp (cwd // Bsb_config.lib_bs // nested);
+      Bsb_build_util.mkp (build_artifacts_dir // Bsb_config.lib_bs // nested);
       
       let config = 
         Bsb_config_parse.interpret_json 
@@ -18131,6 +18161,7 @@ let regenerate_ninja
               Bsb_build_util.walk_all_deps cwd
                 (fun {top; cwd} ->
                   if not top then begin
+                    let build_artifacts_dir = Bsb_build_util.get_build_artifacts_location cwd in
                     (* @Speed We don't need to read the full config, just the right fields.
                        Then again we also should cache this info so we don't have to crawl anything. *)
                     let innerConfig = 
@@ -18145,7 +18176,7 @@ let regenerate_ninja
                     | Bsb_config_types.Js ->  assert false
                     | Bsb_config_types.Bytecode 
                       when List.mem Bsb_config_types.Bytecode Bsb_config_types.(innerConfig.allowed_build_kinds) -> 
-                        all_external_deps := (cwd // Bsb_config.lib_ocaml // "bytecode") :: !all_external_deps;
+                        all_external_deps := (build_artifacts_dir // Bsb_config.lib_ocaml // "bytecode") :: !all_external_deps;
                         all_c_linker_flags := (List.rev Bsb_config_types.(innerConfig.c_linker_flags)) 
                           @ !all_c_linker_flags;
                         all_clibs := (List.rev Bsb_config_types.(innerConfig.static_libraries)) 
@@ -18155,7 +18186,7 @@ let regenerate_ninja
                         
                     | Bsb_config_types.Native 
                       when List.mem Bsb_config_types.Native Bsb_config_types.(innerConfig.allowed_build_kinds) -> 
-                        all_external_deps := (cwd // Bsb_config.lib_ocaml // "native") :: !all_external_deps;
+                        all_external_deps := (build_artifacts_dir // Bsb_config.lib_ocaml // "native") :: !all_external_deps;
                         all_c_linker_flags := (List.rev Bsb_config_types.(innerConfig.c_linker_flags)) 
                           @ !all_c_linker_flags;
                         all_clibs := (List.rev Bsb_config_types.(innerConfig.static_libraries)) 
@@ -18165,7 +18196,24 @@ let regenerate_ninja
                         
                     | _ -> ()
                     end;
-                  end
+                    if List.mem backend Bsb_config_types.(innerConfig.allowed_build_kinds)
+                       && Bsb_config_types.(config.build_script) <> None then begin
+                      let artifacts_installed = ref [] in
+                      let filename = build_artifacts_dir // ".static_libraries"in
+                      if not (Sys.file_exists filename) then 
+                        Bsb_exception.missing_static_libraries_file (Bsb_config_types.(innerConfig.package_name)) 
+                      else begin
+                        let ic = open_in_bin filename in
+                        (try
+                           while true do
+                             artifacts_installed := (input_line ic) :: !artifacts_installed
+                           done
+                         with End_of_file -> ());
+                        close_in ic;
+                        all_clibs := !artifacts_installed @ !all_clibs;
+                      end
+                    end
+                   end
                 );
               (List.rev !all_external_deps, List.rev !all_clibs, List.rev !all_c_linker_flags, List.rev !all_ocamlfind_dependencies, !all_ocaml_dependencies)
             end
@@ -19393,6 +19441,7 @@ let build_bs_deps cwd ~root_project_dir ~backend ~main_bs_super_errors deps =
     (fun {top; cwd} ->
        if not top then
          begin 
+           let build_artifacts_dir = Bsb_build_util.get_build_artifacts_location cwd in
            let config_opt = Bsb_ninja_regen.regenerate_ninja 
              ~is_top_level:false
              ~not_dev:true
@@ -19427,15 +19476,15 @@ let build_bs_deps cwd ~root_project_dir ~backend ~main_bs_super_errors deps =
               let nested = begin match backend with 
               | Bsb_config_types.Js -> "js"
               | Bsb_config_types.Bytecode -> 
-                all_external_deps := (cwd // Bsb_config.lib_ocaml // "bytecode") :: !all_external_deps;
+                all_external_deps := (build_artifacts_dir // Bsb_config.lib_ocaml // "bytecode") :: !all_external_deps;
                 "bytecode"
               | Bsb_config_types.Native -> 
-                all_external_deps := (cwd // Bsb_config.lib_ocaml // "native") :: !all_external_deps;
+                all_external_deps := (build_artifacts_dir // Bsb_config.lib_ocaml // "native") :: !all_external_deps;
                 "native"
               end in
              let command = 
               {Bsb_unix.cmd = vendor_ninja;
-                cwd = cwd // Bsb_config.lib_bs // nested;
+                cwd = build_artifacts_dir // Bsb_config.lib_bs // nested;
                 args  = [|vendor_ninja|] ;
                 env = Array.append (Unix.environment ()) [| "BSB_BACKEND=" ^ nested |] ;
                } in     
@@ -19444,12 +19493,30 @@ let build_bs_deps cwd ~root_project_dir ~backend ~main_bs_super_errors deps =
                command in 
              if eid <> 0 then   
               Bsb_unix.command_fatal_error command eid;
+            
+             if Bsb_config_types.(config.build_script) <> None then begin
+               let filename = build_artifacts_dir // ".static_libraries" in
+               if not (Sys.file_exists filename) then 
+                  Bsb_exception.missing_static_libraries_file (Bsb_config_types.(config.package_name)) 
+               else begin
+                 let artifacts_installed = ref [] in
+                 let ic = open_in_bin filename in
+                 (try
+                   while true do
+                     artifacts_installed := (input_line ic) :: !artifacts_installed
+                   done
+                 with End_of_file -> ());
+                 close_in ic;
+                 all_clibs := !artifacts_installed @ !all_clibs;
+                end
+             end;
+             
              (* When ninja is not regenerated, ninja will still do the build, 
                 still need reinstall check
                 Note that we can check if ninja print "no work to do", 
                 then don't need reinstall more
              *)
-             install_targets ~backend cwd config_opt;
+             install_targets ~backend build_artifacts_dir config_opt;
            end
          end
     );
@@ -19594,6 +19661,9 @@ let bsb_main_flags : (string * Arg.spec * string) list=
         | _ -> failwith "-backend should be one of: 'js', 'bytecode' or 'native'."
       ),
     " Builds the entries in the bsconfig which match the given backend.";
+    
+    "-build-artifacts-dir", Arg.String (fun s -> Bsb_build_util.build_artifacts_dir := Some (cwd // s)),
+    " Sets the directory in which all the build artifacts will go into.";
   ]
 
 
@@ -19605,22 +19675,22 @@ let exec_command_then_exit  command =
   exit (Sys.command command ) 
 
 (* Execute the underlying ninja build call, then exit (as opposed to keep watching) *)
-let ninja_command_exit  vendor_ninja ninja_args nested =
+let ninja_command_exit  cwd vendor_ninja ninja_args nested =
   let ninja_args_len = Array.length ninja_args in
   if Ext_sys.is_windows_or_cygwin then
     let path_ninja = Filename.quote vendor_ninja in 
     exec_command_then_exit @@ 
-    (if ninja_args_len = 0 then      
+    (if ninja_args_len = 0 then
        Ext_string.inter3
-         path_ninja "-C" Bsb_config.lib_bs // nested
+         path_ninja "-C" (cwd // Bsb_config.lib_bs // nested)
      else   
        let args = 
          Array.append 
-           [| path_ninja ; "-C"; Bsb_config.lib_bs // nested|]
+           [| path_ninja ; "-C"; cwd // Bsb_config.lib_bs // nested|]
            ninja_args in 
        Ext_string.concat_array Ext_string.single_space args)
   else
-    let ninja_common_args = [|"ninja.exe"; "-C"; Bsb_config.lib_bs // nested |] in 
+    let ninja_common_args = [|"ninja.exe"; "-C"; cwd // Bsb_config.lib_bs // nested |] in 
     let args = 
       if ninja_args_len = 0 then ninja_common_args else 
         Array.append ninja_common_args ninja_args in 
@@ -19700,7 +19770,7 @@ let () =
           cwd bsc_dir ocaml_dir
       in
       let nested = get_string_backend backend in
-      ninja_command_exit  vendor_ninja [||] nested
+      ninja_command_exit (Bsb_build_util.get_build_artifacts_location cwd) vendor_ninja [||] nested
     end
   | argv -> 
     begin
@@ -19753,7 +19823,7 @@ let () =
                     *)
                 end else begin
                   let nested = get_string_backend backend in
-                  ninja_command_exit vendor_ninja [||] nested
+                  ninja_command_exit (Bsb_build_util.get_build_artifacts_location cwd) vendor_ninja [||] nested
                 end
             end;
         end
@@ -19781,7 +19851,7 @@ let () =
           if !watch_mode then watch_exit ()
           else begin 
             let nested = get_string_backend backend in
-            ninja_command_exit vendor_ninja ninja_args nested
+            ninja_command_exit (Bsb_build_util.get_build_artifacts_location cwd) vendor_ninja ninja_args nested
           end
         end
     end

@@ -66,9 +66,9 @@ end
 module Bsb_internals
 = struct
 #1 "bsb_internals.ml"
-(* build_script.exe vendor_dir ocaml_lib cwd root_project_dir -verbose *)
+(* build_script.exe vendor_dir ocaml_lib cwd root_project_dir build_artifacts_dir -verbose *)
 
-let _ = if Array.length Sys.argv != 5 && Array.length Sys.argv != 6 then begin
+let _ = if Array.length Sys.argv != 6 && Array.length Sys.argv != 7 then begin
   print_endline "This binary is only for bsb's internal use";
   exit 1
 end
@@ -77,7 +77,8 @@ let vendor_dir = Sys.argv.(1)
 let ocaml_lib = Sys.argv.(2)
 let cwd = Sys.argv.(3)
 let root_project_dir = Sys.argv.(4)
-let verbose = (6 = Array.length Sys.argv)
+let build_artifacts_dir = Sys.argv.(5)
+let verbose = (7 = Array.length Sys.argv)
 
 let ( // ) = Filename.concat
 
@@ -105,18 +106,26 @@ let checkInputTimestamps outfile_mtime includes srcs =
   in
   should_build srcs || should_build includes
 
-let gcc ?c:(c=true) ?include_ocaml:(include_ocaml=true) ?flags:(flags=[]) ?includes:(includes=[]) outfile srcs = 
+(* @Hack We open a file here and let the OS clean it up when this program exists. *)
+let oc = open_out (build_artifacts_dir // ".static_libraries")
+
+let gcc ?c:(c=true) ?include_ocaml:(include_ocaml=true) ?flags:(flags=[]) ?includes:(includes=[]) ?should_link:(should_link=true) outfile srcs = 
   let output = if Filename.is_relative outfile then cwd // outfile else outfile in
   let should_build = match (Unix.(stat output)) with
     | exception (Unix.Unix_error (Unix.ENOENT, _, _)) -> true
     | {Unix.st_mtime} -> checkInputTimestamps st_mtime includes srcs
   in
+
+  if should_link then begin
+    output_string oc output; output_char oc '\n'
+  end;
+
   if should_build then begin
     let dash_c = if c then "-c" else "" in
     let all_includes = if List.length includes > 0 then 
       "-I " ^ (String.concat " -I " (List.map (fun i -> 
         if Filename.is_relative i then cwd // i else i
-      ) includes)) 
+      ) includes))
     else "" in
     let include_ocaml_flag = if include_ocaml then "-I " ^ ocaml_lib else "" in
     let compiler = if Ext_sys.is_windows_or_cygwin then "gcc.exe" else "gcc" in
