@@ -41,6 +41,7 @@ let regenerate_ninja
   ~generate_watch_metadata
   ~forced
   ~root_project_dir
+  ~build_library
   ~backend
   cwd bsc_dir ocaml_dir 
   : _ option =
@@ -199,6 +200,7 @@ let regenerate_ninja
           ~is_top_level 
           ~backend 
           ~main_bs_super_errors
+          ~build_library
           config;
         (* PR2184: we still need record empty dir 
             since it may add files in the future *)  

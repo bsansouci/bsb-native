@@ -110,6 +110,7 @@ let build_bs_deps cwd ~root_project_dir ~backend ~main_bs_super_errors deps =
              ~forced:true
              ~backend
              ~main_bs_super_errors
+             ~build_library:false
              cwd bsc_dir ocaml_dir in (* set true to force regenrate ninja file so we have [config_opt]*)
            let config = begin match config_opt with 
             | None ->

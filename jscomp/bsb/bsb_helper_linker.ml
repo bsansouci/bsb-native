@@ -164,8 +164,8 @@ let link link_byte_or_native
     else begin
       (* @CrossPlatform This might work on windows since we're using the Unix module which claims to
          have a windows implementation... We should double check this. *)
-      let list_of_args = ("ocamlfind" :: compiler :: []) 
-        @ (if bs_super_errors then ["-passopt"; "-bs-super-errors"] else []) 
+      let list_of_args = "ocamlfind" :: compiler 
+        :: (if bs_super_errors then ["-passopt"; "-bs-super-errors"] else []) 
         @ ("-linkpkg" :: ocamlfind_packages)
         @ warning_command
         @ ("-g" :: "-o" :: output_file :: all_object_files) in

@@ -2603,7 +2603,6 @@ let concat dirname filename =
 
 let check_suffix_case =
   Ext_string.ends_with
-
 end
 module Bsb_config : sig 
 #1 "bsb_config.mli"
@@ -8495,6 +8494,7 @@ val package_dir : string Lazy.t
 
 val simple_convert_node_path_to_os_path : string -> string
 
+
 end = struct
 #1 "ext_filename.ml"
 (* Copyright (C) 2015-2016 Bloomberg Finance L.P.
@@ -13682,12 +13682,11 @@ end = struct
 (**                                                                   **)
 (***********************************************************************)
 
-let ( // ) = Filename.concat
 
 (* The main OCaml version string has moved to ../VERSION *)
 let version = Sys.ocaml_version
 
-let standard_library_default = (Filename.dirname Sys.executable_name) // "lib" // "ocaml"
+let standard_library_default = "/Users/benjamin/Desktop/bucklescript/vendor/ocaml/lib/ocaml"
 
 let standard_library =
  
@@ -13697,20 +13696,19 @@ let standard_library =
 
     standard_library_default
 
-let extension = if Sys.win32 || Sys.cygwin then ".exe" else ""
-let standard_runtime = (Filename.dirname Sys.executable_name) // "bin" // "ocamlrun" ^ extension
+let standard_runtime = "/Users/benjamin/Desktop/bucklescript/vendor/ocaml/bin/ocamlrun"
 let ccomp_type = "cc"
-let bytecomp_c_compiler = "gcc -O  -Wall -D_FILE_OFFSET_BITS=64 -D_REENTRANT -O "
-let bytecomp_c_libraries = "-lpthread"
-let native_c_compiler = "gcc -O  -D_FILE_OFFSET_BITS=64 -D_REENTRANT"
+let bytecomp_c_compiler = "gcc -O -Wall -D_FILE_OFFSET_BITS=64 -O "
+let bytecomp_c_libraries = ""
+let native_c_compiler = "gcc -O  -D_FILE_OFFSET_BITS=64"
 let native_c_libraries = ""
 let native_pack_linker = "ld -r -arch x86_64  -o "
 let ranlib = "ranlib"
 let ar = "ar"
 let cc_profile = "-pg"
-let mkdll = "gcc -bundle -flat_namespace -undefined suppress -Wl,-no_compact_unwind"
+let mkdll = ""
 let mkexe = "gcc -Wl,-no_compact_unwind"
-let mkmaindll = "gcc -bundle -flat_namespace -undefined suppress -Wl,-no_compact_unwind"
+let mkmaindll = ""
 
 let exec_magic_number = "Caml1999X011"
 and cmi_magic_number = "Caml1999I017"
@@ -13749,8 +13747,8 @@ let ext_asm = ".s"
 let ext_lib = ".a"
 let ext_dll = ".so"
 
-let host = "x86_64-apple-darwin16.7.0"
-let target = "x86_64-apple-darwin16.7.0"
+let host = "x86_64-apple-darwin17.4.0"
+let target = "x86_64-apple-darwin17.4.0"
 
 let default_executable_name =
   match Sys.os_type with
@@ -13758,7 +13756,7 @@ let default_executable_name =
   | "Win32" | "Cygwin" -> "camlprog.exe"
   | _ -> "camlprog"
 
-let systhread_supported = true;;
+let systhread_supported = false;;
 
 let print_config oc =
   let p name valu = Printf.fprintf oc "%s: %s\n" name valu in
@@ -17468,6 +17466,7 @@ val output_ninja_and_namespace_map :
   is_top_level: bool ->
   backend:Bsb_config_types.compilation_kind_t ->
   main_bs_super_errors:bool ->
+  build_library:bool ->
   Bsb_config_types.t -> unit 
 
 end = struct
@@ -17533,6 +17532,7 @@ let output_ninja_and_namespace_map
     ~is_top_level
     ~backend
     ~main_bs_super_errors
+    ~build_library
     ({
       bs_suffix;
       package_name;
@@ -17823,7 +17823,7 @@ let output_ninja_and_namespace_map
     if List.mem Bsb_config_types.Bytecode allowed_build_kinds then
       (Bsb_ninja_native.handle_file_groups oc
         ~custom_rules
-        ~is_top_level
+        ~is_top_level:(if build_library then false else is_top_level)
         ~entries
         ~compile_target:Bsb_ninja_native.Bytecode
         ~backend
@@ -17844,7 +17844,7 @@ let output_ninja_and_namespace_map
     if List.mem Bsb_config_types.Native allowed_build_kinds then
       (Bsb_ninja_native.handle_file_groups oc
         ~custom_rules
-        ~is_top_level
+        ~is_top_level:(if build_library then false else is_top_level)
         ~entries
         ~compile_target:Bsb_ninja_native.Native
         ~backend
@@ -18026,6 +18026,7 @@ val regenerate_ninja :
   generate_watch_metadata: bool -> 
   forced: bool -> 
   root_project_dir:string ->
+  build_library:bool ->
   backend: Bsb_config_types.compilation_kind_t ->
   string ->  string ->  string -> 
   Bsb_config_types.t option 
@@ -18075,6 +18076,7 @@ let regenerate_ninja
   ~generate_watch_metadata
   ~forced
   ~root_project_dir
+  ~build_library
   ~backend
   cwd bsc_dir ocaml_dir 
   : _ option =
@@ -18233,6 +18235,7 @@ let regenerate_ninja
           ~is_top_level 
           ~backend 
           ~main_bs_super_errors
+          ~build_library
           config;
         (* PR2184: we still need record empty dir 
             since it may add files in the future *)  
@@ -18331,7 +18334,7 @@ let query_current_package_sources cwd backend bsc_dir =
       ~not_dev:false
       ~override_package_specs:None
       ~generate_watch_metadata:true
-      ~forced:true ~backend cwd bsc_dir ocaml_dir in 
+      ~forced:true ~backend ~build_library:false cwd bsc_dir ocaml_dir in 
     match config_opt with   
     | None -> None
      
@@ -19451,6 +19454,7 @@ let build_bs_deps cwd ~root_project_dir ~backend ~main_bs_super_errors deps =
              ~forced:true
              ~backend
              ~main_bs_super_errors
+             ~build_library:false
              cwd bsc_dir ocaml_dir in (* set true to force regenrate ninja file so we have [config_opt]*)
            let config = begin match config_opt with 
             | None ->
@@ -19592,6 +19596,8 @@ let cmdline_build_kind = ref Bsb_config_types.Js
 *)
 let is_cmdline_build_kind_set = ref false
 
+let build_library = ref false
+
 let get_backend () =
   (* If cmdline_build_kind is set we use it, otherwise we actually shadow it for the first entry. *)
   if !is_cmdline_build_kind_set then
@@ -19664,6 +19670,9 @@ let bsb_main_flags : (string * Arg.spec * string) list=
     
     "-build-artifacts-dir", Arg.String (fun s -> Bsb_build_util.build_artifacts_dir := Some (cwd // s)),
     " Sets the directory in which all the build artifacts will go into.";
+
+    "-build-library", Arg.Unit (fun () -> build_library := true),
+    " Builds the current package as a library. Outputs a cmxa/cma file."
   ]
 
 
@@ -19766,6 +19775,7 @@ let () =
           ~generate_watch_metadata:true
           ~root_project_dir:cwd
           ~forced:true
+          ~build_library:!build_library
           ~backend
           cwd bsc_dir ocaml_dir
       in
@@ -19787,8 +19797,8 @@ let () =
 
             (* [-make-world] should never be combined with [-package-specs] *)
             let make_world = !make_world in 
-            begin match make_world, !force_regenerate with
-              | false, false -> 
+            begin match make_world, !force_regenerate, !build_library with
+              | false, false, false -> 
                 (* [regenerate_ninja] is not triggered in this case
                    There are several cases we wish ninja will not be triggered.
                    [bsb -clean-world]
@@ -19796,8 +19806,8 @@ let () =
                 *)
                 if !watch_mode then begin
                   watch_exit ()
-                end 
-              | make_world, force_regenerate ->
+                end
+              | make_world, force_regenerate, build_library ->
                 (* If -make-world is passed we first do that because we'll collect
                    the library files as we go. *)
                 let acc_libraries_for_linking = if make_world then
@@ -19812,6 +19822,7 @@ let () =
                   ~not_dev:false 
                   ~root_project_dir:cwd
                   ~forced:force_regenerate
+                  ~build_library:build_library
                   ~backend
                   cwd bsc_dir ocaml_dir in
                 if !watch_mode then begin
@@ -19846,6 +19857,7 @@ let () =
             ~not_dev:false
             ~root_project_dir:cwd
             ~forced:!force_regenerate
+            ~build_library:!build_library
             ~backend
             cwd bsc_dir ocaml_dir in
           if !watch_mode then watch_exit ()
