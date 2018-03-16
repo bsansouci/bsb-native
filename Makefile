@@ -16,7 +16,6 @@ libs:
 	#$(MAKE) -C jscomp/runtime -j8 all
 	#$(MAKE) -C jscomp/others -j8 all
 	#$(MAKE) -C jscomp/stdlib -j8 all
-	
 
 DEST=lib/ocaml
 RUNTIME=jscomp/runtime
@@ -40,7 +39,5 @@ install:
 	# $(RUNTIME)/js_typed_array.ml $(RUNTIME)/js_typed_array.cmi  \
 	# $(STDLIB)/*.cm* $(STDLIB)/*.ml $(STDLIB)/*.mli \
 	# $(OTHERS)/*.ml $(OTHERS)/*.mli  $(OTHERS)/*.cm* $(DEST)
-	cp -r $(OCAML)/lib/ocaml/caml $(DEST)
-	
 
 .PHONY: libs world

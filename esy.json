@@ -1,0 +1,44 @@
+{
+  "name": "bs-platform",
+  "description": "Bucklescript build system",
+  "version": "2.1.1",
+  "license": "SEE LICENSE IN LICENSE",
+  "author": "Hongbo Zhang <bobzhang1988@gmail.com>",
+  "esy": {
+    "build": [
+      ["make", "world"],
+      ["make", "install"],
+      ["cp", "-rf", "#{self.target_dir / 'lib' }", "#{self.install}"],
+      ["cp", "-rf", "#{self.target_dir / 'vendor' }", "#{self.install}"],
+      ["cp", "-rf", "#{ocaml.lib / 'ocaml' / 'caml' }", "#{self.lib}"]
+    ],
+    "install": [],
+    "buildsInSource": true,
+    "exportedEnv": {
+      "bs_custom_resolution": {
+        "val": "true",
+        "scope": "global"
+      },
+      "bs_platform__install": {
+        "val": "#{self.install}",
+        "scope": "global"
+      },
+      "PATH": {
+        "val": "#{self.lib : $PATH}",
+        "scope": "global"
+      }
+    }
+  },
+  "dependencies": {
+    "@esy-cross/ninja-build": "^1.8.2",
+    "@esy-ocaml/esy-installer": "^0.0.0",
+    "@esy-ocaml/substs": "^0.0.1",
+    "ocaml": "~4.6.1"
+  },
+  "peerDependencies": {
+    "ocaml": "~4.6.1"
+  },
+  "devDependencies": {
+    "@esy-ocaml/merlin": "*"
+  }
+}

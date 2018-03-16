@@ -226,7 +226,7 @@ let () =
   try begin
   let ocaml_dir = Bsb_build_util.get_ocaml_dir cwd in
   let vendor_ninja = bsc_dir // "ninja.exe" in
-  match Sys.argv with 
+  match Sys.argv with
   (* Both of those are equivalent and the watcher will always pass in the `-backend` flag. *)
   | [| _; "-backend"; _ |] 
   | [| _ |] ->  (* specialize this path [bsb.exe] which is used in watcher *)
