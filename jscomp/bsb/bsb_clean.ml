@@ -28,7 +28,7 @@ let (//) = Ext_path.combine
 
 let ninja_clean ~nested bsc_dir proj_dir =
   try
-    let cmd = bsc_dir // "ninja.exe" in
+    let cmd = "ninja.exe" in
     let cwd = proj_dir // nested // Bsb_config.lib_bs  in
     if Sys.file_exists cwd then 
       let eid = 

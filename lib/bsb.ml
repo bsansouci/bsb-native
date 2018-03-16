@@ -6537,7 +6537,7 @@ let (//) = Ext_path.combine
 
 let ninja_clean ~nested bsc_dir proj_dir =
   try
-    let cmd = bsc_dir // "ninja.exe" in
+    let cmd = "ninja.exe" in
     let cwd = proj_dir // nested // Bsb_config.lib_bs  in
     if Sys.file_exists cwd then 
       let eid = 
@@ -19365,7 +19365,7 @@ let install_targets ~backend cwd (config : Bsb_config_types.t option) =
 let build_bs_deps cwd ~root_project_dir ~backend ~main_bs_super_errors deps =
   let bsc_dir = Bsb_build_util.get_bsc_dir cwd in
   let ocaml_dir = Bsb_build_util.get_ocaml_dir cwd in
-  let vendor_ninja = bsc_dir // "ninja.exe" in
+  let vendor_ninja = "ninja.exe" in
   let all_external_deps = ref [] in
   let all_ocamlfind_dependencies = ref [] in
   let all_ocaml_dependencies = ref Depend.StringSet.empty in
@@ -20437,7 +20437,7 @@ let watch_exit () =
 let () =
   try begin
   let ocaml_dir = Bsb_build_util.get_ocaml_dir cwd in
-  let vendor_ninja = bsc_dir // "ninja.exe" in
+  let vendor_ninja = "ninja.exe" in
   match Sys.argv with
   (* Both of those are equivalent and the watcher will always pass in the `-backend` flag. *)
   | [| _; "-backend"; _ |] 
