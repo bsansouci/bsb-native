@@ -110,7 +110,7 @@ let build_bs_deps cwd ~root_project_dir ~backend ~main_bs_super_errors deps =
              ~forced:true
              ~backend
              ~main_bs_super_errors
-             ~build_library:false
+             ~build_library:None
              cwd bsc_dir ocaml_dir in (* set true to force regenrate ninja file so we have [config_opt]*)
            let config = begin match config_opt with 
             | None ->
@@ -157,7 +157,8 @@ let build_bs_deps cwd ~root_project_dir ~backend ~main_bs_super_errors deps =
              if Bsb_config_types.(config.build_script) <> None then begin
                let filename = build_artifacts_dir // ".static_libraries" in
                if not (Sys.file_exists filename) then 
-                  Bsb_exception.missing_static_libraries_file (Bsb_config_types.(config.package_name)) 
+                ()
+                  (* Bsb_exception.missing_static_libraries_file (Bsb_config_types.(config.package_name))  *)
                else begin
                  let artifacts_installed = ref [] in
                  let ic = open_in_bin filename in

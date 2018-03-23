@@ -32,6 +32,9 @@ for (var i = 2; i < process_argv.length; ++i) {
     } else if (current === "-backend" && i + 1 < process_argv.length) {
         backend_arg.push(current);
         backend_arg.push(process_argv[i + 1]);
+    } else if (current === "-build-library" && i + 1 < process_argv.length) {
+        backend_arg.push(current);
+        backend_arg.push(process_argv[i + 1]);
     }
 }
 

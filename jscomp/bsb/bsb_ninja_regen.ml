@@ -50,7 +50,7 @@ let regenerate_ninja
   let check_result  =
     Bsb_ninja_check.check 
       ~cwd:build_artifacts_dir
-      ~forced ~file:output_deps backend in
+      ~forced ~file:output_deps backend build_library in
   let () = 
     Bsb_log.info
       "@{<info>BSB check@} build spec : %a @." Bsb_ninja_check.pp_check_result check_result in 
@@ -168,7 +168,8 @@ let regenerate_ninja
                       let artifacts_installed = ref [] in
                       let filename = build_artifacts_dir // ".static_libraries"in
                       if not (Sys.file_exists filename) then 
-                        Bsb_exception.missing_static_libraries_file (Bsb_config_types.(innerConfig.package_name)) 
+                        ()
+                        (* Bsb_exception.missing_static_libraries_file (Bsb_config_types.(innerConfig.package_name))  *)
                       else begin
                         let ic = open_in_bin filename in
                         (try
@@ -206,7 +207,8 @@ let regenerate_ninja
             since it may add files in the future *)  
         Bsb_ninja_check.record ~cwd ~file:output_deps 
           (Literals.bsconfig_json::config.globbed_dirs) 
-          backend;
+          backend
+          build_library;
         Some config 
       end 
   end

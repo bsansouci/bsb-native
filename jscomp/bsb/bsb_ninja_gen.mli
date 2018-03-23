@@ -35,5 +35,5 @@ val output_ninja_and_namespace_map :
   is_top_level: bool ->
   backend:Bsb_config_types.compilation_kind_t ->
   main_bs_super_errors:bool ->
-  build_library:bool ->
+  build_library:string option ->
   Bsb_config_types.t -> unit 

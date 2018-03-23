@@ -8452,6 +8452,7 @@ val pack : pack_t ->
   warnings: string -> 
   warn_error: string ->
   verbose: bool ->
+  build_library:string option ->
   string ->
   unit
 
@@ -8503,6 +8504,7 @@ let pack pack_byte_or_native
   ~warnings 
   ~warn_error
   ~verbose
+  ~build_library
   cwd =
   let suffix_object_files, suffix_library_files, compiler, custom_flag = begin match pack_byte_or_native with
   | PackBytecode -> Literals.suffix_cmo, Literals.suffix_cma , "ocamlc", true
@@ -8528,14 +8530,32 @@ let pack pack_byte_or_native
     String_map.fold
       (fun k _ acc -> String_set.add k acc)
       dependency_graph String_set.empty in
-  let sorted_tasks = Bsb_helper_dep_graph.sort_files_by_dependencies ~domain dependency_graph in
-  let all_object_files = List.rev (Queue.fold
+  
+  let all_object_files = match build_library with 
+  | None -> 
+    let sorted_tasks = Bsb_helper_dep_graph.sort_files_by_dependencies ~domain dependency_graph in
+    List.rev (Queue.fold
     (fun acc v -> match String_map.find_opt v module_to_filepath with
       | Some file -> (file ^ suffix_object_files) :: acc
       | None -> Bsb_exception.missing_object_file v
       )
     []
-    sorted_tasks) in
+    sorted_tasks)
+  | Some build_library -> 
+    let tasks = Bsb_helper_dep_graph.simple_collect_from_main dependency_graph build_library in
+    let namespace = match namespace with 
+      | None -> ""
+      | Some namespace -> "-" ^ namespace
+    in
+    List.rev (Queue.fold
+        (fun acc v -> match String_map.find_opt v module_to_filepath with
+          | Some file -> (file ^ namespace ^ suffix_object_files) :: acc
+          | None -> Bsb_exception.missing_object_file v
+          )
+        []
+        tasks)
+  in
+  
   let all_object_files = match namespace with
     | None -> all_object_files
     | Some namespace -> (namespace ^ suffix_object_files) :: all_object_files 
@@ -8693,6 +8713,8 @@ let bs_super_errors = ref false
 let dev_group = ref 0
 let namespace = ref None
 
+let build_library = ref None
+
 
 let anonymous filename =
   collect_file filename
@@ -8730,6 +8752,7 @@ let pack link_byte_or_native =
     ~warnings:!warnings
     ~warn_error:!warn_error
     ~verbose:!verbose
+    ~build_library:!build_library
     (Sys.getcwd ())
     
 let () =
@@ -8831,7 +8854,10 @@ let () =
     " Turn warnings into errors for packer/linker.";
     
     "-verbose", (Arg.Unit (fun v -> verbose := true)),
-    " Turn on verbose Maude."
+    " Turn on verbose Maude.";
+    
+    "-build-library", (Arg.String (fun v -> build_library := Some v)),
+    " Create a library file with all the object files from the given entry point."
   ] anonymous usage
 
 end

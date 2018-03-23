@@ -350,7 +350,8 @@ let output_ninja_and_namespace_map
     if List.mem Bsb_config_types.Bytecode allowed_build_kinds then
       (Bsb_ninja_native.handle_file_groups oc
         ~custom_rules
-        ~is_top_level:(if build_library then false else is_top_level)
+        ~is_top_level
+        ~build_library
         ~entries
         ~compile_target:Bsb_ninja_native.Bytecode
         ~backend
@@ -371,7 +372,8 @@ let output_ninja_and_namespace_map
     if List.mem Bsb_config_types.Native allowed_build_kinds then
       (Bsb_ninja_native.handle_file_groups oc
         ~custom_rules
-        ~is_top_level:(if build_library then false else is_top_level)
+        ~is_top_level
+        ~build_library
         ~entries
         ~compile_target:Bsb_ninja_native.Native
         ~backend

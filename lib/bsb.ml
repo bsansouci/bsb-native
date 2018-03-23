@@ -11563,13 +11563,13 @@ val pp_check_result : Format.formatter -> check_result -> unit
     We serialize such data structure and call {!check} to decide
     [build.ninja] should be regenerated
 *)
-val record : cwd:string -> file:string -> string list -> Bsb_config_types.compilation_kind_t -> unit
+val record : cwd:string -> file:string -> string list -> Bsb_config_types.compilation_kind_t -> string option -> unit
 
 
 (** check if [build.ninja] should be regenerated *)
 val check :
   cwd:string ->  
-  forced:bool -> file:string -> Bsb_config_types.compilation_kind_t -> check_result
+  forced:bool -> file:string -> Bsb_config_types.compilation_kind_t -> string option -> check_result
 
 end = struct
 #1 "bsb_ninja_check.ml"
@@ -11608,6 +11608,7 @@ type t =
     bsb_version : string;
     bsc_version : string;
     cmdline_build_kind: Bsb_config_types.compilation_kind_t;
+    cmdline_build_library: string option;
   }
 
 
@@ -11670,7 +11671,7 @@ let read (fname : string) cont =
       cont res
   | exception _ -> Bsb_file_not_exist
 
-let record ~cwd ~file  file_or_dirs cmdline_build_kind =
+let record ~cwd ~file  file_or_dirs cmdline_build_kind cmdline_build_library =
   let file_stamps = 
     Ext_array.of_list_map
       (fun  x -> 
@@ -11683,7 +11684,8 @@ let record ~cwd ~file  file_or_dirs cmdline_build_kind =
       source_directory = cwd ;
       bsb_version ;
       bsc_version = Bs_version.version;
-      cmdline_build_kind = cmdline_build_kind }
+      cmdline_build_kind = cmdline_build_kind;
+      cmdline_build_library = cmdline_build_library; }
 
 (** check time stamp for all files
     TODO: those checks system call can be saved later
@@ -11691,16 +11693,21 @@ let record ~cwd ~file  file_or_dirs cmdline_build_kind =
     Even forced, we still need walk through a little
     bit in case we found a different version of compiler
 *)
-let check ~cwd ~forced ~file cmdline_build_kind : check_result =
+let check ~cwd ~forced ~file cmdline_build_kind cmdline_build_library : check_result =
   read file  begin  function  {
-    file_stamps = xs; source_directory; bsb_version = old_version; cmdline_build_kind = old_cmdline_build_kind;
+    file_stamps = xs; 
+    source_directory; 
+    bsb_version = old_version; 
+    cmdline_build_kind = old_cmdline_build_kind; 
+    cmdline_build_library = old_cmdline_build_library;
     bsc_version
   } ->
     if old_version <> bsb_version then Bsb_bsc_version_mismatch else
     if cwd <> source_directory then Bsb_source_directory_changed else
     if bsc_version <> Bs_version.version then Bsb_bsc_version_mismatch else
     if forced then Bsb_forced else (* No need walk through *)
-    if cmdline_build_kind <> old_cmdline_build_kind then Bsb_different_cmdline_arg
+    if cmdline_build_kind <> old_cmdline_build_kind
+      || cmdline_build_library <> old_cmdline_build_library then Bsb_different_cmdline_arg
     else
       try
         check_aux cwd xs  0 (Array.length xs)
@@ -12280,14 +12287,14 @@ let linking_native =
 
 let build_cma_library =
   define
-    ~command:"${bsb_helper} ${bsb_helper_verbose} ${ocaml_dependencies} ${warnings} ${namespace} ${bs_super_errors} ${static_libraries} ${ocamlfind_dependencies} \
+    ~command:"${bsb_helper} ${bsb_helper_verbose} ${build_library} ${ocaml_dependencies} ${warnings} ${namespace} ${bs_super_errors} ${static_libraries} ${ocamlfind_dependencies} \
               ${bs_package_includes} ${bsc_lib_includes} ${bsc_extra_includes} \
               ${in} -pack-bytecode-library"
     "build_cma_library"
 
 let build_cmxa_library =
   define
-    ~command:"${bsb_helper} ${bsb_helper_verbose} ${ocaml_dependencies} ${warnings} ${namespace} ${bs_super_errors} ${static_libraries} ${ocamlfind_dependencies} \
+    ~command:"${bsb_helper} ${bsb_helper_verbose} ${build_library} ${ocaml_dependencies} ${warnings} ${namespace} ${bs_super_errors} ${static_libraries} ${ocamlfind_dependencies} \
               ${bs_package_includes} ${bsc_lib_includes} ${bsc_extra_includes} \
               ${in} -pack-native-library"
     "build_cmxa_library"
@@ -12991,6 +12998,7 @@ type compile_target_t = Native | Bytecode
 val handle_file_groups : out_channel ->
   custom_rules:Bsb_rule.t String_map.t -> 
   is_top_level:bool ->
+  build_library:string option ->
   entries:Bsb_config_types.entries_t list ->
   compile_target:compile_target_t ->
   backend:Bsb_config_types.compilation_kind_t ->
@@ -13427,7 +13435,7 @@ let link oc ret ~entries ~file_groups ~static_libraries ~c_linker_flags ~namespa
     acc
   ) ret entries
     
-let pack oc ret ~backend ~file_groups ~namespace =
+let pack oc ret ?build_library ~backend ~file_groups ~namespace () =
   let output_cma_or_cmxa, rule_name, suffix_cmo_or_cmx =
     begin match backend with
     (* These cases could benefit from a better error message. *)
@@ -13479,6 +13487,13 @@ let pack oc ret ~backend ~file_groups ~namespace =
     ) group.Bsb_parse_sources.sources acc) 
     ([], [])
     file_groups in
+  let shadows = match build_library with
+  | None -> []
+  | Some build_library -> [{
+      Bsb_ninja_util.key = "build_library";
+      op = Bsb_ninja_util.Overwrite ("-build-library " ^ build_library)
+    }]
+  in
   (* In the case that a library is just an interface file, we don't do anything *)
   if List.length all_cmo_or_cmx_files > 0 then begin
     output_build oc
@@ -13486,6 +13501,7 @@ let pack oc ret ~backend ~file_groups ~namespace =
       ~input:""
       ~inputs:all_cmo_or_cmx_files
       ~implicit_deps:all_cmi_files
+      ~shadows
       ~rule:rule_name;
     ret @ []
   end else ret
@@ -13493,6 +13509,7 @@ let pack oc ret ~backend ~file_groups ~namespace =
 let handle_file_groups oc
   ~custom_rules
   ~is_top_level
+  ~build_library
   ~entries
   ~compile_target
   ~backend
@@ -13521,10 +13538,14 @@ let handle_file_groups oc
       ~bs_suffix
       files_to_install
   ) st file_groups in
-  if is_top_level then
-    link oc ret ~entries ~file_groups ~static_libraries ~c_linker_flags ~namespace ~external_deps_for_linking ~ocaml_dir
-  else
-    pack oc ret ~backend ~file_groups ~namespace
+  match build_library with
+  | None -> 
+    if is_top_level then
+      link oc ret ~entries ~file_groups ~static_libraries ~c_linker_flags ~namespace ~external_deps_for_linking ~ocaml_dir
+    else
+      pack oc ret ~backend ~file_groups ~namespace ()
+  | Some build_library -> 
+    pack oc ret ~build_library ~backend ~file_groups ~namespace ()
 
 end
 module Config : sig 
@@ -13682,11 +13703,12 @@ end = struct
 (**                                                                   **)
 (***********************************************************************)
 
+let ( // ) = Filename.concat
 
 (* The main OCaml version string has moved to ../VERSION *)
 let version = Sys.ocaml_version
 
-let standard_library_default = "/Users/benjamin/Desktop/bucklescript/vendor/ocaml/lib/ocaml"
+let standard_library_default = (Filename.dirname Sys.executable_name) // "lib" // "ocaml"
 
 let standard_library =
  
@@ -13696,19 +13718,20 @@ let standard_library =
 
     standard_library_default
 
-let standard_runtime = "/Users/benjamin/Desktop/bucklescript/vendor/ocaml/bin/ocamlrun"
+let extension = if Sys.win32 || Sys.cygwin then ".exe" else ""
+let standard_runtime = (Filename.dirname Sys.executable_name) // "bin" // "ocamlrun" ^ extension
 let ccomp_type = "cc"
-let bytecomp_c_compiler = "gcc -O -Wall -D_FILE_OFFSET_BITS=64 -O "
-let bytecomp_c_libraries = ""
-let native_c_compiler = "gcc -O  -D_FILE_OFFSET_BITS=64"
+let bytecomp_c_compiler = "gcc -O  -Wall -D_FILE_OFFSET_BITS=64 -D_REENTRANT -O "
+let bytecomp_c_libraries = "-lpthread"
+let native_c_compiler = "gcc -O  -D_FILE_OFFSET_BITS=64 -D_REENTRANT"
 let native_c_libraries = ""
 let native_pack_linker = "ld -r -arch x86_64  -o "
 let ranlib = "ranlib"
 let ar = "ar"
 let cc_profile = "-pg"
-let mkdll = ""
+let mkdll = "gcc -bundle -flat_namespace -undefined suppress -Wl,-no_compact_unwind"
 let mkexe = "gcc -Wl,-no_compact_unwind"
-let mkmaindll = ""
+let mkmaindll = "gcc -bundle -flat_namespace -undefined suppress -Wl,-no_compact_unwind"
 
 let exec_magic_number = "Caml1999X011"
 and cmi_magic_number = "Caml1999I017"
@@ -13756,7 +13779,7 @@ let default_executable_name =
   | "Win32" | "Cygwin" -> "camlprog.exe"
   | _ -> "camlprog"
 
-let systhread_supported = false;;
+let systhread_supported = true;;
 
 let print_config oc =
   let p name valu = Printf.fprintf oc "%s: %s\n" name valu in
@@ -17466,7 +17489,7 @@ val output_ninja_and_namespace_map :
   is_top_level: bool ->
   backend:Bsb_config_types.compilation_kind_t ->
   main_bs_super_errors:bool ->
-  build_library:bool ->
+  build_library:string option ->
   Bsb_config_types.t -> unit 
 
 end = struct
@@ -17823,7 +17846,8 @@ let output_ninja_and_namespace_map
     if List.mem Bsb_config_types.Bytecode allowed_build_kinds then
       (Bsb_ninja_native.handle_file_groups oc
         ~custom_rules
-        ~is_top_level:(if build_library then false else is_top_level)
+        ~is_top_level
+        ~build_library
         ~entries
         ~compile_target:Bsb_ninja_native.Bytecode
         ~backend
@@ -17844,7 +17868,8 @@ let output_ninja_and_namespace_map
     if List.mem Bsb_config_types.Native allowed_build_kinds then
       (Bsb_ninja_native.handle_file_groups oc
         ~custom_rules
-        ~is_top_level:(if build_library then false else is_top_level)
+        ~is_top_level
+        ~build_library
         ~entries
         ~compile_target:Bsb_ninja_native.Native
         ~backend
@@ -18026,7 +18051,7 @@ val regenerate_ninja :
   generate_watch_metadata: bool -> 
   forced: bool -> 
   root_project_dir:string ->
-  build_library:bool ->
+  build_library:string option ->
   backend: Bsb_config_types.compilation_kind_t ->
   string ->  string ->  string -> 
   Bsb_config_types.t option 
@@ -18085,7 +18110,7 @@ let regenerate_ninja
   let check_result  =
     Bsb_ninja_check.check 
       ~cwd:build_artifacts_dir
-      ~forced ~file:output_deps backend in
+      ~forced ~file:output_deps backend build_library in
   let () = 
     Bsb_log.info
       "@{<info>BSB check@} build spec : %a @." Bsb_ninja_check.pp_check_result check_result in 
@@ -18203,7 +18228,8 @@ let regenerate_ninja
                       let artifacts_installed = ref [] in
                       let filename = build_artifacts_dir // ".static_libraries"in
                       if not (Sys.file_exists filename) then 
-                        Bsb_exception.missing_static_libraries_file (Bsb_config_types.(innerConfig.package_name)) 
+                        ()
+                        (* Bsb_exception.missing_static_libraries_file (Bsb_config_types.(innerConfig.package_name))  *)
                       else begin
                         let ic = open_in_bin filename in
                         (try
@@ -18241,7 +18267,8 @@ let regenerate_ninja
             since it may add files in the future *)  
         Bsb_ninja_check.record ~cwd ~file:output_deps 
           (Literals.bsconfig_json::config.globbed_dirs) 
-          backend;
+          backend
+          build_library;
         Some config 
       end 
   end
@@ -18334,7 +18361,7 @@ let query_current_package_sources cwd backend bsc_dir =
       ~not_dev:false
       ~override_package_specs:None
       ~generate_watch_metadata:true
-      ~forced:true ~backend ~build_library:false cwd bsc_dir ocaml_dir in 
+      ~forced:true ~backend ~build_library:None cwd bsc_dir ocaml_dir in 
     match config_opt with   
     | None -> None
      
@@ -19454,7 +19481,7 @@ let build_bs_deps cwd ~root_project_dir ~backend ~main_bs_super_errors deps =
              ~forced:true
              ~backend
              ~main_bs_super_errors
-             ~build_library:false
+             ~build_library:None
              cwd bsc_dir ocaml_dir in (* set true to force regenrate ninja file so we have [config_opt]*)
            let config = begin match config_opt with 
             | None ->
@@ -19501,7 +19528,8 @@ let build_bs_deps cwd ~root_project_dir ~backend ~main_bs_super_errors deps =
              if Bsb_config_types.(config.build_script) <> None then begin
                let filename = build_artifacts_dir // ".static_libraries" in
                if not (Sys.file_exists filename) then 
-                  Bsb_exception.missing_static_libraries_file (Bsb_config_types.(config.package_name)) 
+                ()
+                  (* Bsb_exception.missing_static_libraries_file (Bsb_config_types.(config.package_name))  *)
                else begin
                  let artifacts_installed = ref [] in
                  let ic = open_in_bin filename in
@@ -19596,7 +19624,7 @@ let cmdline_build_kind = ref Bsb_config_types.Js
 *)
 let is_cmdline_build_kind_set = ref false
 
-let build_library = ref false
+let build_library = ref None
 
 let get_backend () =
   (* If cmdline_build_kind is set we use it, otherwise we actually shadow it for the first entry. *)
@@ -19671,7 +19699,7 @@ let bsb_main_flags : (string * Arg.spec * string) list=
     "-build-artifacts-dir", Arg.String (fun s -> Bsb_build_util.build_artifacts_dir := Some (cwd // s)),
     " Sets the directory in which all the build artifacts will go into.";
 
-    "-build-library", Arg.Unit (fun () -> build_library := true),
+    "-build-library", Arg.String (fun main_file -> build_library := Some(main_file)),
     " Builds the current package as a library. Outputs a cmxa/cma file."
   ]
 
@@ -19798,7 +19826,7 @@ let () =
             (* [-make-world] should never be combined with [-package-specs] *)
             let make_world = !make_world in 
             begin match make_world, !force_regenerate, !build_library with
-              | false, false, false -> 
+              | false, false, None -> 
                 (* [regenerate_ninja] is not triggered in this case
                    There are several cases we wish ninja will not be triggered.
                    [bsb -clean-world]

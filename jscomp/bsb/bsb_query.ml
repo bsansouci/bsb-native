@@ -49,7 +49,7 @@ let query_current_package_sources cwd backend bsc_dir =
       ~not_dev:false
       ~override_package_specs:None
       ~generate_watch_metadata:true
-      ~forced:true ~backend ~build_library:false cwd bsc_dir ocaml_dir in 
+      ~forced:true ~backend ~build_library:None cwd bsc_dir ocaml_dir in 
     match config_opt with   
     | None -> None
      

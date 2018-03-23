@@ -40,7 +40,7 @@ val regenerate_ninja :
   generate_watch_metadata: bool -> 
   forced: bool -> 
   root_project_dir:string ->
-  build_library:bool ->
+  build_library:string option ->
   backend: Bsb_config_types.compilation_kind_t ->
   string ->  string ->  string -> 
   Bsb_config_types.t option 

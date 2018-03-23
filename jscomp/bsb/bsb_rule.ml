@@ -261,14 +261,14 @@ let linking_native =
 
 let build_cma_library =
   define
-    ~command:"${bsb_helper} ${bsb_helper_verbose} ${ocaml_dependencies} ${warnings} ${namespace} ${bs_super_errors} ${static_libraries} ${ocamlfind_dependencies} \
+    ~command:"${bsb_helper} ${bsb_helper_verbose} ${build_library} ${ocaml_dependencies} ${warnings} ${namespace} ${bs_super_errors} ${static_libraries} ${ocamlfind_dependencies} \
               ${bs_package_includes} ${bsc_lib_includes} ${bsc_extra_includes} \
               ${in} -pack-bytecode-library"
     "build_cma_library"
 
 let build_cmxa_library =
   define
-    ~command:"${bsb_helper} ${bsb_helper_verbose} ${ocaml_dependencies} ${warnings} ${namespace} ${bs_super_errors} ${static_libraries} ${ocamlfind_dependencies} \
+    ~command:"${bsb_helper} ${bsb_helper_verbose} ${build_library} ${ocaml_dependencies} ${warnings} ${namespace} ${bs_super_errors} ${static_libraries} ${ocamlfind_dependencies} \
               ${bs_package_includes} ${bsc_lib_includes} ${bsc_extra_includes} \
               ${in} -pack-native-library"
     "build_cmxa_library"

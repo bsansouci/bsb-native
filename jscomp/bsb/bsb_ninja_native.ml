@@ -416,7 +416,7 @@ let link oc ret ~entries ~file_groups ~static_libraries ~c_linker_flags ~namespa
     acc
   ) ret entries
     
-let pack oc ret ~backend ~file_groups ~namespace =
+let pack oc ret ?build_library ~backend ~file_groups ~namespace () =
   let output_cma_or_cmxa, rule_name, suffix_cmo_or_cmx =
     begin match backend with
     (* These cases could benefit from a better error message. *)
@@ -468,6 +468,13 @@ let pack oc ret ~backend ~file_groups ~namespace =
     ) group.Bsb_parse_sources.sources acc) 
     ([], [])
     file_groups in
+  let shadows = match build_library with
+  | None -> []
+  | Some build_library -> [{
+      Bsb_ninja_util.key = "build_library";
+      op = Bsb_ninja_util.Overwrite ("-build-library " ^ build_library)
+    }]
+  in
   (* In the case that a library is just an interface file, we don't do anything *)
   if List.length all_cmo_or_cmx_files > 0 then begin
     output_build oc
@@ -475,6 +482,7 @@ let pack oc ret ~backend ~file_groups ~namespace =
       ~input:""
       ~inputs:all_cmo_or_cmx_files
       ~implicit_deps:all_cmi_files
+      ~shadows
       ~rule:rule_name;
     ret @ []
   end else ret
@@ -482,6 +490,7 @@ let pack oc ret ~backend ~file_groups ~namespace =
 let handle_file_groups oc
   ~custom_rules
   ~is_top_level
+  ~build_library
   ~entries
   ~compile_target
   ~backend
@@ -510,7 +519,11 @@ let handle_file_groups oc
       ~bs_suffix
       files_to_install
   ) st file_groups in
-  if is_top_level then
-    link oc ret ~entries ~file_groups ~static_libraries ~c_linker_flags ~namespace ~external_deps_for_linking ~ocaml_dir
-  else
-    pack oc ret ~backend ~file_groups ~namespace
+  match build_library with
+  | None -> 
+    if is_top_level then
+      link oc ret ~entries ~file_groups ~static_libraries ~c_linker_flags ~namespace ~external_deps_for_linking ~ocaml_dir
+    else
+      pack oc ret ~backend ~file_groups ~namespace ()
+  | Some build_library -> 
+    pack oc ret ~build_library ~backend ~file_groups ~namespace ()

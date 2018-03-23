@@ -33,6 +33,7 @@ type t =
     bsb_version : string;
     bsc_version : string;
     cmdline_build_kind: Bsb_config_types.compilation_kind_t;
+    cmdline_build_library: string option;
   }
 
 
@@ -95,7 +96,7 @@ let read (fname : string) cont =
       cont res
   | exception _ -> Bsb_file_not_exist
 
-let record ~cwd ~file  file_or_dirs cmdline_build_kind =
+let record ~cwd ~file  file_or_dirs cmdline_build_kind cmdline_build_library =
   let file_stamps = 
     Ext_array.of_list_map
       (fun  x -> 
@@ -108,7 +109,8 @@ let record ~cwd ~file  file_or_dirs cmdline_build_kind =
       source_directory = cwd ;
       bsb_version ;
       bsc_version = Bs_version.version;
-      cmdline_build_kind = cmdline_build_kind }
+      cmdline_build_kind = cmdline_build_kind;
+      cmdline_build_library = cmdline_build_library; }
 
 (** check time stamp for all files
     TODO: those checks system call can be saved later
@@ -116,16 +118,21 @@ let record ~cwd ~file  file_or_dirs cmdline_build_kind =
     Even forced, we still need walk through a little
     bit in case we found a different version of compiler
 *)
-let check ~cwd ~forced ~file cmdline_build_kind : check_result =
+let check ~cwd ~forced ~file cmdline_build_kind cmdline_build_library : check_result =
   read file  begin  function  {
-    file_stamps = xs; source_directory; bsb_version = old_version; cmdline_build_kind = old_cmdline_build_kind;
+    file_stamps = xs; 
+    source_directory; 
+    bsb_version = old_version; 
+    cmdline_build_kind = old_cmdline_build_kind; 
+    cmdline_build_library = old_cmdline_build_library;
     bsc_version
   } ->
     if old_version <> bsb_version then Bsb_bsc_version_mismatch else
     if cwd <> source_directory then Bsb_source_directory_changed else
     if bsc_version <> Bs_version.version then Bsb_bsc_version_mismatch else
     if forced then Bsb_forced else (* No need walk through *)
-    if cmdline_build_kind <> old_cmdline_build_kind then Bsb_different_cmdline_arg
+    if cmdline_build_kind <> old_cmdline_build_kind
+      || cmdline_build_library <> old_cmdline_build_library then Bsb_different_cmdline_arg
     else
       try
         check_aux cwd xs  0 (Array.length xs)

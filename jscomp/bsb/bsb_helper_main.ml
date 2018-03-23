@@ -61,6 +61,8 @@ let bs_super_errors = ref false
 let dev_group = ref 0
 let namespace = ref None
 
+let build_library = ref None
+
 
 let anonymous filename =
   collect_file filename
@@ -98,6 +100,7 @@ let pack link_byte_or_native =
     ~warnings:!warnings
     ~warn_error:!warn_error
     ~verbose:!verbose
+    ~build_library:!build_library
     (Sys.getcwd ())
     
 let () =
@@ -199,5 +202,8 @@ let () =
     " Turn warnings into errors for packer/linker.";
     
     "-verbose", (Arg.Unit (fun v -> verbose := true)),
-    " Turn on verbose Maude."
+    " Turn on verbose Maude.";
+    
+    "-build-library", (Arg.String (fun v -> build_library := Some v)),
+    " Create a library file with all the object files from the given entry point."
   ] anonymous usage

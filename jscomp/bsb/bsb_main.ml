@@ -54,7 +54,7 @@ let cmdline_build_kind = ref Bsb_config_types.Js
 *)
 let is_cmdline_build_kind_set = ref false
 
-let build_library = ref false
+let build_library = ref None
 
 let get_backend () =
   (* If cmdline_build_kind is set we use it, otherwise we actually shadow it for the first entry. *)
@@ -129,8 +129,8 @@ let bsb_main_flags : (string * Arg.spec * string) list=
     "-build-artifacts-dir", Arg.String (fun s -> Bsb_build_util.build_artifacts_dir := Some (cwd // s)),
     " Sets the directory in which all the build artifacts will go into.";
 
-    "-build-library", Arg.Unit (fun () -> build_library := true),
-    " Builds the current package as a library. Outputs a cmxa/cma file."
+    "-build-library", Arg.String (fun main_file -> build_library := Some(main_file)),
+    " Builds a static library given a main module name. Outputs a cmxa/cma file depending on -backend."
   ]
 
 
@@ -256,7 +256,7 @@ let () =
             (* [-make-world] should never be combined with [-package-specs] *)
             let make_world = !make_world in 
             begin match make_world, !force_regenerate, !build_library with
-              | false, false, false -> 
+              | false, false, None -> 
                 (* [regenerate_ninja] is not triggered in this case
                    There are several cases we wish ninja will not be triggered.
                    [bsb -clean-world]

@@ -55,10 +55,10 @@ val pp_check_result : Format.formatter -> check_result -> unit
     We serialize such data structure and call {!check} to decide
     [build.ninja] should be regenerated
 *)
-val record : cwd:string -> file:string -> string list -> Bsb_config_types.compilation_kind_t -> unit
+val record : cwd:string -> file:string -> string list -> Bsb_config_types.compilation_kind_t -> string option -> unit
 
 
 (** check if [build.ninja] should be regenerated *)
 val check :
   cwd:string ->  
-  forced:bool -> file:string -> Bsb_config_types.compilation_kind_t -> check_result
+  forced:bool -> file:string -> Bsb_config_types.compilation_kind_t -> string option -> check_result
