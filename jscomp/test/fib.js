@@ -24,7 +24,6 @@ function fib2(n) {
       _b = a + b | 0;
       _a = b;
       continue ;
-      
     }
   };
 }
@@ -40,7 +39,7 @@ function fib3(n) {
   return a;
 }
 
-exports.fib  = fib;
+exports.fib = fib;
 exports.fib2 = fib2;
 exports.fib3 = fib3;
 /* No side effect */

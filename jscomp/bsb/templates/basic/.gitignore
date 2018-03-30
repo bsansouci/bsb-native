@@ -25,3 +25,4 @@
 
 lib/bs
 node_modules
+.bsb.lock

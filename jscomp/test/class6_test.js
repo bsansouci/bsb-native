@@ -1,12 +1,12 @@
 'use strict';
 
-var Mt                      = require("./mt.js");
-var Block                   = require("../../lib/js/block.js");
-var Curry                   = require("../../lib/js/curry.js");
-var Caml_obj                = require("../../lib/js/caml_obj.js");
-var Caml_oo_curry           = require("../../lib/js/caml_oo_curry.js");
-var CamlinternalOO          = require("../../lib/js/camlinternalOO.js");
-var Caml_exceptions         = require("../../lib/js/caml_exceptions.js");
+var Mt = require("./mt.js");
+var Block = require("../../lib/js/block.js");
+var Curry = require("../../lib/js/curry.js");
+var Caml_obj = require("../../lib/js/caml_obj.js");
+var Caml_oo_curry = require("../../lib/js/caml_oo_curry.js");
+var CamlinternalOO = require("../../lib/js/camlinternalOO.js");
+var Caml_exceptions = require("../../lib/js/caml_exceptions.js");
 var Caml_builtin_exceptions = require("../../lib/js/caml_builtin_exceptions.js");
 
 var shared = ["m"];
@@ -26,7 +26,7 @@ function eq(loc, x, y) {
   test_id[0] = test_id[0] + 1 | 0;
   suites[0] = /* :: */[
     /* tuple */[
-      loc + (" id " + test_id[0]),
+      loc + (" id " + String(test_id[0])),
       (function () {
           return /* Eq */Block.__(0, [
                     x,
@@ -108,7 +108,6 @@ function lookup_obj(obj, _param) {
       } else {
         _param = param[1];
         continue ;
-        
       }
     } else {
       throw Caml_builtin_exceptions.not_found;
@@ -280,18 +279,18 @@ eq("File \"class6_test.ml\", line 74, characters 5-12", /* tuple */[
 
 Mt.from_pair_suites("class6_test.ml", suites[0]);
 
-exports.suites                 = suites;
-exports.test_id                = test_id;
-exports.eq                     = eq;
-exports.point                  = point;
-exports.colored_point          = colored_point;
+exports.suites = suites;
+exports.test_id = test_id;
+exports.eq = eq;
+exports.point = point;
+exports.colored_point = colored_point;
 exports.colored_point_to_point = colored_point_to_point;
-exports.p                      = p;
-exports.q                      = q;
-exports.lookup_obj             = lookup_obj;
-exports.c                      = c;
-exports.d                      = d;
-exports.c2$prime               = c2$prime;
-exports.functional_point       = functional_point;
-exports.bad_functional_point   = bad_functional_point;
+exports.p = p;
+exports.q = q;
+exports.lookup_obj = lookup_obj;
+exports.c = c;
+exports.d = d;
+exports.c2$prime = c2$prime;
+exports.functional_point = functional_point;
+exports.bad_functional_point = bad_functional_point;
 /* point Not a pure module */

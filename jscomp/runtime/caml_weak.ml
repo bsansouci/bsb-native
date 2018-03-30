@@ -39,14 +39,14 @@ let caml_weak_set xs i v =
   | None -> ()
 
 let caml_weak_get  xs i = 
-  Js_undefined.to_opt xs.(i) 
+  Js.undefinedToOption xs.(i) 
 
 let caml_weak_get_copy  xs i = 
-  match Js_undefined.to_opt xs.(i) with 
+  match Js.undefinedToOption xs.(i) with 
   | None -> None 
   | Some x -> Some (Obj.magic (Obj.dup (Obj.repr x) ))
 
 let caml_weak_check xs i = 
-  not @@ Js_undefined.test xs.(i)
+  xs.(i) <> Js.undefined
 
 let caml_weak_blit = Caml_array.caml_array_blit

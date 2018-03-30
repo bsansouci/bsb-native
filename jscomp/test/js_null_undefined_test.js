@@ -1,9 +1,8 @@
 'use strict';
 
-var Mt                = require("./mt.js");
-var Block             = require("../../lib/js/block.js");
-var Caml_obj          = require("../../lib/js/caml_obj.js");
-var Js_primitive      = require("../../lib/js/js_primitive.js");
+var Mt = require("./mt.js");
+var Block = require("../../lib/js/block.js");
+var Js_primitive = require("../../lib/js/js_primitive.js");
 var Js_null_undefined = require("../../lib/js/js_null_undefined.js");
 
 var suites_000 = /* tuple */[
@@ -228,21 +227,21 @@ var suites_001 = /* :: */[
                                       /* tuple */[
                                         "null <> undefined",
                                         (function () {
-                                            return /* Ok */Block.__(4, [Caml_obj.caml_notequal(null, undefined)]);
+                                            return /* Ok */Block.__(4, [/* true */1]);
                                           })
                                       ],
                                       /* :: */[
                                         /* tuple */[
                                           "null <> empty",
                                           (function () {
-                                              return /* Ok */Block.__(4, [Caml_obj.caml_notequal(null, undefined)]);
+                                              return /* Ok */Block.__(4, [/* true */1]);
                                             })
                                         ],
                                         /* :: */[
                                           /* tuple */[
                                             "undefined = empty",
                                             (function () {
-                                                return /* Ok */Block.__(4, [Caml_obj.caml_equal(undefined, undefined)]);
+                                                return /* Ok */Block.__(4, [/* true */1]);
                                               })
                                           ],
                                           /* :: */[

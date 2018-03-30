@@ -1,23 +1,24 @@
 'use strict';
 
-var Sys                     = require("../../lib/js/sys.js");
-var Char                    = require("../../lib/js/char.js");
-var List                    = require("../../lib/js/list.js");
-var Block                   = require("../../lib/js/block.js");
-var Bytes                   = require("../../lib/js/bytes.js");
-var Curry                   = require("../../lib/js/curry.js");
-var Buffer                  = require("../../lib/js/buffer.js");
-var Format                  = require("../../lib/js/format.js");
-var Js_exn                  = require("../../lib/js/js_exn.js");
-var Printf                  = require("../../lib/js/printf.js");
-var $$String                = require("../../lib/js/string.js");
-var Caml_io                 = require("../../lib/js/caml_io.js");
-var Printexc                = require("../../lib/js/printexc.js");
-var Caml_bytes              = require("../../lib/js/caml_bytes.js");
-var Caml_int32              = require("../../lib/js/caml_int32.js");
-var Pervasives              = require("../../lib/js/pervasives.js");
-var Caml_string             = require("../../lib/js/caml_string.js");
-var Caml_missing_polyfill   = require("../../lib/js/caml_missing_polyfill.js");
+var Sys = require("../../lib/js/sys.js");
+var Char = require("../../lib/js/char.js");
+var List = require("../../lib/js/list.js");
+var Block = require("../../lib/js/block.js");
+var Bytes = require("../../lib/js/bytes.js");
+var Curry = require("../../lib/js/curry.js");
+var $$Buffer = require("../../lib/js/buffer.js");
+var Format = require("../../lib/js/format.js");
+var Js_exn = require("../../lib/js/js_exn.js");
+var Printf = require("../../lib/js/printf.js");
+var $$String = require("../../lib/js/string.js");
+var Caml_io = require("../../lib/js/caml_io.js");
+var Printexc = require("../../lib/js/printexc.js");
+var Caml_bytes = require("../../lib/js/caml_bytes.js");
+var Caml_int32 = require("../../lib/js/caml_int32.js");
+var Pervasives = require("../../lib/js/pervasives.js");
+var Caml_string = require("../../lib/js/caml_string.js");
+var Caml_primitive = require("../../lib/js/caml_primitive.js");
+var Caml_missing_polyfill = require("../../lib/js/caml_missing_polyfill.js");
 var Caml_builtin_exceptions = require("../../lib/js/caml_builtin_exceptions.js");
 
 function _with_in(filename, f) {
@@ -102,14 +103,14 @@ function to_buf(b, t) {
     var l = t[1];
     if (l) {
       if (l[1]) {
-        Buffer.add_char(b, /* "(" */40);
+        $$Buffer.add_char(b, /* "(" */40);
         List.iteri((function (i, t$prime) {
                 if (i > 0) {
-                  Buffer.add_char(b, /* " " */32);
+                  $$Buffer.add_char(b, /* " " */32);
                 }
                 return to_buf(b, t$prime);
               }), l);
-        return Buffer.add_char(b, /* ")" */41);
+        return $$Buffer.add_char(b, /* ")" */41);
       } else {
         return Curry._2(Printf.bprintf(b, /* Format */[
                         /* Char_literal */Block.__(12, [
@@ -123,7 +124,7 @@ function to_buf(b, t) {
                       ]), to_buf, l[0]);
       }
     } else {
-      return Buffer.add_string(b, "()");
+      return $$Buffer.add_string(b, "()");
     }
   } else {
     var s = t[1];
@@ -142,15 +143,15 @@ function to_buf(b, t) {
                       "\"%s\""
                     ]), $$String.escaped(s));
     } else {
-      return Buffer.add_string(b, s);
+      return $$Buffer.add_string(b, s);
     }
   }
 }
 
 function to_string(t) {
-  var b = Buffer.create(128);
+  var b = $$Buffer.create(128);
   to_buf(b, t);
-  return Buffer.contents(b);
+  return $$Buffer.contents(b);
 }
 
 function print(fmt, t) {
@@ -348,11 +349,11 @@ var ID_MONAD = /* module */[
 
 function make($staropt$star, refill) {
   var bufsize = $staropt$star ? $staropt$star[0] : 1024;
-  var bufsize$1 = Pervasives.min(Pervasives.max(bufsize, 16), Sys.max_string_length);
+  var bufsize$1 = Caml_primitive.caml_int_min(bufsize > 16 ? bufsize : 16, Sys.max_string_length);
   return /* record */[
           /* buf */Caml_string.caml_create_string(bufsize$1),
           /* refill */refill,
-          /* atom */Buffer.create(32),
+          /* atom */$$Buffer.create(32),
           /* i */0,
           /* len */0,
           /* line */1,
@@ -372,10 +373,10 @@ function _refill(t, k_succ, k_fail) {
   var n = Curry._3(t[/* refill */1], t[/* buf */0], 0, t[/* buf */0].length);
   t[/* i */3] = 0;
   t[/* len */4] = n;
-  if (n) {
-    return Curry._1(k_succ, t);
-  } else {
+  if (n === 0) {
     return Curry._1(k_fail, t);
+  } else {
+    return Curry._1(k_succ, t);
   }
 }
 
@@ -402,7 +403,7 @@ function _get(t) {
 }
 
 function _error(t, msg) {
-  var b = Buffer.create(32);
+  var b = $$Buffer.create(32);
   Curry._2(Printf.bprintf(b, /* Format */[
             /* String_literal */Block.__(11, [
                 "at ",
@@ -427,7 +428,7 @@ function _error(t, msg) {
             "at %d, %d: "
           ]), t[/* line */5], t[/* col */6]);
   return Printf.kbprintf((function (b) {
-                var msg$prime = Buffer.contents(b);
+                var msg$prime = $$Buffer.contents(b);
                 return /* `Error */[
                         106380200,
                         msg$prime
@@ -458,11 +459,9 @@ function expr(k, t) {
           return expr_starting_with(c, k, t);
         } else {
           continue ;
-          
         }
       } else if (c >= 9) {
         continue ;
-        
       } else {
         return expr_starting_with(c, k, t);
       }
@@ -526,7 +525,7 @@ function expr_starting_with(c, k, t) {
   }
   switch (exit) {
     case 1 : 
-        Buffer.add_char(t[/* atom */2], c);
+        $$Buffer.add_char(t[/* atom */2], c);
         return atom(k, t);
     case 2 : 
         throw [
@@ -562,7 +561,6 @@ function expr_list(acc, k, t) {
         }
       } else if (switcher > 22 || switcher < 2) {
         continue ;
-        
       } else {
         exit = 1;
       }
@@ -609,7 +607,7 @@ function expr_list(acc, k, t) {
 }
 
 function _return_atom(last, k, t) {
-  var s = Buffer.contents(t[/* atom */2]);
+  var s = $$Buffer.contents(t[/* atom */2]);
   t[/* atom */2][/* position */1] = 0;
   return Curry._2(k, last, /* `Atom */[
               726615281,
@@ -671,9 +669,9 @@ function atom(k, t) {
       }
       switch (exit) {
         case 1 : 
-            Buffer.add_char(t[/* atom */2], c);
+            $$Buffer.add_char(t[/* atom */2], c);
             continue ;
-            case 2 : 
+        case 2 : 
             return _return_atom(/* Some */[c], k, t);
         
       }
@@ -695,7 +693,7 @@ function quoted(k, t) {
           exit = 1;
         } else {
           return escaped((function (c) {
-                        Buffer.add_char(t[/* atom */2], c);
+                        $$Buffer.add_char(t[/* atom */2], c);
                         return quoted(k, t);
                       }), t);
         }
@@ -703,9 +701,8 @@ function quoted(k, t) {
         return _return_atom(/* None */0, k, t);
       }
       if (exit === 1) {
-        Buffer.add_char(t[/* atom */2], c);
+        $$Buffer.add_char(t[/* atom */2], c);
         continue ;
-        
       }
       
     }
@@ -849,7 +846,6 @@ function skip_comment(k, t) {
       var match = _get(t);
       if (match !== 10) {
         continue ;
-        
       } else {
         return Curry._2(k, /* None */0, /* () */0);
       }
@@ -872,11 +868,9 @@ function expr_or_end(k, t) {
           return expr_starting_with(c, k, t);
         } else {
           continue ;
-          
         }
       } else if (c >= 9) {
         continue ;
-        
       } else {
         return expr_starting_with(c, k, t);
       }
@@ -967,7 +961,6 @@ function parse_chan_list(bufsize, ic) {
         acc
       ];
       continue ;
-      
     }
   };
 }
@@ -988,11 +981,11 @@ function MakeDecode(funarg) {
   var $great$great$eq = funarg[/* >>= */1];
   var make = function ($staropt$star, refill) {
     var bufsize = $staropt$star ? $staropt$star[0] : 1024;
-    var bufsize$1 = Pervasives.min(Pervasives.max(bufsize, 16), Sys.max_string_length);
+    var bufsize$1 = Caml_primitive.caml_int_min(bufsize > 16 ? bufsize : 16, Sys.max_string_length);
     return /* record */[
             /* buf */Caml_string.caml_create_string(bufsize$1),
             /* refill */refill,
-            /* atom */Buffer.create(32),
+            /* atom */$$Buffer.create(32),
             /* i */0,
             /* len */0,
             /* line */1,
@@ -1010,10 +1003,10 @@ function MakeDecode(funarg) {
     return Curry._2($great$great$eq, Curry._3(t[/* refill */1], t[/* buf */0], 0, t[/* buf */0].length), (function (n) {
                   t[/* i */3] = 0;
                   t[/* len */4] = n;
-                  if (n) {
-                    return Curry._1(k_succ, t);
-                  } else {
+                  if (n === 0) {
                     return Curry._1(k_fail, t);
+                  } else {
+                    return Curry._1(k_succ, t);
                   }
                 }));
   };
@@ -1039,7 +1032,7 @@ function MakeDecode(funarg) {
     return c;
   };
   var _error = function (t, msg) {
-    var b = Buffer.create(32);
+    var b = $$Buffer.create(32);
     Curry._2(Printf.bprintf(b, /* Format */[
               /* String_literal */Block.__(11, [
                   "at ",
@@ -1064,7 +1057,7 @@ function MakeDecode(funarg) {
               "at %d, %d: "
             ]), t[/* line */5], t[/* col */6]);
     return Printf.kbprintf((function (b) {
-                  var msg$prime = Buffer.contents(b);
+                  var msg$prime = $$Buffer.contents(b);
                   return Curry._1(funarg[/* return */0], /* `Error */[
                               106380200,
                               msg$prime
@@ -1093,11 +1086,9 @@ function MakeDecode(funarg) {
             return expr_starting_with(c, k, t);
           } else {
             continue ;
-            
           }
         } else if (c >= 9) {
           continue ;
-          
         } else {
           return expr_starting_with(c, k, t);
         }
@@ -1160,7 +1151,7 @@ function MakeDecode(funarg) {
     }
     switch (exit) {
       case 1 : 
-          Buffer.add_char(t[/* atom */2], c);
+          $$Buffer.add_char(t[/* atom */2], c);
           return atom(k, t);
       case 2 : 
           throw [
@@ -1195,7 +1186,6 @@ function MakeDecode(funarg) {
           }
         } else if (switcher > 22 || switcher < 2) {
           continue ;
-          
         } else {
           exit = 1;
         }
@@ -1241,7 +1231,7 @@ function MakeDecode(funarg) {
     };
   };
   var _return_atom = function (last, k, t) {
-    var s = Buffer.contents(t[/* atom */2]);
+    var s = $$Buffer.contents(t[/* atom */2]);
     t[/* atom */2][/* position */1] = 0;
     return Curry._2(k, last, /* `Atom */[
                 726615281,
@@ -1302,9 +1292,9 @@ function MakeDecode(funarg) {
         }
         switch (exit) {
           case 1 : 
-              Buffer.add_char(t[/* atom */2], c);
+              $$Buffer.add_char(t[/* atom */2], c);
               continue ;
-              case 2 : 
+          case 2 : 
               return _return_atom(/* Some */[c], k, t);
           
         }
@@ -1325,7 +1315,7 @@ function MakeDecode(funarg) {
             exit = 1;
           } else {
             return escaped((function (c) {
-                          Buffer.add_char(t[/* atom */2], c);
+                          $$Buffer.add_char(t[/* atom */2], c);
                           return quoted(k, t);
                         }), t);
           }
@@ -1333,9 +1323,8 @@ function MakeDecode(funarg) {
           return _return_atom(/* None */0, k, t);
         }
         if (exit === 1) {
-          Buffer.add_char(t[/* atom */2], c);
+          $$Buffer.add_char(t[/* atom */2], c);
           continue ;
-          
         }
         
       }
@@ -1475,7 +1464,6 @@ function MakeDecode(funarg) {
         var match = _get(t);
         if (match !== 10) {
           continue ;
-          
         } else {
           return Curry._2(k, /* None */0, /* () */0);
         }
@@ -1497,11 +1485,9 @@ function MakeDecode(funarg) {
             return expr_starting_with(c, k, t);
           } else {
             continue ;
-            
           }
         } else if (c >= 9) {
           continue ;
-          
         } else {
           return expr_starting_with(c, k, t);
         }
@@ -1527,20 +1513,20 @@ var D = [
   next
 ];
 
-exports.to_buf          = to_buf;
-exports.to_string       = to_string;
-exports.to_file         = to_file;
-exports.to_file_seq     = to_file_seq;
-exports.to_chan         = to_chan;
-exports.print           = print;
-exports.print_noindent  = print_noindent;
-exports.MakeDecode      = MakeDecode;
-exports.ID_MONAD        = ID_MONAD;
-exports.D               = D;
-exports.parse_string    = parse_string;
-exports.parse_chan      = parse_chan;
-exports.parse_chan_gen  = parse_chan_gen;
+exports.to_buf = to_buf;
+exports.to_string = to_string;
+exports.to_file = to_file;
+exports.to_file_seq = to_file_seq;
+exports.to_chan = to_chan;
+exports.print = print;
+exports.print_noindent = print_noindent;
+exports.MakeDecode = MakeDecode;
+exports.ID_MONAD = ID_MONAD;
+exports.D = D;
+exports.parse_string = parse_string;
+exports.parse_chan = parse_chan;
+exports.parse_chan_gen = parse_chan_gen;
 exports.parse_chan_list = parse_chan_list;
-exports.parse_file      = parse_file;
+exports.parse_file = parse_file;
 exports.parse_file_list = parse_file_list;
 /* Format Not a pure module */

@@ -20,3 +20,15 @@ val from_promise_suites :
   string ->
   promise_suites -> 
   unit
+
+val eq_suites :   
+  test_id:int ref ->
+  suites:pair_suites ref -> string -> 'b -> 'b -> unit
+  
+val bool_suites :
+  test_id:int ref ->
+  suites: pair_suites ref -> string -> bool -> unit
+
+val throw_suites : 
+  test_id:int ref ->
+  suites: pair_suites ref -> string -> (unit -> unit) -> unit

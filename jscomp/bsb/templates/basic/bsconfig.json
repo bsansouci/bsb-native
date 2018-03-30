@@ -12,5 +12,8 @@
   "bs-dependencies": [
     // add your bs-dependencies here
   ],
+  "warnings": {
+    "error" : "+101"
+  },
   "refmt": 3
 }

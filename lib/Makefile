@@ -20,10 +20,8 @@ bsb.exe:  bsb.mli bsb.ml
 bsb_helper.exe:  bsb_helper.mli bsb_helper.ml
 	$(NATIVE) $(OCAMLOPT_FLAGS) unix.cmxa -w -a $^ -o $@
 
-refmt.exe: refmt_main.mli refmt_main.ml
-	$(NATIVE) -w -40-30 -no-alias-deps -I +compiler-libs ocamlcommon.cmxa $^ -o $@
 
-refmt3.exe: refmt_main3.mli refmt_main3.ml
+refmt.exe: refmt_main3.mli refmt_main3.ml
 	$(NATIVE) -w -40-30 -no-alias-deps -I +compiler-libs ocamlcommon.cmxa $^ -o $@
 
 reactjs_jsx_ppx_2.exe:reactjs_jsx_ppx_v2.mli reactjs_jsx_ppx_v2.ml
@@ -37,7 +35,7 @@ bsc.exe: whole_compiler.mli whole_compiler.ml
 
 
 
-all: bsc.exe bsb.exe bsppx.exe bsb_helper.exe refmt.exe refmt3.exe reactjs_jsx_ppx_2.exe bsdep.exe bsb_internals.cma
+all: bsc.exe bsb.exe bsppx.exe bsb_helper.exe  refmt.exe reactjs_jsx_ppx_2.exe bsb_internals.cma
 #  bspp.exe bsdep.exe
 # bspack.exe
 # bsppx.exe is needed for merlin

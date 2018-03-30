@@ -1,18 +1,18 @@
 'use strict';
 
-var Mt         = require("./mt.js");
-var Block      = require("../../lib/js/block.js");
-var Curry      = require("../../lib/js/curry.js");
+var Mt = require("./mt.js");
+var Block = require("../../lib/js/block.js");
+var Curry = require("../../lib/js/curry.js");
 var Caml_int32 = require("../../lib/js/caml_int32.js");
 
 function f(v) {
-  if (v % 2) {
+  if (v % 2 === 0) {
     return (function (v) {
-        return v + v | 0;
+        return Caml_int32.imul(v, v);
       });
   } else {
     return (function (v) {
-        return Caml_int32.imul(v, v);
+        return v + v | 0;
       });
   }
 }
@@ -164,14 +164,14 @@ Mt.from_pair_suites("ffi_arity_test.ml", /* :: */[
       ]
     ]);
 
-exports.f     = f;
-exports.v     = v;
-exports.vv    = vv;
-exports.hh    = hh;
-exports.u     = u;
-exports.vvv   = vvv;
-exports.fff   = fff;
-exports.g     = g;
-exports.abc   = abc;
+exports.f = f;
+exports.v = v;
+exports.vv = vv;
+exports.hh = hh;
+exports.u = u;
+exports.vvv = vvv;
+exports.fff = fff;
+exports.g = g;
+exports.abc = abc;
 exports.abc_u = abc_u;
 /* v Not a pure module */

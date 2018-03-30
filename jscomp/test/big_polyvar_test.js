@@ -1,6 +1,6 @@
 'use strict';
 
-var Js_mapperRt             = require("../../lib/js/js_mapperRt.js");
+var Js_mapperRt = require("../../lib/js/js_mapperRt.js");
 var Caml_builtin_exceptions = require("../../lib/js/caml_builtin_exceptions.js");
 
 var jsMapperConstantArray = /* array */[
@@ -1207,7 +1207,7 @@ var jsMapperConstantArray = /* array */[
 ];
 
 function tToJs(param) {
-  return Js_mapperRt.binSearch(300, param, jsMapperConstantArray);
+  return Js_mapperRt.binarySearch(300, param, jsMapperConstantArray);
 }
 
 function tFromJs(param) {
@@ -7837,7 +7837,7 @@ if (!eq(tFromJs("xx"), /* None */0)) {
       ];
 }
 
-exports.tToJs   = tToJs;
+exports.tToJs = tToJs;
 exports.tFromJs = tFromJs;
-exports.eq      = eq;
+exports.eq = eq;
 /*  Not a pure module */

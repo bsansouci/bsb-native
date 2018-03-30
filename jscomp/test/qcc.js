@@ -1,21 +1,21 @@
 'use strict';
 
-var Sys                     = require("../../lib/js/sys.js");
-var Char                    = require("../../lib/js/char.js");
-var List                    = require("../../lib/js/list.js");
-var Block                   = require("../../lib/js/block.js");
-var Bytes                   = require("../../lib/js/bytes.js");
-var Curry                   = require("../../lib/js/curry.js");
-var Printf                  = require("../../lib/js/printf.js");
-var $$String                = require("../../lib/js/string.js");
-var Caml_io                 = require("../../lib/js/caml_io.js");
-var Caml_obj                = require("../../lib/js/caml_obj.js");
-var Caml_array              = require("../../lib/js/caml_array.js");
-var Caml_bytes              = require("../../lib/js/caml_bytes.js");
-var Caml_int32              = require("../../lib/js/caml_int32.js");
-var Pervasives              = require("../../lib/js/pervasives.js");
-var Caml_string             = require("../../lib/js/caml_string.js");
-var Caml_missing_polyfill   = require("../../lib/js/caml_missing_polyfill.js");
+var Sys = require("../../lib/js/sys.js");
+var Char = require("../../lib/js/char.js");
+var List = require("../../lib/js/list.js");
+var Block = require("../../lib/js/block.js");
+var Bytes = require("../../lib/js/bytes.js");
+var Curry = require("../../lib/js/curry.js");
+var Printf = require("../../lib/js/printf.js");
+var $$String = require("../../lib/js/string.js");
+var Caml_io = require("../../lib/js/caml_io.js");
+var Caml_obj = require("../../lib/js/caml_obj.js");
+var Caml_array = require("../../lib/js/caml_array.js");
+var Caml_bytes = require("../../lib/js/caml_bytes.js");
+var Caml_int32 = require("../../lib/js/caml_int32.js");
+var Pervasives = require("../../lib/js/pervasives.js");
+var Caml_string = require("../../lib/js/caml_string.js");
+var Caml_missing_polyfill = require("../../lib/js/caml_missing_polyfill.js");
 var Caml_builtin_exceptions = require("../../lib/js/caml_builtin_exceptions.js");
 
 var dbg = [/* true */1];
@@ -80,18 +80,17 @@ function find(s, _n) {
     } else {
       _n = n + 1 | 0;
       continue ;
-      
     }
   };
 }
 
-function match_000(s) {
+function addsym(s) {
   var sid = find(s, 0);
   Caml_array.caml_array_set(symtab, sid, s);
   return sid;
 }
 
-function match_001(n) {
+function symstr(n) {
   if (n >= syms[0]) {
     throw [
           Caml_builtin_exceptions.assert_failure,
@@ -105,24 +104,18 @@ function match_001(n) {
   return Caml_array.caml_array_get(symtab, n);
 }
 
-function match_002(f) {
+function symitr(f) {
   for(var i = 0 ,i_finish = syms[0] - 1 | 0; i <= i_finish; ++i){
     Curry._2(f, i, Caml_array.caml_array_get(symtab, i));
   }
   return /* () */0;
 }
 
-var symitr = match_002;
-
-var symstr = match_001;
-
-var addsym = match_000;
-
 var glo = Bytes.make(4096, /* "\000" */0);
 
 var gpos = [0];
 
-var s = new Array(100);
+var s = Caml_string.caml_create_string(100);
 
 function getq() {
   var c = Curry._1(getch, /* () */0);
@@ -163,33 +156,28 @@ function skip(_param) {
             if (match !== 42) {
               _param$1 = /* () */0;
               continue ;
-              
             } else if (peekch(/* () */0) === /* "/" */47) {
               return skip((Curry._1(getch, /* () */0), /* () */0));
             } else {
               _param$1 = /* () */0;
               continue ;
-              
             }
           };
         }
       } else {
         _param = /* () */0;
         continue ;
-        
       }
     } else if (ch >= 11) {
       if (ch >= 13) {
         _param = /* () */0;
         continue ;
-        
       } else {
         return ch;
       }
     } else if (ch >= 9) {
       _param = /* () */0;
       continue ;
-      
     } else {
       return ch;
     }
@@ -225,7 +213,6 @@ function next() {
             } else {
               _n = (Caml_int32.imul(10, n) + Curry._1(getch, /* () */0) | 0) - 48 | 0;
               continue ;
-              
             }
           };
         }
@@ -253,7 +240,6 @@ function next() {
           glo[e] = getq(/* () */0);
           _e = e + 1 | 0;
           continue ;
-          
         } else {
           Curry._1(getch, /* () */0);
           gpos[0] = e + 8 & -8;
@@ -276,9 +262,8 @@ function next() {
             _ch = Curry._1(getch, /* () */0);
             _n$1 = n$1 + 1 | 0;
             continue ;
-            
           } else {
-            return /* Sym */Block.__(3, [Curry._1(addsym, Bytes.to_string(Bytes.sub(s, 0, n$1 + 1 | 0)))]);
+            return /* Sym */Block.__(3, [addsym(Bytes.to_string(Bytes.sub(s, 0, n$1 + 1 | 0)))]);
           }
         };
       } else {
@@ -324,7 +309,6 @@ function next() {
             } else {
               _param = param[1];
               continue ;
-              
             }
           } else {
             return /* Op */Block.__(0, [Caml_string.bytes_to_string(Bytes.make(1, ch$2))]);
@@ -777,21 +761,21 @@ var inss = /* :: */[
   ]
 ];
 
-var tokint = /* Sym */Block.__(3, [Curry._1(addsym, "int")]);
+var tokint = /* Sym */Block.__(3, [addsym("int")]);
 
-var tokchar = /* Sym */Block.__(3, [Curry._1(addsym, "char")]);
+var tokchar = /* Sym */Block.__(3, [addsym("char")]);
 
-var tokret = /* Sym */Block.__(3, [Curry._1(addsym, "return")]);
+var tokret = /* Sym */Block.__(3, [addsym("return")]);
 
-var tokif = /* Sym */Block.__(3, [Curry._1(addsym, "if")]);
+var tokif = /* Sym */Block.__(3, [addsym("if")]);
 
-var tokelse = /* Sym */Block.__(3, [Curry._1(addsym, "else")]);
+var tokelse = /* Sym */Block.__(3, [addsym("else")]);
 
-var tokwhile = /* Sym */Block.__(3, [Curry._1(addsym, "while")]);
+var tokwhile = /* Sym */Block.__(3, [addsym("while")]);
 
-var tokfor = /* Sym */Block.__(3, [Curry._1(addsym, "for")]);
+var tokfor = /* Sym */Block.__(3, [addsym("for")]);
 
-var tokbreak = /* Sym */Block.__(3, [Curry._1(addsym, "break")]);
+var tokbreak = /* Sym */Block.__(3, [addsym("break")]);
 
 function binary(stk, lvl) {
   if (lvl === -1) {
@@ -816,7 +800,6 @@ function binary(stk, lvl) {
           binary(stk, lvl - 1 | 0);
           _loc = loc$prime;
           continue ;
-          
         } else {
           Curry._1(unnext, t);
           return loc;
@@ -845,7 +828,6 @@ function binary(stk, lvl) {
             }
             _param = /* () */0;
             continue ;
-            
           } else {
             return Curry._1(unnext, t);
           }
@@ -949,7 +931,6 @@ function unary(stk) {
               return 0;
             }
         }
-        break;
     case 1 : 
         return load(0, match[0]);
     case 2 : 
@@ -1019,7 +1000,6 @@ function postfix(stk) {
                   l
                 ];
                 continue ;
-                
               }
             };
           };
@@ -1115,24 +1095,21 @@ function expr(stk) {
   var _param = /* () */0;
   while(true) {
     var t = Curry._1(next$1, /* () */0);
-    if (t.tag) {
+    if (t.tag || t[0] !== "=") {
       return Curry._1(unnext, t);
-    } else if (t[0] === "=") {
+    } else {
       patchlval(/* () */0);
       var ty = lval[0][1];
       push(0);
       expr(stk);
       pop(1);
-      if (ty) {
-        out(34817);
-      } else {
+      if (ty === /* Int */0) {
         out(4753665);
+      } else {
+        out(34817);
       }
       _param = /* () */0;
       continue ;
-      
-    } else {
-      return Curry._1(unnext, t);
     }
   };
 }
@@ -1192,7 +1169,6 @@ function decl(g, _n, _stk) {
                 _stk = stk$prime;
                 _n = n$prime;
                 continue ;
-                
               } else {
                 return /* tuple */[
                         n$prime,
@@ -1231,7 +1207,6 @@ function decl(g, _n, _stk) {
       _stk = match[1];
       _n = n + match[0] | 0;
       continue ;
-      
     } else {
       Curry._1(unnext, t);
       if (!g && n !== 0) {
@@ -1289,9 +1264,8 @@ function stmt(brk, stk) {
     }
     return patch(/* true */1, loc$1, opos[0]);
   } else if (Caml_obj.caml_equal(t, tokwhile) || Caml_obj.caml_equal(t, tokfor)) {
-    var match_000 = [0];
-    var match_001 = align[0];
-    var bl = match_000;
+    var bl = [0];
+    var ba = align[0];
     var match;
     if (Caml_obj.caml_equal(t, tokwhile)) {
       var loc$2 = opos[0];
@@ -1331,7 +1305,7 @@ function stmt(brk, stk) {
     patch(/* true */1, match[0], opos[0]);
     stmt(/* tuple */[
           bl,
-          match_001
+          ba
         ], stk);
     out(233);
     le(32, (match[1] - opos[0] | 0) - 4 | 0);
@@ -1416,7 +1390,6 @@ function top(_param) {
       decl(/* true */1, 0, /* [] */0);
       _param = /* () */0;
       continue ;
-      
     } else {
       var match = Curry._1(next$1, /* () */0);
       if (match.tag === 3) {
@@ -1448,7 +1421,6 @@ function top(_param) {
                           "[var] or ) expected"
                         ];
                   }
-                  break;
               case 1 : 
               case 2 : 
                   throw [
@@ -1473,7 +1445,7 @@ function top(_param) {
                   _n = n + 1 | 0;
                   _regs = List.tl(regs);
                   continue ;
-                  
+              
             }
           };
         };
@@ -1523,11 +1495,10 @@ function top(_param) {
                           ])
                       ]),
                     "done with function %s\n"
-                  ]), Curry._1(symstr, f));
+                  ]), symstr(f));
         }
         _param = /* () */0;
         continue ;
-        
       } else {
         throw [
               Caml_builtin_exceptions.failure,
@@ -1598,7 +1569,7 @@ function elfphdr(ty, off, sz, align) {
 
 function elfgen(outf) {
   var entry = opos[0];
-  var main = Curry._1(addsym, "main");
+  var main = addsym("main");
   var gmain = Caml_array.caml_array_get(globs, main);
   out(1217084452);
   out(-1921768440);
@@ -1614,7 +1585,7 @@ function elfgen(outf) {
   out(3845);
   var off = 232 + gpos[0] | 0;
   var itr = function (f) {
-    return Curry._1(symitr, (function (i, s) {
+    return symitr((function (i, s) {
                   var g = Caml_array.caml_array_get(globs, i);
                   if (g[/* va */1] < 0 && g[/* loc */0] !== 0) {
                     return Curry._3(f, s, s.length, g[/* loc */0]);
@@ -1636,7 +1607,7 @@ function elfgen(outf) {
       return 0;
     }
   };
-  Curry._1(symitr, patchloc);
+  symitr(patchloc);
   var strtab = opos[0];
   opos[0] = opos[0] + 1 | 0;
   $$String.blit("/lib64/ld-linux-x86-64.so.2\0libc.so.6", 0, obuf, opos[0], 37);
@@ -1670,7 +1641,6 @@ function elfgen(outf) {
                 le(64, 0);
                 _l = get32(l);
                 continue ;
-                
               } else {
                 return 0;
               }
@@ -1841,7 +1811,7 @@ function main() {
                                 ])
                             ]),
                           "Symbol '%s' (%d)\n"
-                        ]), Curry._1(symstr, i), i);
+                        ]), symstr(i), i);
       
     }
   };
@@ -1868,7 +1838,6 @@ function main() {
             ppsym(tok);
             _param = /* () */0;
             continue ;
-            
           } else if (tok[0] === "EOF!") {
             return Printf.printf(/* Format */[
                         /* String_literal */Block.__(11, [
@@ -1881,7 +1850,6 @@ function main() {
             ppsym(tok);
             _param = /* () */0;
             continue ;
-            
           }
         };
     default:
@@ -1900,59 +1868,59 @@ var base = 4194304;
 
 var textoff = 232;
 
-exports.dbg       = dbg;
-exports.inch      = inch;
+exports.dbg = dbg;
+exports.inch = inch;
 exports.bufferize = bufferize;
-exports.getch     = getch;
-exports.ungetch   = ungetch;
-exports.peekch    = peekch;
-exports.addsym    = addsym;
-exports.symstr    = symstr;
-exports.symitr    = symitr;
-exports.glo       = glo;
-exports.gpos      = gpos;
-exports.base      = base;
-exports.textoff   = textoff;
-exports.next      = next$1;
-exports.unnext    = unnext;
-exports.nextis    = nextis;
-exports.obuf      = obuf;
-exports.opos      = opos;
-exports.out       = out;
-exports.le        = le;
-exports.get32     = get32;
-exports.patch     = patch;
-exports.load      = load;
-exports.cmp       = cmp;
-exports.test      = test;
-exports.align     = align;
-exports.push      = push;
-exports.pop       = pop;
-exports.lval      = lval;
+exports.getch = getch;
+exports.ungetch = ungetch;
+exports.peekch = peekch;
+exports.addsym = addsym;
+exports.symstr = symstr;
+exports.symitr = symitr;
+exports.glo = glo;
+exports.gpos = gpos;
+exports.base = base;
+exports.textoff = textoff;
+exports.next = next$1;
+exports.unnext = unnext;
+exports.nextis = nextis;
+exports.obuf = obuf;
+exports.opos = opos;
+exports.out = out;
+exports.le = le;
+exports.get32 = get32;
+exports.patch = patch;
+exports.load = load;
+exports.cmp = cmp;
+exports.test = test;
+exports.align = align;
+exports.push = push;
+exports.pop = pop;
+exports.lval = lval;
 exports.patchlval = patchlval;
-exports.read      = read;
-exports.globs     = globs;
-exports.lvls      = lvls;
-exports.inss      = inss;
-exports.tokint    = tokint;
-exports.tokchar   = tokchar;
-exports.tokret    = tokret;
-exports.tokif     = tokif;
-exports.tokelse   = tokelse;
-exports.tokwhile  = tokwhile;
-exports.tokfor    = tokfor;
-exports.tokbreak  = tokbreak;
-exports.binary    = binary;
-exports.unary     = unary;
-exports.postfix   = postfix;
-exports.expr      = expr;
-exports.decl      = decl;
-exports.retl      = retl;
-exports.stmt      = stmt;
-exports.block     = block;
-exports.top       = top;
-exports.elfhdr    = elfhdr;
-exports.elfphdr   = elfphdr;
-exports.elfgen    = elfgen;
-exports.main      = main;
+exports.read = read;
+exports.globs = globs;
+exports.lvls = lvls;
+exports.inss = inss;
+exports.tokint = tokint;
+exports.tokchar = tokchar;
+exports.tokret = tokret;
+exports.tokif = tokif;
+exports.tokelse = tokelse;
+exports.tokwhile = tokwhile;
+exports.tokfor = tokfor;
+exports.tokbreak = tokbreak;
+exports.binary = binary;
+exports.unary = unary;
+exports.postfix = postfix;
+exports.expr = expr;
+exports.decl = decl;
+exports.retl = retl;
+exports.stmt = stmt;
+exports.block = block;
+exports.top = top;
+exports.elfhdr = elfhdr;
+exports.elfphdr = elfphdr;
+exports.elfgen = elfgen;
+exports.main = main;
 /* match Not a pure module */

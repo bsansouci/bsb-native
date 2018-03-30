@@ -12,13 +12,12 @@ function gray_decode(n) {
   while(true) {
     var n$1 = _n;
     var p = _p;
-    if (n$1) {
+    if (n$1 === 0) {
+      return p;
+    } else {
       _n = (n$1 >>> 1);
       _p = p ^ n$1;
       continue ;
-      
-    } else {
-      return p;
     }
   };
 }
@@ -39,7 +38,6 @@ function bool_string(len, n) {
       _n = (n$1 >>> 1);
       _i = i - 1 | 0;
       continue ;
-      
     }
   };
 }
@@ -57,5 +55,5 @@ function next_power(v) {
 exports.gray_encode = gray_encode;
 exports.gray_decode = gray_decode;
 exports.bool_string = bool_string;
-exports.next_power  = next_power;
+exports.next_power = next_power;
 /* No side effect */

@@ -1,12 +1,12 @@
 'use strict';
 
-var Mt              = require("./mt.js");
-var Oo              = require("../../lib/js/oo.js");
-var Block           = require("../../lib/js/block.js");
-var Curry           = require("../../lib/js/curry.js");
-var Caml_obj        = require("../../lib/js/caml_obj.js");
-var Caml_oo_curry   = require("../../lib/js/caml_oo_curry.js");
-var CamlinternalOO  = require("../../lib/js/camlinternalOO.js");
+var Mt = require("./mt.js");
+var Oo = require("../../lib/js/oo.js");
+var Block = require("../../lib/js/block.js");
+var Curry = require("../../lib/js/curry.js");
+var Caml_obj = require("../../lib/js/caml_obj.js");
+var Caml_oo_curry = require("../../lib/js/caml_oo_curry.js");
+var CamlinternalOO = require("../../lib/js/camlinternalOO.js");
 var Caml_exceptions = require("../../lib/js/caml_exceptions.js");
 
 var shared = [
@@ -40,7 +40,7 @@ function eq(loc, x, y) {
   test_id[0] = test_id[0] + 1 | 0;
   suites[0] = /* :: */[
     /* tuple */[
-      loc + (" id " + test_id[0]),
+      loc + (" id " + String(test_id[0])),
       (function () {
           return /* Eq */Block.__(0, [
                     x,
@@ -178,13 +178,12 @@ function get(_p, _n) {
   while(true) {
     var n = _n;
     var p = _p;
-    if (n) {
+    if (n === 0) {
+      return Caml_oo_curry.js1(5144726, 6, p);
+    } else {
       _n = n - 1 | 0;
       _p = Caml_oo_curry.js1(-357537970, 7, p);
       continue ;
-      
-    } else {
-      return Caml_oo_curry.js1(5144726, 6, p);
     }
   };
 }
@@ -340,16 +339,16 @@ var widget = CamlinternalOO.make_class(shared$2, widget_init);
 
 Mt.from_pair_suites("class7_test.ml", suites[0]);
 
-exports.suites      = suites;
-exports.test_id     = test_id;
-exports.eq          = eq;
-exports.point       = point;
-exports.ref         = ref;
-exports.backup      = backup;
-exports.backup_ref  = backup_ref;
-exports.get         = get;
-exports.backup2     = backup2;
+exports.suites = suites;
+exports.test_id = test_id;
+exports.eq = eq;
+exports.point = point;
+exports.ref = ref;
+exports.backup = backup;
+exports.backup_ref = backup_ref;
+exports.get = get;
+exports.backup2 = backup2;
 exports.backup_ref2 = backup_ref2;
-exports.$$window    = $$window;
-exports.widget      = widget;
+exports.$$window = $$window;
+exports.widget = widget;
 /* point Not a pure module */

@@ -1,6 +1,6 @@
 'use strict';
 
-var Block      = require("../../lib/js/block.js");
+var Block = require("../../lib/js/block.js");
 var Caml_int32 = require("../../lib/js/caml_int32.js");
 
 function $plus$colon(_f, _g) {
@@ -37,7 +37,7 @@ function $plus$colon(_f, _g) {
             _g = g[1];
             _f = $plus$colon(f, g[0]);
             continue ;
-            case 1 : 
+        case 1 : 
         case 3 : 
             return /* Add */Block.__(2, [
                       f,
@@ -72,18 +72,14 @@ function $star$colon(_f, _g) {
       }
     }
     if (exit$2 === 3) {
-      if (g.tag) {
-        exit$1 = 2;
-      } else if (g[0] !== 0) {
+      if (g.tag || g[0] !== 0) {
         exit$1 = 2;
       } else {
         return /* Int */Block.__(0, [0]);
       }
     }
     if (exit$1 === 2) {
-      if (f.tag) {
-        exit = 1;
-      } else if (f[0] !== 1) {
+      if (f.tag || f[0] !== 1) {
         exit = 1;
       } else {
         return g;
@@ -110,7 +106,7 @@ function $star$colon(_f, _g) {
             _g = g[1];
             _f = $star$colon(f, g[0]);
             continue ;
-            
+        
       }
     }
     
@@ -132,5 +128,5 @@ function simplify(f) {
 
 exports.$plus$colon = $plus$colon;
 exports.$star$colon = $star$colon;
-exports.simplify    = simplify;
+exports.simplify = simplify;
 /* No side effect */

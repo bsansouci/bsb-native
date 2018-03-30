@@ -52,6 +52,10 @@ type function_kind
    (* | Tupled *)
 
 type constant = 
+  | Const_js_null 
+  | Const_js_undefined 
+  | Const_js_true
+  | Const_js_false  
   | Const_int of int
   | Const_char of char
   | Const_string of string 
@@ -191,7 +195,7 @@ type primitive =
   | Pjs_function_length 
 
   | Pjs_string_of_small_array
-  | Pjs_is_instance_array
+  (* | Pjs_is_instance_array *)
   | Pcaml_obj_length
   | Pcaml_obj_set_length
   | Pwrap_exn (* convert either JS exception or OCaml exception into OCaml format *)  

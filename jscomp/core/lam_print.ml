@@ -19,6 +19,10 @@ open Types
 
 let rec struct_const ppf (cst : Lam.constant) =
   match cst with 
+  | Const_js_true -> fprintf ppf "#true"
+  | Const_js_false -> fprintf ppf "#false"
+  | Const_js_null -> fprintf ppf "#null"
+  | Const_js_undefined -> fprintf ppf "#undefined"
   |  (Const_int n) -> fprintf ppf "%i" n
   |  (Const_char c) -> fprintf ppf "%C" c
   |  (Const_string s) -> fprintf ppf "%S" s
@@ -105,7 +109,7 @@ let primitive ppf (prim : Lam.primitive) = match prim with
   | Pcreate_extension s -> fprintf ppf "[ext-create]%S" s 
   | Pwrap_exn -> fprintf ppf "#exn"
   | Pjs_string_of_small_array -> fprintf ppf "#string_of_small_array"
-  | Pjs_is_instance_array -> fprintf ppf "#is_instance_array"
+  (* | Pjs_is_instance_array -> fprintf ppf "#is_instance_array" *)
   | Pcaml_obj_length -> fprintf ppf "#obj_length"
   | Pcaml_obj_set_length -> fprintf ppf "#obj_set_length"
   | Pinit_mod -> fprintf ppf "init_mod!"

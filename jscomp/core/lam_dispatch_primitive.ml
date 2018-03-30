@@ -137,8 +137,6 @@ let translate loc (prim_name : string)
       E.math "log1p" args 
     | "caml_power_float"  -> 
       E.math "pow" args
-    |  "caml_make_float_vect" -> 
-      E.new_ (E.js_global "Array") args 
 
 
     | "caml_array_append" -> 
@@ -289,6 +287,15 @@ let translate loc (prim_name : string)
         | [e0; e1] -> E.float_mul e0 e1 
         | _ -> assert false  
       end
+        
+
+    | "caml_int64_equal_null"
+      -> Js_long.equal_null args 
+    | "caml_int64_equal_undefined"
+      -> Js_long.equal_undefined args 
+    | "caml_int64_equal_nullable" 
+      -> Js_long.equal_nullable args 
+      
     | "caml_int64_to_float"
       -> Js_long.to_float args
     | "caml_int64_of_float"
@@ -307,13 +314,17 @@ let translate loc (prim_name : string)
       -> Js_long.float_of_bits args 
     | "caml_int64_bswap"
       -> Js_long.swap args    
+    | "caml_int64_min"       
+      ->  Js_long.min args 
+    | "caml_int64_max" 
+      ->  Js_long.max args      
     | "caml_int32_float_of_bits"
     | "caml_int32_bits_of_float"
     | "caml_classify_float"
     | "caml_modf_float"
     | "caml_ldexp_float"
     | "caml_frexp_float"
-    | "caml_float_compare"
+
     | "caml_copysign_float"
     | "caml_expm1_float"
     | "caml_hypot_float"
@@ -366,6 +377,46 @@ let translate loc (prim_name : string)
           E.string_comp Ge  e0 e1
         | _ -> assert false 
       end
+    
+    | "caml_int_equal_null"
+    | "caml_int_equal_nullable"
+    | "caml_int_equal_undefined"
+    
+    | "caml_int32_equal_null"
+    | "caml_int32_equal_nullable"
+    | "caml_int32_equal_undefined"
+    
+
+    | "caml_nativeint_equal_null"
+    | "caml_nativeint_equal_nullable"
+    | "caml_nativeint_equal_undefined"
+      ->   
+      begin match args with 
+      | [e0;e1]
+       -> E.int_comp Ceq e0 e1
+      | _ -> assert false 
+      end 
+    
+    | "caml_float_equal_null"
+    | "caml_float_equal_nullable"
+    | "caml_float_equal_undefined"
+      ->   
+      begin match args with 
+      | [e0;e1]
+       -> E.float_comp Ceq e0 e1
+      | _ -> assert false 
+      end 
+    
+    | "caml_string_equal_null"
+    | "caml_string_equal_nullable"
+    | "caml_string_equal_undefined"
+      ->   
+      begin match args with 
+      | [e0;e1]
+       -> E.string_comp EqEqEq e0 e1
+      | _ -> assert false 
+      end 
+
     | "caml_string_greaterthan"
       -> 
       begin match args with 
@@ -375,21 +426,58 @@ let translate loc (prim_name : string)
         | _ -> assert false 
       end
     | "caml_create_string" -> 
+      (* Bytes.create *)
       (* Note that for invalid range, JS raise an Exception RangeError, 
          here in OCaml it's [Invalid_argument], we have to preserve this semantics.
           Also, it's creating a [bytes] which is a js array actually.
       *)
       begin match args with
-        | [{expression_desc = Number (Int {i; _}); _} as v] 
-          when i >= 0l -> 
-          E.uninitialized_array v 
-        (* TODO: inline and spits out a warning when i is negative *)
+        | [{expression_desc = Number (Int {i = 0l; _}); _}] 
+          ->
+          E.array NA []
         | _ -> 
           call Js_runtime_modules.string 
       end
 
-    | "caml_string_get"
-    | "caml_string_compare"
+    | "caml_int_compare"
+    | "caml_int32_compare"
+    | "caml_nativeint_compare"
+    | "caml_float_compare"
+    | "caml_string_compare" 
+    -> 
+      call Js_runtime_modules.caml_primitive
+
+    | "caml_int_min"
+    | "caml_float_min"
+    | "caml_string_min"
+    | "caml_nativeint_min"
+    | "caml_int32_min"
+    
+      -> 
+      begin match args with 
+        | [a;b] ->
+          if Js_analyzer.is_okay_to_duplicate a && Js_analyzer.is_okay_to_duplicate b then 
+            E.econd (E.js_comp Clt a b) a b 
+          else 
+            call Js_runtime_modules.caml_primitive
+        | _ -> assert false  
+      end
+    | "caml_int_max"
+    | "caml_float_max"
+    | "caml_string_max"
+    | "caml_nativeint_max"
+    | "caml_int32_max"    
+    -> 
+      begin match args with 
+        | [a;b] -> 
+          if Js_analyzer.is_okay_to_duplicate a && Js_analyzer.is_okay_to_duplicate b then 
+            E.econd (E.js_comp Cgt a b) a b 
+          else 
+            call Js_runtime_modules.caml_primitive
+        | _ -> assert false 
+      end
+      
+    | "caml_string_get"    
     | "string_of_bytes"
     | "bytes_of_string"
 
@@ -493,6 +581,7 @@ let translate loc (prim_name : string)
        Not good for inline *)
 
     | "caml_array_blit"
+    | "caml_make_float_vect"
     | "caml_make_vect" -> 
       call Js_runtime_modules.array
     | "caml_ml_flush"
@@ -574,22 +663,50 @@ let translate loc (prim_name : string)
         | [e] -> E.is_caml_block e 
         | _ -> assert false
       end
+
+
     | "caml_obj_dup" 
     | "caml_update_dummy"
     | "caml_obj_truncate"
     | "caml_lazy_make_forward"  
-    | "caml_int_compare"
-    | "caml_int32_compare"
-    | "caml_nativeint_compare"
       -> 
       call Js_runtime_modules.obj_runtime
-    | "caml_compare"
-    | "caml_equal"
-    | "caml_notequal"
+
+    | "caml_notequal" ->
+      begin match args with 
+      | [a1;b1]  when 
+        E.for_sure_js_null_undefined_boolean a1 
+        || E.for_sure_js_null_undefined_boolean b1 
+        -> 
+        E.neq_null_undefined_boolean a1 b1 
+      (* FIXME address_equal *)
+      | _ -> 
+        Location.prerr_warning loc Warnings.Bs_polymorphic_comparison ; 
+        call Js_runtime_modules.obj_runtime
+      end
+    | "caml_equal"  ->     
+      begin match args with 
+      | [a1;b1]  when 
+        E.for_sure_js_null_undefined_boolean a1 || E.for_sure_js_null_undefined_boolean b1 
+        -> 
+        E.eq_null_undefined_boolean a1 b1 
+        (* FIXME address_equal *)
+      | _ -> 
+        Location.prerr_warning loc Warnings.Bs_polymorphic_comparison ; 
+        call Js_runtime_modules.obj_runtime
+      end
+  
+    | "caml_min"
+    | "caml_max"
+    | "caml_compare"    
     | "caml_greaterequal"
     | "caml_greaterthan"
     | "caml_lessequal"
     | "caml_lessthan"
+
+    | "caml_equal_null"
+    | "caml_equal_undefined"
+    | "caml_equal_nullable"
       -> 
 
       Location.prerr_warning loc Warnings.Bs_polymorphic_comparison ; 
@@ -606,133 +723,6 @@ let translate loc (prim_name : string)
         | [e] -> E.tag e 
         | _ -> assert false end
 
-    (* Unix support *)
-    | "unix_tcdrain"
-    | "unix_tcflush"
-    | "unix_setsid"
-    | "unix_tcflow"
-    | "unix_tcgetattr"
-    | "unix_tcsetattr"
-    | "unix_tcsendbreak"
-    | "unix_getprotobynumber"
-    | "unix_getprotobyname"
-    | "unix_getservbyport"
-    | "unix_getservbyname"
-    | "unix_getservbyaddr"
-    | "unix_gethostbyname"
-    | "unix_gethostname"
-    | "unix_getpeername"
-    | "unix_accept"
-    | "unix_bind"
-    | "unix_connect"
-    | "unix_listen"
-    | "unix_shutdown"
-    | "unix_getsockname"
-    | "unix_gethostbyaddr"
-    | "unix_getgrnam"
-    | "unix_getpwuid"
-    | "unix_getgrgid"
-    | "unix_inet_addr_of_string"
-    | "unix_string_of_inet_addr"
-    | "unix_socket"
-    | "unix_socketpair"
-    | "unix_error_message"
-    | "unix_read"
-    | "unix_write"
-    | "unix_single_write"
-    | "unix_set_close_on_exec"
-    | "unix_sigprocmask"
-    | "unix_sigsuspend"
-    | "unix_recv"
-    | "unix_recvfrom"
-    | "unix_send"
-    | "unix_sendto"
-    | "unix_getsockopt"
-    | "unix_setsockopt"
-    | "unix_getaddrinfo"
-    | "unix_getnameinfo"
-    | "unix_waitpid"
-    | "unix_wait"
-    | "unix_fork"
-    | "unix_execv"
-    | "unix_dup"
-    | "unix_close"
-    | "unix_dup2"
-    | "unix_execvp"
-    | "unix_execvpe"
-    | "unix_pipe"
-    | "unix_execve"
-    | "caml_channel_descriptor"
-    | "unix_putenv"
-    | "unix_environment"
-    | "unix_lseek"
-    | "unix_getppid"
-    | "unix_getpid"
-    | "unix_nice"
-    | "unix_open"
-    | "unix_truncate"
-    | "unix_ftruncate"
-    | "unix_stat"
-    | "unix_lstat"
-    | "unix_fstat"
-    | "unix_isatty"
-    | "unix_lseek_64"
-    | "unix_truncate_64"
-    | "unix_ftruncate_64"
-    | "unix_stat_64"
-    | "unix_lstat_64"
-    | "unix_fstat_64"
-    | "unix_unlink"
-    | "unix_rename"
-    | "unix_link"
-    | "unix_chmod"
-    | "unix_fchmod"
-    | "unix_chown"
-    | "unix_fchown"
-    | "unix_umask"
-    | "unix_access"
-    | "unix_set_nonblock"
-    | "unix_clear_nonblock"
-    | "unix_clear_close_on_exec"
-    | "unix_mkdir"
-    | "unix_rmdir"
-    | "unix_chdir"
-    | "unix_getcwd"
-    | "unix_chroot"
-    | "unix_opendir"
-    | "unix_readdir"
-    | "unix_rewinddir"
-    | "unix_closedir"
-    | "unix_mkfifo"
-    | "unix_symlink"
-    | "unix_readlink"
-    | "unix_select"
-    | "unix_lockf"
-    | "unix_kill"
-    | "unix_sigpending"
-    | "unix_time"
-    | "unix_gettimeofday"
-    | "unix_gmtime"
-    | "unix_localtime"
-    | "unix_mktime"
-    | "unix_alarm"
-    | "unix_sleep"
-    | "unix_times"
-    | "unix_utimes"
-    | "unix_getitimer"
-    | "unix_setitimer"
-    | "unix_getuid"
-    | "unix_geteuid"
-    | "unix_setuid"
-    | "unix_getgid"
-    | "unix_getegid"
-    | "unix_setgid"
-    | "unix_getgroups"
-    | "unix_setgroups"
-    | "unix_initgroups"
-    | "unix_getlogin"
-    | "unix_getpwnam"
-      ->  E.not_implemented prim_name
     (* End of Unix support *)
     (* bigarrary support *)
     | "caml_ba_init"

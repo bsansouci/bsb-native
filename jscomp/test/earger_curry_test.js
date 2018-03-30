@@ -1,45 +1,43 @@
 'use strict';
 
-var Mt                      = require("./mt.js");
-var Block                   = require("../../lib/js/block.js");
-var Curry                   = require("../../lib/js/curry.js");
-var Caml_array              = require("../../lib/js/caml_array.js");
-var Pervasives              = require("../../lib/js/pervasives.js");
+var Mt = require("./mt.js");
+var Block = require("../../lib/js/block.js");
+var Curry = require("../../lib/js/curry.js");
+var Caml_array = require("../../lib/js/caml_array.js");
+var Pervasives = require("../../lib/js/pervasives.js");
 var Caml_builtin_exceptions = require("../../lib/js/caml_builtin_exceptions.js");
 
 function map(f, a) {
   var f$1 = Curry.__1(f);
   var a$1 = a;
   var l = a$1.length;
-  if (l) {
+  if (l === 0) {
+    return /* array */[];
+  } else {
     var r = Caml_array.caml_make_vect(l, f$1(a$1[0]));
     for(var i = 1 ,i_finish = l - 1 | 0; i <= i_finish; ++i){
       r[i] = f$1(a$1[i]);
     }
     return r;
-  } else {
-    return /* array */[];
   }
 }
 
 function init(l, f) {
   var l$1 = l;
   var f$1 = Curry.__1(f);
-  if (l$1) {
-    if (l$1 < 0) {
-      throw [
-            Caml_builtin_exceptions.invalid_argument,
-            "Array.init"
-          ];
-    } else {
-      var res = Caml_array.caml_make_vect(l$1, f$1(0));
-      for(var i = 1 ,i_finish = l$1 - 1 | 0; i <= i_finish; ++i){
-        res[i] = f$1(i);
-      }
-      return res;
-    }
-  } else {
+  if (l$1 === 0) {
     return /* array */[];
+  } else if (l$1 < 0) {
+    throw [
+          Caml_builtin_exceptions.invalid_argument,
+          "Array.init"
+        ];
+  } else {
+    var res = Caml_array.caml_make_vect(l$1, f$1(0));
+    for(var i = 1 ,i_finish = l$1 - 1 | 0; i <= i_finish; ++i){
+      res[i] = f$1(i);
+    }
+    return res;
   }
 }
 
@@ -78,7 +76,7 @@ function eq(loc, x, y) {
   test_id[0] = test_id[0] + 1 | 0;
   suites[0] = /* :: */[
     /* tuple */[
-      loc + (" id " + test_id[0]),
+      loc + (" id " + String(test_id[0])),
       (function () {
           return /* Eq */Block.__(0, [
                     x,
@@ -173,20 +171,20 @@ eq("File \"earger_curry_test.ml\", line 122, characters 7-14", all_v[0], /* :: *
 
 Mt.from_pair_suites("earger_curry_test.ml", suites[0]);
 
-exports.map       = map;
-exports.init      = init;
+exports.map = map;
+exports.init = init;
 exports.fold_left = fold_left;
-exports.f2        = f2;
-exports.suites    = suites;
-exports.test_id   = test_id;
-exports.eq        = eq;
-exports.v         = v;
-exports.all_v     = all_v;
-exports.add5      = add5;
-exports.f         = f;
-exports.g         = g;
-exports.a         = a;
-exports.b         = b;
-exports.c         = c;
-exports.d         = d;
+exports.f2 = f2;
+exports.suites = suites;
+exports.test_id = test_id;
+exports.eq = eq;
+exports.v = v;
+exports.all_v = all_v;
+exports.add5 = add5;
+exports.f = f;
+exports.g = g;
+exports.a = a;
+exports.b = b;
+exports.c = c;
+exports.d = d;
 /*  Not a pure module */

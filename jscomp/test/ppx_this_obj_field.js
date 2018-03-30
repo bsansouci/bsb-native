@@ -1,6 +1,6 @@
 'use strict';
 
-var Mt    = require("./mt.js");
+var Mt = require("./mt.js");
 var Block = require("../../lib/js/block.js");
 
 var suites = [/* [] */0];
@@ -13,7 +13,7 @@ function eq(loc, param) {
   test_id[0] = test_id[0] + 1 | 0;
   suites[0] = /* :: */[
     /* tuple */[
-      loc + (" id " + test_id[0]),
+      loc + (" id " + String(test_id[0])),
       (function () {
           return /* Eq */Block.__(0, [
                     x,
@@ -59,11 +59,13 @@ var v = {
   y: 0,
   reset: (function () {
       var self = this ;
-      return self.y = 0;
+      self.y = 0;
+      return /* () */0;
     }),
   incr: (function () {
       var self = this ;
-      return self.y = self.y + 1 | 0;
+      self.y = self.y + 1 | 0;
+      return /* () */0;
     }),
   getY: (function () {
       var self = this ;
@@ -139,7 +141,8 @@ var zz = {
   x: 3,
   setX: (function (x) {
       var self = this ;
-      return self.x = x;
+      self.x = x;
+      return /* () */0;
     }),
   getX: (function () {
       var self = this ;
@@ -206,16 +209,16 @@ eq("File \"ppx_this_obj_field.ml\", line 103, characters 5-12", /* tuple */[
 
 Mt.from_pair_suites("ppx_this_obj_field.ml", suites[0]);
 
-exports.suites     = suites;
-exports.test_id    = test_id;
-exports.eq         = eq;
-exports.v5         = v5;
-exports.v          = v;
-exports.u          = u;
-exports.test_type  = test_type;
-exports.z          = z;
-exports.eventObj   = eventObj;
-exports.test__     = test__;
-exports.zz         = zz;
+exports.suites = suites;
+exports.test_id = test_id;
+exports.eq = eq;
+exports.v5 = v5;
+exports.v = v;
+exports.u = u;
+exports.test_type = test_type;
+exports.z = z;
+exports.eventObj = eventObj;
+exports.test__ = test__;
+exports.zz = zz;
 exports.test_type2 = test_type2;
 /* v5 Not a pure module */

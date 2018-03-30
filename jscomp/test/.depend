@@ -5,6 +5,7 @@ ari_regress_test.cmi :
 array_test.cmi :
 ast_js_mapper_test.cmi :
 basic_module_test.cmi :
+bs_abstract_test.cmi : ../runtime/js.cmi
 class_setter_getter.cmi : ../runtime/js.cmi
 config2_test.cmi : ../runtime/js.cmi
 const_block_test.cmi :
@@ -30,7 +31,7 @@ polymorphism_test.cmi :
 scanf_reference_error_regression_test.cmi :
 sexp.cmi :
 sexpm.cmi : ../stdlib/format.cmi ../stdlib/bytes.cmi ../stdlib/buffer.cmi
-simple_derive_test.cmi : ../others/bs_dyn.cmi
+simple_derive_test.cmi :
 simple_derive_use.cmi :
 test_for_map2.cmi :
 test_http_server.cmi :
@@ -60,6 +61,7 @@ arith_parser.cmj : ../stdlib/parsing.cmj ../stdlib/obj.cmj \
     ../stdlib/lexing.cmj arith_syntax.cmj
 arith_syntax.cmj :
 arity_deopt.cmj : mt.cmj
+array_data_util.cmj : ../others/belt.cmj
 array_safe_get.cmj : ../stdlib/array.cmj
 array_subtle_test.cmj : mt.cmj ../runtime/js.cmj ../stdlib/array.cmj
 array_test.cmj : ../stdlib/pervasives.cmj mt.cmj ../stdlib/list.cmj \
@@ -83,19 +85,44 @@ big_enum.cmj :
 big_polyvar_test.cmj :
 bigarray_test.cmj : ../stdlib/int32.cmj ../stdlib/complex.cmj \
     ../stdlib/bigarray.cmj
+block_alias_test.cmj : mt.cmj ../stdlib/list.cmj
 boolean_test.cmj : test_bool_equal.cmj mt.cmj
-bs_MapInt_test.cmj : ../runtime/js.cmj ../others/bs.cmj
-bs_array_test.cmj : mt.cmj ../runtime/js.cmj
+bs_MapInt_test.cmj : ../runtime/js.cmj ../others/belt.cmj
+bs_abstract_test.cmj : ../runtime/js.cmj bs_abstract_test.cmi
+bs_array_test.cmj : mt.cmj ../runtime/js.cmj ../others/belt.cmj
 bs_auto_uncurry.cmj : ../runtime/js.cmj
 bs_auto_uncurry_test.cmj : mt.cmj ../others/js_array.cmj ../runtime/js.cmj
-bs_hashtbl_string_test.cmj : ../stdlib/hashtbl.cmj ../others/bs.cmj
+bs_hashmap_test.cmj : mt.cmj ../stdlib/hashtbl.cmj ../others/belt.cmj \
+    array_data_util.cmj
+bs_hashset_int_test.cmj : mt.cmj ../others/belt.cmj array_data_util.cmj
+bs_hashtbl_string_test.cmj : ../stdlib/hashtbl.cmj ../others/belt.cmj
 bs_ignore_effect.cmj : mt.cmj
 bs_ignore_test.cmj : ../runtime/js.cmj
-bs_map_test.cmj : ../runtime/js.cmj ../others/bs.cmj
+bs_list_test.cmj : mt.cmj ../runtime/js.cmj ../others/belt.cmj
+bs_map_set_dict_test.cmj : mt.cmj ../runtime/js.cmj ../others/belt.cmj \
+    array_data_util.cmj
+bs_map_test.cmj : mt.cmj ../others/belt.cmj
+bs_min_max_test.cmj : ../stdlib/pervasives.cmj mt.cmj
+bs_mutable_set_test.cmj : mt.cmj ../runtime/js.cmj ../others/belt.cmj \
+    array_data_util.cmj ../stdlib/array.cmj
 bs_node_string_buffer_test.cmj : ../others/node.cmj ../runtime/js.cmj
+bs_poly_map_test.cmj : mt.cmj ../runtime/js.cmj ../others/belt.cmj \
+    array_data_util.cmj
+bs_poly_mutable_map_test.cmj : mt.cmj ../others/belt.cmj array_data_util.cmj
+bs_poly_mutable_set_test.cmj : mt.cmj ../runtime/js.cmj ../others/belt.cmj \
+    array_data_util.cmj
+bs_poly_set_test.cmj : mt.cmj ../runtime/js.cmj ../others/belt.cmj \
+    array_data_util.cmj
 bs_qualified.cmj : ../runtime/js.cmj
+bs_queue_test.cmj : mt.cmj ../runtime/js.cmj ../others/belt.cmj
+bs_rbset_int_bench.cmj : rbset.cmj
 bs_rest_test.cmj :
+bs_set_bench.cmj : ../others/belt.cmj
+bs_set_int_test.cmj : mt.cmj ../stdlib/list.cmj ../runtime/js.cmj \
+    ../others/belt.cmj array_data_util.cmj ../stdlib/array.cmj
+bs_sort_test.cmj : mt.cmj ../others/belt.cmj array_data_util.cmj
 bs_splice_partial.cmj : ../runtime/js.cmj
+bs_stack_test.cmj : ../runtime/js.cmj ../others/belt.cmj
 bs_string_test.cmj : mt.cmj ../runtime/js.cmj
 bs_unwrap_test.cmj : ../runtime/js.cmj
 buffer_test.cmj : ../stdlib/string.cmj mt.cmj ../stdlib/bytes.cmj \
@@ -147,8 +174,8 @@ demo_binding.cmj : ../runtime/js.cmj
 demo_int_map.cmj : ../stdlib/map.cmj demo_int_map.cmi
 demo_page.cmj :
 demo_pipe.cmj : ../runtime/js.cmj
-derive_dyntype.cmj : ../others/bs_dyn.cmj
-derive_projector_test.cmj : derive_projector_test.cmi
+derive_dyntype.cmj :
+derive_projector_test.cmj : ../runtime/js.cmj derive_projector_test.cmi
 derive_type_test.cmj :
 digest_test.cmj : ../stdlib/string.cmj ../stdlib/printf.cmj mt.cmj \
     ext_array_test.cmj ../stdlib/digest.cmj ../stdlib/array.cmj
@@ -157,6 +184,7 @@ dollar_escape_test.cmj : mt.cmj
 earger_curry_test.cmj : mt.cmj ../runtime/js.cmj ../stdlib/array.cmj
 empty_obj.cmj :
 epsilon_test.cmj : mt.cmj
+equal_box_test.cmj : mt.cmj ../runtime/js.cmj
 equal_exception_test.cmj : ../stdlib/string.cmj mt.cmj ../stdlib/bytes.cmj
 equal_test.cmj :
 es6_module_test.cmj : mt.cmj ../stdlib/list.cmj
@@ -273,6 +301,16 @@ gpr_1943_test.cmj : mt.cmj
 gpr_1946_test.cmj : ../stdlib/obj.cmj ../runtime/js.cmj
 gpr_2250_test.cmj : mt.cmj
 gpr_2316_test.cmj : mt.cmj ../runtime/js.cmj
+gpr_2352_test.cmj :
+gpr_2413_test.cmj :
+gpr_2474.cmj :
+gpr_2487.cmj : ../others/belt.cmj
+gpr_2503_test.cmj : mt.cmj ../runtime/js.cmj
+gpr_2608_test.cmj : mt.cmj ../stdlib/list.cmj
+gpr_2614_test.cmj :
+gpr_2633_test.cmj :
+gpr_2642_test.cmj :
+gpr_2652_test.cmj : ../others/node.cmj ../stdlib/buffer.cmj
 gpr_405_test.cmj : ../stdlib/hashtbl.cmj gpr_405_test.cmi
 gpr_441.cmj :
 gpr_459_test.cmj : mt.cmj
@@ -296,6 +334,7 @@ hashtbl_test.cmj : mt.cmj ../stdlib/moreLabels.cmj ../stdlib/list.cmj \
 hello.foo.cmj : ../runtime/js.cmj
 http_types.cmj : ../runtime/js.cmj
 ignore_test.cmj : mt.cmj ../runtime/js.cmj
+imm_map_bench.cmj : ../runtime/js.cmj ../others/belt.cmj
 include_side_effect.cmj : side_effect.cmj
 include_side_effect_free.cmj : side_effect_free.cmj
 infer_type_test.cmj : ../runtime/js.cmj infer_type_test.cmi
@@ -448,6 +487,7 @@ offset.cmj : ../stdlib/string.cmj ../stdlib/set.cmj
 oo_js_test_date.cmj : mt.cmj ../runtime/js.cmj
 optional_ffi_test.cmj : mt.cmj
 pipe_send_readline.cmj : ../runtime/js.cmj
+pipe_syntax.cmj :
 poly_type.cmj : ../runtime/js.cmj
 poly_variant_test.cmj : mt.cmj ../runtime/js.cmj poly_variant_test.cmi
 polymorphism_test.cmj : polymorphism_test.cmi
@@ -471,6 +511,8 @@ qcc.cmj : ../stdlib/sys.cmj ../stdlib/string.cmj ../stdlib/printf.cmj \
 queue_test.cmj : ../stdlib/queue.cmj mt.cmj ../stdlib/array.cmj
 random_test.cmj : ../stdlib/random.cmj ../stdlib/printf.cmj mt_global.cmj \
     mt.cmj ../stdlib/int64.cmj ../stdlib/array.cmj
+raw_hash_tbl_bench.cmj : ../stdlib/hashtbl.cmj
+rbset.cmj :
 rebind_module.cmj :
 rebind_module_test.cmj : rebind_module.cmj
 rec_fun_test.cmj : mt.cmj
@@ -500,7 +542,7 @@ sexpm_test.cmj : sexpm.cmj mt.cmj ../runtime/js.cmj ../stdlib/format.cmj
 shift_test.cmj : ../stdlib/nativeint.cmj
 side_effect.cmj : ../runtime/js.cmj
 side_effect_free.cmj :
-simple_derive_test.cmj : ../runtime/js.cmj ../others/bs.cmj \
+simple_derive_test.cmj : ../runtime/js.cmj ../others/belt.cmj \
     simple_derive_test.cmi
 simple_derive_use.cmj : simple_derive_test.cmj simple_derive_use.cmi
 simple_lexer_test.cmj : ../stdlib/string.cmj mt.cmj ../stdlib/lexing.cmj
@@ -538,7 +580,7 @@ test_ari.cmj : ../stdlib/list.cmj
 test_array.cmj : ../stdlib/array.cmj
 test_array_append.cmj : ../stdlib/array.cmj
 test_array_primitive.cmj : ../stdlib/array.cmj
-test_bool_equal.cmj :
+test_bool_equal.cmj : ../runtime/js.cmj ../others/belt.cmj
 test_bs_this.cmj : ../runtime/js.cmj
 test_bug.cmj : ../stdlib/bytes.cmj
 test_bytes.cmj : ../stdlib/bytes.cmj

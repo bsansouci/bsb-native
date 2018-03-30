@@ -1,5 +1,7 @@
 # bsb-native
 
+[![NPM](https://nodei.co/npm/bs-platform.png?compact=true)](https://nodei.co/npm/bs-platform/) [![Build Status](https://travis-ci.org/BuckleScript/bucklescript.svg?branch=master)](https://travis-ci.org/bucklescript/bucklescript) [![Coverage Status](https://coveralls.io/repos/github/BuckleScript/bucklescript/badge.svg?branch=master)](https://coveralls.io/github/BuckleScript/bucklescript?branch=master)
+
 Bsb-native is a fork of [bsb](https://bucklescript.github.io/docs/en/build-overview.html) that compiles to native OCaml instead.
 
 ## Install
@@ -181,3 +183,4 @@ Platform specific files (like `MyModule_Native`) should be added to a folder tha
 ```
 
 **Note**: BuckleScript's conditional compilation doesn't work with Reason yet, so any usage of conditional compilation will have to be implemented in OCaml `.ml` files.
+

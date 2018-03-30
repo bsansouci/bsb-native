@@ -1,8 +1,8 @@
 'use strict';
 
-var Mt         = require("./mt.js");
-var $$Array    = require("../../lib/js/array.js");
-var Block      = require("../../lib/js/block.js");
+var Mt = require("./mt.js");
+var $$Array = require("../../lib/js/array.js");
+var Block = require("../../lib/js/block.js");
 var Caml_array = require("../../lib/js/caml_array.js");
 
 function f() {
@@ -14,7 +14,6 @@ function f() {
         _n = n - 1 | 0;
         _acc = acc + n | 0;
         continue ;
-        
       } else {
         return acc;
       }
@@ -81,6 +80,6 @@ var suites = /* :: */[
 
 Mt.from_pair_suites("tailcall_inline_test.ml", suites);
 
-exports.f      = f;
+exports.f = f;
 exports.suites = suites;
 /*  Not a pure module */

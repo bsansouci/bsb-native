@@ -58,15 +58,121 @@ let show_extra_help ppf env trace = begin
   | _ -> ();
 end
 
-let rec collect_missing_arguments rettype targettype = match rettype with
-  | {desc=Tarrow (label, argtype, rettype, _)} when rettype.desc = targettype.desc -> Some ((label, argtype) :: [])
-  | {desc=Tarrow (label, argtype, rettype, _)} -> begin
-  match collect_missing_arguments rettype targettype with
+(* given type1 is foo => bar => baz(qux) and type 2 is bar => baz(qux), return Some(foo) *)
+let rec collect_missing_arguments env type1 type2 = match type1 with
+  (* why do we use Ctype.matches here? Please see https://github.com/BuckleScript/bucklescript/pull/2554 *)
+  | {desc=Tarrow (label, argtype, typ, _)} when Ctype.matches env typ type2 ->
+    Some [(label, argtype)]
+  | {desc=Tarrow (label, argtype, typ, _)} -> begin
+    match collect_missing_arguments env typ type2 with
     | Some res -> Some ((label, argtype) :: res)
     | None -> None
-  end
+    end
   | _ -> None
 
+let check_bs_arity_mismatch ppf trace =
+  let arity t = match t.desc with
+    | Tvariant { row_fields = [(label,_)] } ->
+        let label_len = String.length label in
+        let arity_str = "Arity_" in
+        let arity_len = String.length arity_str in
+        if arity_len < label_len &&
+          String.sub label 0 arity_len = arity_str
+        then
+          try
+            Some (int_of_string (String.sub label arity_len (label_len-arity_len)))
+          with _ -> None
+        else None
+    | _ ->
+        None in
+  let check_mismatch t1 t2 = match (arity t1, arity t2) with
+    | Some n1, Some n2 ->
+        fprintf ppf "@[@{<info>Found uncurried application [@bs] with arity %d, where arity %d was expected.@}@]" n1 n2;
+        true
+    | None, _
+    | _, None ->
+        false in
+  let rec traverse = function
+    | (_arity1, type1) :: (_arity2, type2) :: rest ->
+        if traverse rest
+        then true
+        else check_mismatch type1 type2
+    | _ ->
+        false in
+  ignore (traverse trace)
+
+let print_expr_type_clash env trace ppf =
+  (* this is the most frequent error. Do whatever we can to provide specific
+    guidance to this generic error before giving up *)
+  if Super_reason_react.state_escape_scope trace && Super_reason_react.trace_both_component_spec trace then
+    fprintf ppf "@[<v>\
+      @[@{<info>Is this a ReasonReact reducerComponent or component with retained props?@}@ \
+      If so, is the type for state, retained props or action declared _after_@ the component declaration?@ \
+      @{<info>Moving these types above the component declaration@} should resolve this!@]\
+    @]"
+    (* This one above shouldn't catch any false positives, so we can safely not display the original type clash error. *)
+  else begin
+    if Super_reason_react.is_array_wanted_react_element trace then
+    fprintf ppf "@[<v>\
+      @[@{<info>Did you pass an array as a ReasonReact DOM (lower-case) component's children?@}@ If not, disregard this.@ \
+      If so, please use `ReasonReact.createDomElement`:@ https://reasonml.github.io/reason-react/docs/en/children.html@]@,@,\
+      @[@{<info>Here's the original error message@}@]@,\
+    @]"
+    else if Super_reason_react.is_component_spec_wanted_react_element trace then
+      fprintf ppf "@[<v>\
+        @[@{<info>Did you want to create a ReasonReact element without using JSX?@}@ If not, disregard this.@ \
+        If so, don't forget to wrap this value in `ReasonReact.element` yourself:@ https://reasonml.github.io/reason-react/docs/en/jsx.html#capitalized@]@,@,\
+        @[@{<info>Here's the original error message@}@]@,\
+      @]";
+  begin
+    let bottom_aliases_result = bottom_aliases trace in
+    let missing_arguments = match bottom_aliases_result with
+    | Some (actual, expected) -> collect_missing_arguments env actual expected
+    | None -> assert false
+    in
+    let print_arguments =
+      Format.pp_print_list
+        ~pp_sep:(fun ppf _ -> fprintf ppf ",@ ")
+        (fun ppf (label, argtype) ->
+          if label = "" then fprintf ppf "@[%a@]" type_expr argtype
+          else fprintf ppf "@[(~%s: %a)@]" label type_expr argtype
+        )
+    in
+    match missing_arguments with
+    | Some [singleArgument] ->
+      (* btw, you can't say "final arguments". Intermediate labeled
+        arguments might be the ones missing *)
+      fprintf ppf "@[@{<info>This call is missing an argument@} of type@ %a@]"
+        print_arguments [singleArgument]
+    | Some arguments ->
+      fprintf ppf "@[<hv>@{<info>This call is missing arguments@} of type:@ %a@]"
+        print_arguments arguments
+    | None ->
+      let missing_parameters = match bottom_aliases_result with
+      | Some (actual, expected) -> collect_missing_arguments env expected actual
+      | None -> assert false
+      in
+      begin match missing_parameters with
+      | Some [singleParameter] ->
+        fprintf ppf "@[This value might need to be @{<info>wrapped in a function@ that@ takes@ an@ extra@ parameter@}@ of@ type@ %a@]@,@,"
+          print_arguments [singleParameter];
+        fprintf ppf "@[@{<info>Here's the original error message@}@]@,"
+      | Some arguments ->
+        fprintf ppf "@[This value seems to @{<info>need to be wrapped in a function that takes extra@ arguments@}@ of@ type:@ @[<hv>%a@]@]@,@,"
+          print_arguments arguments;
+        fprintf ppf "@[@{<info>Here's the original error message@}@]@,"
+      | None -> ()
+      end;
+      (* final fallback: show the generic type mismatch error *)
+      check_bs_arity_mismatch ppf trace;
+      super_report_unification_error ppf env trace
+        (function ppf ->
+            fprintf ppf "This has type:")
+        (function ppf ->
+            fprintf ppf "But somewhere wanted:");
+      show_extra_help ppf env trace;
+    end
+  end
 (* taken from https://github.com/BuckleScript/ocaml/blob/d4144647d1bf9bc7dc3aadc24c25a7efa3a67915/typing/typecore.ml#L3769 *)
 (* modified branches are commented *)
 let report_error env ppf = function
@@ -104,38 +210,9 @@ let report_error env ppf = function
         (Ident.name id)
   | Expr_type_clash trace ->
       (* modified *)
-      if Super_reason_react.state_escape_scope trace then
-        fprintf ppf "@[<v>\
-          @[@{<info>Is this a ReasonReact reducerComponent or component with retained props?@}@ \
-          If so, is the type for state, retained props or action declared _after_ the component declaration?@ \
-          Moving these types above the component declaration should resolve this!@]@,@,\
-          @[@{<info>Here's the original error message@}@]@,\
-        @]"
-      else if Super_reason_react.is_array_wanted_reactElement trace then
-        fprintf ppf "@[<v>\
-          @[@{<info>Are you passing an array as a ReasonReact DOM (lower-case) component's children?@}@ If not, disregard this.@ \
-          If so, please use `ReasonReact.createDomElement`:@ https://reasonml.github.io/reason-react/docs/en/children.html@]@,@,\
-          @[@{<info>Here's the original error message@}@]@,\
-        @]";
-      begin
-        let missing_arguments = match bottom_aliases trace with
-        | Some (actual, expected) -> collect_missing_arguments actual expected
-        | None -> assert false
-        in
-        match missing_arguments with
-        | Some arguments ->
-          fprintf ppf "You're missing arguments: @[%a@]" (Format.pp_print_list ~pp_sep:(fun ppf _ -> fprintf ppf ", ") (fun ppf (label, argtype) ->
-            if label = "" then type_expr ppf argtype
-            else fprintf ppf "~%s: %a" label type_expr argtype
-          )) arguments
-        | None ->
-          super_report_unification_error ppf env trace
-            (function ppf ->
-                fprintf ppf "This has type:")
-            (function ppf ->
-                fprintf ppf "But somewhere wanted:");
-          show_extra_help ppf env trace
-      end
+      fprintf ppf "@[<v>";
+      print_expr_type_clash env trace ppf;
+      fprintf ppf "@]"
   | Apply_non_function typ ->
       (* modified *)
       reset_and_mark_loops typ;
@@ -151,8 +228,19 @@ let report_error env ppf = function
             type_expr typ;
           fprintf ppf "@ @[It only accepts %i %s; here, it's called with more.@]@]"
                       acceptsCount (if acceptsCount == 1 then "argument" else "arguments")
-      | Tconstr ((Path.Pdot (((Pdot (Path.Pident {name="Js"}, "Internal", _))| (Pident {name="Js_internal"})), ("fn" | "meth"), _)), _, _)
-        -> fprintf ppf "This is an uncurried bucklescript function. It must be applied with [@bs]."
+      | Tconstr (
+          (Path.Pdot (((Pdot (Path.Pident {name="Js"}, "Internal", _)) | (Pident {name="Js_internal"})), ("fn" | "meth"), _)),
+          _,
+          _
+        )
+        ->
+          fprintf
+            ppf
+            "@[<v>This is an uncurried BuckleScript function. @{<info>It must be applied with a dot@}.@,@,\
+            Like this: @{<info>foo(. a, b)@}@,\
+            Not like this: @{<dim>foo(a, b)@}@,@,\
+            This guarantees that your function is fully applied. More info here:@,\
+            https://bucklescript.github.io/docs/en/function.html#solution-guaranteed-uncurrying@]"
       | _ ->
           fprintf ppf "@[<v>@[<2>This expression has type@ %a@]@ %s@]"
             type_expr typ
@@ -240,14 +328,15 @@ let report_error env ppf = function
           "This simple coercion was not fully general."
           "Consider using a double coercion."
   | Too_many_arguments (in_function, ty) ->
+      (* modified *)
       reset_and_mark_loops ty;
       if in_function then begin
-        fprintf ppf "This function expects too many arguments,@ ";
-        fprintf ppf "it should have type@ %a"
+        fprintf ppf "@[This function expects too many arguments,@ ";
+        fprintf ppf "it should have type@ %a@]"
           type_expr ty
       end else begin
-        fprintf ppf "This expression should not be a function,@ ";
-        fprintf ppf "the expected type is@ %a"
+        fprintf ppf "@[This expression should not be a function,@ ";
+        fprintf ppf "the expected type is@ %a@]"
           type_expr ty
       end
   | Abstract_wrong_label (l, ty) ->

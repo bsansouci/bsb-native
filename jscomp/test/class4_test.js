@@ -1,9 +1,9 @@
 'use strict';
 
-var Mt             = require("./mt.js");
-var Block          = require("../../lib/js/block.js");
-var Curry          = require("../../lib/js/curry.js");
-var Caml_oo_curry  = require("../../lib/js/caml_oo_curry.js");
+var Mt = require("./mt.js");
+var Block = require("../../lib/js/block.js");
+var Curry = require("../../lib/js/curry.js");
+var Caml_oo_curry = require("../../lib/js/caml_oo_curry.js");
 var CamlinternalOO = require("../../lib/js/camlinternalOO.js");
 
 var shared = [
@@ -26,7 +26,7 @@ function eq(loc, x, y) {
   test_id[0] = test_id[0] + 1 | 0;
   suites[0] = /* :: */[
     /* tuple */[
-      loc + (" id " + test_id[0]),
+      loc + (" id " + String(test_id[0])),
       (function () {
           return /* Eq */Block.__(0, [
                     x,
@@ -207,18 +207,18 @@ function incr(p) {
 
 Mt.from_pair_suites("class4_test.ml", suites[0]);
 
-exports.suites                  = suites;
-exports.test_id                 = test_id;
-exports.eq                      = eq;
-exports.restricted_point        = restricted_point;
-exports.restricted_point$prime  = restricted_point$prime;
+exports.suites = suites;
+exports.test_id = test_id;
+exports.eq = eq;
+exports.restricted_point = restricted_point;
+exports.restricted_point$prime = restricted_point$prime;
 exports.restricted_point2$prime = restricted_point2$prime;
-exports.Point                   = Point;
-exports.abstract_point          = abstract_point;
-exports.point                   = point;
-exports.colored_point           = colored_point;
-exports.p$prime                 = p$prime;
-exports.get_succ_x              = get_succ_x;
-exports.set_x                   = set_x;
-exports.incr                    = incr;
+exports.Point = Point;
+exports.abstract_point = abstract_point;
+exports.point = point;
+exports.colored_point = colored_point;
+exports.p$prime = p$prime;
+exports.get_succ_x = get_succ_x;
+exports.set_x = set_x;
+exports.incr = incr;
 /* restricted_point Not a pure module */

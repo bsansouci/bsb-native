@@ -1,11 +1,12 @@
 'use strict';
 
-var Mt         = require("./mt.js");
-var List       = require("../../lib/js/list.js");
-var $$Array    = require("../../lib/js/array.js");
-var Block      = require("../../lib/js/block.js");
-var Caml_obj   = require("../../lib/js/caml_obj.js");
+var Mt = require("./mt.js");
+var List = require("../../lib/js/list.js");
+var $$Array = require("../../lib/js/array.js");
+var Block = require("../../lib/js/block.js");
+var Caml_obj = require("../../lib/js/caml_obj.js");
 var Caml_array = require("../../lib/js/caml_array.js");
+var Caml_primitive = require("../../lib/js/caml_primitive.js");
 
 function is_sorted(x) {
   var len = x.length;
@@ -17,7 +18,6 @@ function is_sorted(x) {
     } else if (Caml_obj.caml_lessthan(Caml_array.caml_array_get(x, i), Caml_array.caml_array_get(x, i + 1 | 0))) {
       _i = i + 1 | 0;
       continue ;
-      
     } else {
       return /* false */0;
     }
@@ -192,7 +192,7 @@ var array_suites_001 = /* :: */[
                       0,
                       1
                     ];
-                    $$Array.sort(Caml_obj.caml_int_compare, u);
+                    $$Array.sort(Caml_primitive.caml_int_compare, u);
                     return /* Eq */Block.__(0, [
                               Caml_obj.caml_equal(/* int array */[
                                     0,
@@ -210,7 +210,7 @@ var array_suites_001 = /* :: */[
                       var v = $$Array.init(4, (function (i) {
                               return i % 17;
                             }));
-                      $$Array.sort(Caml_obj.caml_int_compare, v);
+                      $$Array.sort(Caml_primitive.caml_int_compare, v);
                       return /* Eq */Block.__(0, [
                                 /* true */1,
                                 is_sorted(v)

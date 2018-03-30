@@ -1,24 +1,23 @@
 'use strict';
 
-var Curry      = require("../../lib/js/curry.js");
+var Curry = require("../../lib/js/curry.js");
 var Caml_array = require("../../lib/js/caml_array.js");
 
 function f(_n, _acc) {
   while(true) {
     var acc = _acc;
     var n = _n;
-    if (n) {
+    if (n === 0) {
+      return Curry._1(acc, /* () */0);
+    } else {
       _acc = (function(n,acc){
       return function () {
-        console.log("" + n);
+        console.log(String(n));
         return Curry._1(acc, /* () */0);
       }
       }(n,acc));
       _n = n - 1 | 0;
       continue ;
-      
-    } else {
-      return Curry._1(acc, /* () */0);
     }
   };
 }
@@ -41,6 +40,6 @@ f(10, (function () {
         return /* () */0;
       }));
 
-exports.f            = f;
+exports.f = f;
 exports.test_closure = test_closure;
 /*  Not a pure module */

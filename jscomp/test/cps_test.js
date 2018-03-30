@@ -1,9 +1,9 @@
 'use strict';
 
-var Mt         = require("./mt.js");
-var $$Array    = require("../../lib/js/array.js");
-var Block      = require("../../lib/js/block.js");
-var Curry      = require("../../lib/js/curry.js");
+var Mt = require("./mt.js");
+var $$Array = require("../../lib/js/array.js");
+var Block = require("../../lib/js/block.js");
+var Curry = require("../../lib/js/curry.js");
 var Caml_array = require("../../lib/js/caml_array.js");
 
 function test() {
@@ -12,7 +12,9 @@ function test() {
     while(true) {
       var acc = _acc;
       var n = _n;
-      if (n) {
+      if (n === 0) {
+        return Curry._1(acc, /* () */0);
+      } else {
         _acc = (function(n,acc){
         return function () {
           v[0] = v[0] + n | 0;
@@ -21,9 +23,6 @@ function test() {
         }(n,acc));
         _n = n - 1 | 0;
         continue ;
-        
-      } else {
-        return Curry._1(acc, /* () */0);
       }
     };
   };
@@ -107,7 +106,7 @@ Mt.from_pair_suites("cps_test.ml", /* :: */[
       ]
     ]);
 
-exports.test          = test;
-exports.test_closure  = test_closure;
+exports.test = test;
+exports.test_closure = test_closure;
 exports.test_closure2 = test_closure2;
 /*  Not a pure module */

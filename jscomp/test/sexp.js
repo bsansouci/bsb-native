@@ -1,11 +1,11 @@
 'use strict';
 
-var List                    = require("../../lib/js/list.js");
-var Curry                   = require("../../lib/js/curry.js");
-var Hashtbl                 = require("../../lib/js/hashtbl.js");
-var Caml_obj                = require("../../lib/js/caml_obj.js");
-var Pervasives              = require("../../lib/js/pervasives.js");
-var Caml_format             = require("../../lib/js/caml_format.js");
+var List = require("../../lib/js/list.js");
+var Curry = require("../../lib/js/curry.js");
+var Hashtbl = require("../../lib/js/hashtbl.js");
+var Caml_obj = require("../../lib/js/caml_obj.js");
+var Pervasives = require("../../lib/js/pervasives.js");
+var Caml_format = require("../../lib/js/caml_format.js");
 var Caml_builtin_exceptions = require("../../lib/js/caml_builtin_exceptions.js");
 
 var equal = Caml_obj.caml_equal;
@@ -17,7 +17,7 @@ var hash = Hashtbl.hash;
 function of_int(x) {
   return /* `Atom */[
           726615281,
-          "" + x
+          String(x)
         ];
 }
 
@@ -177,7 +177,6 @@ function map_opt(f, l) {
           acc
         ];
         continue ;
-        
       } else {
         return /* None */0;
       }
@@ -200,7 +199,6 @@ function list_any(f, e) {
         } else {
           _l = l[1];
           continue ;
-          
         }
       } else {
         return /* None */0;
@@ -229,10 +227,8 @@ function list_all(f, e) {
             acc
           ];
           continue ;
-          
         } else {
           continue ;
-          
         }
       } else {
         return List.rev(acc);
@@ -275,9 +271,7 @@ function to_string(e) {
 }
 
 function to_pair(e) {
-  if (typeof e === "number") {
-    return /* None */0;
-  } else if (e[0] !== 848054398) {
+  if (typeof e === "number" || e[0] !== 848054398) {
     return /* None */0;
   } else {
     var match = e[1];
@@ -312,9 +306,7 @@ function to_pair_with(f1, f2, e) {
 }
 
 function to_triple(e) {
-  if (typeof e === "number") {
-    return /* None */0;
-  } else if (e[0] !== 848054398) {
+  if (typeof e === "number" || e[0] !== 848054398) {
     return /* None */0;
   } else {
     var match = e[1];
@@ -385,11 +377,9 @@ function get_field(name, e) {
         if (typeof match === "number") {
           _l = l[1];
           continue ;
-          
         } else if (match[0] !== 848054398) {
           _l = l[1];
           continue ;
-          
         } else {
           var match$1 = match[1];
           if (match$1) {
@@ -397,35 +387,29 @@ function get_field(name, e) {
             if (typeof match$2 === "number") {
               _l = l[1];
               continue ;
-              
             } else if (match$2[0] !== 726615281) {
               _l = l[1];
               continue ;
-              
             } else {
               var match$3 = match$1[1];
               if (match$3) {
                 if (match$3[1]) {
                   _l = l[1];
                   continue ;
-                  
                 } else if (Caml_obj.caml_equal(name$1, match$2[1])) {
                   return /* Some */[match$3[0]];
                 } else {
                   _l = l[1];
                   continue ;
-                  
                 }
               } else {
                 _l = l[1];
                 continue ;
-                
               }
             }
           } else {
             _l = l[1];
             continue ;
-            
           }
         }
       } else {
@@ -449,11 +433,9 @@ function _get_field_list(name, _l) {
       if (typeof match === "number") {
         _l = l[1];
         continue ;
-        
       } else if (match[0] !== 848054398) {
         _l = l[1];
         continue ;
-        
       } else {
         var match$1 = match[1];
         if (match$1) {
@@ -461,22 +443,18 @@ function _get_field_list(name, _l) {
           if (typeof match$2 === "number") {
             _l = l[1];
             continue ;
-            
           } else if (match$2[0] !== 726615281) {
             _l = l[1];
             continue ;
-            
           } else if (Caml_obj.caml_equal(name, match$2[1])) {
             return /* Some */[match$1[1]];
           } else {
             _l = l[1];
             continue ;
-            
           }
         } else {
           _l = l[1];
           continue ;
-          
         }
       }
     } else {
@@ -503,7 +481,6 @@ function _get_variant(s, args, _l) {
       } else {
         _l = l[1];
         continue ;
-        
       }
     } else {
       return /* None */0;
@@ -569,21 +546,21 @@ var Traverse = [
   get_exn
 ];
 
-exports.equal       = equal;
-exports.compare     = compare;
-exports.hash        = hash;
-exports.atom        = atom;
-exports.of_int      = of_int;
-exports.of_bool     = of_bool;
-exports.of_list     = of_list;
+exports.equal = equal;
+exports.compare = compare;
+exports.hash = hash;
+exports.atom = atom;
+exports.of_int = of_int;
+exports.of_bool = of_bool;
+exports.of_list = of_list;
 exports.of_rev_list = of_rev_list;
-exports.of_float    = of_float;
-exports.of_unit     = of_unit;
-exports.of_pair     = of_pair;
-exports.of_triple   = of_triple;
-exports.of_quad     = of_quad;
-exports.of_variant  = of_variant;
-exports.of_field    = of_field;
-exports.of_record   = of_record;
-exports.Traverse    = Traverse;
+exports.of_float = of_float;
+exports.of_unit = of_unit;
+exports.of_pair = of_pair;
+exports.of_triple = of_triple;
+exports.of_quad = of_quad;
+exports.of_variant = of_variant;
+exports.of_field = of_field;
+exports.of_record = of_record;
+exports.Traverse = Traverse;
 /* No side effect */

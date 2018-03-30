@@ -1,11 +1,11 @@
 'use strict';
 
-var Mt                      = require("./mt.js");
-var List                    = require("../../lib/js/list.js");
-var Block                   = require("../../lib/js/block.js");
-var Curry                   = require("../../lib/js/curry.js");
-var Caml_obj                = require("../../lib/js/caml_obj.js");
-var CamlinternalLazy        = require("../../lib/js/camlinternalLazy.js");
+var Mt = require("./mt.js");
+var List = require("../../lib/js/list.js");
+var Block = require("../../lib/js/block.js");
+var Curry = require("../../lib/js/curry.js");
+var Caml_obj = require("../../lib/js/caml_obj.js");
+var CamlinternalLazy = require("../../lib/js/camlinternalLazy.js");
 var Caml_builtin_exceptions = require("../../lib/js/caml_builtin_exceptions.js");
 
 var x = [];
@@ -138,27 +138,26 @@ function fib3(n) {
 }
 
 function even(n) {
-  if (n) {
+  if (n === 0) {
+    return /* true */1;
+  } else {
     var n$1 = n - 1 | 0;
     if (n$1 === 1) {
       return /* true */1;
     } else {
       return even(n$1 - 1 | 0);
     }
-  } else {
-    return /* true */1;
   }
 }
 
 function even2(_n) {
   while(true) {
     var n = _n;
-    if (n) {
+    if (n === 0) {
+      return /* true */1;
+    } else {
       _n = n - 1 | 0;
       continue ;
-      
-    } else {
-      return /* true */1;
     }
   };
 }
@@ -182,7 +181,6 @@ function sum(_acc, _n) {
       _n = n - 1 | 0;
       _acc = acc + n | 0;
       continue ;
-      
     } else {
       return acc;
     }
@@ -480,33 +478,33 @@ var v$1 = 3;
 
 var fake_inline_inlie2 = 4;
 
-exports.x                  = x;
-exports.a                  = a;
-exports.b                  = b;
-exports.c                  = c;
-exports.xx                 = xx;
-exports.naive              = naive;
-exports.fib                = fib;
-exports.xs                 = xs;
-exports.fib2               = fib2;
-exports.two                = two;
-exports.fib3               = fib3;
-exports.even               = even;
-exports.even2              = even2;
-exports.lazy_v             = lazy_v;
-exports.sum                = sum;
-exports.fake_v             = fake_v;
-exports.fake_y             = fake_y;
-exports.fake_z             = fake_z;
-exports.fake_z2            = fake_z2;
-exports.fake_y2            = fake_y2;
-exports.v                  = v$1;
-exports.rec_variant_b      = rec_variant_b;
-exports.rec_variant_a      = rec_variant_a;
-exports.suites             = suites;
-exports.fake_odd           = fake_odd;
-exports.fake_minus         = fake_minus;
-exports.fake_inline        = fake_inline;
-exports.fake_inline_minus  = fake_inline_minus;
+exports.x = x;
+exports.a = a;
+exports.b = b;
+exports.c = c;
+exports.xx = xx;
+exports.naive = naive;
+exports.fib = fib;
+exports.xs = xs;
+exports.fib2 = fib2;
+exports.two = two;
+exports.fib3 = fib3;
+exports.even = even;
+exports.even2 = even2;
+exports.lazy_v = lazy_v;
+exports.sum = sum;
+exports.fake_v = fake_v;
+exports.fake_y = fake_y;
+exports.fake_z = fake_z;
+exports.fake_z2 = fake_z2;
+exports.fake_y2 = fake_y2;
+exports.v = v$1;
+exports.rec_variant_b = rec_variant_b;
+exports.rec_variant_a = rec_variant_a;
+exports.suites = suites;
+exports.fake_odd = fake_odd;
+exports.fake_minus = fake_minus;
+exports.fake_inline = fake_inline;
+exports.fake_inline_minus = fake_inline_minus;
 exports.fake_inline_inlie2 = fake_inline_inlie2;
 /* xs Not a pure module */

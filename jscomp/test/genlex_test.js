@@ -1,8 +1,8 @@
 'use strict';
 
-var Mt     = require("./mt.js");
-var List   = require("../../lib/js/list.js");
-var Block  = require("../../lib/js/block.js");
+var Mt = require("./mt.js");
+var List = require("../../lib/js/list.js");
+var Block = require("../../lib/js/block.js");
 var Genlex = require("../../lib/js/genlex.js");
 var Stream = require("../../lib/js/stream.js");
 
@@ -55,7 +55,6 @@ function to_list(s) {
         acc
       ];
       continue ;
-      
     }
     
   };
@@ -99,7 +98,7 @@ var suites = /* :: */[
 
 Mt.from_pair_suites("genlex_test.ml", suites);
 
-exports.lexer   = lexer;
+exports.lexer = lexer;
 exports.to_list = to_list;
-exports.suites  = suites;
+exports.suites = suites;
 /* lexer Not a pure module */

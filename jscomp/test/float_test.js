@@ -1,21 +1,19 @@
 'use strict';
 
-var Mt         = require("./mt.js");
-var $$Array    = require("../../lib/js/array.js");
-var Block      = require("../../lib/js/block.js");
-var Curry      = require("../../lib/js/curry.js");
-var Printf     = require("../../lib/js/printf.js");
-var Mt_global  = require("./mt_global.js");
+var Mt = require("./mt.js");
+var $$Array = require("../../lib/js/array.js");
+var Block = require("../../lib/js/block.js");
+var Curry = require("../../lib/js/curry.js");
+var Printf = require("../../lib/js/printf.js");
+var Mt_global = require("./mt_global.js");
 var Caml_float = require("../../lib/js/caml_float.js");
+var Caml_int64 = require("../../lib/js/caml_int64.js");
 var Pervasives = require("../../lib/js/pervasives.js");
+var Caml_primitive = require("../../lib/js/caml_primitive.js");
 
-var match_000 = [0];
+var test_id = [0];
 
-var match_001 = [/* [] */0];
-
-var suites = match_001;
-
-var test_id = match_000;
+var suites = [/* [] */0];
 
 function eq(loc) {
   return (function (param, param$1) {
@@ -28,6 +26,11 @@ function approx(loc) {
       return Mt_global.collect_approx(test_id, suites, loc, param, param$1);
     });
 }
+
+var epsilon_float = Caml_int64.float_of_bits(/* int64 */[
+      /* hi */1018167296,
+      /* lo */0
+    ]);
 
 var match = Caml_float.caml_frexp_float(12.0);
 
@@ -142,7 +145,7 @@ function from_pairs(ps) {
                   }), ps));
 }
 
-var float_compare = Caml_float.caml_float_compare;
+var float_compare = Caml_primitive.caml_float_compare;
 
 var param = Caml_float.caml_classify_float(3);
 
@@ -155,7 +158,7 @@ Mt_global.collect_eq(test_id, suites, "File \"float_test.ml\", line 48, characte
       -3
     ]);
 
-var match$3 = Caml_float.caml_modf_float(Pervasives.nan);
+var match$3 = Caml_float.caml_modf_float(Number.NaN);
 
 var param_000 = +isNaN(match$3[0]);
 
@@ -186,7 +189,7 @@ var param$4 = $$Array.map((function (x) {
           return 0;
         }
       }), $$Array.map((function (param) {
-            return Caml_float.caml_float_compare(param[0], param[1]);
+            return Caml_primitive.caml_float_compare(param[0], param[1]);
           }), /* array */[
           /* tuple */[
             1,
@@ -280,14 +283,12 @@ Mt.from_pair_suites("float_test.ml", Pervasives.$at(/* :: */[
           ]
         ], Pervasives.$at(from_pairs(results), suites[0])));
 
-var epsilon_float = 2.22044604925031308e-16;
-
-exports.test_id       = test_id;
-exports.suites        = suites;
-exports.eq            = eq;
-exports.approx        = approx;
+exports.test_id = test_id;
+exports.suites = suites;
+exports.eq = eq;
+exports.approx = approx;
 exports.epsilon_float = epsilon_float;
-exports.results       = results;
-exports.from_pairs    = from_pairs;
+exports.results = results;
+exports.from_pairs = from_pairs;
 exports.float_compare = float_compare;
 /* results Not a pure module */

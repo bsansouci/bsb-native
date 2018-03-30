@@ -57,7 +57,7 @@ let mk ~lo ~hi = {lo = to_unsigned lo ; hi}
 let min_int =  mk  ~lo: 0n ~hi:(-0x80000000n)
 
 let max_int =
- mk  ~lo:( -0xffff_ffffn) ~hi: 0x7fff_fffn
+ mk  ~lo:( -0xffff_ffffn) ~hi: 0x7fff_ffffn
 
 let one = mk ~lo: 1n ~hi:0n
 let zero = mk ~lo: 0n ~hi: 0n
@@ -83,6 +83,19 @@ let add
 let not {lo; hi }  = mk ~lo:(lognot lo) ~hi:(lognot hi)
 
 let eq x y = x.hi = y.hi && x.lo = y.lo
+
+let equal_null x y =    
+  match Js.nullToOption y with 
+  | None -> false 
+  | Some y -> eq x y 
+let equal_undefined x y =   
+  match Js.undefinedToOption y with 
+  | None -> false 
+  | Some y -> eq x y   
+let equal_nullable x y =   
+  match Js.toOption y with 
+  | None -> false 
+  | Some y -> eq x y 
 
 let neg ({lo; hi} as x) =
   if eq x  min_int then
@@ -258,7 +271,8 @@ let gt x y =
 
 
 let le x y = Pervasives.not (gt x y)
-
+let min x y = if lt x  y then x else y 
+let max x y = if gt x y then x else y 
 
 let to_float ({hi; lo} : t) = 
   Nativeint.to_float ( hi *~ [%raw{|0x100000000|}] +~ lo)
@@ -306,7 +320,7 @@ let rec of_float (x : float) : t =
 
 
 external log2 : float = "Math.LN2" [@@bs.val]  
-external max : float -> float -> float = "Math.max" [@@bs.val]
+(* external maxFloat : float -> float -> float = "Math.max" [@@bs.val] *)
 
 let rec div self other =
   match self, other with
@@ -348,7 +362,7 @@ let rec div self other =
       let rem = ref self in
       (* assert false *)
       while ge !rem other  do
-        let approx = ref ( max 1.
+        let approx = ref ( Pervasives.max 1.
              (floor (to_float !rem /. to_float other) )) in
         let log2 = ceil (log !approx /. log2) in
         let delta =

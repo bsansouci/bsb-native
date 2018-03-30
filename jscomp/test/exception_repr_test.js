@@ -1,11 +1,11 @@
 'use strict';
 
-var Mt              = require("./mt.js");
-var Block           = require("../../lib/js/block.js");
-var Curry           = require("../../lib/js/curry.js");
-var Format          = require("../../lib/js/format.js");
-var Printexc        = require("../../lib/js/printexc.js");
-var Exception_def   = require("./exception_def.js");
+var Mt = require("./mt.js");
+var Block = require("../../lib/js/block.js");
+var Curry = require("../../lib/js/curry.js");
+var Format = require("../../lib/js/format.js");
+var Printexc = require("../../lib/js/printexc.js");
+var Exception_def = require("./exception_def.js");
 var Caml_exceptions = require("../../lib/js/caml_exceptions.js");
 
 var suites = [/* [] */0];
@@ -16,7 +16,7 @@ function eq(loc, x, y) {
   test_id[0] = test_id[0] + 1 | 0;
   suites[0] = /* :: */[
     /* tuple */[
-      loc + (" id " + test_id[0]),
+      loc + (" id " + String(test_id[0])),
       (function () {
           return /* Eq */Block.__(0, [
                     x,
@@ -77,11 +77,11 @@ Mt.from_pair_suites("exception_repr_test.ml", suites[0]);
 
 var AAA = Exception_def.A;
 
-exports.suites  = suites;
+exports.suites = suites;
 exports.test_id = test_id;
-exports.eq      = eq;
-exports.Hi      = Hi;
-exports.Hello   = Hello;
-exports.A       = A;
-exports.AAA     = AAA;
+exports.eq = eq;
+exports.Hi = Hi;
+exports.Hello = Hello;
+exports.A = A;
+exports.AAA = AAA;
 /*  Not a pure module */

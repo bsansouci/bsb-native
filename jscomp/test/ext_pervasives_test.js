@@ -1,19 +1,19 @@
 'use strict';
 
-var Arg                     = require("../../lib/js/arg.js");
-var Obj                     = require("../../lib/js/obj.js");
-var List                    = require("../../lib/js/list.js");
-var $$Array                 = require("../../lib/js/array.js");
-var Block                   = require("../../lib/js/block.js");
-var Curry                   = require("../../lib/js/curry.js");
-var Format                  = require("../../lib/js/format.js");
-var Printf                  = require("../../lib/js/printf.js");
-var $$String                = require("../../lib/js/string.js");
-var Caml_obj                = require("../../lib/js/caml_obj.js");
-var Caml_int32              = require("../../lib/js/caml_int32.js");
-var Pervasives              = require("../../lib/js/pervasives.js");
-var Caml_string             = require("../../lib/js/caml_string.js");
-var Caml_exceptions         = require("../../lib/js/caml_exceptions.js");
+var Arg = require("../../lib/js/arg.js");
+var Obj = require("../../lib/js/obj.js");
+var List = require("../../lib/js/list.js");
+var $$Array = require("../../lib/js/array.js");
+var Block = require("../../lib/js/block.js");
+var Curry = require("../../lib/js/curry.js");
+var Format = require("../../lib/js/format.js");
+var Printf = require("../../lib/js/printf.js");
+var $$String = require("../../lib/js/string.js");
+var Caml_obj = require("../../lib/js/caml_obj.js");
+var Caml_int32 = require("../../lib/js/caml_int32.js");
+var Pervasives = require("../../lib/js/pervasives.js");
+var Caml_string = require("../../lib/js/caml_string.js");
+var Caml_exceptions = require("../../lib/js/caml_exceptions.js");
 var Caml_builtin_exceptions = require("../../lib/js/caml_builtin_exceptions.js");
 
 function $$finally(v, action, f) {
@@ -59,13 +59,12 @@ function is_pos_pow(n) {
         return -2;
       } else if (n$1 === 1) {
         return c;
-      } else if (n$1 & 1) {
-        throw E;
-      } else {
+      } else if ((n$1 & 1) === 0) {
         _n = (n$1 >> 1);
         _c = c + 1 | 0;
         continue ;
-        
+      } else {
+        throw E;
       }
     };
   }
@@ -103,7 +102,7 @@ function bad_argf(fmt) {
 
 function dump(r) {
   if (typeof r === "number") {
-    return "" + r;
+    return String(r);
   } else {
     var get_fields = function (_acc, _n) {
       while(true) {
@@ -117,7 +116,6 @@ function dump(r) {
             acc
           ];
           continue ;
-          
         } else {
           return acc;
         }
@@ -131,12 +129,9 @@ function dump(r) {
         } else {
           var s = r.length;
           var t = r.tag | 0;
-          if (t) {
-            return /* false */0;
-          } else if (s === 2) {
+          if (t === 0 && s === 2) {
             _r = r[1];
             continue ;
-            
           } else {
             return /* false */0;
           }
@@ -203,7 +198,7 @@ function dump(r) {
         return "<forward>";
       } else if (t < Obj.no_scan_tag) {
         var fields$2 = get_fields(/* [] */0, s);
-        return "Tag" + (t + (" (" + ($$String.concat(", ", List.map(dump, fields$2)) + ")")));
+        return "Tag" + (String(t) + (" (" + ($$String.concat(", ", List.map(dump, fields$2)) + ")")));
       } else if (t === Obj.string_tag) {
         return "\"" + ($$String.escaped(r) + "\"");
       } else if (t === Obj.double_tag) {
@@ -280,14 +275,14 @@ function hash_variant(s) {
   }
 }
 
-exports.$$finally         = $$finally;
+exports.$$finally = $$finally;
 exports.with_file_as_chan = with_file_as_chan;
-exports.with_file_as_pp   = with_file_as_pp;
-exports.is_pos_pow        = is_pos_pow;
-exports.failwithf         = failwithf;
-exports.invalid_argf      = invalid_argf;
-exports.bad_argf          = bad_argf;
-exports.dump              = dump$1;
-exports.pp_any            = pp_any;
-exports.hash_variant      = hash_variant;
+exports.with_file_as_pp = with_file_as_pp;
+exports.is_pos_pow = is_pos_pow;
+exports.failwithf = failwithf;
+exports.invalid_argf = invalid_argf;
+exports.bad_argf = bad_argf;
+exports.dump = dump$1;
+exports.pp_any = pp_any;
+exports.hash_variant = hash_variant;
 /* Format Not a pure module */

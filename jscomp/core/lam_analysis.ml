@@ -158,7 +158,7 @@ let rec no_side_effects (lam : Lam.t) : bool =
       | Pstringadd 
       | Pjs_function_length
       | Pcaml_obj_length
-      | Pjs_is_instance_array
+      (* | Pjs_is_instance_array *)
       | Pwrap_exn
         -> true
       | Pjs_string_of_small_array
@@ -317,6 +317,8 @@ and size_constant x =
   | Const_nativeint _ 
   | Const_immstring _
   | Const_pointer _ 
+  | Const_js_null | Const_js_undefined
+  | Const_js_true | Const_js_false
     -> 1 
   | Const_block (_, _, str) 
     ->  List.fold_left (fun acc x -> acc + size_constant x ) 0 str
@@ -542,7 +544,7 @@ and eq_primitive ( lhs : Lam.primitive) (rhs : Lam.primitive) =
   | Pbswap16 -> rhs = Pbswap16
   | Pjs_function_length -> rhs = Pjs_function_length
   | Pjs_string_of_small_array -> rhs = Pjs_string_of_small_array
-  | Pjs_is_instance_array -> rhs = Pjs_is_instance_array
+  (* | Pjs_is_instance_array -> rhs = Pjs_is_instance_array *)
   | Pcaml_obj_length -> rhs = Pcaml_obj_length
   | Pcaml_obj_set_length -> rhs = Pcaml_obj_set_length
   | Pccall {prim_name = n0 ;  prim_native_name = nn0} ->  (match rhs with Pccall {prim_name = n1; prim_native_name = nn1} ->    n0 = n1 && nn0 = nn1 | _ -> false )    

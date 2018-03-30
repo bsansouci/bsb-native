@@ -1,9 +1,9 @@
 'use strict';
 
-var List                    = require("../../lib/js/list.js");
-var Curry                   = require("../../lib/js/curry.js");
-var Pervasives              = require("../../lib/js/pervasives.js");
-var Caml_exceptions         = require("../../lib/js/caml_exceptions.js");
+var List = require("../../lib/js/list.js");
+var Curry = require("../../lib/js/curry.js");
+var Pervasives = require("../../lib/js/pervasives.js");
+var Caml_exceptions = require("../../lib/js/caml_exceptions.js");
 var Caml_builtin_exceptions = require("../../lib/js/caml_builtin_exceptions.js");
 
 function cons_enum(_s, _e) {
@@ -18,7 +18,6 @@ function cons_enum(_s, _e) {
       ];
       _s = s[0];
       continue ;
-      
     } else {
       return e;
     }
@@ -41,7 +40,6 @@ function min_elt(_param) {
       if (l) {
         _param = l;
         continue ;
-        
       } else {
         return param[1];
       }
@@ -59,7 +57,6 @@ function max_elt(_param) {
       if (r) {
         _param = r;
         continue ;
-        
       } else {
         return param[1];
       }
@@ -85,7 +82,6 @@ function cardinal_aux(_acc, _param) {
       _param = param[0];
       _acc = cardinal_aux(acc + 1 | 0, param[2]);
       continue ;
-      
     } else {
       return acc;
     }
@@ -107,7 +103,6 @@ function elements_aux(_accu, _param) {
         elements_aux(accu, param[2])
       ];
       continue ;
-      
     } else {
       return accu;
     }
@@ -126,7 +121,6 @@ function iter(f, _param) {
       Curry._1(f, param[1]);
       _param = param[2];
       continue ;
-      
     } else {
       return /* () */0;
     }
@@ -141,7 +135,6 @@ function fold(f, _s, _accu) {
       _accu = Curry._2(f, s[1], fold(f, s[0], accu));
       _s = s[2];
       continue ;
-      
     } else {
       return accu;
     }
@@ -152,14 +145,9 @@ function for_all(p, _param) {
   while(true) {
     var param = _param;
     if (param) {
-      if (Curry._1(p, param[1])) {
-        if (for_all(p, param[0])) {
-          _param = param[2];
-          continue ;
-          
-        } else {
-          return /* false */0;
-        }
+      if (Curry._1(p, param[1]) && for_all(p, param[0])) {
+        _param = param[2];
+        continue ;
       } else {
         return /* false */0;
       }
@@ -173,14 +161,11 @@ function exists(p, _param) {
   while(true) {
     var param = _param;
     if (param) {
-      if (Curry._1(p, param[1])) {
-        return /* true */1;
-      } else if (exists(p, param[0])) {
+      if (Curry._1(p, param[1]) || exists(p, param[0])) {
         return /* true */1;
       } else {
         _param = param[2];
         continue ;
-        
       }
     } else {
       return /* false */0;
@@ -569,59 +554,57 @@ function of_sorted_list(l) {
 
 function of_sorted_array(l) {
   var sub = function (start, n, l) {
-    if (n) {
-      if (n === 1) {
-        var x0 = l[start];
-        return /* Node */[
+    if (n === 0) {
+      return /* Empty */0;
+    } else if (n === 1) {
+      var x0 = l[start];
+      return /* Node */[
+              /* Empty */0,
+              x0,
+              /* Empty */0,
+              1
+            ];
+    } else if (n === 2) {
+      var x0$1 = l[start];
+      var x1 = l[start + 1 | 0];
+      return /* Node */[
+              /* Node */[
                 /* Empty */0,
-                x0,
+                x0$1,
                 /* Empty */0,
                 1
-              ];
-      } else if (n === 2) {
-        var x0$1 = l[start];
-        var x1 = l[start + 1 | 0];
-        return /* Node */[
-                /* Node */[
-                  /* Empty */0,
-                  x0$1,
-                  /* Empty */0,
-                  1
-                ],
-                x1,
+              ],
+              x1,
+              /* Empty */0,
+              2
+            ];
+    } else if (n === 3) {
+      var x0$2 = l[start];
+      var x1$1 = l[start + 1 | 0];
+      var x2 = l[start + 2 | 0];
+      return /* Node */[
+              /* Node */[
                 /* Empty */0,
-                2
-              ];
-      } else if (n === 3) {
-        var x0$2 = l[start];
-        var x1$1 = l[start + 1 | 0];
-        var x2 = l[start + 2 | 0];
-        return /* Node */[
-                /* Node */[
-                  /* Empty */0,
-                  x0$2,
-                  /* Empty */0,
-                  1
-                ],
-                x1$1,
-                /* Node */[
-                  /* Empty */0,
-                  x2,
-                  /* Empty */0,
-                  1
-                ],
-                2
-              ];
-      } else {
-        var nl = n / 2 | 0;
-        var left = sub(start, nl, l);
-        var mid = start + nl | 0;
-        var v = l[mid];
-        var right = sub(mid + 1 | 0, (n - nl | 0) - 1 | 0, l);
-        return create(left, v, right);
-      }
+                x0$2,
+                /* Empty */0,
+                1
+              ],
+              x1$1,
+              /* Node */[
+                /* Empty */0,
+                x2,
+                /* Empty */0,
+                1
+              ],
+              2
+            ];
     } else {
-      return /* Empty */0;
+      var nl = n / 2 | 0;
+      var left = sub(start, nl, l);
+      var mid = start + nl | 0;
+      var v = l[mid];
+      var right = sub(mid + 1 | 0, (n - nl | 0) - 1 | 0, l);
+      return create(left, v, right);
     }
   };
   return sub(0, l.length, l);
@@ -722,7 +705,6 @@ function compare_aux(cmp, _e1, _e2) {
           _e2 = cons_enum(e2[1], e2[2]);
           _e1 = cons_enum(e1[1], e1[2]);
           continue ;
-          
         }
       } else {
         return 1;
@@ -743,42 +725,42 @@ var empty = /* Empty */0;
 
 var choose = min_elt;
 
-exports.cons_enum               = cons_enum;
-exports.height                  = height;
-exports.min_elt                 = min_elt;
-exports.max_elt                 = max_elt;
-exports.empty                   = empty;
-exports.is_empty                = is_empty;
-exports.cardinal_aux            = cardinal_aux;
-exports.cardinal                = cardinal;
-exports.elements_aux            = elements_aux;
-exports.elements                = elements;
-exports.choose                  = choose;
-exports.iter                    = iter;
-exports.fold                    = fold;
-exports.for_all                 = for_all;
-exports.exists                  = exists;
-exports.max_int3                = max_int3;
-exports.max_int_2               = max_int_2;
+exports.cons_enum = cons_enum;
+exports.height = height;
+exports.min_elt = min_elt;
+exports.max_elt = max_elt;
+exports.empty = empty;
+exports.is_empty = is_empty;
+exports.cardinal_aux = cardinal_aux;
+exports.cardinal = cardinal;
+exports.elements_aux = elements_aux;
+exports.elements = elements;
+exports.choose = choose;
+exports.iter = iter;
+exports.fold = fold;
+exports.for_all = for_all;
+exports.exists = exists;
+exports.max_int3 = max_int3;
+exports.max_int_2 = max_int_2;
 exports.Height_invariant_broken = Height_invariant_broken;
-exports.Height_diff_borken      = Height_diff_borken;
-exports.check_height_and_diff   = check_height_and_diff;
-exports.check                   = check;
-exports.create                  = create;
-exports.internal_bal            = internal_bal;
-exports.remove_min_elt          = remove_min_elt;
-exports.singleton               = singleton;
-exports.internal_merge          = internal_merge;
-exports.add_min_element         = add_min_element;
-exports.add_max_element         = add_max_element;
-exports.internal_join           = internal_join;
-exports.internal_concat         = internal_concat;
-exports.filter                  = filter;
-exports.partition               = partition;
-exports.of_sorted_list          = of_sorted_list;
-exports.of_sorted_array         = of_sorted_array;
-exports.is_ordered              = is_ordered;
-exports.invariant               = invariant;
-exports.compare_aux             = compare_aux;
-exports.compare                 = compare;
+exports.Height_diff_borken = Height_diff_borken;
+exports.check_height_and_diff = check_height_and_diff;
+exports.check = check;
+exports.create = create;
+exports.internal_bal = internal_bal;
+exports.remove_min_elt = remove_min_elt;
+exports.singleton = singleton;
+exports.internal_merge = internal_merge;
+exports.add_min_element = add_min_element;
+exports.add_max_element = add_max_element;
+exports.internal_join = internal_join;
+exports.internal_concat = internal_concat;
+exports.filter = filter;
+exports.partition = partition;
+exports.of_sorted_list = of_sorted_list;
+exports.of_sorted_array = of_sorted_array;
+exports.is_ordered = is_ordered;
+exports.invariant = invariant;
+exports.compare_aux = compare_aux;
+exports.compare = compare;
 /* No side effect */

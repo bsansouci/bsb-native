@@ -1,7 +1,7 @@
 'use strict';
 
-var Curry                   = require("../../lib/js/curry.js");
-var Caml_string             = require("../../lib/js/caml_string.js");
+var Curry = require("../../lib/js/curry.js");
+var Caml_primitive = require("../../lib/js/caml_primitive.js");
 var Caml_builtin_exceptions = require("../../lib/js/caml_builtin_exceptions.js");
 
 function height(param) {
@@ -88,14 +88,8 @@ function add(x, data, param) {
     var d = param[2];
     var v = param[1];
     var l = param[0];
-    var c = Caml_string.caml_string_compare(x, v);
-    if (c) {
-      if (c < 0) {
-        return bal(add(x, data, l), v, d, r);
-      } else {
-        return bal(l, v, d, add(x, data, r));
-      }
-    } else {
+    var c = Caml_primitive.caml_string_compare(x, v);
+    if (c === 0) {
       return /* Node */[
               l,
               x,
@@ -103,6 +97,10 @@ function add(x, data, param) {
               r,
               param[4]
             ];
+    } else if (c < 0) {
+      return bal(add(x, data, l), v, d, r);
+    } else {
+      return bal(l, v, d, add(x, data, r));
     }
   } else {
     return /* Node */[
@@ -119,13 +117,12 @@ function find(x, _param) {
   while(true) {
     var param = _param;
     if (param) {
-      var c = Caml_string.caml_string_compare(x, param[1]);
-      if (c) {
+      var c = Caml_primitive.caml_string_compare(x, param[1]);
+      if (c === 0) {
+        return param[2];
+      } else {
         _param = c < 0 ? param[0] : param[3];
         continue ;
-        
-      } else {
-        return param[2];
       }
     } else {
       throw Caml_builtin_exceptions.not_found;
@@ -144,13 +141,13 @@ function assertion_test() {
   var m = [/* Empty */0];
   timing("building", (function () {
           for(var i = 0; i <= 1000000; ++i){
-            m[0] = add("" + i, "" + i, m[0]);
+            m[0] = add(String(i), String(i), m[0]);
           }
           return /* () */0;
         }));
   return timing("querying", (function () {
                 for(var i = 0; i <= 1000000; ++i){
-                  find("" + i, m[0]);
+                  find(String(i), m[0]);
                 }
                 return /* () */0;
               }));

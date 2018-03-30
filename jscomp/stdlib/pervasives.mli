@@ -95,6 +95,10 @@ external compare : 'a -> 'a -> int = "%compare"
    required by the {!Set.Make} and {!Map.Make} functors, as well as
    the {!List.sort} and {!Array.sort} functions. *)
 
+#if BS then 
+external min : 'a -> 'a -> 'a = "%bs_min"
+external max : 'a -> 'a -> 'a = "%bs_max"
+#else
 val min : 'a -> 'a -> 'a
 (** Return the smaller of the two arguments.
     The result is unspecified if one of the arguments contains
@@ -105,6 +109,7 @@ val max : 'a -> 'a -> 'a
     The result is unspecified if one of the arguments contains
     the float value [nan]. *)
 
+#end 
 external ( == ) : 'a -> 'a -> bool = "%eq"
 (** [e1 == e2] tests for physical equality of [e1] and [e2].
    On mutable types such as references, arrays, byte sequences, records with
@@ -458,7 +463,21 @@ external int_of_float : float -> int = "%intoffloat"
 (** Truncate the given floating-point number to an integer.
    The result is unspecified if the argument is [nan] or falls outside the
    range of representable integers. *)
-
+#if BS then 
+external infinity : float = "POSITIVE_INFINITY" 
+[@@bs.val]  [@@bs.scope "Number"]
+external neg_infinity : float = "NEGATIVE_INFINITY"
+[@@bs.val]  [@@bs.scope "Number"]
+external nan : float = "NaN"
+[@@bs.val]  [@@bs.scope "Number"]
+external max_float : float = "MAX_VALUE"
+[@@bs.val]  [@@bs.scope "Number"]
+external min_float : float = "MIN_VALUE"
+[@@bs.val]  [@@bs.scope "Number"]
+(* external epsilon_float : float = "EPSILON" (* ES 2015 *)
+[@@bs.val]  [@@bs.scope "Number"]   *)
+val epsilon_float : float
+#else
 val infinity : float
 (** Positive infinity. *)
 
@@ -483,6 +502,8 @@ val epsilon_float : float
 (** The difference between [1.0] and the smallest exactly representable
     floating-point number greater than [1.0]. *)
 
+#end
+
 type fpclass =
     FP_normal           (** Normal number, none of the below *)
   | FP_subnormal        (** Number very close to 0.0, has reduced precision *)
@@ -502,7 +523,11 @@ external classify_float : float -> fpclass = "caml_classify_float"
    More string operations are provided in module {!String}.
 *)
 
+#if BS then
+external (^) : string -> string -> string = "#string_append"
+#else
 val ( ^ ) : string -> string -> string
+#end
 (** String concatenation. *)
 
 
@@ -543,9 +568,12 @@ val bool_of_string : string -> bool
    Raise [Invalid_argument "bool_of_string"] if the string is not
    ["true"] or ["false"]. *)
 
+#if BS then    
+external string_of_int : int -> string = "String" [@@bs.val]
+#else
 val string_of_int : int -> string
 (** Return the string representation of an integer, in decimal. *)
-
+#end
 external int_of_string : string -> int = "caml_int_of_string"
 (** Convert the given string to an integer.
    The string is read in decimal (by default) or in hexadecimal (if it
@@ -619,7 +647,12 @@ val print_int : int -> unit
 val print_float : float -> unit
 (** Print a floating-point number, in decimal, on standard output. *)
 
+#if BS then
+external print_endline : string -> unit = "log" 
+[@@bs.val] [@@bs.scope "console"]
+#else    
 val print_endline : string -> unit
+#end
 (** Print a string, followed by a newline character, on
    standard output and flush standard output. *)
 
@@ -647,7 +680,12 @@ val prerr_int : int -> unit
 val prerr_float : float -> unit
 (** Print a floating-point number, in decimal, on standard error. *)
 
+#if BS then
+external prerr_endline : string -> unit = "error" 
+[@@bs.val] [@@bs.scope "console"]
+#else    
 val prerr_endline : string -> unit
+#end  
 (** Print a string, followed by a newline character on standard
    error and flush standard error. *)
 

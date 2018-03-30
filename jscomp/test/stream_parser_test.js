@@ -1,12 +1,12 @@
 'use strict';
 
-var Mt              = require("./mt.js");
-var Block           = require("../../lib/js/block.js");
-var Curry           = require("../../lib/js/curry.js");
-var Queue           = require("../../lib/js/queue.js");
-var Genlex          = require("../../lib/js/genlex.js");
-var Stream          = require("../../lib/js/stream.js");
-var Caml_int32      = require("../../lib/js/caml_int32.js");
+var Mt = require("./mt.js");
+var Block = require("../../lib/js/block.js");
+var Curry = require("../../lib/js/curry.js");
+var Queue = require("../../lib/js/queue.js");
+var Genlex = require("../../lib/js/genlex.js");
+var Stream = require("../../lib/js/stream.js");
+var Caml_int32 = require("../../lib/js/caml_int32.js");
 var Caml_exceptions = require("../../lib/js/caml_exceptions.js");
 
 var Parse_error = Caml_exceptions.create("Stream_parser_test.Parse_error");
@@ -17,15 +17,15 @@ function parse(token) {
     /* tail : None */0
   ];
   var token$1 = function () {
-    if (look_ahead[/* length */0]) {
-      return Queue.pop(look_ahead);
-    } else {
+    if (look_ahead[/* length */0] === 0) {
       try {
         return Curry._1(token, /* () */0);
       }
       catch (exn){
         return /* Kwd */Block.__(0, ["=="]);
       }
+    } else {
+      return Queue.pop(look_ahead);
     }
   };
   var parse_atom = function () {
@@ -55,7 +55,6 @@ function parse(token) {
                   "unexpected token"
                 ];
           }
-          break;
       case 2 : 
           return e[0];
       default:
@@ -145,15 +144,15 @@ function l_parse(token) {
     /* tail : None */0
   ];
   var token$1 = function () {
-    if (look_ahead[/* length */0]) {
-      return Queue.pop(look_ahead);
-    } else {
+    if (look_ahead[/* length */0] === 0) {
       try {
         return Curry._1(token, /* () */0);
       }
       catch (exn){
         return /* Kwd */Block.__(0, ["=="]);
       }
+    } else {
+      return Queue.pop(look_ahead);
     }
   };
   var parse_f = function () {
@@ -182,7 +181,6 @@ function l_parse(token) {
                   "Unexpected token"
                 ];
           }
-          break;
       case 2 : 
           return t[0];
       default:
@@ -204,10 +202,10 @@ function l_parse(token) {
           case "*" : 
               _a = Caml_int32.imul(a, parse_f(/* () */0));
               continue ;
-              case "/" : 
+          case "/" : 
               _a = Caml_int32.div(a, parse_f(/* () */0));
               continue ;
-              default:
+          default:
             Queue.push(t, look_ahead);
             return a;
         }
@@ -226,10 +224,10 @@ function l_parse(token) {
           case "+" : 
               _a = a + parse_f_aux(parse_f(/* () */0)) | 0;
               continue ;
-              case "-" : 
+          case "-" : 
               _a = a - parse_f_aux(parse_f(/* () */0)) | 0;
               continue ;
-              default:
+          default:
             Queue.push(t, look_ahead);
             return a;
         }
@@ -256,7 +254,7 @@ function eq(loc, x, y) {
   test_id[0] = test_id[0] + 1 | 0;
   suites[0] = /* :: */[
     /* tuple */[
-      loc + (" id " + test_id[0]),
+      loc + (" id " + String(test_id[0])),
       (function () {
           return /* Eq */Block.__(0, [
                     x,
@@ -301,11 +299,11 @@ eq("File \"stream_parser_test.ml\", line 134, characters 5-12", /* tuple */[
 Mt.from_pair_suites("stream_parser_test.ml", suites[0]);
 
 exports.Parse_error = Parse_error;
-exports.parse       = parse;
-exports.lexer       = lexer;
-exports.token       = token;
-exports.l_parse     = l_parse;
-exports.suites      = suites;
-exports.test_id     = test_id;
-exports.eq          = eq;
+exports.parse = parse;
+exports.lexer = lexer;
+exports.token = token;
+exports.l_parse = l_parse;
+exports.suites = suites;
+exports.test_id = test_id;
+exports.eq = eq;
 /* lexer Not a pure module */

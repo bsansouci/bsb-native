@@ -1,13 +1,13 @@
 'use strict';
 
-var List                    = require("../../lib/js/list.js");
-var Bytes                   = require("../../lib/js/bytes.js");
-var Curry                   = require("../../lib/js/curry.js");
-var $$String                = require("../../lib/js/string.js");
-var Caml_int32              = require("../../lib/js/caml_int32.js");
-var Caml_string             = require("../../lib/js/caml_string.js");
-var Ext_bytes_test          = require("./ext_bytes_test.js");
-var Caml_exceptions         = require("../../lib/js/caml_exceptions.js");
+var List = require("../../lib/js/list.js");
+var Bytes = require("../../lib/js/bytes.js");
+var Curry = require("../../lib/js/curry.js");
+var $$String = require("../../lib/js/string.js");
+var Caml_int32 = require("../../lib/js/caml_int32.js");
+var Caml_string = require("../../lib/js/caml_string.js");
+var Ext_bytes_test = require("./ext_bytes_test.js");
+var Caml_exceptions = require("../../lib/js/caml_exceptions.js");
 var Caml_builtin_exceptions = require("../../lib/js/caml_builtin_exceptions.js");
 
 function split_by($staropt$star, is_delim, str) {
@@ -40,17 +40,14 @@ function split_by($staropt$star, is_delim, str) {
           acc
         ];
         continue ;
-        
       } else {
         _pos = pos - 1 | 0;
         _last_pos = pos;
         continue ;
-        
       }
     } else {
       _pos = pos - 1 | 0;
       continue ;
-      
     }
   };
 }
@@ -59,15 +56,23 @@ function trim(s) {
   var i = 0;
   var j = s.length;
   while((function () {
-          var u = s.charCodeAt(i);
-          return +(i < j && (u === /* "\t" */9 || u === /* "\n" */10 || u === /* " " */32));
+          var tmp = /* false */0;
+          if (i < j) {
+            var u = s.charCodeAt(i);
+            tmp = +(u === /* "\t" */9 || u === /* "\n" */10 || u === /* " " */32);
+          }
+          return tmp;
         })()) {
     i = i + 1 | 0;
   };
   var k = j - 1 | 0;
   while((function () {
-          var u = s.charCodeAt(k);
-          return +(k >= i && (u === /* "\t" */9 || u === /* "\n" */10 || u === /* " " */32));
+          var tmp = /* false */0;
+          if (k >= i) {
+            var u = s.charCodeAt(k);
+            tmp = +(u === /* "\t" */9 || u === /* "\n" */10 || u === /* " " */32);
+          }
+          return tmp;
         })()) {
     k = k - 1 | 0;
   };
@@ -125,7 +130,6 @@ function ends_with_index(s, end_) {
         _k = k - 1 | 0;
         _j = j - 1 | 0;
         continue ;
-        
       } else {
         return -1;
       }
@@ -163,7 +167,6 @@ function check_any_suffix_case_then_chop(s, suffixes) {
       } else {
         _suffixes = suffixes$1[1];
         continue ;
-        
       }
     } else {
       return /* None */0;
@@ -187,14 +190,12 @@ function escaped(s) {
             } else {
               _i = i + 1 | 0;
               continue ;
-              
             }
           } else if (switcher > 57 || switcher < 1) {
             return /* true */1;
           } else {
             _i = i + 1 | 0;
             continue ;
-            
           }
         } else {
           return /* true */1;
@@ -217,7 +218,6 @@ function unsafe_for_all_range(s, _start, finish, p) {
     } else if (Curry._1(p, s.charCodeAt(start))) {
       _start = start + 1 | 0;
       continue ;
-      
     } else {
       return /* false */0;
     }
@@ -263,7 +263,6 @@ function unsafe_is_sub(sub, i, s, j, len) {
       } else if (sub[i + k | 0] === s[j + k | 0]) {
         _k = k + 1 | 0;
         continue ;
-        
       } else {
         return /* false */0;
       }
@@ -304,7 +303,12 @@ function contain_substring(s, sub) {
 
 function non_overlap_count(sub, s) {
   var sub_len = sub.length;
-  if (sub.length) {
+  if (sub.length === 0) {
+    throw [
+          Caml_builtin_exceptions.invalid_argument,
+          "Ext_string_test.non_overlap_count"
+        ];
+  } else {
     var _acc = 0;
     var _off = 0;
     while(true) {
@@ -317,14 +321,8 @@ function non_overlap_count(sub, s) {
         _off = i + sub_len | 0;
         _acc = acc + 1 | 0;
         continue ;
-        
       }
     };
-  } else {
-    throw [
-          Caml_builtin_exceptions.invalid_argument,
-          "Ext_string_test.non_overlap_count"
-        ];
   }
 }
 
@@ -352,7 +350,7 @@ function rfind(sub, s) {
 function tail_from(s, x) {
   var len = s.length;
   if (x > len) {
-    var s$1 = "Ext_string_test.tail_from " + (s + (" : " + x));
+    var s$1 = "Ext_string_test.tail_from " + (s + (" : " + String(x)));
     throw [
           Caml_builtin_exceptions.invalid_argument,
           s$1
@@ -376,7 +374,6 @@ function digits_of_str(s, offset, x) {
       _acc = (Caml_int32.imul(10, acc) + Caml_string.get(s$1, offset + i | 0) | 0) - 48 | 0;
       _i = i + 1 | 0;
       continue ;
-      
     }
   };
 }
@@ -429,14 +426,11 @@ function unsafe_concat_with_length(len, sep, l) {
 function rindex_rec(s, _i, c) {
   while(true) {
     var i = _i;
-    if (i < 0) {
-      return i;
-    } else if (s.charCodeAt(i) === c) {
+    if (i < 0 || s.charCodeAt(i) === c) {
       return i;
     } else {
       _i = i - 1 | 0;
       continue ;
-      
     }
   };
 }
@@ -451,7 +445,6 @@ function rindex_rec_opt(s, _i, c) {
     } else {
       _i = i - 1 | 0;
       continue ;
-      
     }
   };
 }
@@ -516,46 +509,42 @@ function is_valid_module_file(s) {
 
 function is_valid_npm_package_name(s) {
   var len = s.length;
-  if (len <= 214) {
-    if (len > 0) {
-      var match = s.charCodeAt(0);
-      var exit = 0;
-      if (match >= 97) {
-        if (match >= 123) {
-          return /* false */0;
-        } else {
-          exit = 1;
-        }
-      } else if (match !== 64) {
+  if (len <= 214 && len > 0) {
+    var match = s.charCodeAt(0);
+    var exit = 0;
+    if (match >= 97) {
+      if (match >= 123) {
         return /* false */0;
       } else {
         exit = 1;
       }
-      if (exit === 1) {
-        return unsafe_for_all_range(s, 1, len - 1 | 0, (function (x) {
-                      if (x >= 58) {
-                        if (x >= 97) {
-                          if (x >= 123) {
-                            return /* false */0;
-                          } else {
-                            return /* true */1;
-                          }
-                        } else if (x !== 95) {
+    } else if (match !== 64) {
+      return /* false */0;
+    } else {
+      exit = 1;
+    }
+    if (exit === 1) {
+      return unsafe_for_all_range(s, 1, len - 1 | 0, (function (x) {
+                    if (x >= 58) {
+                      if (x >= 97) {
+                        if (x >= 123) {
                           return /* false */0;
                         } else {
                           return /* true */1;
                         }
-                      } else if (x !== 45 && x < 48) {
+                      } else if (x !== 95) {
                         return /* false */0;
                       } else {
                         return /* true */1;
                       }
-                    }));
-      }
-      
-    } else {
-      return /* false */0;
+                    } else if (x !== 45 && x < 48) {
+                      return /* false */0;
+                    } else {
+                      return /* true */1;
+                    }
+                  }));
     }
+    
   } else {
     return /* false */0;
   }
@@ -594,7 +583,6 @@ function unsafe_no_char(x, ch, _i, last_idx) {
     } else if (x.charCodeAt(i) !== ch) {
       _i = i + 1 | 0;
       continue ;
-      
     } else {
       return /* false */0;
     }
@@ -609,7 +597,6 @@ function unsafe_no_char_idx(x, ch, _i, last_idx) {
     } else if (x.charCodeAt(i) !== ch) {
       _i = i + 1 | 0;
       continue ;
-      
     } else {
       return i;
     }
@@ -770,59 +757,59 @@ var parent_dir_lit = "..";
 
 var current_dir_lit = ".";
 
-exports.split_by                        = split_by;
-exports.trim                            = trim;
-exports.split                           = split;
-exports.quick_split_by_ws               = quick_split_by_ws;
-exports.starts_with                     = starts_with;
-exports.ends_with_index                 = ends_with_index;
-exports.ends_with                       = ends_with;
-exports.ends_with_then_chop             = ends_with_then_chop;
-exports.check_suffix_case               = check_suffix_case;
-exports.check_suffix_case_then_chop     = check_suffix_case_then_chop;
-exports.check_any_suffix_case           = check_any_suffix_case;
+exports.split_by = split_by;
+exports.trim = trim;
+exports.split = split;
+exports.quick_split_by_ws = quick_split_by_ws;
+exports.starts_with = starts_with;
+exports.ends_with_index = ends_with_index;
+exports.ends_with = ends_with;
+exports.ends_with_then_chop = ends_with_then_chop;
+exports.check_suffix_case = check_suffix_case;
+exports.check_suffix_case_then_chop = check_suffix_case_then_chop;
+exports.check_any_suffix_case = check_any_suffix_case;
 exports.check_any_suffix_case_then_chop = check_any_suffix_case_then_chop;
-exports.escaped                         = escaped;
-exports.unsafe_for_all_range            = unsafe_for_all_range;
-exports.for_all_range                   = for_all_range;
-exports.for_all                         = for_all;
-exports.is_empty                        = is_empty;
-exports.repeat                          = repeat;
-exports.unsafe_is_sub                   = unsafe_is_sub;
-exports.Local_exit                      = Local_exit;
-exports.find                            = find;
-exports.contain_substring               = contain_substring;
-exports.non_overlap_count               = non_overlap_count;
-exports.rfind                           = rfind;
-exports.tail_from                       = tail_from;
-exports.digits_of_str                   = digits_of_str;
-exports.starts_with_and_number          = starts_with_and_number;
-exports.equal                           = equal;
-exports.unsafe_concat_with_length       = unsafe_concat_with_length;
-exports.rindex_rec                      = rindex_rec;
-exports.rindex_rec_opt                  = rindex_rec_opt;
-exports.rindex_neg                      = rindex_neg;
-exports.rindex_opt                      = rindex_opt;
-exports.is_valid_module_file            = is_valid_module_file;
-exports.is_valid_npm_package_name       = is_valid_npm_package_name;
-exports.is_valid_source_name            = is_valid_source_name;
-exports.unsafe_no_char                  = unsafe_no_char;
-exports.unsafe_no_char_idx              = unsafe_no_char_idx;
-exports.no_char                         = no_char;
-exports.no_slash                        = no_slash;
-exports.no_slash_idx                    = no_slash_idx;
-exports.replace_slash_backward          = replace_slash_backward;
-exports.replace_backward_slash          = replace_backward_slash;
-exports.empty                           = empty;
-exports.single_space                    = single_space;
-exports.single_colon                    = single_colon;
-exports.concat_array                    = concat_array;
-exports.concat3                         = concat3;
-exports.concat4                         = concat4;
-exports.concat5                         = concat5;
-exports.inter2                          = inter2;
-exports.inter3                          = inter3;
-exports.inter4                          = inter4;
-exports.parent_dir_lit                  = parent_dir_lit;
-exports.current_dir_lit                 = current_dir_lit;
+exports.escaped = escaped;
+exports.unsafe_for_all_range = unsafe_for_all_range;
+exports.for_all_range = for_all_range;
+exports.for_all = for_all;
+exports.is_empty = is_empty;
+exports.repeat = repeat;
+exports.unsafe_is_sub = unsafe_is_sub;
+exports.Local_exit = Local_exit;
+exports.find = find;
+exports.contain_substring = contain_substring;
+exports.non_overlap_count = non_overlap_count;
+exports.rfind = rfind;
+exports.tail_from = tail_from;
+exports.digits_of_str = digits_of_str;
+exports.starts_with_and_number = starts_with_and_number;
+exports.equal = equal;
+exports.unsafe_concat_with_length = unsafe_concat_with_length;
+exports.rindex_rec = rindex_rec;
+exports.rindex_rec_opt = rindex_rec_opt;
+exports.rindex_neg = rindex_neg;
+exports.rindex_opt = rindex_opt;
+exports.is_valid_module_file = is_valid_module_file;
+exports.is_valid_npm_package_name = is_valid_npm_package_name;
+exports.is_valid_source_name = is_valid_source_name;
+exports.unsafe_no_char = unsafe_no_char;
+exports.unsafe_no_char_idx = unsafe_no_char_idx;
+exports.no_char = no_char;
+exports.no_slash = no_slash;
+exports.no_slash_idx = no_slash_idx;
+exports.replace_slash_backward = replace_slash_backward;
+exports.replace_backward_slash = replace_backward_slash;
+exports.empty = empty;
+exports.single_space = single_space;
+exports.single_colon = single_colon;
+exports.concat_array = concat_array;
+exports.concat3 = concat3;
+exports.concat4 = concat4;
+exports.concat5 = concat5;
+exports.inter2 = inter2;
+exports.inter3 = inter3;
+exports.inter4 = inter4;
+exports.parent_dir_lit = parent_dir_lit;
+exports.current_dir_lit = current_dir_lit;
 /* No side effect */

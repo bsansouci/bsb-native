@@ -16,7 +16,7 @@ Prerequisites:
 opam update
 opam switch 4.02.3+buckle-master
 opam switch reinstall 4.02.3+buckle-master # do this if you get errors even from a clean compilation
-opam install camlp4
+opam install camlp4 cppo
 eval `opam config env`
 
 # Build BuckleScript's forked OCaml and bucklescript
@@ -31,7 +31,7 @@ npm -g install .
 Go somewhere else and do this:
 
 ```
-bsb -init foo
+bsb -init foo -theme basic-reason
 cd foo
 npm run build
 ```
@@ -69,8 +69,8 @@ This section is reserved for when you're making a change to the vendored ocaml c
 # at project root
 cd jscomp
 make force-snapshotml # make sure your changes are reflected in jscomp/bin/whole_compiler.ml
-make -C bin bsc.exe && ./install-bsc.sh
-make -C bin bsb.exe && ./install-bsb.sh
+make -C ../lib bsc.exe && ./install-bsc.sh
+make -C ../lib bsb.exe && ./install-bsb.sh
 ```
 
 ## Contributing to the runtime
@@ -98,7 +98,7 @@ Currently all tests are in `jscomp/test` directory and you should either add/mod
 - Run the tests:
   `mocha -R list jscomp/test/your_test_file.js`
   To build libs, tests and run all tests:
-  `make libs && make -C test all && npm test`
+  `make libs && make -C jscomp/test all && npm test`
 
 - See the coverage: `npm run cover`
 

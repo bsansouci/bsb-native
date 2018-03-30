@@ -1,10 +1,10 @@
 'use strict';
 
-var List                    = require("../../lib/js/list.js");
-var $$Array                 = require("../../lib/js/array.js");
-var $$String                = require("../../lib/js/string.js");
-var Set_gen                 = require("./set_gen.js");
-var Caml_string             = require("../../lib/js/caml_string.js");
+var List = require("../../lib/js/list.js");
+var $$Array = require("../../lib/js/array.js");
+var $$String = require("../../lib/js/string.js");
+var Set_gen = require("./set_gen.js");
+var Caml_primitive = require("../../lib/js/caml_primitive.js");
 var Caml_builtin_exceptions = require("../../lib/js/caml_builtin_exceptions.js");
 
 function split(x, tree) {
@@ -12,28 +12,26 @@ function split(x, tree) {
     var r = tree[2];
     var v = tree[1];
     var l = tree[0];
-    var c = Caml_string.caml_string_compare(x, v);
-    if (c) {
-      if (c < 0) {
-        var match = split(x, l);
-        return /* tuple */[
-                match[0],
-                match[1],
-                Set_gen.internal_join(match[2], v, r)
-              ];
-      } else {
-        var match$1 = split(x, r);
-        return /* tuple */[
-                Set_gen.internal_join(l, v, match$1[0]),
-                match$1[1],
-                match$1[2]
-              ];
-      }
-    } else {
+    var c = Caml_primitive.caml_string_compare(x, v);
+    if (c === 0) {
       return /* tuple */[
               l,
               /* true */1,
               r
+            ];
+    } else if (c < 0) {
+      var match = split(x, l);
+      return /* tuple */[
+              match[0],
+              match[1],
+              Set_gen.internal_join(match[2], v, r)
+            ];
+    } else {
+      var match$1 = split(x, r);
+      return /* tuple */[
+              Set_gen.internal_join(l, v, match$1[0]),
+              match$1[1],
+              match$1[2]
             ];
     }
   } else {
@@ -50,15 +48,13 @@ function add(x, tree) {
     var r = tree[2];
     var v = tree[1];
     var l = tree[0];
-    var c = Caml_string.caml_string_compare(x, v);
-    if (c) {
-      if (c < 0) {
-        return Set_gen.internal_bal(add(x, l), v, r);
-      } else {
-        return Set_gen.internal_bal(l, v, add(x, r));
-      }
-    } else {
+    var c = Caml_primitive.caml_string_compare(x, v);
+    if (c === 0) {
       return tree;
+    } else if (c < 0) {
+      return Set_gen.internal_bal(add(x, l), v, r);
+    } else {
+      return Set_gen.internal_bal(l, v, add(x, r));
     }
   } else {
     return /* Node */[
@@ -99,20 +95,16 @@ function union(s1, s2) {
 }
 
 function inter(s1, s2) {
-  if (s1) {
-    if (s2) {
-      var r1 = s1[2];
-      var v1 = s1[1];
-      var l1 = s1[0];
-      var match = split(v1, s2);
-      var l2 = match[0];
-      if (match[1] !== 0) {
-        return Set_gen.internal_join(inter(l1, l2), v1, inter(r1, match[2]));
-      } else {
-        return Set_gen.internal_concat(inter(l1, l2), inter(r1, match[2]));
-      }
+  if (s1 && s2) {
+    var r1 = s1[2];
+    var v1 = s1[1];
+    var l1 = s1[0];
+    var match = split(v1, s2);
+    var l2 = match[0];
+    if (match[1] !== 0) {
+      return Set_gen.internal_join(inter(l1, l2), v1, inter(r1, match[2]));
     } else {
-      return /* Empty */0;
+      return Set_gen.internal_concat(inter(l1, l2), inter(r1, match[2]));
     }
   } else {
     return /* Empty */0;
@@ -144,13 +136,12 @@ function mem(x, _tree) {
   while(true) {
     var tree = _tree;
     if (tree) {
-      var c = Caml_string.caml_string_compare(x, tree[1]);
-      if (c) {
+      var c = Caml_primitive.caml_string_compare(x, tree[1]);
+      if (c === 0) {
+        return /* true */1;
+      } else {
         _tree = c < 0 ? tree[0] : tree[2];
         continue ;
-        
-      } else {
-        return /* true */1;
       }
     } else {
       return /* false */0;
@@ -163,15 +154,13 @@ function remove(x, tree) {
     var r = tree[2];
     var v = tree[1];
     var l = tree[0];
-    var c = Caml_string.caml_string_compare(x, v);
-    if (c) {
-      if (c < 0) {
-        return Set_gen.internal_bal(remove(x, l), v, r);
-      } else {
-        return Set_gen.internal_bal(l, v, remove(x, r));
-      }
-    } else {
+    var c = Caml_primitive.caml_string_compare(x, v);
+    if (c === 0) {
       return Set_gen.internal_merge(l, r);
+    } else if (c < 0) {
+      return Set_gen.internal_bal(remove(x, l), v, r);
+    } else {
+      return Set_gen.internal_bal(l, v, remove(x, r));
     }
   } else {
     return /* Empty */0;
@@ -197,38 +186,35 @@ function subset(_s1, _s2) {
         var r1 = s1[2];
         var v1 = s1[1];
         var l1 = s1[0];
-        var c = Caml_string.caml_string_compare(v1, s2[1]);
-        if (c) {
-          if (c < 0) {
-            if (subset(/* Node */[
-                    l1,
-                    v1,
-                    /* Empty */0,
-                    0
-                  ], l2)) {
-              _s1 = r1;
-              continue ;
-              
-            } else {
-              return /* false */0;
-            }
-          } else if (subset(/* Node */[
-                  /* Empty */0,
-                  v1,
-                  r1,
-                  0
-                ], r2)) {
-            _s1 = l1;
+        var c = Caml_primitive.caml_string_compare(v1, s2[1]);
+        if (c === 0) {
+          if (subset(l1, l2)) {
+            _s2 = r2;
+            _s1 = r1;
             continue ;
-            
           } else {
             return /* false */0;
           }
-        } else if (subset(l1, l2)) {
-          _s2 = r2;
-          _s1 = r1;
+        } else if (c < 0) {
+          if (subset(/* Node */[
+                  l1,
+                  v1,
+                  /* Empty */0,
+                  0
+                ], l2)) {
+            _s1 = r1;
+            continue ;
+          } else {
+            return /* false */0;
+          }
+        } else if (subset(/* Node */[
+                /* Empty */0,
+                v1,
+                r1,
+                0
+              ], r2)) {
+          _s1 = l1;
           continue ;
-          
         } else {
           return /* false */0;
         }
@@ -246,13 +232,12 @@ function find(x, _tree) {
     var tree = _tree;
     if (tree) {
       var v = tree[1];
-      var c = Caml_string.caml_string_compare(x, v);
-      if (c) {
+      var c = Caml_primitive.caml_string_compare(x, v);
+      if (c === 0) {
+        return v;
+      } else {
         _tree = c < 0 ? tree[0] : tree[2];
         continue ;
-        
-      } else {
-        return v;
       }
     } else {
       throw Caml_builtin_exceptions.not_found;
@@ -341,35 +326,35 @@ var of_sorted_list = Set_gen.of_sorted_list;
 
 var of_sorted_array = Set_gen.of_sorted_array;
 
-exports.compare_elt     = compare_elt;
-exports.empty           = empty;
-exports.is_empty        = is_empty;
-exports.iter            = iter;
-exports.fold            = fold;
-exports.for_all         = for_all;
-exports.exists          = exists;
-exports.singleton       = singleton;
-exports.cardinal        = cardinal;
-exports.elements        = elements;
-exports.min_elt         = min_elt;
-exports.max_elt         = max_elt;
-exports.choose          = choose;
-exports.partition       = partition;
-exports.filter          = filter;
-exports.of_sorted_list  = of_sorted_list;
+exports.compare_elt = compare_elt;
+exports.empty = empty;
+exports.is_empty = is_empty;
+exports.iter = iter;
+exports.fold = fold;
+exports.for_all = for_all;
+exports.exists = exists;
+exports.singleton = singleton;
+exports.cardinal = cardinal;
+exports.elements = elements;
+exports.min_elt = min_elt;
+exports.max_elt = max_elt;
+exports.choose = choose;
+exports.partition = partition;
+exports.filter = filter;
+exports.of_sorted_list = of_sorted_list;
 exports.of_sorted_array = of_sorted_array;
-exports.split           = split;
-exports.add             = add;
-exports.union           = union;
-exports.inter           = inter;
-exports.diff            = diff;
-exports.mem             = mem;
-exports.remove          = remove;
-exports.compare         = compare;
-exports.equal           = equal;
-exports.subset          = subset;
-exports.find            = find;
-exports.of_list         = of_list;
-exports.of_array        = of_array;
-exports.invariant       = invariant;
+exports.split = split;
+exports.add = add;
+exports.union = union;
+exports.inter = inter;
+exports.diff = diff;
+exports.mem = mem;
+exports.remove = remove;
+exports.compare = compare;
+exports.equal = equal;
+exports.subset = subset;
+exports.find = find;
+exports.of_list = of_list;
+exports.of_array = of_array;
+exports.invariant = invariant;
 /* No side effect */

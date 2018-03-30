@@ -51,7 +51,6 @@ function searchForSureExists(xs, k) {
     } else {
       _i = i + 1 | 0;
       continue ;
-      
     }
   };
 }
@@ -91,7 +90,7 @@ var jsMapperConstantArray$1 = /* array */[
 ];
 
 function bToJs(param) {
-  return Js_mapperRt.binSearch(4, param, jsMapperConstantArray$1);
+  return Js_mapperRt.binarySearch(4, param, jsMapperConstantArray$1);
 }
 
 function bFromJs(param) {
@@ -100,11 +99,11 @@ function bFromJs(param) {
 
 bToJs(/* b0 */21902);
 
-exports.tToJs               = tToJs;
-exports.tFromJs             = tFromJs;
+exports.tToJs = tToJs;
+exports.tFromJs = tFromJs;
 exports.searchForSureExists = searchForSureExists;
-exports.aToJs               = aToJs;
-exports.aFromJs             = aFromJs;
-exports.bToJs               = bToJs;
-exports.bFromJs             = bFromJs;
+exports.aToJs = aToJs;
+exports.aFromJs = aFromJs;
+exports.bToJs = bToJs;
+exports.bFromJs = bFromJs;
 /* u Not a pure module */

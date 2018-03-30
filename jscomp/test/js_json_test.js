@@ -1,12 +1,12 @@
 'use strict';
 
-var Mt                      = require("./mt.js");
-var $$Array                 = require("../../lib/js/array.js");
-var Block                   = require("../../lib/js/block.js");
-var Js_json                 = require("../../lib/js/js_json.js");
-var Caml_array              = require("../../lib/js/caml_array.js");
-var Js_boolean              = require("../../lib/js/js_boolean.js");
-var Js_primitive            = require("../../lib/js/js_primitive.js");
+var Mt = require("./mt.js");
+var $$Array = require("../../lib/js/array.js");
+var Block = require("../../lib/js/block.js");
+var Js_json = require("../../lib/js/js_json.js");
+var Caml_array = require("../../lib/js/caml_array.js");
+var Js_boolean = require("../../lib/js/js_boolean.js");
+var Js_primitive = require("../../lib/js/js_primitive.js");
 var Caml_builtin_exceptions = require("../../lib/js/caml_builtin_exceptions.js");
 
 var suites = [/* [] */0];
@@ -15,7 +15,7 @@ var counter = [0];
 
 function add_test(loc, test) {
   counter[0] = counter[0] + 1 | 0;
-  var id = loc + (" id " + counter[0]);
+  var id = loc + (" id " + String(counter[0]));
   suites[0] = /* :: */[
     /* tuple */[
       id,
@@ -289,7 +289,6 @@ function eq_at_i(loc, json, i, kind, expected) {
           } else {
             return eq(loc, ty$1[0], expected);
           }
-          break;
       case 1 : 
           if (typeof ty$1 === "number") {
             return add_test(loc, (function () {
@@ -302,7 +301,6 @@ function eq_at_i(loc, json, i, kind, expected) {
                           return /* Ok */Block.__(4, [/* false */0]);
                         }));
           }
-          break;
       case 2 : 
           if (typeof ty$1 === "number") {
             return add_test(loc, (function () {
@@ -315,7 +313,6 @@ function eq_at_i(loc, json, i, kind, expected) {
                           return /* Ok */Block.__(4, [/* false */0]);
                         }));
           }
-          break;
       case 3 : 
           if (typeof ty$1 === "number") {
             return add_test(loc, (function () {
@@ -328,7 +325,6 @@ function eq_at_i(loc, json, i, kind, expected) {
                           return /* Ok */Block.__(4, [/* false */0]);
                         }));
           }
-          break;
       case 4 : 
           if (typeof ty$1 === "number") {
             switch (ty$1) {
@@ -347,7 +343,6 @@ function eq_at_i(loc, json, i, kind, expected) {
                           return /* Ok */Block.__(4, [/* false */0]);
                         }));
           }
-          break;
       case 5 : 
           if (typeof ty$1 === "number") {
             if (ty$1 >= 2) {
@@ -603,11 +598,11 @@ eq("File \"js_json_test.ml\", line 390, characters 5-12", Js_json.decodeNull(1.2
 
 Mt.from_pair_suites("js_json_test.ml", suites[0]);
 
-exports.suites     = suites;
-exports.add_test   = add_test;
-exports.eq         = eq;
-exports.false_     = false_;
-exports.true_      = true_;
+exports.suites = suites;
+exports.add_test = add_test;
+exports.eq = eq;
+exports.false_ = false_;
+exports.true_ = true_;
 exports.option_get = option_get;
-exports.eq_at_i    = eq_at_i;
+exports.eq_at_i = eq_at_i;
 /* v Not a pure module */

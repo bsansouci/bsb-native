@@ -1,16 +1,17 @@
 'use strict';
 
-var Obj                     = require("../../lib/js/obj.js");
-var Sys                     = require("../../lib/js/sys.js");
-var List                    = require("../../lib/js/list.js");
-var $$Array                 = require("../../lib/js/array.js");
-var Curry                   = require("../../lib/js/curry.js");
-var Caml_oo                 = require("../../lib/js/caml_oo.js");
-var Caml_obj                = require("../../lib/js/caml_obj.js");
-var Caml_array              = require("../../lib/js/caml_array.js");
-var Caml_int32              = require("../../lib/js/caml_int32.js");
-var Caml_string             = require("../../lib/js/caml_string.js");
-var Caml_exceptions         = require("../../lib/js/caml_exceptions.js");
+var Obj = require("../../lib/js/obj.js");
+var Sys = require("../../lib/js/sys.js");
+var List = require("../../lib/js/list.js");
+var $$Array = require("../../lib/js/array.js");
+var Curry = require("../../lib/js/curry.js");
+var Caml_oo = require("../../lib/js/caml_oo.js");
+var Caml_obj = require("../../lib/js/caml_obj.js");
+var Caml_array = require("../../lib/js/caml_array.js");
+var Caml_int32 = require("../../lib/js/caml_int32.js");
+var Caml_string = require("../../lib/js/caml_string.js");
+var Caml_primitive = require("../../lib/js/caml_primitive.js");
+var Caml_exceptions = require("../../lib/js/caml_exceptions.js");
 var Caml_builtin_exceptions = require("../../lib/js/caml_builtin_exceptions.js");
 
 function copy(o) {
@@ -142,14 +143,8 @@ function add(x, data, param) {
     var d = param[2];
     var v = param[1];
     var l = param[0];
-    var c = Caml_string.caml_string_compare(x, v);
-    if (c) {
-      if (c < 0) {
-        return bal(add(x, data, l), v, d, r);
-      } else {
-        return bal(l, v, d, add(x, data, r));
-      }
-    } else {
+    var c = Caml_primitive.caml_string_compare(x, v);
+    if (c === 0) {
       return /* Node */[
               l,
               x,
@@ -157,6 +152,10 @@ function add(x, data, param) {
               r,
               param[4]
             ];
+    } else if (c < 0) {
+      return bal(add(x, data, l), v, d, r);
+    } else {
+      return bal(l, v, d, add(x, data, r));
     }
   } else {
     return /* Node */[
@@ -173,13 +172,12 @@ function find(x, _param) {
   while(true) {
     var param = _param;
     if (param) {
-      var c = Caml_string.caml_string_compare(x, param[1]);
-      if (c) {
+      var c = Caml_primitive.caml_string_compare(x, param[1]);
+      if (c === 0) {
+        return param[2];
+      } else {
         _param = c < 0 ? param[0] : param[3];
         continue ;
-        
-      } else {
-        return param[2];
       }
     } else {
       throw Caml_builtin_exceptions.not_found;
@@ -191,13 +189,12 @@ function mem(x, _param) {
   while(true) {
     var param = _param;
     if (param) {
-      var c = Caml_string.caml_string_compare(x, param[1]);
-      if (c) {
+      var c = Caml_primitive.caml_string_compare(x, param[1]);
+      if (c === 0) {
+        return /* true */1;
+      } else {
         _param = c < 0 ? param[0] : param[3];
         continue ;
-        
-      } else {
-        return /* true */1;
       }
     } else {
       return /* false */0;
@@ -213,7 +210,6 @@ function min_binding(_param) {
       if (l) {
         _param = l;
         continue ;
-        
       } else {
         return /* tuple */[
                 param[1],
@@ -234,7 +230,6 @@ function max_binding(_param) {
       if (r) {
         _param = r;
         continue ;
-        
       } else {
         return /* tuple */[
                 param[1],
@@ -269,14 +264,8 @@ function remove(x, param) {
     var d = param[2];
     var v = param[1];
     var l = param[0];
-    var c = Caml_string.caml_string_compare(x, v);
-    if (c) {
-      if (c < 0) {
-        return bal(remove(x, l), v, d, r);
-      } else {
-        return bal(l, v, d, remove(x, r));
-      }
-    } else {
+    var c = Caml_primitive.caml_string_compare(x, v);
+    if (c === 0) {
       var t1 = l;
       var t2 = r;
       if (t1) {
@@ -289,6 +278,10 @@ function remove(x, param) {
       } else {
         return t2;
       }
+    } else if (c < 0) {
+      return bal(remove(x, l), v, d, r);
+    } else {
+      return bal(l, v, d, remove(x, r));
     }
   } else {
     return /* Empty */0;
@@ -303,7 +296,6 @@ function iter(f, _param) {
       Curry._2(f, param[1], param[2]);
       _param = param[3];
       continue ;
-      
     } else {
       return /* () */0;
     }
@@ -353,7 +345,6 @@ function fold(f, _m, _accu) {
       _accu = Curry._3(f, m[1], m[2], fold(f, m[0], accu));
       _m = m[3];
       continue ;
-      
     } else {
       return accu;
     }
@@ -364,14 +355,9 @@ function for_all(p, _param) {
   while(true) {
     var param = _param;
     if (param) {
-      if (Curry._2(p, param[1], param[2])) {
-        if (for_all(p, param[0])) {
-          _param = param[3];
-          continue ;
-          
-        } else {
-          return /* false */0;
-        }
+      if (Curry._2(p, param[1], param[2]) && for_all(p, param[0])) {
+        _param = param[3];
+        continue ;
       } else {
         return /* false */0;
       }
@@ -385,14 +371,11 @@ function exists(p, _param) {
   while(true) {
     var param = _param;
     if (param) {
-      if (Curry._2(p, param[1], param[2])) {
-        return /* true */1;
-      } else if (exists(p, param[0])) {
+      if (Curry._2(p, param[1], param[2]) || exists(p, param[0])) {
         return /* true */1;
       } else {
         _param = param[3];
         continue ;
-        
       }
     } else {
       return /* false */0;
@@ -463,28 +446,26 @@ function split(x, param) {
     var d = param[2];
     var v = param[1];
     var l = param[0];
-    var c = Caml_string.caml_string_compare(x, v);
-    if (c) {
-      if (c < 0) {
-        var match = split(x, l);
-        return /* tuple */[
-                match[0],
-                match[1],
-                join(match[2], v, d, r)
-              ];
-      } else {
-        var match$1 = split(x, r);
-        return /* tuple */[
-                join(l, v, d, match$1[0]),
-                match$1[1],
-                match$1[2]
-              ];
-      }
-    } else {
+    var c = Caml_primitive.caml_string_compare(x, v);
+    if (c === 0) {
       return /* tuple */[
               l,
               /* Some */[d],
               r
+            ];
+    } else if (c < 0) {
+      var match = split(x, l);
+      return /* tuple */[
+              match[0],
+              match[1],
+              join(match[2], v, d, r)
+            ];
+    } else {
+      var match$1 = split(x, r);
+      return /* tuple */[
+              join(l, v, d, match$1[0]),
+              match$1[1],
+              match$1[2]
             ];
     }
   } else {
@@ -590,7 +571,6 @@ function cons_enum(_m, _e) {
       ];
       _m = m[0];
       continue ;
-      
     } else {
       return e;
     }
@@ -605,7 +585,7 @@ function compare(cmp, m1, m2) {
     var e1 = _e1;
     if (e1) {
       if (e2) {
-        var c = Caml_string.caml_string_compare(e1[0], e2[0]);
+        var c = Caml_primitive.caml_string_compare(e1[0], e2[0]);
         if (c !== 0) {
           return c;
         } else {
@@ -616,7 +596,6 @@ function compare(cmp, m1, m2) {
             _e2 = cons_enum(e2[2], e2[3]);
             _e1 = cons_enum(e1[2], e1[3]);
             continue ;
-            
           }
         }
       } else {
@@ -637,17 +616,10 @@ function equal(cmp, m1, m2) {
     var e2 = _e2;
     var e1 = _e1;
     if (e1) {
-      if (e2) {
-        if (Caml_string.caml_string_compare(e1[0], e2[0])) {
-          return /* false */0;
-        } else if (Curry._2(cmp, e1[1], e2[1])) {
-          _e2 = cons_enum(e2[2], e2[3]);
-          _e1 = cons_enum(e1[2], e1[3]);
-          continue ;
-          
-        } else {
-          return /* false */0;
-        }
+      if (e2 && Caml_primitive.caml_string_compare(e1[0], e2[0]) === 0 && Curry._2(cmp, e1[1], e2[1])) {
+        _e2 = cons_enum(e2[2], e2[3]);
+        _e1 = cons_enum(e1[2], e1[3]);
+        continue ;
       } else {
         return /* false */0;
       }
@@ -681,7 +653,6 @@ function bindings_aux(_accu, _param) {
         bindings_aux(accu, param[3])
       ];
       continue ;
-      
     } else {
       return accu;
     }
@@ -821,14 +792,8 @@ function add$1(x, data, param) {
     var d = param[2];
     var v = param[1];
     var l = param[0];
-    var c = Caml_string.caml_string_compare(x, v);
-    if (c) {
-      if (c < 0) {
-        return bal$1(add$1(x, data, l), v, d, r);
-      } else {
-        return bal$1(l, v, d, add$1(x, data, r));
-      }
-    } else {
+    var c = Caml_primitive.caml_string_compare(x, v);
+    if (c === 0) {
       return /* Node */[
               l,
               x,
@@ -836,6 +801,10 @@ function add$1(x, data, param) {
               r,
               param[4]
             ];
+    } else if (c < 0) {
+      return bal$1(add$1(x, data, l), v, d, r);
+    } else {
+      return bal$1(l, v, d, add$1(x, data, r));
     }
   } else {
     return /* Node */[
@@ -852,13 +821,12 @@ function find$1(x, _param) {
   while(true) {
     var param = _param;
     if (param) {
-      var c = Caml_string.caml_string_compare(x, param[1]);
-      if (c) {
+      var c = Caml_primitive.caml_string_compare(x, param[1]);
+      if (c === 0) {
+        return param[2];
+      } else {
         _param = c < 0 ? param[0] : param[3];
         continue ;
-        
-      } else {
-        return param[2];
       }
     } else {
       throw Caml_builtin_exceptions.not_found;
@@ -870,13 +838,12 @@ function mem$1(x, _param) {
   while(true) {
     var param = _param;
     if (param) {
-      var c = Caml_string.caml_string_compare(x, param[1]);
-      if (c) {
+      var c = Caml_primitive.caml_string_compare(x, param[1]);
+      if (c === 0) {
+        return /* true */1;
+      } else {
         _param = c < 0 ? param[0] : param[3];
         continue ;
-        
-      } else {
-        return /* true */1;
       }
     } else {
       return /* false */0;
@@ -892,7 +859,6 @@ function min_binding$1(_param) {
       if (l) {
         _param = l;
         continue ;
-        
       } else {
         return /* tuple */[
                 param[1],
@@ -913,7 +879,6 @@ function max_binding$1(_param) {
       if (r) {
         _param = r;
         continue ;
-        
       } else {
         return /* tuple */[
                 param[1],
@@ -948,14 +913,8 @@ function remove$1(x, param) {
     var d = param[2];
     var v = param[1];
     var l = param[0];
-    var c = Caml_string.caml_string_compare(x, v);
-    if (c) {
-      if (c < 0) {
-        return bal$1(remove$1(x, l), v, d, r);
-      } else {
-        return bal$1(l, v, d, remove$1(x, r));
-      }
-    } else {
+    var c = Caml_primitive.caml_string_compare(x, v);
+    if (c === 0) {
       var t1 = l;
       var t2 = r;
       if (t1) {
@@ -968,6 +927,10 @@ function remove$1(x, param) {
       } else {
         return t2;
       }
+    } else if (c < 0) {
+      return bal$1(remove$1(x, l), v, d, r);
+    } else {
+      return bal$1(l, v, d, remove$1(x, r));
     }
   } else {
     return /* Empty */0;
@@ -982,7 +945,6 @@ function iter$1(f, _param) {
       Curry._2(f, param[1], param[2]);
       _param = param[3];
       continue ;
-      
     } else {
       return /* () */0;
     }
@@ -1032,7 +994,6 @@ function fold$1(f, _m, _accu) {
       _accu = Curry._3(f, m[1], m[2], fold$1(f, m[0], accu));
       _m = m[3];
       continue ;
-      
     } else {
       return accu;
     }
@@ -1043,14 +1004,9 @@ function for_all$1(p, _param) {
   while(true) {
     var param = _param;
     if (param) {
-      if (Curry._2(p, param[1], param[2])) {
-        if (for_all$1(p, param[0])) {
-          _param = param[3];
-          continue ;
-          
-        } else {
-          return /* false */0;
-        }
+      if (Curry._2(p, param[1], param[2]) && for_all$1(p, param[0])) {
+        _param = param[3];
+        continue ;
       } else {
         return /* false */0;
       }
@@ -1064,14 +1020,11 @@ function exists$1(p, _param) {
   while(true) {
     var param = _param;
     if (param) {
-      if (Curry._2(p, param[1], param[2])) {
-        return /* true */1;
-      } else if (exists$1(p, param[0])) {
+      if (Curry._2(p, param[1], param[2]) || exists$1(p, param[0])) {
         return /* true */1;
       } else {
         _param = param[3];
         continue ;
-        
       }
     } else {
       return /* false */0;
@@ -1142,28 +1095,26 @@ function split$1(x, param) {
     var d = param[2];
     var v = param[1];
     var l = param[0];
-    var c = Caml_string.caml_string_compare(x, v);
-    if (c) {
-      if (c < 0) {
-        var match = split$1(x, l);
-        return /* tuple */[
-                match[0],
-                match[1],
-                join$1(match[2], v, d, r)
-              ];
-      } else {
-        var match$1 = split$1(x, r);
-        return /* tuple */[
-                join$1(l, v, d, match$1[0]),
-                match$1[1],
-                match$1[2]
-              ];
-      }
-    } else {
+    var c = Caml_primitive.caml_string_compare(x, v);
+    if (c === 0) {
       return /* tuple */[
               l,
               /* Some */[d],
               r
+            ];
+    } else if (c < 0) {
+      var match = split$1(x, l);
+      return /* tuple */[
+              match[0],
+              match[1],
+              join$1(match[2], v, d, r)
+            ];
+    } else {
+      var match$1 = split$1(x, r);
+      return /* tuple */[
+              join$1(l, v, d, match$1[0]),
+              match$1[1],
+              match$1[2]
             ];
     }
   } else {
@@ -1269,7 +1220,6 @@ function cons_enum$1(_m, _e) {
       ];
       _m = m[0];
       continue ;
-      
     } else {
       return e;
     }
@@ -1284,7 +1234,7 @@ function compare$1(cmp, m1, m2) {
     var e1 = _e1;
     if (e1) {
       if (e2) {
-        var c = Caml_string.caml_string_compare(e1[0], e2[0]);
+        var c = Caml_primitive.caml_string_compare(e1[0], e2[0]);
         if (c !== 0) {
           return c;
         } else {
@@ -1295,7 +1245,6 @@ function compare$1(cmp, m1, m2) {
             _e2 = cons_enum$1(e2[2], e2[3]);
             _e1 = cons_enum$1(e1[2], e1[3]);
             continue ;
-            
           }
         }
       } else {
@@ -1316,17 +1265,10 @@ function equal$1(cmp, m1, m2) {
     var e2 = _e2;
     var e1 = _e1;
     if (e1) {
-      if (e2) {
-        if (Caml_string.caml_string_compare(e1[0], e2[0])) {
-          return /* false */0;
-        } else if (Curry._2(cmp, e1[1], e2[1])) {
-          _e2 = cons_enum$1(e2[2], e2[3]);
-          _e1 = cons_enum$1(e1[2], e1[3]);
-          continue ;
-          
-        } else {
-          return /* false */0;
-        }
+      if (e2 && Caml_primitive.caml_string_compare(e1[0], e2[0]) === 0 && Curry._2(cmp, e1[1], e2[1])) {
+        _e2 = cons_enum$1(e2[2], e2[3]);
+        _e1 = cons_enum$1(e1[2], e1[3]);
+        continue ;
       } else {
         return /* false */0;
       }
@@ -1360,7 +1302,6 @@ function bindings_aux$1(_accu, _param) {
         bindings_aux$1(accu, param[3])
       ];
       continue ;
-      
     } else {
       return accu;
     }
@@ -1500,14 +1441,8 @@ function add$2(x, data, param) {
     var d = param[2];
     var v = param[1];
     var l = param[0];
-    var c = Caml_obj.caml_int_compare(x, v);
-    if (c) {
-      if (c < 0) {
-        return bal$2(add$2(x, data, l), v, d, r);
-      } else {
-        return bal$2(l, v, d, add$2(x, data, r));
-      }
-    } else {
+    var c = Caml_primitive.caml_int_compare(x, v);
+    if (c === 0) {
       return /* Node */[
               l,
               x,
@@ -1515,6 +1450,10 @@ function add$2(x, data, param) {
               r,
               param[4]
             ];
+    } else if (c < 0) {
+      return bal$2(add$2(x, data, l), v, d, r);
+    } else {
+      return bal$2(l, v, d, add$2(x, data, r));
     }
   } else {
     return /* Node */[
@@ -1531,13 +1470,12 @@ function find$2(x, _param) {
   while(true) {
     var param = _param;
     if (param) {
-      var c = Caml_obj.caml_int_compare(x, param[1]);
-      if (c) {
+      var c = Caml_primitive.caml_int_compare(x, param[1]);
+      if (c === 0) {
+        return param[2];
+      } else {
         _param = c < 0 ? param[0] : param[3];
         continue ;
-        
-      } else {
-        return param[2];
       }
     } else {
       throw Caml_builtin_exceptions.not_found;
@@ -1549,13 +1487,12 @@ function mem$2(x, _param) {
   while(true) {
     var param = _param;
     if (param) {
-      var c = Caml_obj.caml_int_compare(x, param[1]);
-      if (c) {
+      var c = Caml_primitive.caml_int_compare(x, param[1]);
+      if (c === 0) {
+        return /* true */1;
+      } else {
         _param = c < 0 ? param[0] : param[3];
         continue ;
-        
-      } else {
-        return /* true */1;
       }
     } else {
       return /* false */0;
@@ -1571,7 +1508,6 @@ function min_binding$2(_param) {
       if (l) {
         _param = l;
         continue ;
-        
       } else {
         return /* tuple */[
                 param[1],
@@ -1592,7 +1528,6 @@ function max_binding$2(_param) {
       if (r) {
         _param = r;
         continue ;
-        
       } else {
         return /* tuple */[
                 param[1],
@@ -1627,14 +1562,8 @@ function remove$2(x, param) {
     var d = param[2];
     var v = param[1];
     var l = param[0];
-    var c = Caml_obj.caml_int_compare(x, v);
-    if (c) {
-      if (c < 0) {
-        return bal$2(remove$2(x, l), v, d, r);
-      } else {
-        return bal$2(l, v, d, remove$2(x, r));
-      }
-    } else {
+    var c = Caml_primitive.caml_int_compare(x, v);
+    if (c === 0) {
       var t1 = l;
       var t2 = r;
       if (t1) {
@@ -1647,6 +1576,10 @@ function remove$2(x, param) {
       } else {
         return t2;
       }
+    } else if (c < 0) {
+      return bal$2(remove$2(x, l), v, d, r);
+    } else {
+      return bal$2(l, v, d, remove$2(x, r));
     }
   } else {
     return /* Empty */0;
@@ -1661,7 +1594,6 @@ function iter$2(f, _param) {
       Curry._2(f, param[1], param[2]);
       _param = param[3];
       continue ;
-      
     } else {
       return /* () */0;
     }
@@ -1711,7 +1643,6 @@ function fold$2(f, _m, _accu) {
       _accu = Curry._3(f, m[1], m[2], fold$2(f, m[0], accu));
       _m = m[3];
       continue ;
-      
     } else {
       return accu;
     }
@@ -1722,14 +1653,9 @@ function for_all$2(p, _param) {
   while(true) {
     var param = _param;
     if (param) {
-      if (Curry._2(p, param[1], param[2])) {
-        if (for_all$2(p, param[0])) {
-          _param = param[3];
-          continue ;
-          
-        } else {
-          return /* false */0;
-        }
+      if (Curry._2(p, param[1], param[2]) && for_all$2(p, param[0])) {
+        _param = param[3];
+        continue ;
       } else {
         return /* false */0;
       }
@@ -1743,14 +1669,11 @@ function exists$2(p, _param) {
   while(true) {
     var param = _param;
     if (param) {
-      if (Curry._2(p, param[1], param[2])) {
-        return /* true */1;
-      } else if (exists$2(p, param[0])) {
+      if (Curry._2(p, param[1], param[2]) || exists$2(p, param[0])) {
         return /* true */1;
       } else {
         _param = param[3];
         continue ;
-        
       }
     } else {
       return /* false */0;
@@ -1821,28 +1744,26 @@ function split$2(x, param) {
     var d = param[2];
     var v = param[1];
     var l = param[0];
-    var c = Caml_obj.caml_int_compare(x, v);
-    if (c) {
-      if (c < 0) {
-        var match = split$2(x, l);
-        return /* tuple */[
-                match[0],
-                match[1],
-                join$2(match[2], v, d, r)
-              ];
-      } else {
-        var match$1 = split$2(x, r);
-        return /* tuple */[
-                join$2(l, v, d, match$1[0]),
-                match$1[1],
-                match$1[2]
-              ];
-      }
-    } else {
+    var c = Caml_primitive.caml_int_compare(x, v);
+    if (c === 0) {
       return /* tuple */[
               l,
               /* Some */[d],
               r
+            ];
+    } else if (c < 0) {
+      var match = split$2(x, l);
+      return /* tuple */[
+              match[0],
+              match[1],
+              join$2(match[2], v, d, r)
+            ];
+    } else {
+      var match$1 = split$2(x, r);
+      return /* tuple */[
+              join$2(l, v, d, match$1[0]),
+              match$1[1],
+              match$1[2]
             ];
     }
   } else {
@@ -1948,7 +1869,6 @@ function cons_enum$2(_m, _e) {
       ];
       _m = m[0];
       continue ;
-      
     } else {
       return e;
     }
@@ -1963,7 +1883,7 @@ function compare$2(cmp, m1, m2) {
     var e1 = _e1;
     if (e1) {
       if (e2) {
-        var c = Caml_obj.caml_int_compare(e1[0], e2[0]);
+        var c = Caml_primitive.caml_int_compare(e1[0], e2[0]);
         if (c !== 0) {
           return c;
         } else {
@@ -1974,7 +1894,6 @@ function compare$2(cmp, m1, m2) {
             _e2 = cons_enum$2(e2[2], e2[3]);
             _e1 = cons_enum$2(e1[2], e1[3]);
             continue ;
-            
           }
         }
       } else {
@@ -1995,19 +1914,10 @@ function equal$2(cmp, m1, m2) {
     var e2 = _e2;
     var e1 = _e1;
     if (e1) {
-      if (e2) {
-        if (e1[0] === e2[0]) {
-          if (Curry._2(cmp, e1[1], e2[1])) {
-            _e2 = cons_enum$2(e2[2], e2[3]);
-            _e1 = cons_enum$2(e1[2], e1[3]);
-            continue ;
-            
-          } else {
-            return /* false */0;
-          }
-        } else {
-          return /* false */0;
-        }
+      if (e2 && e1[0] === e2[0] && Curry._2(cmp, e1[1], e2[1])) {
+        _e2 = cons_enum$2(e2[2], e2[3]);
+        _e1 = cons_enum$2(e1[2], e1[3]);
+        continue ;
       } else {
         return /* false */0;
       }
@@ -2041,7 +1951,6 @@ function bindings_aux$2(_accu, _param) {
         bindings_aux$2(accu, param[3])
       ];
       continue ;
-      
     } else {
       return accu;
     }
@@ -2202,10 +2111,10 @@ function get_method(table, label) {
 }
 
 function to_list(arr) {
-  if (arr) {
-    return $$Array.to_list(arr);
-  } else {
+  if (arr === 0) {
     return /* [] */0;
+  } else {
+    return $$Array.to_list(arr);
   }
 }
 
@@ -2377,7 +2286,9 @@ function add_initializer(table, f) {
 }
 
 function create_table(public_methods) {
-  if (public_methods) {
+  if (public_methods === 0) {
+    return new_table(/* array */[]);
+  } else {
     var tags = $$Array.map(public_method_label, public_methods);
     var table = new_table(tags);
     $$Array.iteri((function (i, met) {
@@ -2387,8 +2298,6 @@ function create_table(public_methods) {
             return /* () */0;
           }), public_methods);
     return table;
-  } else {
-    return new_table(/* array */[]);
   }
 }
 
@@ -2478,7 +2387,6 @@ function iter_f(obj, _param) {
       Curry._1(param[0], obj);
       _param = param[1];
       continue ;
-      
     } else {
       return /* () */0;
     }
@@ -2547,7 +2455,6 @@ function lookup_keys(i, keys, tables) {
       } else if (tables$1[/* next */2] !== /* Empty */0) {
         _tables = tables$1[/* next */2];
         continue ;
-        
       } else {
         var next = /* Cons */[
           key,
@@ -2879,80 +2786,80 @@ var initial_object_size = 2;
 
 var dummy_item = /* () */0;
 
-exports.copy                               = copy;
-exports.params                             = params;
-exports.step                               = step;
-exports.initial_object_size                = initial_object_size;
-exports.dummy_item                         = dummy_item;
-exports.public_method_label                = public_method_label;
-exports.Vars                               = Vars;
-exports.Meths                              = Meths;
-exports.Labs                               = Labs;
-exports.dummy_table                        = dummy_table;
-exports.table_count                        = table_count;
-exports.dummy_met                          = dummy_met;
-exports.fit_size                           = fit_size;
-exports.new_table                          = new_table;
-exports.resize                             = resize;
-exports.put                                = put;
-exports.method_count                       = method_count;
-exports.inst_var_count                     = inst_var_count;
-exports.new_method                         = new_method;
-exports.get_method_label                   = get_method_label;
-exports.get_method_labels                  = get_method_labels;
-exports.set_method                         = set_method;
-exports.get_method                         = get_method;
-exports.to_list                            = to_list;
-exports.narrow                             = narrow;
-exports.widen                              = widen;
-exports.new_slot                           = new_slot;
-exports.new_variable                       = new_variable;
-exports.to_array                           = to_array;
-exports.new_methods_variables              = new_methods_variables;
-exports.get_variable                       = get_variable;
-exports.get_variables                      = get_variables;
-exports.add_initializer                    = add_initializer;
-exports.create_table                       = create_table;
-exports.init_class                         = init_class;
-exports.inherits                           = inherits;
-exports.make_class                         = make_class;
-exports.make_class_store                   = make_class_store;
-exports.dummy_class                        = dummy_class;
-exports.create_object                      = create_object;
-exports.create_object_opt                  = create_object_opt;
-exports.iter_f                             = iter_f;
-exports.run_initializers                   = run_initializers;
-exports.run_initializers_opt               = run_initializers_opt;
+exports.copy = copy;
+exports.params = params;
+exports.step = step;
+exports.initial_object_size = initial_object_size;
+exports.dummy_item = dummy_item;
+exports.public_method_label = public_method_label;
+exports.Vars = Vars;
+exports.Meths = Meths;
+exports.Labs = Labs;
+exports.dummy_table = dummy_table;
+exports.table_count = table_count;
+exports.dummy_met = dummy_met;
+exports.fit_size = fit_size;
+exports.new_table = new_table;
+exports.resize = resize;
+exports.put = put;
+exports.method_count = method_count;
+exports.inst_var_count = inst_var_count;
+exports.new_method = new_method;
+exports.get_method_label = get_method_label;
+exports.get_method_labels = get_method_labels;
+exports.set_method = set_method;
+exports.get_method = get_method;
+exports.to_list = to_list;
+exports.narrow = narrow;
+exports.widen = widen;
+exports.new_slot = new_slot;
+exports.new_variable = new_variable;
+exports.to_array = to_array;
+exports.new_methods_variables = new_methods_variables;
+exports.get_variable = get_variable;
+exports.get_variables = get_variables;
+exports.add_initializer = add_initializer;
+exports.create_table = create_table;
+exports.init_class = init_class;
+exports.inherits = inherits;
+exports.make_class = make_class;
+exports.make_class_store = make_class_store;
+exports.dummy_class = dummy_class;
+exports.create_object = create_object;
+exports.create_object_opt = create_object_opt;
+exports.iter_f = iter_f;
+exports.run_initializers = run_initializers;
+exports.run_initializers_opt = run_initializers_opt;
 exports.create_object_and_run_initializers = create_object_and_run_initializers;
-exports.build_path                         = build_path;
-exports.lookup_keys                        = lookup_keys;
-exports.lookup_tables                      = lookup_tables;
-exports.get_const                          = get_const;
-exports.get_var                            = get_var;
-exports.get_env                            = get_env;
-exports.get_meth                           = get_meth;
-exports.set_var                            = set_var;
-exports.app_const                          = app_const;
-exports.app_var                            = app_var;
-exports.app_env                            = app_env;
-exports.app_meth                           = app_meth;
-exports.app_const_const                    = app_const_const;
-exports.app_const_var                      = app_const_var;
-exports.app_const_meth                     = app_const_meth;
-exports.app_var_const                      = app_var_const;
-exports.app_meth_const                     = app_meth_const;
-exports.app_const_env                      = app_const_env;
-exports.app_env_const                      = app_env_const;
-exports.meth_app_const                     = meth_app_const;
-exports.meth_app_var                       = meth_app_var;
-exports.meth_app_env                       = meth_app_env;
-exports.meth_app_meth                      = meth_app_meth;
-exports.send_const                         = send_const;
-exports.send_var                           = send_var;
-exports.send_env                           = send_env;
-exports.send_meth                          = send_meth;
-exports.new_cache                          = new_cache;
-exports.method_impl                        = method_impl;
-exports.set_methods                        = set_methods;
-exports.stats                              = stats;
+exports.build_path = build_path;
+exports.lookup_keys = lookup_keys;
+exports.lookup_tables = lookup_tables;
+exports.get_const = get_const;
+exports.get_var = get_var;
+exports.get_env = get_env;
+exports.get_meth = get_meth;
+exports.set_var = set_var;
+exports.app_const = app_const;
+exports.app_var = app_var;
+exports.app_env = app_env;
+exports.app_meth = app_meth;
+exports.app_const_const = app_const_const;
+exports.app_const_var = app_const_var;
+exports.app_const_meth = app_const_meth;
+exports.app_var_const = app_var_const;
+exports.app_meth_const = app_meth_const;
+exports.app_const_env = app_const_env;
+exports.app_env_const = app_env_const;
+exports.meth_app_const = meth_app_const;
+exports.meth_app_var = meth_app_var;
+exports.meth_app_env = meth_app_env;
+exports.meth_app_meth = meth_app_meth;
+exports.send_const = send_const;
+exports.send_var = send_var;
+exports.send_env = send_env;
+exports.send_meth = send_meth;
+exports.new_cache = new_cache;
+exports.method_impl = method_impl;
+exports.set_methods = set_methods;
+exports.stats = stats;
 /* No side effect */

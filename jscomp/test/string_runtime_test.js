@@ -1,9 +1,9 @@
 'use strict';
 
-var Mt          = require("./mt.js");
-var List        = require("../../lib/js/list.js");
-var Block       = require("../../lib/js/block.js");
-var Bytes       = require("../../lib/js/bytes.js");
+var Mt = require("./mt.js");
+var List = require("../../lib/js/list.js");
+var Block = require("../../lib/js/block.js");
+var Bytes = require("../../lib/js/bytes.js");
 var Caml_string = require("../../lib/js/caml_string.js");
 
 var suites_000 = /* tuple */[
@@ -36,7 +36,7 @@ var suites_001 = /* :: */[
       (function () {
           var match = List.split(List.map((function (x) {
                       var len = x;
-                      var b = new Array(1000);
+                      var b = Caml_string.caml_create_string(1000);
                       Caml_string.caml_fill_string(b, 0, len, /* "c" */99);
                       return /* tuple */[
                               Caml_string.bytes_to_string(b),
@@ -85,6 +85,6 @@ Mt.from_pair_suites("string_runtime_test.ml", suites);
 
 var S = 0;
 
-exports.S      = S;
+exports.S = S;
 exports.suites = suites;
 /*  Not a pure module */

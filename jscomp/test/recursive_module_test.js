@@ -1,9 +1,9 @@
 'use strict';
 
-var Mt          = require("./mt.js");
-var Block       = require("../../lib/js/block.js");
-var Curry       = require("../../lib/js/curry.js");
-var Caml_int32  = require("../../lib/js/caml_int32.js");
+var Mt = require("./mt.js");
+var Block = require("../../lib/js/block.js");
+var Curry = require("../../lib/js/curry.js");
+var Caml_int32 = require("../../lib/js/caml_int32.js");
 var Caml_module = require("../../lib/js/caml_module.js");
 
 var suites = [/* [] */0];
@@ -14,7 +14,7 @@ function eq(loc, x, y) {
   test_id[0] = test_id[0] + 1 | 0;
   suites[0] = /* :: */[
     /* tuple */[
-      loc + (" id " + test_id[0]),
+      loc + (" id " + String(test_id[0])),
       (function () {
           return /* Eq */Block.__(0, [
                     x,
@@ -80,10 +80,10 @@ add(/* tuple */[
 
 Mt.from_pair_suites("recursive_module_test.ml", suites[0]);
 
-exports.suites  = suites;
+exports.suites = suites;
 exports.test_id = test_id;
-exports.eq      = eq;
-exports.add     = add;
-exports.Int3    = Int3;
-exports.Fact    = Fact;
+exports.eq = eq;
+exports.add = add;
+exports.Int3 = Int3;
+exports.Fact = Fact;
 /* Int3 Not a pure module */

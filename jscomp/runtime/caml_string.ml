@@ -54,13 +54,16 @@ let caml_string_get s i=
 let caml_create_string len : bytes = 
   (* Node raise [RangeError] exception *)
   if len < 0 then raise (Invalid_argument "String.create")
-  else new_uninitialized len 
+  else 
+    let result = new_uninitialized len in 
+    for i = 0 to  len - 1 do 
+      unsafe_set result i '\000'
+    done ;
+    result 
 
 
-let caml_string_compare (s1 : string) (s2 : string) : int = 
-  if s1 = s2 then 0 
-  else if s1 < s2 then -1
-  else 1
+
+
 
 let caml_fill_string (s : bytes) i l (c : char) = 
   if l > 0 then

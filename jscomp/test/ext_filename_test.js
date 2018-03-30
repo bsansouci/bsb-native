@@ -1,22 +1,22 @@
 'use strict';
 
-var Sys                     = require("../../lib/js/sys.js");
-var List                    = require("../../lib/js/list.js");
-var Block                   = require("../../lib/js/block.js");
-var Bytes                   = require("../../lib/js/bytes.js");
-var Curry                   = require("../../lib/js/curry.js");
-var Format                  = require("../../lib/js/format.js");
-var Js_exn                  = require("../../lib/js/js_exn.js");
-var $$String                = require("../../lib/js/string.js");
-var Caml_sys                = require("../../lib/js/caml_sys.js");
-var Filename                = require("../../lib/js/filename.js");
-var Pervasives              = require("../../lib/js/pervasives.js");
-var Caml_string             = require("../../lib/js/caml_string.js");
-var Test_literals           = require("./test_literals.js");
-var Ext_string_test         = require("./ext_string_test.js");
-var CamlinternalLazy        = require("../../lib/js/camlinternalLazy.js");
-var Ext_pervasives_test     = require("./ext_pervasives_test.js");
-var Caml_missing_polyfill   = require("../../lib/js/caml_missing_polyfill.js");
+var Sys = require("../../lib/js/sys.js");
+var List = require("../../lib/js/list.js");
+var Block = require("../../lib/js/block.js");
+var Bytes = require("../../lib/js/bytes.js");
+var Curry = require("../../lib/js/curry.js");
+var Format = require("../../lib/js/format.js");
+var Js_exn = require("../../lib/js/js_exn.js");
+var $$String = require("../../lib/js/string.js");
+var Caml_sys = require("../../lib/js/caml_sys.js");
+var Filename = require("../../lib/js/filename.js");
+var Pervasives = require("../../lib/js/pervasives.js");
+var Caml_string = require("../../lib/js/caml_string.js");
+var Test_literals = require("./test_literals.js");
+var Ext_string_test = require("./ext_string_test.js");
+var CamlinternalLazy = require("../../lib/js/camlinternalLazy.js");
+var Ext_pervasives_test = require("./ext_pervasives_test.js");
+var Caml_missing_polyfill = require("../../lib/js/caml_missing_polyfill.js");
 var Caml_builtin_exceptions = require("../../lib/js/caml_builtin_exceptions.js");
 
 var node_sep = "/";
@@ -51,22 +51,17 @@ function absolute_path(s) {
   var aux = function (_s) {
     while(true) {
       var s = _s;
-      var match_000 = Curry._1(Filename.basename, s);
-      var match_001 = Curry._1(Filename.dirname, s);
-      var dir = match_001;
+      var base = Curry._1(Filename.basename, s);
+      var dir = Curry._1(Filename.dirname, s);
       if (dir === s) {
         return dir;
+      } else if (base === Filename.current_dir_name) {
+        _s = dir;
+        continue ;
+      } else if (base === Filename.parent_dir_name) {
+        return Curry._1(Filename.dirname, aux(dir));
       } else {
-        var base = match_000;
-        if (base === Filename.current_dir_name) {
-          _s = dir;
-          continue ;
-          
-        } else if (base === Filename.parent_dir_name) {
-          return Curry._1(Filename.dirname, aux(dir));
-        } else {
-          return Filename.concat(aux(dir), base);
-        }
+        return Filename.concat(aux(dir), base);
       }
     };
   };
@@ -132,19 +127,10 @@ function relative_path(file_or_dir_1, file_or_dir_2) {
       var dir2 = _dir2;
       var dir1 = _dir1;
       var exit = 0;
-      if (dir1) {
-        if (dir2) {
-          if (dir1[0] === dir2[0]) {
-            _dir2 = dir2[1];
-            _dir1 = dir1[1];
-            continue ;
-            
-          } else {
-            exit = 1;
-          }
-        } else {
-          exit = 1;
-        }
+      if (dir1 && dir2 && dir1[0] === dir2[0]) {
+        _dir2 = dir2[1];
+        _dir1 = dir1[1];
+        continue ;
       } else {
         exit = 1;
       }
@@ -198,7 +184,6 @@ function node_relative_path(node_modules_shorten, file1, dep_file) {
           if (curr_char === os_path_separator_char || curr_char === /* "." */46) {
             _i = i + 1 | 0;
             continue ;
-            
           } else {
             return i;
           }
@@ -233,7 +218,6 @@ function find_root_filename(_cwd, filename) {
       if (cwd$prime.length < cwd.length) {
         _cwd = cwd$prime;
         continue ;
-        
       } else {
         return Curry._2(Ext_pervasives_test.failwithf("File \"ext_filename_test.ml\", line 205, characters 13-20", /* Format */[
                         /* String */Block.__(2, [
@@ -304,7 +288,6 @@ function split_aux(p) {
       if (new_path === Filename.dir_sep) {
         _p = dir;
         continue ;
-        
       } else {
         _acc = /* :: */[
           new_path,
@@ -312,7 +295,6 @@ function split_aux(p) {
         ];
         _p = dir;
         continue ;
-        
       }
     }
   };
@@ -337,7 +319,6 @@ function rel_normalized_absolute_path(from, to_) {
             _yss = yss[1];
             _xss = xs;
             continue ;
-            
           } else {
             var start = List.fold_left((function (acc, _) {
                     return Filename.concat(acc, Ext_string_test.parent_dir_lit);
@@ -376,18 +357,15 @@ function normalize_absolute_path(x) {
         _paths = xs;
         if (x === Ext_string_test.current_dir_lit) {
           continue ;
-          
         } else if (x === Ext_string_test.parent_dir_lit) {
           _acc = drop_if_exist(acc);
           continue ;
-          
         } else {
           _acc = /* :: */[
             x,
             acc
           ];
           continue ;
-          
         }
       } else {
         return acc;
@@ -407,7 +385,6 @@ function normalize_absolute_path(x) {
         _rev_paths = rev_paths$1[1];
         _acc = Filename.concat(rev_paths$1[0], acc);
         continue ;
-        
       } else {
         return Filename.concat(root, acc);
       }
@@ -444,27 +421,27 @@ if (Sys.unix) {
 
 var $slash$slash = Filename.concat;
 
-exports.node_sep                            = node_sep;
-exports.node_parent                         = node_parent;
-exports.node_current                        = node_current;
-exports.cwd                                 = cwd;
-exports.$slash$slash                        = $slash$slash;
-exports.path_as_directory                   = path_as_directory;
-exports.absolute_path                       = absolute_path;
-exports.chop_extension                      = chop_extension;
-exports.chop_extension_if_any               = chop_extension_if_any;
-exports.os_path_separator_char              = os_path_separator_char;
-exports.relative_path                       = relative_path;
-exports.node_relative_path                  = node_relative_path;
-exports.find_root_filename                  = find_root_filename;
-exports.find_package_json_dir               = find_package_json_dir;
-exports.package_dir                         = package_dir;
-exports.module_name_of_file                 = module_name_of_file;
-exports.module_name_of_file_if_any          = module_name_of_file_if_any;
-exports.combine                             = combine;
-exports.split_aux                           = split_aux;
-exports.rel_normalized_absolute_path        = rel_normalized_absolute_path;
-exports.normalize_absolute_path             = normalize_absolute_path;
-exports.get_extension                       = get_extension;
+exports.node_sep = node_sep;
+exports.node_parent = node_parent;
+exports.node_current = node_current;
+exports.cwd = cwd;
+exports.$slash$slash = $slash$slash;
+exports.path_as_directory = path_as_directory;
+exports.absolute_path = absolute_path;
+exports.chop_extension = chop_extension;
+exports.chop_extension_if_any = chop_extension_if_any;
+exports.os_path_separator_char = os_path_separator_char;
+exports.relative_path = relative_path;
+exports.node_relative_path = node_relative_path;
+exports.find_root_filename = find_root_filename;
+exports.find_package_json_dir = find_package_json_dir;
+exports.package_dir = package_dir;
+exports.module_name_of_file = module_name_of_file;
+exports.module_name_of_file_if_any = module_name_of_file_if_any;
+exports.combine = combine;
+exports.split_aux = split_aux;
+exports.rel_normalized_absolute_path = rel_normalized_absolute_path;
+exports.normalize_absolute_path = normalize_absolute_path;
+exports.get_extension = get_extension;
 exports.simple_convert_node_path_to_os_path = simple_convert_node_path_to_os_path;
 /* simple_convert_node_path_to_os_path Not a pure module */

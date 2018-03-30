@@ -46,7 +46,6 @@ type compilation_kind_t = Js | Bytecode | Native
 
 type refmt = 
   | Refmt_none
-  | Refmt_v2
   | Refmt_v3 
   | Refmt_custom of string 
 type t = 

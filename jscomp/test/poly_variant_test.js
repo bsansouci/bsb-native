@@ -1,7 +1,7 @@
 'use strict';
 
-var Mt    = require("./mt.js");
-var Fs    = require("fs");
+var Mt = require("./mt.js");
+var Fs = require("fs");
 var Block = require("../../lib/js/block.js");
 
 var suites = [/* [] */0];
@@ -12,7 +12,7 @@ function eq(loc, x, y) {
   test_id[0] = test_id[0] + 1 | 0;
   suites[0] = /* :: */[
     /* tuple */[
-      loc + (" id " + test_id[0]),
+      loc + (" id " + String(test_id[0])),
       (function () {
           return /* Eq */Block.__(0, [
                     x,
@@ -104,56 +104,40 @@ function read$1(name) {
 }
 
 function test(readline, x) {
-  readline.on((function (action) {
-          switch (x) {
-            case -944564236 : 
-                return action[0];
-            case -933029960 : 
-                return action[0];
-            
-          }
-        }), (function (action) {
-          switch (x) {
-            case -944564236 : 
-                return action[1];
-            case -933029960 : 
-                return action[1];
-            
-          }
-        }));
+  readline.on((function () {
+            switch (x[0]) {
+              case -944564236 : 
+                  return "line";
+              case -933029960 : 
+                  return "close";
+              
+            }
+          })(), x[1]);
   return /* () */0;
 }
 
 Mt.from_pair_suites("poly_variant_test.ml", suites[0]);
 
 function on2(prim, prim$1) {
-  prim.on2((function (action) {
-          switch (prim$1) {
-            case -944564236 : 
-                return action[0];
-            case -933029960 : 
-                return action[0];
-            
-          }
-        }), (function (action) {
-          switch (prim$1) {
-            case -944564236 : 
-                return action[1];
-            case -933029960 : 
-                return action[1];
-            
-          }
-        }));
+  prim.on2((function () {
+            switch (prim$1[0]) {
+              case -944564236 : 
+                  return "line";
+              case -933029960 : 
+                  return "close";
+              
+            }
+          })(), prim$1[1]);
   return /* () */0;
 }
 
 var readN = read$1;
 
-exports.uu       = uu;
-exports.vv       = vv;
+exports.uu = uu;
+exports.vv = vv;
 exports.register = register;
-exports.test     = test;
-exports.on2      = on2;
-exports.read     = read;
-exports.readN    = readN;
+exports.test = test;
+exports.on2 = on2;
+exports.read = read;
+exports.readN = readN;
 /*  Not a pure module */

@@ -1,7 +1,7 @@
 'use strict';
 
-var Mt           = require("./mt.js");
-var Block        = require("../../lib/js/block.js");
+var Mt = require("./mt.js");
+var Block = require("../../lib/js/block.js");
 var Js_primitive = require("../../lib/js/js_primitive.js");
 var Js_undefined = require("../../lib/js/js_undefined.js");
 
@@ -41,7 +41,7 @@ var suites_001 = /* :: */[
         (function () {
             return /* Eq */Block.__(0, [
                       /* true */1,
-                      +(undefined === undefined)
+                      /* true */1
                     ]);
           })
       ],

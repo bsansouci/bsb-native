@@ -1,11 +1,11 @@
 'use strict';
 
-var $$Array                 = require("../../lib/js/array.js");
-var Block                   = require("../../lib/js/block.js");
-var Curry                   = require("../../lib/js/curry.js");
-var Format                  = require("../../lib/js/format.js");
-var Caml_obj                = require("../../lib/js/caml_obj.js");
-var Caml_array              = require("../../lib/js/caml_array.js");
+var $$Array = require("../../lib/js/array.js");
+var Block = require("../../lib/js/block.js");
+var Curry = require("../../lib/js/curry.js");
+var Format = require("../../lib/js/format.js");
+var Caml_obj = require("../../lib/js/caml_obj.js");
+var Caml_array = require("../../lib/js/caml_array.js");
 var Caml_builtin_exceptions = require("../../lib/js/caml_builtin_exceptions.js");
 
 function sub(_tr, _k) {
@@ -17,14 +17,12 @@ function sub(_tr, _k) {
         return tr[0];
       } else {
         _k = k / 2 | 0;
-        if (k % 2) {
-          _tr = tr[2];
-          continue ;
-          
-        } else {
+        if (k % 2 === 0) {
           _tr = tr[1];
           continue ;
-          
+        } else {
+          _tr = tr[2];
+          continue ;
         }
       }
     } else {
@@ -45,17 +43,17 @@ function update(tr, k, w) {
             ];
     } else {
       var v = tr[0];
-      if (k % 2) {
-        return /* Br */[
-                v,
-                l,
-                update(r, k / 2 | 0, w)
-              ];
-      } else {
+      if (k % 2 === 0) {
         return /* Br */[
                 v,
                 update(l, k / 2 | 0, w),
                 r
+              ];
+      } else {
+        return /* Br */[
+                v,
+                l,
+                update(r, k / 2 | 0, w)
               ];
       }
     }
@@ -78,17 +76,17 @@ function $$delete(tr, n) {
       var r = tr[2];
       var l = tr[1];
       var v = tr[0];
-      if (n % 2) {
-        return /* Br */[
-                v,
-                l,
-                $$delete(r, n / 2 | 0)
-              ];
-      } else {
+      if (n % 2 === 0) {
         return /* Br */[
                 v,
                 $$delete(l, n / 2 | 0),
                 r
+              ];
+      } else {
+        return /* Br */[
+                v,
+                l,
+                $$delete(r, n / 2 | 0)
               ];
       }
     }
@@ -222,7 +220,7 @@ function pop_back(param) {
 function pp(fmt, s) {
   var v = "[ ";
   for(var i = 0 ,i_finish = length(s) - 1 | 0; i <= i_finish; ++i){
-    v = v + (", " + get(s, i));
+    v = v + (", " + String(get(s, i)));
   }
   v = v + "]";
   return Curry._1(Format.fprintf(fmt, /* Format */[
@@ -337,11 +335,11 @@ $eq$tilde(sort(of_array(v)), $$Array.init(500, (function (i) {
             return i + 1 | 0;
           })));
 
-exports.sub       = sub;
-exports.update    = update;
-exports.$$delete  = $$delete;
-exports.loext     = loext;
-exports.lorem     = lorem;
+exports.sub = sub;
+exports.update = update;
+exports.$$delete = $$delete;
+exports.loext = loext;
+exports.lorem = lorem;
 exports.Int_array = Int_array;
 exports.$eq$tilde = $eq$tilde;
 /* u Not a pure module */

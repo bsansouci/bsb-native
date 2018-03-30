@@ -30,20 +30,24 @@ type + 'a t = 'a Js.undefined
 (** Constructs a value of ['a Js.undefined] containing a value of ['a] *)
 external return : 'a -> 'a t = "%identity"
 
-(** Returns [true] if the given value is [empty] ([undefined]), [false] otherwise *)
-external test : 'a t -> bool =  "#is_undef"
 
+val test : 'a t -> bool 
+[@@ocaml.deprecated "Use = Js.undefined directly"]
+(** Returns [true] if the given value is [empty] ([undefined]), [false] otherwise *)
 
 (**
    @since 1.6.1
    Returns [true] if the given value is [empty] ([undefined])
 *)
-external testAny : 'a -> bool = "#is_undef"
+val testAny : 'a -> bool 
 
 
 (** The empty value, [undefined] *)
-external empty : 'a t = "undefined" [@@bs.val]
+external empty : 'a t = "#undefined" 
 
+external getUnsafe : 'a t -> 'a = "%identity"
+
+val getExn: 'a t -> 'a
 
 (** Maps the contained value using the given function
 
@@ -78,7 +82,9 @@ val iter : 'a t -> ('a -> unit [@bs]) -> unit
 </table>
 %}
 *)
+val fromOption: 'a option -> 'a t
 val from_opt : 'a option -> 'a t
+[@@ocaml.deprecated "Use fromOption instead"]
 
 (** Maps ['a Js.undefined] to ['a option]
 
@@ -89,4 +95,6 @@ val from_opt : 'a option -> 'a t
 </table>
 %}
 *)
+external toOption : 'a t -> 'a option = "#undefined_to_opt"
 external to_opt : 'a t -> 'a option = "#undefined_to_opt"
+[@@deprecated "use toOption instead"]

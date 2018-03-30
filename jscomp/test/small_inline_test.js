@@ -31,7 +31,6 @@ function f(_x) {
     var x = _x;
     _x = (((x + 1 | 0) + 1 | 0) + 1 | 0) + 1 | 0;
     continue ;
-    
   };
 }
 
@@ -42,24 +41,22 @@ function ff(_x, _y) {
     _y = x + 1 | 0;
     _x = y;
     continue ;
-    
   };
 }
 
 function fff(_, _$1) {
   while(true) {
     continue ;
-    
   };
 }
 
 exports.$pipe$great = $pipe$great;
-exports.hello1      = hello1;
-exports.hello2      = hello2;
-exports.hello3      = hello3;
-exports.hello4      = hello4;
-exports.hello5      = hello5;
-exports.f           = f;
-exports.ff          = ff;
-exports.fff         = fff;
+exports.hello1 = hello1;
+exports.hello2 = hello2;
+exports.hello3 = hello3;
+exports.hello4 = hello4;
+exports.hello5 = hello5;
+exports.f = f;
+exports.ff = ff;
+exports.fff = fff;
 /* No side effect */

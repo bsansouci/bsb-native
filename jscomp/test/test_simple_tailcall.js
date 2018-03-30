@@ -4,7 +4,6 @@
 function tailcall() {
   while(true) {
     continue ;
-    
   };
 }
 
@@ -28,7 +27,6 @@ function length(_acc, _x) {
         _x = tl;
         _acc = acc + 1 | 0;
         continue ;
-        
       }
     } else {
       return acc;
@@ -36,7 +34,7 @@ function length(_acc, _x) {
   };
 }
 
-exports.tailcall   = tailcall;
+exports.tailcall = tailcall;
 exports.non_length = non_length;
-exports.length     = length;
+exports.length = length;
 /* No side effect */

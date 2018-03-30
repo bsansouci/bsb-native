@@ -32,6 +32,10 @@ val ocaml_flags : string list
 
 val refmt_flags : string list  
 
+val refmt_v3 : string
+
+val refmt_none : string
+
 val main_entries : Bsb_config_types.entries_t list
 
 val allowed_build_kinds : Bsb_config_types.compilation_kind_t list

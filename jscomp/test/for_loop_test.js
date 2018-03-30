@@ -1,9 +1,9 @@
 'use strict';
 
-var List       = require("../../lib/js/list.js");
-var $$Array    = require("../../lib/js/array.js");
-var Block      = require("../../lib/js/block.js");
-var Curry      = require("../../lib/js/curry.js");
+var List = require("../../lib/js/list.js");
+var $$Array = require("../../lib/js/array.js");
+var Block = require("../../lib/js/block.js");
+var Curry = require("../../lib/js/curry.js");
 var Caml_array = require("../../lib/js/caml_array.js");
 var Caml_int32 = require("../../lib/js/caml_int32.js");
 
@@ -156,17 +156,13 @@ function for_8() {
 
 function for_9() {
   var v = [/* [] */0];
-  var match_000 = function (x) {
+  var collect = function (x) {
     v[0] = /* :: */[
       x,
       v[0]
     ];
     return /* () */0;
   };
-  var match_001 = function () {
-    return $$Array.of_list(List.rev(v[0]));
-  };
-  var collect = match_000;
   var vv = [0];
   var vv2 = [0];
   var arr = Caml_array.caml_make_vect(4, (function () {
@@ -181,7 +177,7 @@ function for_9() {
     (function(v$1){
     for(var j = 0; j <= 1; ++j){
       v$1[0] = v$1[0] + 1 | 0;
-      Curry._1(collect, v$1[0]);
+      collect(v$1[0]);
       Caml_array.caml_array_set(arr, (i << 1) + j | 0, (function () {
               vv[0] = vv[0] + v$1[0] | 0;
               return /* () */0;
@@ -203,7 +199,7 @@ function for_9() {
         }), arr2);
   return /* array */[/* tuple */[
             vv[0],
-            Curry._1(match_001, /* () */0),
+            $$Array.of_list(List.rev(v[0])),
             vv2[0]
           ]];
 }
@@ -305,12 +301,12 @@ var suites = /* :: */[
   suites_001
 ];
 
-exports.for_3  = for_3;
-exports.for_4  = for_4;
-exports.for_5  = for_5;
-exports.for_6  = for_6;
-exports.for_7  = for_7;
-exports.for_8  = for_8;
-exports.for_9  = for_9;
+exports.for_3 = for_3;
+exports.for_4 = for_4;
+exports.for_5 = for_5;
+exports.for_6 = for_6;
+exports.for_7 = for_7;
+exports.for_8 = for_8;
+exports.for_9 = for_9;
 exports.suites = suites;
 /* No side effect */

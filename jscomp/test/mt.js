@@ -1,10 +1,11 @@
 'use strict';
 
-var List    = require("../../lib/js/list.js");
-var Path    = require("path");
+var List = require("../../lib/js/list.js");
+var Path = require("path");
 var $$Array = require("../../lib/js/array.js");
-var Curry   = require("../../lib/js/curry.js");
-var Assert  = require("assert");
+var Block = require("../../lib/js/block.js");
+var Curry = require("../../lib/js/curry.js");
+var Assert = require("assert");
 var Process = require("process");
 
 function assert_fail(msg) {
@@ -229,7 +230,55 @@ function from_promise_suites(name, suites) {
   }
 }
 
-exports.from_suites         = from_suites;
-exports.from_pair_suites    = from_pair_suites;
+function eq_suites(test_id, suites, loc, x, y) {
+  test_id[0] = test_id[0] + 1 | 0;
+  suites[0] = /* :: */[
+    /* tuple */[
+      loc + (" id " + String(test_id[0])),
+      (function () {
+          return /* Eq */Block.__(0, [
+                    x,
+                    y
+                  ]);
+        })
+    ],
+    suites[0]
+  ];
+  return /* () */0;
+}
+
+function bool_suites(test_id, suites, loc, x) {
+  test_id[0] = test_id[0] + 1 | 0;
+  suites[0] = /* :: */[
+    /* tuple */[
+      loc + (" id " + String(test_id[0])),
+      (function () {
+          return /* Ok */Block.__(4, [x]);
+        })
+    ],
+    suites[0]
+  ];
+  return /* () */0;
+}
+
+function throw_suites(test_id, suites, loc, x) {
+  test_id[0] = test_id[0] + 1 | 0;
+  suites[0] = /* :: */[
+    /* tuple */[
+      loc + (" id " + String(test_id[0])),
+      (function () {
+          return /* ThrowAny */Block.__(7, [x]);
+        })
+    ],
+    suites[0]
+  ];
+  return /* () */0;
+}
+
+exports.from_suites = from_suites;
+exports.from_pair_suites = from_pair_suites;
 exports.from_promise_suites = from_promise_suites;
+exports.eq_suites = eq_suites;
+exports.bool_suites = bool_suites;
+exports.throw_suites = throw_suites;
 /* val_unit Not a pure module */

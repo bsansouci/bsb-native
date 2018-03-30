@@ -1,9 +1,9 @@
 'use strict';
 
-var Caml_obj                = require("../../lib/js/caml_obj.js");
+var Caml_primitive = require("../../lib/js/caml_primitive.js");
 var Caml_builtin_exceptions = require("../../lib/js/caml_builtin_exceptions.js");
 
-function getComapre(x) {
+function getcompare(x) {
   return x;
 }
 
@@ -13,7 +13,7 @@ function Make(M) {
 }
 
 var Comparable = /* module */[
-  /* getComapre */getComapre,
+  /* getcompare */getcompare,
   /* Make */Make
 ];
 
@@ -102,13 +102,7 @@ function add(x, data, compare, param) {
     var v = param[1];
     var l = param[0];
     var c = compare(x, v);
-    if (c) {
-      if (c < 0) {
-        return bal(add(x, data, compare, l), v, d, r);
-      } else {
-        return bal(l, v, d, add(x, data, compare, r));
-      }
-    } else {
+    if (c === 0) {
       return /* Node */[
               l,
               x,
@@ -116,6 +110,10 @@ function add(x, data, compare, param) {
               r,
               param[4]
             ];
+    } else if (c < 0) {
+      return bal(add(x, data, compare, l), v, d, r);
+    } else {
+      return bal(l, v, d, add(x, data, compare, r));
     }
   } else {
     return /* Node */[
@@ -143,11 +141,11 @@ function empty(v) {
         ];
 }
 
-var compare = Caml_obj.caml_int_compare;
+var compare = Caml_primitive.caml_int_compare;
 
 var V0 = /* module */[/* compare */compare];
 
-var compare$1 = Caml_obj.caml_int_compare;
+var compare$1 = Caml_primitive.caml_int_compare;
 
 var V1 = /* module */[/* compare */compare$1];
 
@@ -166,14 +164,14 @@ var v3 = add$1(3, "a", v0);
 console.log(v3);
 
 exports.Comparable = Comparable;
-exports.height     = height;
-exports.create     = create;
-exports.bal        = bal;
-exports.add        = add$1;
-exports.empty      = empty;
-exports.V0         = V0;
-exports.V1         = V1;
-exports.v0         = v0;
-exports.v1         = v1;
-exports.v3         = v3;
+exports.height = height;
+exports.create = create;
+exports.bal = bal;
+exports.add = add$1;
+exports.empty = empty;
+exports.V0 = V0;
+exports.V1 = V1;
+exports.v0 = v0;
+exports.v1 = v1;
+exports.v3 = v3;
 /* v3 Not a pure module */

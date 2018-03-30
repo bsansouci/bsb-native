@@ -75,6 +75,8 @@ type + 'a nullable
 type + 'a null_undefined = 'a nullable    
 
 external toOption : 'a nullable  -> 'a option = "#null_undefined_to_opt"
+external undefinedToOption : 'a undefined -> 'a option = "#undefined_to_opt"
+external nullToOption : 'a null -> 'a option = "#null_to_opt"
 external test : 'a nullable -> bool = "#is_nil_undef"
 
 (** The same as {!test} except that it is more permissive on the types of input *)
@@ -91,13 +93,13 @@ type (+'a, +'e) promise
 *)
 
 
-external true_ : boolean = "true" [@@bs.val]
-external false_ : boolean = "false" [@@bs.val]
+external true_ : boolean = "#true" 
+external false_ : boolean = "#false" 
 
-external null : 'a null = "" [@@bs.val] 
+external null : 'a null = "#null" 
 (** The same as [empty] in {!Js.Null} will be compiled as [null]*)
 
-external undefined : 'a undefined = "" [@@bs.val] 
+external undefined : 'a undefined = "#undefined" 
 (** The same as  [empty] {!Js.Undefined} will be compiled as [undefined]*)
 
 
@@ -121,6 +123,10 @@ external log4 : 'a -> 'b -> 'c -> 'd -> unit = "log"
 external logMany : 'a array -> unit = "log"
 [@@bs.val] [@@bs.scope "console"] [@@bs.splice]
 (** A convenience function to log more than 4 arguments *)
+
+external eqNull : 'a -> 'a null -> bool = "%bs_equal_null"
+external eqUndefined : 'a -> 'a undefined -> bool = "%bs_equal_undefined"
+external eqNullable : 'a -> 'a nullable -> bool = "%bs_equal_nullable" 
 
 (** {4 operators }*)
 

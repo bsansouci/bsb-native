@@ -25,18 +25,25 @@
 (** Provides functionality for dealing with the ['a Js.null] type *)
 
 
-(** Local alias for ['a Js.null] *)
+
 type + 'a t = 'a Js.null
+(** Local alias for ['a Js.null] *)
 
-(** Constructs a value of ['a Js.null] containing a value of ['a] *)
 external return : 'a -> 'a t  = "%identity"
+(** Constructs a value of ['a Js.null] containing a value of ['a] *)
 
+
+val test : 'a t -> bool 
+[@@ocaml.deprecated "Use = Js.null directly "]
 (** Returns [true] if the given value is [empty] ([null]), [false] otherwise *)
-external test : 'a t -> bool = "#is_nil"
 
 (** The empty value, [null] *)
-external empty : 'a t = "null" [@@bs.val]
+external empty : 'a t = "#null" 
 
+
+external getUnsafe : 'a t -> 'a = "%identity"
+
+val getExn : 'a t -> 'a
 
 (** Maps the contained value using the given function
 
@@ -71,7 +78,10 @@ val iter : 'a t -> ('a -> unit [@bs]) -> unit
 </table>
 %}
 *)
+val fromOption: 'a option -> 'a t
+
 val from_opt : 'a option -> 'a t
+[@@ocaml.deprecated "Use fromOption instead"]
 
 (** Maps ['a Js.null] to ['a option]
 
@@ -82,4 +92,9 @@ val from_opt : 'a option -> 'a t
 </table>
 %}
 *)
+external toOption : 'a t -> 'a option = "#null_to_opt"
+
 external to_opt : 'a t -> 'a option = "#null_to_opt"
+[@@ocaml.deprecated "Use toOption instead"]
+
+

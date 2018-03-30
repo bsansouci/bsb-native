@@ -1,6 +1,6 @@
 'use strict';
 
-var List     = require("../../lib/js/list.js");
+var List = require("../../lib/js/list.js");
 var Caml_obj = require("../../lib/js/caml_obj.js");
 
 var ys = [];
@@ -33,26 +33,25 @@ var xs = /* tuple */[
 function even(_n) {
   while(true) {
     var n = _n;
-    if (n) {
+    if (n === 0) {
+      return /* true */1;
+    } else {
       _n = n - 1 | 0;
       continue ;
-      
-    } else {
-      return /* true */1;
     }
   };
 }
 
 function even2(n) {
-  if (n) {
+  if (n === 0) {
+    return /* true */1;
+  } else {
     var n$1 = n - 1 | 0;
     if (n$1 === 1) {
       return /* true */1;
     } else {
       return even2(n$1 - 1 | 0);
     }
-  } else {
-    return /* true */1;
   }
 }
 
@@ -72,9 +71,9 @@ var obj = /* record */[
   obj_001
 ];
 
-exports.xs    = xs;
-exports.even  = even;
+exports.xs = xs;
+exports.even = even;
 exports.even2 = even2;
-exports.v     = v;
-exports.obj   = obj;
+exports.v = v;
+exports.obj = obj;
 /* xs Not a pure module */

@@ -1,8 +1,8 @@
 'use strict';
 
-var Mt          = require("./mt.js");
-var Block       = require("../../lib/js/block.js");
-var Bytes       = require("../../lib/js/bytes.js");
+var Mt = require("./mt.js");
+var Block = require("../../lib/js/block.js");
+var Bytes = require("../../lib/js/bytes.js");
 var Caml_string = require("../../lib/js/caml_string.js");
 
 var suites = [/* [] */0];
@@ -15,7 +15,7 @@ function eq(loc, param) {
   test_id[0] = test_id[0] + 1 | 0;
   suites[0] = /* :: */[
     /* tuple */[
-      loc + (" id " + test_id[0]),
+      loc + (" id " + String(test_id[0])),
       (function () {
           return /* Eq */Block.__(0, [
                     x,
@@ -28,7 +28,7 @@ function eq(loc, param) {
   return /* () */0;
 }
 
-var b = new Array(3);
+var b = Caml_string.caml_create_string(3);
 
 b[0] = /* "a" */97;
 
@@ -47,7 +47,7 @@ eq("File \"bytes_split_gpr_743_test.ml\", line 17, characters 5-12", /* tuple */
       res
     ]);
 
-var b$1 = new Array(3);
+var b$1 = Caml_string.caml_create_string(3);
 
 b$1[0] = /* "a" */97;
 
@@ -68,7 +68,7 @@ eq("File \"bytes_split_gpr_743_test.ml\", line 32, characters 5-12", /* tuple */
 
 Mt.from_pair_suites("bytes_split_gpr_743_test.ml", suites[0]);
 
-exports.suites  = suites;
+exports.suites = suites;
 exports.test_id = test_id;
-exports.eq      = eq;
+exports.eq = eq;
 /*  Not a pure module */

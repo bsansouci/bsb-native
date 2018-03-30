@@ -36,7 +36,7 @@
 
 (** {2 Internal types for FFI}
 
-these types are not used by normal users}
+these types are not used by normal users
 *)
 module MapperRt = Js_mapperRt
 module Internal = Js_internal
@@ -62,6 +62,8 @@ type + 'a null_undefined = 'a nullable
     this type is the same as {!Js.Null_undefined.t}*)
 
 external toOption : 'a nullable  -> 'a option = "#null_undefined_to_opt"
+external undefinedToOption : 'a undefined -> 'a option = "#undefined_to_opt"
+external nullToOption : 'a null -> 'a option = "#null_to_opt"
 external test : 'a nullable -> bool = "#is_nil_undef"
 external testAny : 'a -> bool = "#is_nil_undef"
 
@@ -77,12 +79,12 @@ type (+'a, +'e) promise
 
 
 (* tag::predefined_js_values[]*)
-external true_ : boolean = "true" [@@bs.val]
-external false_ : boolean = "false" [@@bs.val]
-external null : 'a null = ""
-[@@bs.val] (* The same as {!Js.Null.empty} will be compiled as [null]*)
-external undefined : 'a undefined = ""
-[@@bs.val] (* The same as  {!Js.Undefined.empty} will be compiled as [undefined]*)
+external true_ : boolean = "#true"
+external false_ : boolean = "#false"
+external null : 'a null = "#null"
+(* The same as {!Js.Null.empty} will be compiled as [null]*)
+external undefined : 'a undefined = "#undefined"
+(* The same as  {!Js.Undefined.empty} will be compiled as [undefined]*)
 (* end::predefined_js_values[]*)
 
 (* tag::utility_functions[]*)
@@ -102,6 +104,11 @@ external log4 : 'a -> 'b -> 'c -> 'd -> unit = "log"
 external logMany : 'a array -> unit = "log"
 [@@bs.val] [@@bs.scope "console"] [@@bs.splice]
 (** A convenience function to log more than 4 arguments *)
+
+
+external eqNull : 'a -> 'a null -> bool = "%bs_equal_null"
+external eqUndefined : 'a -> 'a undefined -> bool = "%bs_equal_undefined"
+external eqNullable : 'a -> 'a nullable -> bool = "%bs_equal_nullable" 
 
 (** {4 operators }*)
 external unsafe_lt : 'a -> 'a -> bool = "#unsafe_lt"

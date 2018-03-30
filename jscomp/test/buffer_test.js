@@ -1,9 +1,9 @@
 'use strict';
 
-var Mt         = require("./mt.js");
-var Block      = require("../../lib/js/block.js");
-var Bytes      = require("../../lib/js/bytes.js");
-var Buffer     = require("../../lib/js/buffer.js");
+var Mt = require("./mt.js");
+var Block = require("../../lib/js/block.js");
+var Bytes = require("../../lib/js/bytes.js");
+var $$Buffer = require("../../lib/js/buffer.js");
 var Caml_bytes = require("../../lib/js/caml_bytes.js");
 
 var v = "gso";
@@ -46,12 +46,12 @@ var suites_001 = /* :: */[
     /* tuple */[
       "buffer",
       (function () {
-          var v = Buffer.create(30);
+          var v = $$Buffer.create(30);
           for(var i = 0; i <= 10; ++i){
-            Buffer.add_string(v, "" + i);
+            $$Buffer.add_string(v, String(i));
           }
           return /* Eq */Block.__(0, [
-                    Buffer.contents(v),
+                    $$Buffer.contents(v),
                     "012345678910"
                   ]);
         })
@@ -67,6 +67,6 @@ var suites = /* :: */[
 
 Mt.from_pair_suites("buffer_test.ml", suites);
 
-exports.v      = v;
+exports.v = v;
 exports.suites = suites;
 /*  Not a pure module */

@@ -23,8 +23,6 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
 
 let config_file_bak = "bsconfig.json.bak"
-let refmt3_exe = "refmt3.exe"
-let refmt2_exe = "refmt.exe"
 let get_list_string = Bsb_build_util.get_list_string
 let (//) = Ext_path.combine
 
@@ -219,9 +217,8 @@ let interpret_json
       match String_map.find_opt Bsb_build_schemas.refmt map with 
       | Some (Flo {flo} as config) -> 
         begin match flo with 
-        | "2" -> Bsb_config_types.Refmt_v2
-        | "3" -> Refmt_v3
-        | _ -> Bsb_exception.config_error config "expect version 2 or 3"
+        | "3" -> Bsb_config_types.Refmt_v3
+        | _ -> Bsb_exception.config_error config "expect version 3 only"
         end
       | Some (Str {str}) 
         -> 

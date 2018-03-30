@@ -1,23 +1,23 @@
 'use strict';
 
-var Mt                      = require("./mt.js");
-var Char                    = require("../../lib/js/char.js");
-var List                    = require("../../lib/js/list.js");
-var Block                   = require("../../lib/js/block.js");
-var Bytes                   = require("../../lib/js/bytes.js");
-var Curry                   = require("../../lib/js/curry.js");
-var Js_exn                  = require("../../lib/js/js_exn.js");
-var Lexing                  = require("../../lib/js/lexing.js");
-var Printf                  = require("../../lib/js/printf.js");
-var $$String                = require("../../lib/js/string.js");
-var Parsing                 = require("../../lib/js/parsing.js");
-var Caml_obj                = require("../../lib/js/caml_obj.js");
-var Filename                = require("../../lib/js/filename.js");
-var Printexc                = require("../../lib/js/printexc.js");
-var Pervasives              = require("../../lib/js/pervasives.js");
-var Caml_format             = require("../../lib/js/caml_format.js");
-var Caml_string             = require("../../lib/js/caml_string.js");
-var Caml_exceptions         = require("../../lib/js/caml_exceptions.js");
+var Mt = require("./mt.js");
+var Char = require("../../lib/js/char.js");
+var List = require("../../lib/js/list.js");
+var Block = require("../../lib/js/block.js");
+var Bytes = require("../../lib/js/bytes.js");
+var Curry = require("../../lib/js/curry.js");
+var Js_exn = require("../../lib/js/js_exn.js");
+var Lexing = require("../../lib/js/lexing.js");
+var Printf = require("../../lib/js/printf.js");
+var $$String = require("../../lib/js/string.js");
+var Parsing = require("../../lib/js/parsing.js");
+var Caml_obj = require("../../lib/js/caml_obj.js");
+var Filename = require("../../lib/js/filename.js");
+var Printexc = require("../../lib/js/printexc.js");
+var Pervasives = require("../../lib/js/pervasives.js");
+var Caml_format = require("../../lib/js/caml_format.js");
+var Caml_string = require("../../lib/js/caml_string.js");
+var Caml_exceptions = require("../../lib/js/caml_exceptions.js");
 var Caml_builtin_exceptions = require("../../lib/js/caml_builtin_exceptions.js");
 
 function field($staropt$star, label, number, type_, name) {
@@ -243,7 +243,6 @@ function apply_until(f, _param) {
       } else {
         _param = param[1];
         continue ;
-        
       }
     } else {
       return /* None */0;
@@ -280,7 +279,6 @@ function string_fold_lefti(f, e0, s) {
       _i = i + 1 | 0;
       _acc = Curry._3(f, acc, i, s.charCodeAt(i));
       continue ;
-      
     }
   };
 }
@@ -1469,7 +1467,6 @@ function __ocaml_lex_string_rec(_l, lexbuf, ___ocaml_lex_state) {
       Curry._1(lexbuf[/* refill_buff */0], lexbuf);
       ___ocaml_lex_state = __ocaml_lex_state$1;
       continue ;
-      
     } else {
       switch (__ocaml_lex_state$1) {
         case 0 : 
@@ -1480,7 +1477,7 @@ function __ocaml_lex_string_rec(_l, lexbuf, ___ocaml_lex_state) {
               l
             ];
             continue ;
-            case 1 : 
+        case 1 : 
             return /* String_value */[$$String.concat("", List.rev(l))];
         case 2 : 
             ___ocaml_lex_state = 55;
@@ -1489,7 +1486,7 @@ function __ocaml_lex_string_rec(_l, lexbuf, ___ocaml_lex_state) {
               l
             ];
             continue ;
-            case 3 : 
+        case 3 : 
             return /* String_eof */0;
         
       }
@@ -1506,7 +1503,6 @@ function __ocaml_lex_comment_rec(_l, lexbuf, ___ocaml_lex_state) {
       Curry._1(lexbuf[/* refill_buff */0], lexbuf);
       ___ocaml_lex_state = __ocaml_lex_state$1;
       continue ;
-      
     } else {
       switch (__ocaml_lex_state$1) {
         case 0 : 
@@ -1519,7 +1515,7 @@ function __ocaml_lex_comment_rec(_l, lexbuf, ___ocaml_lex_state) {
               l
             ];
             continue ;
-            case 2 : 
+        case 2 : 
             return /* Comment_eof */0;
         
       }
@@ -1536,14 +1532,13 @@ function __ocaml_lex_multi_line_comment_rec(_l, lexbuf, ___ocaml_lex_state) {
       Curry._1(lexbuf[/* refill_buff */0], lexbuf);
       ___ocaml_lex_state = __ocaml_lex_state$1;
       continue ;
-      
     } else {
       switch (__ocaml_lex_state$1) {
         case 0 : 
             update_loc(lexbuf);
             ___ocaml_lex_state = 47;
             continue ;
-            case 1 : 
+        case 1 : 
             Lexing.lexeme(lexbuf);
             return /* Comment_value */[$$String.concat("", List.rev(l))];
         case 2 : 
@@ -1553,7 +1548,7 @@ function __ocaml_lex_multi_line_comment_rec(_l, lexbuf, ___ocaml_lex_state) {
               l
             ];
             continue ;
-            case 3 : 
+        case 3 : 
             return /* Comment_eof */0;
         
       }
@@ -1571,7 +1566,6 @@ function lexer(lexbuf) {
       Curry._1(lexbuf$1[/* refill_buff */0], lexbuf$1);
       ___ocaml_lex_state = __ocaml_lex_state$1;
       continue ;
-      
     } else {
       switch (__ocaml_lex_state$1) {
         case 0 : 
@@ -1601,21 +1595,17 @@ function lexer(lexbuf) {
             if (match) {
               ___ocaml_lex_state = 0;
               continue ;
-              
             } else {
               return /* EOF */25;
             }
-            break;
         case 12 : 
             var match$1 = __ocaml_lex_multi_line_comment_rec(/* [] */0, lexbuf$1, 47);
             if (match$1) {
               ___ocaml_lex_state = 0;
               continue ;
-              
             } else {
               return /* EOF */25;
             }
-            break;
         case 13 : 
             var match$2 = __ocaml_lex_string_rec(/* [] */0, lexbuf$1, 55);
             if (match$2) {
@@ -1628,15 +1618,15 @@ function lexer(lexbuf) {
         case 15 : 
             return /* FLOAT */Block.__(4, [Caml_format.caml_float_of_string(Lexing.lexeme(lexbuf$1))]);
         case 16 : 
-            return /* FLOAT */Block.__(4, [Pervasives.nan]);
+            return /* FLOAT */Block.__(4, [Number.NaN]);
         case 17 : 
             update_loc(lexbuf$1);
             ___ocaml_lex_state = 0;
             continue ;
-            case 18 : 
+        case 18 : 
             ___ocaml_lex_state = 0;
             continue ;
-            case 19 : 
+        case 19 : 
             var loc = from_lexbuf(lexbuf$1);
             var ident = Lexing.lexeme(lexbuf$1);
             switch (ident) {
@@ -1940,7 +1930,6 @@ function print(scope) {
           _param = param[1];
           _acc = Pervasives.$at(sub, acc);
           continue ;
-          
         } else {
           _param = param[1];
           _acc = /* :: */[
@@ -1948,7 +1937,6 @@ function print(scope) {
             acc
           ];
           continue ;
-          
         }
       } else {
         return acc;
@@ -1988,7 +1976,6 @@ function runtime_function(param) {
                         ];
                 
               }
-              break;
           case 1 : 
               switch (param[2]) {
                 case 1 : 
@@ -2007,7 +1994,6 @@ function runtime_function(param) {
                         ];
                 
               }
-              break;
           case 2 : 
               var match$2 = param[2];
               if (match$2 !== 5) {
@@ -2022,7 +2008,6 @@ function runtime_function(param) {
               } else {
                 return "Pbrt.Encoder.bytes";
               }
-              break;
           
         }
       } else if (match$1[0] !== 0) {
@@ -2086,7 +2071,6 @@ function runtime_function(param) {
                       ];
               
             }
-            break;
         case 1 : 
             switch (param[2]) {
               case 1 : 
@@ -2105,7 +2089,6 @@ function runtime_function(param) {
                       ];
               
             }
-            break;
         case 2 : 
             var match$4 = param[2];
             if (match$4 !== 5) {
@@ -2120,7 +2103,6 @@ function runtime_function(param) {
             } else {
               return "Pbrt.Decoder.bytes";
             }
-            break;
         
       }
     } else if (match$3[0] !== 0) {
@@ -2989,12 +2971,10 @@ function endline(s) {
 
 function gen_pp_field(field_type) {
   var exit = 0;
-  if (typeof field_type === "number") {
+  if (typeof field_type === "number" || !field_type.tag) {
     exit = 1;
-  } else if (field_type.tag) {
-    return function_name_of_user_defined("pp", field_type[0]);
   } else {
-    exit = 1;
+    return function_name_of_user_defined("pp", field_type[0]);
   }
   if (exit === 1) {
     return Curry._1(Printf.sprintf(/* Format */[
@@ -3562,13 +3542,7 @@ function add(x, data, param) {
     var v = param[1];
     var l = param[0];
     var c = Caml_obj.caml_compare(x, v);
-    if (c) {
-      if (c < 0) {
-        return bal(add(x, data, l), v, d, r);
-      } else {
-        return bal(l, v, d, add(x, data, r));
-      }
-    } else {
+    if (c === 0) {
       return /* Node */[
               l,
               x,
@@ -3576,6 +3550,10 @@ function add(x, data, param) {
               r,
               param[4]
             ];
+    } else if (c < 0) {
+      return bal(add(x, data, l), v, d, r);
+    } else {
+      return bal(l, v, d, add(x, data, r));
     }
   } else {
     return /* Node */[
@@ -3593,12 +3571,11 @@ function find(x, _param) {
     var param = _param;
     if (param) {
       var c = Caml_obj.caml_compare(x, param[1]);
-      if (c) {
+      if (c === 0) {
+        return param[2];
+      } else {
         _param = c < 0 ? param[0] : param[3];
         continue ;
-        
-      } else {
-        return param[2];
       }
     } else {
       throw Caml_builtin_exceptions.not_found;
@@ -3631,7 +3608,6 @@ function fold(f, _m, _accu) {
       _accu = Curry._3(f, m[1], m[2], fold(f, m[0], accu));
       _m = m[3];
       continue ;
-      
     } else {
       return accu;
     }
@@ -3643,7 +3619,7 @@ function min_value(param) {
   if (match) {
     var match$1 = param[1];
     if (match$1) {
-      return /* Some */[Pervasives.min(match[0], match$1[0])];
+      return /* Some */[Caml_obj.caml_min(match[0], match$1[0])];
     } else {
       throw [
             Caml_builtin_exceptions.failure,
@@ -3765,7 +3741,9 @@ function strong_connect(g, sccs, stack, index, v) {
                           ])
                       ]),
                     "[Graph] sub w [%i], w.index: %s\n"
-                  ]), w[/* core */0][/* id */0], string_of_option(Pervasives.string_of_int, w[/* index */1]));
+                  ]), w[/* core */0][/* id */0], string_of_option((function (prim) {
+                      return String(prim);
+                    }), w[/* index */1]));
           var match = w[/* index */1];
           if (match) {
             if (w[/* on_stack */3]) {
@@ -3825,7 +3803,11 @@ function strong_connect(g, sccs, stack, index, v) {
                   ])
               ]),
             "[Graph] after sub for v [%i], lowlink: %s, index: %s\n"
-          ]), v[/* core */0][/* id */0], string_of_option(Pervasives.string_of_int, v[/* lowlink */2]), string_of_option(Pervasives.string_of_int, v[/* index */1]));
+          ]), v[/* core */0][/* id */0], string_of_option((function (prim) {
+              return String(prim);
+            }), v[/* lowlink */2]), string_of_option((function (prim) {
+              return String(prim);
+            }), v[/* index */1]));
   Curry._1(log(/* Format */[
             /* String_literal */Block.__(11, [
                 "[Graph]   -> stack : ",
@@ -3839,7 +3821,7 @@ function strong_connect(g, sccs, stack, index, v) {
               ]),
             "[Graph]   -> stack : %s\n"
           ]), "[" + ($$String.concat(";", List.map((function (param) {
-                    return "" + param[/* core */0][/* id */0];
+                    return String(param[/* core */0][/* id */0]);
                   }), stack$2)) + "]"));
   if (eq_value(/* tuple */[
           v[/* lowlink */2],
@@ -4108,14 +4090,12 @@ function compile_default_p2(all_types, field) {
             } else {
               return invalid_default_value(/* Some */[field_name$1], "invalid default type (bool expected)", /* () */0);
             }
-            break;
         case 13 : 
             if (constant.tag) {
               return invalid_default_value(/* Some */[field_name$1], "invalid default type (string expected)", /* () */0);
             } else {
               return /* Some */[constant];
             }
-            break;
         case 14 : 
             return invalid_default_value(/* Some */[field_name$1], "default value not supported for bytes", /* () */0);
         
@@ -4154,14 +4134,12 @@ function compile_default_p2(all_types, field) {
             default:
               return invalid_default_value(/* Some */[field_name$1], "invalid default type (float/int expected)", /* () */0);
           }
-          break;
       case 2 : 
           if (constant.tag === 2) {
             return /* Some */[constant];
           } else {
             return invalid_default_value(/* Some */[field_name$1], "invalid default type (int expected)", /* () */0);
           }
-          break;
       case 3 : 
           if (constant.tag === 2) {
             if (constant[0] >= 0) {
@@ -4172,7 +4150,6 @@ function compile_default_p2(all_types, field) {
           } else {
             return invalid_default_value(/* Some */[field_name$1], "invalid default type (int expected)", /* () */0);
           }
-          break;
       
     }
   } else {
@@ -4248,12 +4225,11 @@ function list_assoc2(x, _param) {
     var param = _param;
     if (param) {
       var match = param[0];
-      if (Caml_obj.caml_compare(match[1], x)) {
+      if (Caml_obj.caml_equal(match[1], x)) {
+        return match[0];
+      } else {
         _param = param[1];
         continue ;
-        
-      } else {
-        return match[0];
       }
     } else {
       throw Caml_builtin_exceptions.not_found;
@@ -4480,7 +4456,6 @@ function compile_message_p2(types, param, message) {
               scopes
             ];
             continue ;
-            
           } else {
             return /* :: */[
                     field_scope,
@@ -5658,7 +5633,6 @@ function default_value_of_field_type(field_name, field_type, field_default) {
           } else {
             return "\"\"";
           }
-          break;
       case 1 : 
           if (field_default$1) {
             var match$1 = field_default$1[0];
@@ -5670,19 +5644,17 @@ function default_value_of_field_type(field_name, field_type, field_default) {
           } else {
             return "0.";
           }
-          break;
       case 2 : 
           if (field_default$1) {
             var match$2 = field_default$1[0];
             if (match$2.tag === 2) {
-              return "" + match$2[0];
+              return String(match$2[0]);
             } else {
               return invalid_default_value(field_name$1, "invalid default type", /* () */0);
             }
           } else {
             return "0";
           }
-          break;
       case 3 : 
           if (field_default$1) {
             var match$3 = field_default$1[0];
@@ -5705,7 +5677,6 @@ function default_value_of_field_type(field_name, field_type, field_default) {
           } else {
             return "0l";
           }
-          break;
       case 4 : 
           if (field_default$1) {
             var match$4 = field_default$1[0];
@@ -5728,7 +5699,6 @@ function default_value_of_field_type(field_name, field_type, field_default) {
           } else {
             return "0L";
           }
-          break;
       case 5 : 
           if (field_default$1) {
             var match$5 = field_default$1[0];
@@ -5752,7 +5722,6 @@ function default_value_of_field_type(field_name, field_type, field_default) {
           } else {
             return "Bytes.create 64";
           }
-          break;
       case 6 : 
           if (field_default$1) {
             var match$6 = field_default$1[0];
@@ -5769,7 +5738,6 @@ function default_value_of_field_type(field_name, field_type, field_default) {
           } else {
             return "false";
           }
-          break;
       
     }
   }
@@ -7097,7 +7065,7 @@ function eq(loc, x, y) {
   test_id[0] = test_id[0] + 1 | 0;
   suites[0] = /* :: */[
     /* tuple */[
-      loc + (" id " + test_id[0]),
+      loc + (" id " + String(test_id[0])),
       (function () {
           return /* Eq */Block.__(0, [
                     x,

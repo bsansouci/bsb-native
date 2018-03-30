@@ -127,6 +127,7 @@
 ../lib/whole_compiler.ml : ./ext/int_vec_vec.mli
 ../lib/whole_compiler.ml : ./ext/resize_array.ml
 ../lib/whole_compiler.ml : ./syntax/ast_comb.mli
+../lib/whole_compiler.ml : ./syntax/ast_tdcls.ml
 ../lib/whole_compiler.ml : ./syntax/ast_util.mli
 ../lib/whole_compiler.ml : ./syntax/ppx_entry.ml
 ../lib/whole_compiler.ml : ../vendor/ocaml/typing/env.ml
@@ -160,6 +161,7 @@
 ../lib/whole_compiler.ml : ./ext/int_vec_util.mli
 ../lib/whole_compiler.ml : ./ext/resize_array.mli
 ../lib/whole_compiler.ml : ./syntax/ast_derive.ml
+../lib/whole_compiler.ml : ./syntax/ast_tdcls.mli
 ../lib/whole_compiler.ml : ./syntax/ppx_entry.mli
 ../lib/whole_compiler.ml : ../vendor/ocaml/typing/env.mli
 ../lib/whole_compiler.ml : ../vendor/ocaml/typing/path.ml
@@ -255,8 +257,11 @@
 ../lib/whole_compiler.ml : ./depends/bs_exception.ml
 ../lib/whole_compiler.ml : ./ext/string_hash_set.mli
 ../lib/whole_compiler.ml : ./syntax/ast_core_type.ml
+../lib/whole_compiler.ml : ./syntax/ast_exp_apply.ml
+../lib/whole_compiler.ml : ./syntax/ast_primitive.ml
 ../lib/whole_compiler.ml : ./syntax/ast_signature.ml
 ../lib/whole_compiler.ml : ./syntax/ast_structure.ml
+../lib/whole_compiler.ml : ./syntax/bs_ast_mapper.ml
 ../lib/whole_compiler.ml : ./syntax/bs_syntaxerr.mli
 ../lib/whole_compiler.ml : ../vendor/ocaml/driver/compenv.ml
 ../lib/whole_compiler.ml : ../vendor/ocaml/driver/pparse.mli
@@ -294,8 +299,11 @@
 ../lib/whole_compiler.ml : ./depends/bs_exception.mli
 ../lib/whole_compiler.ml : ./syntax/ast_attributes.ml
 ../lib/whole_compiler.ml : ./syntax/ast_core_type.mli
+../lib/whole_compiler.ml : ./syntax/ast_exp_apply.mli
+../lib/whole_compiler.ml : ./syntax/ast_primitive.mli
 ../lib/whole_compiler.ml : ./syntax/ast_signature.mli
 ../lib/whole_compiler.ml : ./syntax/ast_structure.mli
+../lib/whole_compiler.ml : ./syntax/bs_ast_mapper.mli
 ../lib/whole_compiler.ml : ../vendor/ocaml/bytecomp/lambda.ml
 ../lib/whole_compiler.ml : ../vendor/ocaml/bytecomp/switch.ml
 ../lib/whole_compiler.ml : ../vendor/ocaml/driver/compenv.mli
@@ -359,7 +367,6 @@
 ../lib/whole_compiler.ml : ./core/lam_compile_global.ml
 ../lib/whole_compiler.ml : ./core/lam_eta_conversion.ml
 ../lib/whole_compiler.ml : ./core/lam_pass_lets_dce.mli
-../lib/whole_compiler.ml : ./core/ocaml_stdlib_slots.ml
 ../lib/whole_compiler.ml : ./ext/hash_set_ident_mask.ml
 ../lib/whole_compiler.ml : ./super_errors/super_main.ml
 ../lib/whole_compiler.ml : ./super_errors/super_misc.ml
@@ -392,6 +399,7 @@
 ../lib/whole_compiler.ml : ./ext/hash_set_ident_mask.mli
 ../lib/whole_compiler.ml : ./ext/ordered_hash_map_gen.ml
 ../lib/whole_compiler.ml : ./super_errors/super_misc.mli
+../lib/whole_compiler.ml : ./syntax/ast_exp_extension.ml
 ../lib/whole_compiler.ml : ./syntax/bs_ast_invariant.mli
 ../lib/whole_compiler.ml : ./syntax/external_arg_spec.ml
 ../lib/whole_compiler.ml : ./syntax/external_process.mli
@@ -416,6 +424,7 @@
 ../lib/whole_compiler.ml : ./core/lam_compile_context.mli
 ../lib/whole_compiler.ml : ./core/ocaml_batch_compile.mli
 ../lib/whole_compiler.ml : ./super_errors/super_pparse.ml
+../lib/whole_compiler.ml : ./syntax/ast_exp_extension.mli
 ../lib/whole_compiler.ml : ./syntax/external_arg_spec.mli
 ../lib/whole_compiler.ml : ./syntax/external_ffi_types.ml
 ../lib/whole_compiler.ml : ../vendor/ocaml/bytecomp/translcore.ml
@@ -436,6 +445,7 @@
 ../lib/whole_compiler.ml : ./core/lam_pass_deep_flatten.ml
 ../lib/whole_compiler.ml : ./core/lam_pass_remove_alias.ml
 ../lib/whole_compiler.ml : ./super_errors/super_typemod.ml
+../lib/whole_compiler.ml : ./syntax/ast_derive_abstract.ml
 ../lib/whole_compiler.ml : ./syntax/external_ffi_types.mli
 ../lib/whole_compiler.ml : ../vendor/ocaml/bytecomp/printlambda.ml
 ../lib/whole_compiler.ml : ../vendor/ocaml/bytecomp/translclass.ml
@@ -455,6 +465,7 @@
 ../lib/whole_compiler.ml : ./super_errors/super_typecore.ml
 ../lib/whole_compiler.ml : ./super_errors/super_typetexp.ml
 ../lib/whole_compiler.ml : ./super_errors/super_warnings.ml
+../lib/whole_compiler.ml : ./syntax/ast_derive_abstract.mli
 ../lib/whole_compiler.ml : ./syntax/ast_derive_js_mapper.ml
 ../lib/whole_compiler.ml : ./syntax/ast_derive_projector.ml
 ../lib/whole_compiler.ml : ../vendor/ocaml/bytecomp/printlambda.mli
@@ -476,12 +487,18 @@
 ../lib/whole_compiler.ml : ./core/lam_compile_external_call.mli
 ../lib/whole_compiler.ml : ./core/lam_pass_alpha_conversion.mli
 ../lib/whole_compiler.ml : ./super_errors/super_reason_react.ml
+../lib/whole_compiler.ml : ./syntax/ast_core_type_class_type.ml
 ../lib/whole_compiler.ml : ./ext/ordered_hash_map_local_ident.ml
 ../lib/whole_compiler.ml : ./super_errors/super_reason_react.mli
+../lib/whole_compiler.ml : ./syntax/ast_core_type_class_type.mli
+../lib/whole_compiler.ml : ./syntax/ast_tuple_pattern_flatten.ml
 ../lib/whole_compiler.ml : ./ext/ordered_hash_map_local_ident.mli
+../lib/whole_compiler.ml : ./syntax/ast_tuple_pattern_flatten.mli
 ../lib/whole_compiler.ml : ./core/js_pass_flatten_and_mark_dead.ml
 ../lib/whole_compiler.ml : ./outcome_printer/outcome_printer_ns.ml
+../lib/whole_compiler.ml : ./outcome_printer/reason_syntax_util.ml
 ../lib/whole_compiler.ml : ./core/js_pass_flatten_and_mark_dead.mli
 ../lib/whole_compiler.ml : ./outcome_printer/outcome_printer_ns.mli
+../lib/whole_compiler.ml : ./outcome_printer/reason_syntax_util.mli
 ../lib/whole_compiler.ml : ./outcome_printer/tweaked_reason_oprint.ml
 ../lib/whole_compiler.ml : ./outcome_printer/reason_outcome_printer_main.ml

@@ -1,6 +1,6 @@
 'use strict';
 
-var Mt    = require("./mt.js");
+var Mt = require("./mt.js");
 var Block = require("../../lib/js/block.js");
 
 function f(x) {
@@ -38,7 +38,7 @@ var suites_000 = /* tuple */[
   (function () {
       return /* Eq */Block.__(0, [
                 u,
-                f(true)
+                /* true */1
               ]);
     })
 ];
@@ -59,7 +59,7 @@ var suites_001 = /* :: */[
       (function () {
           return /* Eq */Block.__(0, [
                     /* false */0,
-                    +(f(true) === (true))
+                    +(/* true */1 === (true))
                   ]);
         })
     ],
@@ -72,13 +72,22 @@ var suites = /* :: */[
   suites_001
 ];
 
+function ff(u) {
+  if (u === true) {
+    return 1;
+  } else {
+    return 2;
+  }
+}
+
 Mt.from_pair_suites("js_bool_test.ml", suites);
 
-exports.f      = f;
-exports.f2     = f2;
-exports.f4     = f4;
-exports.f3     = f3;
-exports.u      = u;
-exports.v      = v;
+exports.f = f;
+exports.f2 = f2;
+exports.f4 = f4;
+exports.f3 = f3;
+exports.u = u;
+exports.v = v;
 exports.suites = suites;
-/* f3 Not a pure module */
+exports.ff = ff;
+/* u Not a pure module */

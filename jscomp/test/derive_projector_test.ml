@@ -41,3 +41,13 @@ let h = [
 
 type hh = Xx of int 
 [@@bs.deriving accessors]
+
+type xx = < x : int > Js.t
+[@@bs.deriving accessors]
+
+type t = 
+  | A of (int -> int [@bs]) 
+  [@@bs.deriving accessors]
+
+
+let f = a (fun [@bs] x -> x)  

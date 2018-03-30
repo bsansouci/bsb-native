@@ -239,7 +239,7 @@ SYNTAX_SRCS= \
 	ast_utf8_string\
 	ast_utf8_string_interp\
 	ast_derive_constructor \
-	ast_derive_util \
+	ast_derive_util\
 	ast_exp \
 	ast_external_mk\
 	ast_lift \
@@ -250,19 +250,27 @@ SYNTAX_SRCS= \
 	ast_signature \
 	ast_structure\
 	bs_ast_iterator\
+	bs_ast_mapper\
 	ast_derive\
 	ast_comb\
 	ast_core_type\
 	bs_ast_invariant\
 	ast_attributes\
 	ast_polyvar\
+	external_ffi_types\
+	external_process\
+	ast_derive_abstract\
 	ast_derive_dyn\
 	ast_derive_projector \
 	ast_derive_js_mapper\
-	external_ffi_types\
-	external_process\
 	ast_util\
-	ppx_entry
+	ast_tdcls\
+	ast_primitive\
+	ast_tuple_pattern_flatten\
+	ast_exp_apply\
+	ast_exp_extension\
+	ast_core_type_class_type\
+	ppx_entry\
 # not a good name ast_util
 SYNTAX_CMXS=$(addprefix syntax/, $(addsuffix .cmx, $(SYNTAX_SRCS)))
 DEPENDS_SRCS= bs_exception ast_extract binary_ast
@@ -272,7 +280,6 @@ CORE_SRCS= js_runtime_modules \
 	js_packages_info\
 	js_packages_state\
 	ocaml_types  \
-	ocaml_stdlib_slots \
 	bs_conditional_initial \
 	ocaml_options \
 	ocaml_parse\
@@ -380,7 +387,7 @@ BSB_HELPER_CMXS=$(addprefix bsb/, $(addsuffix .cmx, $(BSB_HELPER_SRCS)))
 BSB_HELPER_CMOS=$(addprefix bsb/, $(addsuffix .cmo, $(BSB_HELPER_SRCS)))
 
 SUPER_ERRORS_SRCS=super_reason_react super_misc super_warnings super_location super_env super_pparse super_typecore super_typemod super_typetexp super_main
-REASON_OUTCOME_PRINTER_SRCS= outcome_printer_ns tweaked_reason_oprint reason_outcome_printer_main
+REASON_OUTCOME_PRINTER_SRCS=reason_syntax_util outcome_printer_ns tweaked_reason_oprint reason_outcome_printer_main
 
 BSB_CMXS=$(addprefix bsb/, $(addsuffix .cmx, $(BSB_SRCS)))
 BSB_CMOS=$(addprefix bsb/, $(addsuffix .cmo, $(BSB_SRCS)))
@@ -488,7 +495,7 @@ depend:
 
 
 
-# this target  is used to make 
+# this target  is used to make
 ./bin/bspack.exe: bin/bspack.mli bin/bspack.ml
 	$(MAKE) -C bin bspack.exe
 
@@ -533,7 +540,7 @@ depend:
 themes:
 	cd bsb && ./pack-templates.sh
 
-snapshotml:./bin/bspack.exe 
+snapshotml:./bin/bspack.exe
 	$(MAKE) -j9 $(SNAPSHOT_SRCS)
 
 force-snapshotml:
@@ -681,9 +688,9 @@ DOCS_SOURCES+=$(shell ls others/*.ml*)
 	ocamlopt.opt -I +compiler-libs -I +ocamldoc -shared -I ../odoc_gen  -o $@ $^
 
 docs: ../odoc_gen/generator.cmxs
-	make -C bin bsppx.exe
+	make -C ../lib bsppx.exe
 	node ../scripts/doc_gen.js
-# ocamldoc.opt -nostdlib -I stdlib -g ../odoc_gen/generator.cmxs -charset utf-8 -css-style ../../odoc_gen/style.css -sort -ppx bin/bsppx.exe -I others -I runtime -d ../docs/api $(DOCS_SOURCES)
+
 
 top: bs_hash.cma ext.cma bsb.cma
 repl: top

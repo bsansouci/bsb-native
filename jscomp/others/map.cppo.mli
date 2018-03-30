@@ -5,117 +5,134 @@ type key = int
 #else
 [%error "unknown type"]
 #endif  
-type (+'a) t
-(** The type of maps from type [key] to type ['a]. *)
+type 'value t
+(** The type of maps from type [key] to type ['value]. *)
 
-val empty: 'a t
-(** The empty map. *)
+val empty: 'v t
+val isEmpty: 'v t -> bool
+val has:  'v t -> key -> bool    
 
-val isEmpty: 'a t -> bool
-(** Test whether a map is empty or not. *)
+val cmpU:  'v t -> 'v t -> ('v -> 'v -> int [@bs]) -> int
+val cmp:  'v t -> 'v t -> ('v -> 'v -> int) -> int
 
-val mem: key -> 'a t -> bool
-(** [mem x m] returns [true] if [m] contains a binding for [x],
-   and [false] otherwise. *)
-
-val add: key -> 'a -> 'a t -> 'a t
-(** [add x y m] returns a map containing the same bindings as
-   [m], plus a binding of [x] to [y]. If [x] was already bound
-   in [m], its previous binding disappears. *)
-
-val singleton: key -> 'a -> 'a t
-(** [singleton x y] returns the one-element map that contains a binding [y]
-    for [x].
-    @since 3.12.0
- *)
-
-val remove: key -> 'a t -> 'a t
-(** [remove x m] returns a map containing the same bindings as
-   [m], except for [x] which is unbound in the returned map. *)
-
-val merge:
-     (key -> 'a option -> 'b option -> 'c option [@bs]) -> 'a t -> 'b t -> 'c t
-(** [merge f m1 m2] computes a map whose keys is a subset of keys of [m1]
-    and of [m2]. The presence of each such binding, and the corresponding
-    value, is determined with the function [f].
-    @since 3.12.0
- *)
-
-val compare: ('a -> 'a -> int [@bs]) -> 'a t -> 'a t -> int
-(** Total ordering between maps.  The first argument is a total ordering
-    used to compare data associated with equal keys in the two maps. *)
-
-val equal: ('a -> 'a -> bool [@bs]) -> 'a t -> 'a t -> bool
-(** [equal cmp m1 m2] tests whether the maps [m1] and [m2] are
+val eqU: 'v t -> 'v t -> ('v -> 'v -> bool [@bs]) -> bool
+val eq: 'v t -> 'v t -> ('v -> 'v -> bool) -> bool
+(** [equal m1 m2 cmp] tests whether the maps [m1] and [m2] are
    equal, that is, contain equal keys and associate them with
    equal data.  [cmp] is the equality predicate used to compare
    the data associated with the keys. *)
 
-val iter: (key -> 'a -> unit [@bs]) -> 'a t -> unit
-(** [iter f m] applies [f] to all bindings in map [m].
+val forEachU: 'v t -> (key -> 'v -> unit [@bs]) ->  unit
+val forEach: 'v t -> (key -> 'v -> unit) ->  unit
+(** [forEach m f] applies [f] to all bindings in map [m].
    [f] receives the key as first argument, and the associated value
    as second argument.  The bindings are passed to [f] in increasing
    order with respect to the ordering over the type of the keys. *)
 
-val fold: (key -> 'a -> 'b -> 'b [@bs]) -> 'a t -> 'b -> 'b
-(** [fold f m a] computes [(f kN dN ... (f k1 d1 a)...)],
+val reduceU:  'v t -> 'v2 -> ('v2 -> key -> 'v -> 'v2 [@bs]) -> 'v2
+val reduce:  'v t -> 'v2 -> ('v2 -> key -> 'v -> 'v2) -> 'v2
+(** [reduce m a f] computes [(f kN dN ... (f k1 d1 a)...)],
    where [k1 ... kN] are the keys of all bindings in [m]
    (in increasing order), and [d1 ... dN] are the associated data. *)
 
-val forAll: (key -> 'a -> bool [@bs]) -> 'a t -> bool
-(** [for_all p m] checks if all the bindings of the map
+val everyU:  'v t -> (key -> 'v -> bool [@bs]) -> bool
+val every:  'v t -> (key -> 'v -> bool) -> bool
+(** [every m p] checks if all the bindings of the map
     satisfy the predicate [p].
-    @since 3.12.0
  *)
 
-val exists: (key -> 'a -> bool [@bs]) -> 'a t -> bool
-(** [exists p m] checks if at least one binding of the map
+val someU:  'v t -> (key -> 'v -> bool [@bs]) -> bool
+val some:  'v t -> (key -> 'v -> bool) -> bool
+(** [some m p] checks if at least one binding of the map
     satisfy the predicate [p].
-    @since 3.12.0
+ *)
+val size: 'v t -> int
+val toList: 'v t -> (key * 'v) list
+(** In increasing order with respect *)
+val toArray: 'v t -> (key * 'v) array
+val ofArray: (key * 'v) array -> 'v t     
+[@@ocaml.deprecated "Use fromArray instead"]
+val fromArray: (key * 'v) array -> 'v t     
+val keysToArray: 'v t -> key array 
+val valuesToArray: 'v t -> 'v array
+val minKey: _ t -> key option 
+val minKeyUndefined: _ t -> key Js.undefined
+val maxKey: _ t -> key option
+val maxKeyUndefined: _ t -> key Js.undefined
+val minimum: 'v t -> (key * 'v) option
+val minUndefined: 'v t -> (key * 'v) Js.undefined
+val maximum: 'v t -> (key * 'v) option
+val maxUndefined: 'v t -> (key * 'v) Js.undefined
+val get: 'v t -> key -> 'v option
+val getUndefined: 'v t -> key -> 'v Js.undefined
+val getWithDefault:  'v t -> key -> 'v  -> 'v
+val getExn: 'v t -> key -> 'v 
+
+val checkInvariantInternal: _ t -> unit
+(**
+   {b raise} when invariant is not held
+*)  
+
+(****************************************************************************)
+
+val remove: 'v t ->  key -> 'v t
+(** [remove m x] returns a map containing the same bindings as
+   [m], except for [x] which is unbound in the returned map. *)
+val removeMany: 'v t -> key array -> 'v t
+
+val set: 'v t ->  key -> 'v -> 'v t
+(** [add m x y] returns a map containing the same bindings as
+   [m], plus a binding of [x] to [y]. If [x] was already bound
+   in [m], its previous binding disappears. *)
+
+val updateU: 'v t -> key -> ('v option -> 'v option [@bs]) -> 'v t 
+val update: 'v t -> key -> ('v option -> 'v option) -> 'v t 
+val mergeArray: 'v t -> (key * 'v) array -> 'v t
+    
+val mergeU:
+    'v t -> 'v2 t ->
+    (key -> 'v option -> 'v2 option -> 'c option [@bs]) ->
+    'c t
+val merge:
+    'v t -> 'v2 t ->
+    (key -> 'v option -> 'v2 option -> 'c option) ->
+    'c t      
+(** [merge m1 m2 f] computes a map whose keys is a subset of keys of [m1]
+    and of [m2]. The presence of each such binding, and the corresponding
+    value, is determined with the function [f].
  *)
 
-val filter: (key -> 'a -> bool [@bs]) -> 'a t -> 'a t
-(** [filter p m] returns the map with all the bindings in [m]
+val keepU: 
+    'v t -> 
+    (key -> 'v -> bool [@bs]) -> 
+    'v t
+val keep: 
+    'v t -> 
+    (key -> 'v -> bool) -> 
+    'v t      
+(** [keep m p] returns the map with all the bindings in [m]
     that satisfy predicate [p].
-    @since 3.12.0
- *)
+*)
 
-val partition: (key -> 'a -> bool [@bs]) -> 'a t -> 'a t * 'a t
-(** [partition p m] returns a pair of maps [(m1, m2)], where
+val partitionU: 
+    'v t -> 
+    (key -> 'v -> bool [@bs]) -> 
+    'v t * 'v t
+val partition: 
+    'v t -> 
+    (key -> 'v -> bool) -> 
+    'v t * 'v t      
+(** [partition m p] returns a pair of maps [(m1, m2)], where
     [m1] contains all the bindings of [s] that satisfy the
     predicate [p], and [m2] is the map with all the bindings of
     [s] that do not satisfy [p].
-    @since 3.12.0
- *)
-
-val cardinal: 'a t -> int
-(** Return the number of bindings of a map.
-    @since 3.12.0
- *)
-
-val bindings: 'a t -> (key * 'a) list
-(** Return the list of all bindings of the given map.
-   The returned list is sorted in increasing order with respect
-   to the ordering [Ord.compare], where [Ord] is the argument
-   given to {!Map.Make}.
-    @since 3.12.0
- *)
-
-val minBinding: 'a t -> (key * 'a) option
-(** Return the smallest binding of the given map
-   or raise
-   [Not_found] if the map is empty.
-    @since 3.12.0
- *)
-
-val maxBinding: 'a t -> (key * 'a) option
-(** returns the largest binding of the given map.
-    @since 3.12.0
  *)
 
 
 
-val split: key -> 'a t -> 'a t * 'a option * 'a t
+
+
+val split: key -> 'v t -> 'v t * 'v option * 'v t
 (** [split x m] returns a triple [(l, data, r)], where
       [l] is the map with all the bindings of [m] whose key
     is strictly less than [x];
@@ -123,24 +140,24 @@ val split: key -> 'a t -> 'a t * 'a option * 'a t
     is strictly greater than [x];
       [data] is [None] if [m] contains no binding for [x],
       or [Some v] if [m] binds [v] to [x].
-    @since 3.12.0
  *)
 
-val findOpt: key -> 'a t -> 'a option
-(** [findOpt x m] returns the current binding of [x] in [m] *)
 
-val findAssert: key -> 'a t -> 'a
-(** raise an exception if not there *)
-  
-val findWithDefault: def:'a -> key -> 'a t -> 'a
-
-val map: ('a -> 'b [@bs]) -> 'a t -> 'b t
-(** [map f m] returns a map with same domain as [m], where the
+val mapU: 'v t -> ('v -> 'v2 [@bs]) ->  'v2 t
+val map: 'v t -> ('v -> 'v2) ->  'v2 t    
+(** [map m f] returns a map with same domain as [m], where the
    associated value [a] of all bindings of [m] has been
    replaced by the result of the application of [f] to [a].
    The bindings are passed to [f] in increasing order
    with respect to the ordering over the type of the keys. *)
 
-val mapi: (key -> 'a -> 'b [@bs]) -> 'a t -> 'b t
-(** Same as {!Map.S.map}, but the function receives as arguments both the
-   key and the associated value for each binding of the map. *)
+val mapWithKeyU: 'v t -> (key -> 'v -> 'v2 [@bs]) -> 'v2 t
+val mapWithKey: 'v t -> (key -> 'v -> 'v2) -> 'v2 t    
+
+(**/**)
+val checkInvariantInternal: _ t -> unit
+(**
+   {b raise} when invariant is not held
+*)  
+(**/**)
+

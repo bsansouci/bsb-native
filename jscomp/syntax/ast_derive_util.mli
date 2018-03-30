@@ -45,3 +45,10 @@ val destruct_label_declarations :
   string ->
   Parsetree.label_declaration list ->
   (Parsetree.core_type * Parsetree.expression) list * string list
+
+val notApplicable:   
+  Location.t ->
+  string -> 
+  unit 
+
+val invalid_config : Parsetree.expression -> 'a   

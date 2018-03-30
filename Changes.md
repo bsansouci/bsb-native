@@ -1,13 +1,69 @@
 
+# 2.2.3
+
+Features:
+- #2646,#2622 Adding Belt.Option
+- #2342, #2624 (|.) pipe syntax for t first convention
+- #2589 Expose Id.MakeComparable functor
+- #2587 Added production ready settings for react theme
+- * remove refmt syntax version 2
+
+Performances:
+- #2438 using concrete predicates for integer comparison
+- #2584 better handling of if then else common sub expression
+
+Fixes:
+- #2303 defining or using a module named "Block" causes runtime errors
+- #2616,#2612,#2554 better error message
+- #2352 return value of assignment expression
+- #2413 no break generated after return statement in some code branches
+- #2633 [@bs.string] in FFI
+- #2608 short-circuiting of && fails due to extraction of variable
+- #2559 fix Bytes.create semantics
+- #2638, bsb -w on windows freez
+- #2448, js_int.ml not installed on windows
+
+# 2.2.2
+
+Features:
+- Upgrade with latest reason syntax (native unucurry support etc)
+- #2531 add missing functions in Js.Nullable fromoption/toOption
+- #2527 Belt.List.shuffle
+
+Fixes:
+- #2503 bs.string and bs.obj interaction
+- #2549, #2548, $2548, #2542, #2541 improve error message
+
+# 2.2.0
+Features:
+- A beta release for the new stdlib called Belt
+- #2436, #2381, #2377, #2353 bs.deriving abstract support
+
+
+Performances:
+- #2452 specialized comparison with Js.null, Js.undefined, Js.boolean
+- #2412, provide specialized primitives for comparison with null/undefined
+- #2361, better  optimization for temporary tuple
+Fixes:
+- #2451 better error message when arity mismatch for reason syntax
+- #2399, turn partial application warnings to error in react template
+- #2465 build on FreeBSD
+- #2450 ignore bsb.lock
+- #2356 ship build-schema.json
+- #2489, #2464  capitalize names in combination of '/'
+- #2459 subdirs:true by default for templates
+- #2428, fix trailing space on react-jsx
+- #2401, stop tab-aligning imports for smaller diff
+- #2383, drop bs.deriving attribute after post-processing
 # 2.1.0
 Features:
 - #2282, #2280,#2272,#2271,#2270,#2262,#2260,#2255,#2253
   Automatically derive js converter between ocaml and Js values
-  see docs: https://bucklescript.github.io/bucklescript/Manual.html#_mapping_between_js_values_and_ocaml_values_since_2_1_0  
-- #2238, #2225, #2221  
+  see docs: https://bucklescript.github.io/bucklescript/Manual.html#_mapping_between_js_values_and_ocaml_values_since_2_1_0
+- #2238, #2225, #2221
   Make the compiler relocatable
   prebuilt compiler (this release for Mac/Win)
-- #2276  update reason syntax@d0d18 
+- #2276  update reason syntax@d0d18
 - #2229 improve error message with regard to `@bs`
 - #2266, add Js_global.(encode|decode)URI(Component) bindings
 - #2220 make watcher mode in linux accept ninja progress animation
@@ -21,6 +77,9 @@ Performance:
 - #2213 refine caml_obj_dump into caml_array_dup better array initialization code
 
 Fixes:
+- #2316 Pattern match with exception case and a single catch-all pattern is optimized incorrectly
+- #2318 no absname in Match_failure
+- #2250 #1285, fix code gen for object oriented code
 - #2278, #2274 fix fatal errors regression and syntactice fatal errors(-werror A) don't stop building
 - #2259 fix fatal errors don't stop generating cmj file
 - #1972 bsb -init does not rely on `npm link` on *nix platform
@@ -34,7 +93,7 @@ Features
 
 # 1.10.3
 Features:
-- #2112, introduced a key `suffix`, so that user can 
+- #2112, introduced a key `suffix`, so that user can
   choose `suffix : ".bs.js"`
 - #2138, in combination of `.bs.js` suffix and `in-source` build,
   bsb is able to remove staled build artifact
@@ -43,7 +102,7 @@ Features:
   it in reason syntax
 - #2096, clorized ninja build output
 
-- #2120 better error message in the location of `{json||json}`  
+- #2120 better error message in the location of `{json||json}`
 - #2123 avoid namespace leaking in types
 - #2130 make Sys module not break React Native bindings
 - #2159, #2165 enhance user expereince of bsb (less verbose, status bar when failed)

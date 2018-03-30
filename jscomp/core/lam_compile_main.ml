@@ -43,8 +43,6 @@ let get_cmj_case output_prefix : Ext_namespace.file_kind =
   | false, false -> Upper_js
   
 
-open Js_output.Ops 
-
 let compile_group ({filename = file_name; env;} as meta : Lam_stats.t) 
     (x : Lam_group.t) : Js_output.t  = 
   match x, file_name with 
@@ -58,102 +56,20 @@ let compile_group ({filename = file_name; env;} as meta : Lam_stats.t)
   (** Special handling for values in [Pervasives] *)
   | Single(_, ({name="stdout"|"stderr"|"stdin";_} as id),_ ),
     "pervasives.ml" -> 
-    Js_output.of_stmt @@ S.alias_variable id
-      ~exp:(E.runtime_ref  Js_runtime_modules.io id.name)
+    Js_output.make 
+      [ S.alias_variable id
+        ~exp:(E.runtime_ref  Js_runtime_modules.io id.name)]
   (* 
          we delegate [stdout, stderr, and stdin] into [caml_io] module, 
          the motivation is to help dead code eliminatiion, it's helpful 
          to make those parts pure (not a function call), then it can be removed 
          if unused 
       *)                     
-  | Single(_, ({name="infinity";_} as id),_ ),  "pervasives.ml" 
-    -> (* TODO: check relative path to compiler*)
-    Js_output.of_stmt @@ S.alias_variable id ~exp:(E.js_global "Infinity")
-  | Single(_, ({name="neg_infinity";_} as id),_ ), "pervasives.ml" ->
-    Js_output.of_stmt @@ S.alias_variable id ~exp:(E.js_global "-Infinity")
-  | Single(_, ({name="nan";_} as id),_ ),  "pervasives.ml" ->
-    Js_output.of_stmt @@ S.alias_variable id ~exp:(E.js_global "NaN")
-
-  (* TODO: 
-      Make it more safe, we should rewrite the last one...
-       checkout [E.mldot], it would make sense that cross module inlining done there
-       In general, we would like to do such specialization on primitive specialization
-        [Lam_dispatch_primitive], here it makes an exception since this function is not a primitive
-  *) 
-  | Single(_, ({name="^";_} as id),_ ),  "pervasives.ml" ->
-    Js_output.of_stmt @@ S.alias_variable id 
-      ~exp:(let a = Ext_ident.create "a" in 
-            let b = Ext_ident.create "b" in
-            E.ocaml_fun [a;b] [S.return (E.string_append (E.var a) (E.var b))]
-           )
 
   (* QUICK hack to make hello world example nicer,
      Note the arity of [print_endline] is already analyzed before, 
      so it should be safe
   *)
-  | Single(_, ({name="print_endline";_} as id),_ ),  "pervasives.ml" ->
-    Js_output.of_stmt @@ S.alias_variable id 
-      ~exp:(let param = Ext_ident.create "param" in 
-            E.ocaml_fun [param] [S.return 
-                                   (E.seq (E.call ~info:{arity=Full; call_info = Call_na} 
-                                             (E.js_global "console.log") [E.var param]) 
-                                      E.zero_int_literal )] )
-  | Single(_, ({name="prerr_endline";_} as id),_ ),  "pervasives.ml" ->
-    Js_output.of_stmt @@ S.alias_variable id 
-      ~exp:(let param = Ext_ident.create "param" in 
-            E.ocaml_fun [param] [S.return 
-                                   (E.seq (E.call ~info:{arity=Full; call_info = Call_na} 
-                                             (E.js_global "console.error") [E.var param]) 
-                                      E.zero_int_literal )] )
-
-
-  | Single(_, ({name="string_of_int";_} as id),_ ),  "pervasives.ml" ->
-    Js_output.of_stmt @@ S.alias_variable id
-      ~exp:( 
-        let arg = Ext_ident.create "param" in
-        E.ocaml_fun [arg] [S.return (E.anything_to_string (E.var arg))]
-      )
-
-  | Single(_, ({name="max_float";_} as id),_ ),  "pervasives.ml" ->
-
-    Js_output.of_stmt @@ S.alias_variable id 
-      ~exp:(E.js_global_dot "Number" "MAX_VALUE")
-  | Single(_, ({name="min_float";_} as id) ,_ ), "pervasives.ml" ->
-    Js_output.of_stmt @@  S.alias_variable id
-      ~exp:(E.js_global_dot  "Number" "MIN_VALUE")
-  | Single(_, ({name="epsilon_float";_} as id) ,_ ),  "pervasives.ml" ->
-    Js_output.of_stmt @@ S.alias_variable id 
-      ~exp:(E.float "2.220446049250313e-16")
-  | Single(_, ({name="cat";_} as id) ,_ ),  "bytes.ml" ->
-    Js_output.of_stmt @@ S.alias_variable id
-      ~exp:(let a = Ext_ident.create "a" in 
-            let b = Ext_ident.create "b" in
-            E.ocaml_fun [a;b] [S.return (E.array_append (E.var a) (E.var b))]
-           )
-
-  (** Special handling for values in [Sys] *)
-  | Single(_, ({name="max_array_length" | "max_string_length";_} as id) ,_ ),  "sys.ml" ->
-    (* See [js_knowledge] Array size section, can not be expressed by OCaml int,
-       note that casual handling of {!Sys.max_string_length} could result into 
-       negative value which could cause wrong behavior of {!Buffer.create}
-    *)
-    Js_output.of_stmt @@ S.alias_variable id ~exp:(E.float "2147483647")  (*2 ^ 31 - 1*)
-
-  | Single(_, ({name="max_int";_} as id) ,_ ),  ("sys.ml" | "nativeint.ml") ->
-    (* See [js_knowledge] Max int section, (2. ** 53. -. 1.;;)
-       can not be expressed by OCaml int 
-       FIXME: we need handle {!Nativeint} and {!Sys} differently
-    *)
-    Js_output.of_stmt @@ S.alias_variable id 
-      ~exp:(E.float "9007199254740991.") 
-
-  | Single(_, ({name="min_int";_} as id) ,_ ),  ("sys.ml" | "nativeint.ml") ->
-    (* See [js_knowledge] Max int section, -. (2. ** 53. -. 1.);;
-       can not be expressed by OCaml int 
-       FIXME: we need handle {!Nativeint} and {!Sys} differently
-    *)
-    Js_output.of_stmt @@ S.alias_variable id
-      ~exp:(E.float ("-9007199254740991.")) 
 
   | Single (kind, id, lam), _ -> 
     (* let lam = Optimizer.simplify_lets [] lam in  *)
@@ -317,7 +233,7 @@ let compile  ~filename (output_prefix : string) env _sigs
     groups
     |> Ext_list.map (fun group -> compile_group meta group)
     |> Js_output.concat
-    |> Js_output.to_block
+    |> Js_output.output_as_block
   in
 #if BS_DEBUG then 
   let () = Ext_log.dwarn __LOC__ "\n@[[TIME:]Post-compile: %f@]@."  (Sys.time () *. 1000.) in      

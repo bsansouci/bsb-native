@@ -1,7 +1,7 @@
 'use strict';
 
-var List       = require("../../lib/js/list.js");
-var Stack      = require("../../lib/js/stack.js");
+var List = require("../../lib/js/list.js");
+var Stack = require("../../lib/js/stack.js");
 var Pervasives = require("../../lib/js/pervasives.js");
 
 var List$1 = /* module */[
@@ -52,23 +52,14 @@ var List$1 = /* module */[
   /* invalid_arg */Pervasives.invalid_arg,
   /* failwith */Pervasives.failwith,
   /* Exit */Pervasives.Exit,
-  /* min */Pervasives.min,
-  /* max */Pervasives.max,
   /* abs */Pervasives.abs,
   /* max_int */Pervasives.max_int,
   /* min_int */Pervasives.min_int,
   /* lnot */Pervasives.lnot,
-  /* infinity */Pervasives.infinity,
-  /* neg_infinity */Pervasives.neg_infinity,
-  /* nan */Pervasives.nan,
-  /* max_float */Pervasives.max_float,
-  /* min_float */Pervasives.min_float,
   /* epsilon_float */Pervasives.epsilon_float,
-  /* ^ */Pervasives.$caret,
   /* char_of_int */Pervasives.char_of_int,
   /* string_of_bool */Pervasives.string_of_bool,
   /* bool_of_string */Pervasives.bool_of_string,
-  /* string_of_int */Pervasives.string_of_int,
   /* string_of_float */Pervasives.string_of_float,
   /* @ */Pervasives.$at,
   /* stdin */Pervasives.stdin,
@@ -79,14 +70,12 @@ var List$1 = /* module */[
   /* print_bytes */Pervasives.print_bytes,
   /* print_int */Pervasives.print_int,
   /* print_float */Pervasives.print_float,
-  /* print_endline */Pervasives.print_endline,
   /* print_newline */Pervasives.print_newline,
   /* prerr_char */Pervasives.prerr_char,
   /* prerr_string */Pervasives.prerr_string,
   /* prerr_bytes */Pervasives.prerr_bytes,
   /* prerr_int */Pervasives.prerr_int,
   /* prerr_float */Pervasives.prerr_float,
-  /* prerr_endline */Pervasives.prerr_endline,
   /* prerr_newline */Pervasives.prerr_newline,
   /* read_line */Pervasives.read_line,
   /* read_int */Pervasives.read_int,
@@ -151,23 +140,14 @@ var U = /* module */[
   /* invalid_arg */Pervasives.invalid_arg,
   /* failwith */Pervasives.failwith,
   /* Exit */Pervasives.Exit,
-  /* min */Pervasives.min,
-  /* max */Pervasives.max,
   /* abs */Pervasives.abs,
   /* max_int */Pervasives.max_int,
   /* min_int */Pervasives.min_int,
   /* lnot */Pervasives.lnot,
-  /* infinity */Pervasives.infinity,
-  /* neg_infinity */Pervasives.neg_infinity,
-  /* nan */Pervasives.nan,
-  /* max_float */Pervasives.max_float,
-  /* min_float */Pervasives.min_float,
   /* epsilon_float */Pervasives.epsilon_float,
-  /* ^ */Pervasives.$caret,
   /* char_of_int */Pervasives.char_of_int,
   /* string_of_bool */Pervasives.string_of_bool,
   /* bool_of_string */Pervasives.bool_of_string,
-  /* string_of_int */Pervasives.string_of_int,
   /* string_of_float */Pervasives.string_of_float,
   /* @ */Pervasives.$at,
   /* stdin */Pervasives.stdin,
@@ -178,14 +158,12 @@ var U = /* module */[
   /* print_bytes */Pervasives.print_bytes,
   /* print_int */Pervasives.print_int,
   /* print_float */Pervasives.print_float,
-  /* print_endline */Pervasives.print_endline,
   /* print_newline */Pervasives.print_newline,
   /* prerr_char */Pervasives.prerr_char,
   /* prerr_string */Pervasives.prerr_string,
   /* prerr_bytes */Pervasives.prerr_bytes,
   /* prerr_int */Pervasives.prerr_int,
   /* prerr_float */Pervasives.prerr_float,
-  /* prerr_endline */Pervasives.prerr_endline,
   /* prerr_newline */Pervasives.prerr_newline,
   /* read_line */Pervasives.read_line,
   /* read_int */Pervasives.read_int,
@@ -243,8 +221,8 @@ var ff = List.length;
 var fff = Pervasives.$at;
 
 exports.List = List$1;
-exports.U    = U;
-exports.f    = f;
-exports.ff   = ff;
-exports.fff  = fff;
+exports.U = U;
+exports.f = f;
+exports.ff = ff;
+exports.fff = fff;
 /* No side effect */

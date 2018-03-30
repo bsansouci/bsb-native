@@ -1,9 +1,9 @@
 'use strict';
 
-var Mt         = require("./mt.js");
-var Block      = require("../../lib/js/block.js");
-var Js_list    = require("../../lib/js/js_list.js");
-var Js_vector  = require("../../lib/js/js_vector.js");
+var Mt = require("./mt.js");
+var Block = require("../../lib/js/block.js");
+var Js_list = require("../../lib/js/js_list.js");
+var Js_vector = require("../../lib/js/js_vector.js");
 var Caml_int32 = require("../../lib/js/caml_int32.js");
 
 var suites = [/* [] */0];
@@ -14,7 +14,7 @@ function eq(loc, x, y) {
   test_id[0] = test_id[0] + 1 | 0;
   suites[0] = /* :: */[
     /* tuple */[
-      loc + (" id " + test_id[0]),
+      loc + (" id " + String(test_id[0])),
       (function () {
           return /* Eq */Block.__(0, [
                     x,
@@ -78,10 +78,10 @@ eq("File \"js_list_test.ml\", line 11, characters 7-14", Js_list.flatten(/* :: *
     ]);
 
 eq("File \"js_list_test.ml\", line 14, characters 7-14", Js_list.filterMap((function (x) {
-            if (x % 2) {
-              return /* None */0;
-            } else {
+            if (x % 2 === 0) {
               return /* Some */[x];
+            } else {
+              return /* None */0;
             }
           }), /* :: */[
           1,
@@ -116,10 +116,10 @@ eq("File \"js_list_test.ml\", line 14, characters 7-14", Js_list.filterMap((func
     ]);
 
 eq("File \"js_list_test.ml\", line 17, characters 7-14", Js_list.filterMap((function (x) {
-            if (x % 2) {
-              return /* None */0;
-            } else {
+            if (x % 2 === 0) {
               return /* Some */[x];
+            } else {
+              return /* None */0;
             }
           }), /* :: */[
           1,
@@ -209,7 +209,7 @@ eq("File \"js_list_test.ml\", line 32, characters 7-14", /* true */1, Js_list.eq
 
 Mt.from_pair_suites("js_list_test.ml", suites[0]);
 
-exports.suites  = suites;
+exports.suites = suites;
 exports.test_id = test_id;
-exports.eq      = eq;
+exports.eq = eq;
 /*  Not a pure module */

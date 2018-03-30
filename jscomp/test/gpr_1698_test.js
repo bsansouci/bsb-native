@@ -1,6 +1,6 @@
 'use strict';
 
-var Block                   = require("../../lib/js/block.js");
+var Block = require("../../lib/js/block.js");
 var Caml_builtin_exceptions = require("../../lib/js/caml_builtin_exceptions.js");
 
 function is_number(_expr) {
@@ -13,11 +13,10 @@ function is_number(_expr) {
           } else {
             return /* true */1;
           }
-          break;
       case 1 : 
           _expr = expr[0];
           continue ;
-          case 2 : 
+      case 2 : 
       case 3 : 
       case 4 : 
       case 5 : 
@@ -69,7 +68,7 @@ function compare(context, state, _a, _b) {
       case 1 : 
           _a = a[0];
           continue ;
-          case 2 : 
+      case 2 : 
       case 3 : 
           exit$3 = 5;
           break;
@@ -129,24 +128,15 @@ function compare(context, state, _a, _b) {
       if (b.tag === 1) {
         _b = b[0];
         continue ;
-        
-      } else if (a.tag === 2) {
-        if (is_number(b)) {
-          return 1;
-        } else {
-          exit$2 = 4;
-        }
+      } else if (a.tag === 2 && is_number(b)) {
+        return 1;
       } else {
         exit$2 = 4;
       }
     }
     if (exit$2 === 4) {
-      if (b.tag === 2) {
-        if (is_number(a)) {
-          return -1;
-        } else {
-          exit$1 = 3;
-        }
+      if (b.tag === 2 && is_number(a)) {
+        return -1;
       } else {
         exit$1 = 3;
       }
@@ -175,7 +165,6 @@ function compare(context, state, _a, _b) {
             default:
               return -1;
           }
-          break;
       case 2 : 
           var denom = compare(context, state, da, db);
           var match = +(denom === 0);
@@ -183,11 +172,9 @@ function compare(context, state, _a, _b) {
             _b = nb;
             _a = na;
             continue ;
-            
           } else {
             return denom;
           }
-          break;
       
     }
   };

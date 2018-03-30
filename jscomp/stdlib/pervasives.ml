@@ -59,9 +59,14 @@ external ( <= ) : 'a -> 'a -> bool = "%lessequal"
 external ( >= ) : 'a -> 'a -> bool = "%greaterequal"
 external compare : 'a -> 'a -> int = "%compare"
 
+#if BS then 
+external min : 'a -> 'a -> 'a = "%bs_min"
+external max : 'a -> 'a -> 'a = "%bs_max"
+#else
 let min x y = if x <= y then x else y
 let max x y = if x >= y then x else y
 
+#end
 external ( == ) : 'a -> 'a -> bool = "%eq"
 external ( != ) : 'a -> 'a -> bool = "%noteq"
 
@@ -141,6 +146,22 @@ external float_of_int : int -> float = "%floatofint"
 external truncate : float -> int = "%intoffloat"
 external int_of_float : float -> int = "%intoffloat"
 external float_of_bits : int64 -> float = "caml_int64_float_of_bits"
+
+#if BS then 
+external infinity : float = "POSITIVE_INFINITY" 
+[@@bs.val]  [@@bs.scope "Number"]
+external neg_infinity : float = "NEGATIVE_INFINITY"
+[@@bs.val]  [@@bs.scope "Number"]
+external nan : float = "NaN"
+[@@bs.val]  [@@bs.scope "Number"]
+external max_float : float = "MAX_VALUE"
+[@@bs.val]  [@@bs.scope "Number"]
+external min_float : float = "MIN_VALUE"
+[@@bs.val]  [@@bs.scope "Number"]
+(* external epsilon_float : float = "EPSILON" (* ES 2015 *)
+[@@bs.val]  [@@bs.scope "Number"]   *)
+let epsilon_float = 2.220446049250313e-16
+#else
 let infinity =
   float_of_bits 0x7F_F0_00_00_00_00_00_00L
 let neg_infinity =
@@ -152,7 +173,8 @@ let max_float =
 let min_float =
   float_of_bits 0x00_10_00_00_00_00_00_00L
 let epsilon_float =
-  float_of_bits 0x3C_B0_00_00_00_00_00_00L
+  float_of_bits 0x3C_B0_00_00_00_00_00_00L    
+#end  
 
 type fpclass =
     FP_normal
@@ -174,6 +196,9 @@ external bytes_blit : bytes -> int -> bytes -> int -> int -> unit
 external bytes_unsafe_to_string : bytes -> string = "%bytes_to_string"
 external bytes_unsafe_of_string : string -> bytes = "%bytes_of_string"
 
+#if BS then 
+external (^) : string -> string -> string = "#string_append"
+#else
 let ( ^ ) s1 s2 =
   let l1 = string_length s1 and l2 = string_length s2 in
   let s = bytes_create (l1 + l2) in
@@ -181,6 +206,7 @@ let ( ^ ) s1 s2 =
   string_blit s2 0 s l1 l2;
   bytes_unsafe_to_string s
 
+#end
 (* Character operations -- more in module Char *)
 
 external int_of_char : char -> int = "%identity"
@@ -218,9 +244,12 @@ let bool_of_string = function
   | "false" -> false
   | _ -> invalid_arg "bool_of_string"
 
+#if BS then   
+external string_of_int : int -> string = "String" [@@bs.val]
+#else
 let string_of_int n =
   format_int "%d" n
-
+#end
 external int_of_string : string -> int = "caml_int_of_string"
 external string_get : string -> int -> char = "%string_safe_get"
 
@@ -416,8 +445,14 @@ let print_string s = output_string stdout s
 let print_bytes s = output_bytes stdout s
 let print_int i = output_string stdout (string_of_int i)
 let print_float f = output_string stdout (string_of_float f)
+
+#if BS then
+external print_endline : string -> unit = "log" 
+[@@bs.val] [@@bs.scope "console"]
+#else    
 let print_endline s =
   output_string stdout s; output_char stdout '\n'; flush stdout
+#end    
 let print_newline () = output_char stdout '\n'; flush stdout
 
 (* Output functions on standard error *)
@@ -427,8 +462,13 @@ let prerr_string s = output_string stderr s
 let prerr_bytes s = output_bytes stderr s
 let prerr_int i = output_string stderr (string_of_int i)
 let prerr_float f = output_string stderr (string_of_float f)
+#if BS then
+external prerr_endline : string -> unit = "error" 
+[@@bs.val] [@@bs.scope "console"]    
+#else    
 let prerr_endline s =
   output_string stderr s; output_char stderr '\n'; flush stderr
+#end    
 let prerr_newline () = output_char stderr '\n'; flush stderr
 
 (* Input functions on standard input *)

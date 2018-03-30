@@ -1,14 +1,20 @@
 let should b = 
   if not b then Js.Exn.raiseError "IMPOSSIBLE"
+
+module M = Belt.Map.Int  
 let test () =
-  let m = ref Bs.MapInt.empty in
+  let m = ref M.empty in
   let count = 100_0000 - 1 in
   for i = 0 to count do
-    m := Bs.MapInt.add i i !m
+    m := M.set !m i i 
   done;
   for i = 0 to count do
-    should (Bs.MapInt.findOpt i !m <> None)
-  done
+    should (M.get !m i <> None)
+  done; 
+  for i = 0 to count do 
+    m := M.remove !m i  ;
+  done ;
+  should (M.isEmpty !m)
 
 let () =
   test ()

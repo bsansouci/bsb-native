@@ -1,11 +1,11 @@
 'use strict';
 
-var Mt             = require("./mt.js");
-var List           = require("../../lib/js/list.js");
-var Block          = require("../../lib/js/block.js");
-var Curry          = require("../../lib/js/curry.js");
-var Pervasives     = require("../../lib/js/pervasives.js");
-var Caml_oo_curry  = require("../../lib/js/caml_oo_curry.js");
+var Mt = require("./mt.js");
+var List = require("../../lib/js/list.js");
+var Block = require("../../lib/js/block.js");
+var Curry = require("../../lib/js/curry.js");
+var Pervasives = require("../../lib/js/pervasives.js");
+var Caml_oo_curry = require("../../lib/js/caml_oo_curry.js");
 var CamlinternalOO = require("../../lib/js/camlinternalOO.js");
 
 var shared = [
@@ -28,7 +28,7 @@ function eq(loc, x, y) {
   test_id[0] = test_id[0] + 1 | 0;
   suites[0] = /* :: */[
     /* tuple */[
-      loc + (" id " + test_id[0]),
+      loc + (" id " + String(test_id[0])),
       (function () {
           return /* Eq */Block.__(0, [
                     x,
@@ -63,7 +63,7 @@ function printable_point_init($$class) {
           }),
         print,
         (function (self$1) {
-            return "" + Curry._1(self$1[0][get_x], self$1);
+            return String(Curry._1(self$1[0][get_x], self$1));
           })
       ]);
   return (function (_, self, x_init) {
@@ -240,7 +240,7 @@ eq("File \"class5_test.ml\", line 67, characters 5-12", /* tuple */[
               return x + y | 0;
             }), 0),
       Caml_oo_curry.js3(-1010803711, 6, l$1, (function (s, x) {
-              return s + (x + " ");
+              return s + (String(x) + " ");
             }), "")
     ]);
 
@@ -295,13 +295,9 @@ var distance_point = CamlinternalOO.make_class([
 
 var p$1 = Curry._2(distance_point[0], 0, 3);
 
-var match_000 = Caml_oo_curry.js2(-335965387, 8, p$1, Curry._2(point[0], 0, 8));
+var a = Caml_oo_curry.js2(-335965387, 8, p$1, Curry._2(point[0], 0, 8));
 
-var match_001 = Caml_oo_curry.js2(-335965387, 9, p$1, Curry._3(printable_colored_point[0], 0, 1, "blue"));
-
-var b = match_001;
-
-var a = match_000;
+var b = Caml_oo_curry.js2(-335965387, 9, p$1, Curry._3(printable_colored_point[0], 0, 1, "blue"));
 
 eq("File \"class5_test.ml\", line 94, characters 5-12", /* tuple */[
       5,
@@ -313,19 +309,19 @@ eq("File \"class5_test.ml\", line 94, characters 5-12", /* tuple */[
 
 Mt.from_pair_suites("class5_test.ml", suites[0]);
 
-exports.suites                  = suites;
-exports.test_id                 = test_id;
-exports.eq                      = eq;
-exports.printable_point         = printable_point;
+exports.suites = suites;
+exports.test_id = test_id;
+exports.eq = eq;
+exports.printable_point = printable_point;
 exports.printable_colored_point = printable_colored_point;
-exports.p                       = p;
-exports.ref                     = ref;
-exports.v                       = v;
-exports.intlist                 = intlist;
-exports.intlist2                = intlist2;
-exports.l                       = l$1;
-exports.point                   = point;
-exports.distance_point          = distance_point;
-exports.a                       = a;
-exports.b                       = b;
+exports.p = p;
+exports.ref = ref;
+exports.v = v;
+exports.intlist = intlist;
+exports.intlist2 = intlist2;
+exports.l = l$1;
+exports.point = point;
+exports.distance_point = distance_point;
+exports.a = a;
+exports.b = b;
 /* printable_point Not a pure module */

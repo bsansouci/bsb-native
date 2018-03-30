@@ -1,5 +1,5 @@
 (* Copyright (C) 2015-2016 Bloomberg Finance L.P.
- * 
+ *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
@@ -17,7 +17,7 @@
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU Lesser General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU Lesser General Public License
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
@@ -31,51 +31,83 @@
 
 (** The intemediate output when compiling lambda into JS IR *)
 
-(* Hongbo Should we rename this module js_of_lambda since it looks like it's 
+(* Hongbo Should we rename this module js_of_lambda since it looks like it's
    containing that step
  *)
 
-type cont = Lam_compile_context.cont
 
-type finished = 
-  | True 
-  | False 
+type finished =
+  | True
+  | False
   | Dummy (* Have no idea, so that when [++] is applied, always use the other *)
 
-type t  =  { 
+type t  =  {
   block : J.block ;
   value : J.expression option;
-  finished : finished
+  output_finished : finished
 }
 
-val make : ?value: J.expression -> ?finished:finished -> J.block -> t
+(** When [finished] is true the block is already terminated,
+    value does not make sense
+    [finished]  default to false, which is conservative
+*)
 
-val of_stmt : ?value: J.expression -> ?finished:finished -> J.statement -> t
+val make :
+  ?value: J.expression ->
+  ?output_finished:finished ->
+  J.block ->
+  t
 
-val of_block : ?value:J.expression -> ?finished:finished -> J.block -> t
+val output_as_block :
+  t ->
+  J.block
 
-val to_block : t -> J.block
+val to_break_block :
+  t ->
+  J.block * bool
+  (* the second argument is
+    [true] means [break] needed
 
-val to_break_block : t -> J.block * bool 
+    When we know the output is gonna finished true
+    we can reduce
+    {[
+      return xx ;
+      break
+    ]}
+    into
+    {[
+      return ;
+    ]}
 
-module Ops : sig 
-  val (++) : t -> t -> t 
-end
+  *)
 
-val dummy : t 
+val append_output: t -> t -> t
 
 
-val handle_name_tail :
-    Lam_compile_context.cont ->
+val dummy : t
+
+
+val output_of_expression :
+    Lam_compile_context.continuation ->
     Lam_compile_context.return_type ->
-    Lam.t ->  J.expression -> t
+    Lam.t -> (* original lambda *)
+    J.expression -> (* compiled expression *)
+    t
 
-val handle_block_return : 
-    Lam_compile_context.cont ->
+(** - needed for instrument [return] statement properly
+*)
+val output_of_block_and_expression :
+    Lam_compile_context.continuation ->
     Lam_compile_context.return_type ->
     Lam.t ->
-    J.block -> J.expression -> t
+    J.block ->
+    J.expression ->
+    t
 
-val concat : t list -> t
+val concat :
+  t list ->
+  t
 
-val to_string : t -> string
+val to_string :
+  t ->
+  string

@@ -1,7 +1,7 @@
-'use strict';
 
-import * as Fs            from "fs";
-import * as Path          from "path";
+
+import * as Fs from "fs";
+import * as Path from "path";
 import * as Child_process from "child_process";
 
 function getWatchFiles(file) {
@@ -27,7 +27,6 @@ function findFile(_prev, _cwd, f) {
       _cwd = Path.dirname(cwd);
       _prev = cwd;
       continue ;
-      
     }
   };
 }
@@ -72,7 +71,8 @@ function makeLock() {
             }),
           release: (function () {
               var self = this ;
-              return self.isBuilding = /* false */0;
+              self.isBuilding = /* false */0;
+              return /* () */0;
             })
         };
 }
@@ -127,13 +127,13 @@ function makeWatcher(file, onChange) {
 }
 
 export {
-  makeLock       ,
-  makeEventObj   ,
-  build          ,
+  makeLock ,
+  makeEventObj ,
+  build ,
   buildWithShell ,
-  findFile       ,
-  getWatchFiles  ,
-  makeWatcher    ,
+  findFile ,
+  getWatchFiles ,
+  makeWatcher ,
   
 }
 /* fs Not a pure module */

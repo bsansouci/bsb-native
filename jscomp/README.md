@@ -20,7 +20,7 @@ This will build and install the bspack-ed files that are in `jscomp/bin`. This c
 opam update
 opam switch 4.02.3+buckle-master
 opam switch reinstall 4.02.3+buckle-master # do this if you get errors even from a clean compilation
-opam install camlp4
+opam install camlp4 cppo
 eval `opam config env`
 ```
 
@@ -31,9 +31,31 @@ eval `opam config env`
 
 #### build all of Bucklescript
 ```sh
-cd ../../jscomp
-make worldnative
+cd ../../
+make world
 ```
+
+### build the compiler (bsc.exe)
+
+If you don't change the type definition of JS IR, i.e, [j.ml](./j.ml),
+then the only dependency is the build tool:
+`make`
+
+```sh
+rm -rf core/js_map.ml core/js_fold.ml && make core/js_map.ml core/js_fold.ml ../lib/bsc.exe
+```
+
+If you do want to change the JS IR, you also need
+[camlp4](https://github.com/ocaml/camlp4), note that the version does
+not need match the exact the same version of compiler.
+
+### build the build system (bsb.exe)
+
+```sh
+make ../lib/bsb.exe && make ../lib/bsb_helper.ml && make ../lib/bsb_helper.exe
+```
+
+Generate packed ML files for PR: `make force-snapshotml`
 
 ### build the runtime
 
@@ -115,7 +137,7 @@ opam switch 4.02.3+buckle-master
 eval `opam config env`
 opam install camlp4 ocp-ocamlres
 (cd vendor/ocaml && make world)
-(cd jscomp && node repl.js)
+(cd jscomp && BS_RELEASE_BUILD=true BS_PLAYGROUND=../../bucklescript-playground node repl.js)
 ```
 
 # Sub directories

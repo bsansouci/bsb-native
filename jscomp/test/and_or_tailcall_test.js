@@ -1,19 +1,16 @@
 'use strict';
 
-var Mt    = require("./mt.js");
+var Mt = require("./mt.js");
 var Block = require("../../lib/js/block.js");
 
 function f(b, _, _n) {
   while(true) {
     var n = _n;
-    if (n > 100000) {
+    if (n > 100000 || !b) {
       return /* false */0;
-    } else if (b) {
+    } else {
       _n = n + 1 | 0;
       continue ;
-      
-    } else {
-      return /* false */0;
     }
   };
 }
@@ -28,7 +25,6 @@ function or_f(b, _, _n) {
     } else {
       _n = n + 1 | 0;
       continue ;
-      
     }
   };
 }
@@ -63,7 +59,7 @@ var suites = /* :: */[
 
 Mt.from_pair_suites("and_or_tailcall_test.ml", suites);
 
-exports.f      = f;
-exports.or_f   = or_f;
+exports.f = f;
+exports.or_f = or_f;
 exports.suites = suites;
 /*  Not a pure module */

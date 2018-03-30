@@ -1,16 +1,16 @@
 'use strict';
 
-var Curry           = require("../../lib/js/curry.js");
+var Curry = require("../../lib/js/curry.js");
 var Caml_exceptions = require("../../lib/js/caml_exceptions.js");
 
-var match_000 = [1];
+var x = [1];
 
-var match_001 = [2];
+var y = [2];
 
 function f(param) {
-  var match_000 = [param[0]];
-  var match_001 = [param[1]];
-  console.log(match_000, match_001);
+  var a = [param[0]];
+  var b = [param[1]];
+  console.log(a, b);
   return /* () */0;
 }
 
@@ -47,16 +47,12 @@ var a = 1;
 
 var b = 2;
 
-var x = match_000;
-
-var y = match_001;
-
-exports.a  = a;
-exports.b  = b;
-exports.x  = x;
-exports.y  = y;
-exports.f  = f;
-exports.g  = g;
+exports.a = a;
+exports.b = b;
+exports.x = x;
+exports.y = y;
+exports.f = f;
+exports.g = g;
 exports.a0 = a0;
 exports.a1 = a1;
 /* No side effect */
