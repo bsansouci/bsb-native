@@ -34,10 +34,10 @@ let standard_library =
   try
     Sys.getenv "CAMLLIB"
   with Not_found ->
-#else 
-  try 
+#else
+  try
     Sys.getenv "BSLIB"
-  with Not_found -> 
+  with Not_found ->
 #end
     standard_library_default
 

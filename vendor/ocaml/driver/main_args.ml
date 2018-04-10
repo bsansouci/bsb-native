@@ -10,14 +10,6 @@
 (*                                                                     *)
 (***********************************************************************)
 
-#if undefined  BS_NO_COMPILER_PATCH then 
-
-let mk_super_errors f = 
-  "-bs-super-errors", Arg.Unit f, " Better error message combined with other tools"
-;;
-
-#end
-
 let mk_a f =
   "-a", Arg.Unit f, " Build a library"
 ;;
@@ -502,10 +494,6 @@ let mk__ f =
 ;;
 
 module type Common_options = sig
-#if undefined  BS_NO_COMPILER_PATCH then 
-  val _super_errors : unit -> unit
-#end
-
   val _absname : unit -> unit
   val _I : string -> unit
   val _labels : unit -> unit
@@ -674,11 +662,6 @@ end;;
 module Make_bytecomp_options (F : Bytecomp_options) =
 struct
   let list = [
-
-#if undefined  BS_NO_COMPILER_PATCH then 
-    mk_super_errors F._super_errors;
-#end
-
     mk_a F._a;
     mk_absname F._absname;
     mk_annot F._annot;
@@ -761,10 +744,6 @@ end;;
 module Make_bytetop_options (F : Bytetop_options) =
 struct
   let list = [
-#if undefined  BS_NO_COMPILER_PATCH then 
-    mk_super_errors F._super_errors;
-#end
-
     mk_absname F._absname;
     mk_I F._I;
     mk_init F._init;
@@ -807,10 +786,6 @@ end;;
 module Make_optcomp_options (F : Optcomp_options) =
 struct
   let list = [
-#if undefined  BS_NO_COMPILER_PATCH then 
-    mk_super_errors F._super_errors;
-#end
-
     mk_a F._a;
     mk_absname F._absname;
     mk_annot F._annot;
@@ -900,10 +875,6 @@ end;;
 
 module Make_opttop_options (F : Opttop_options) = struct
   let list = [
-#if undefined  BS_NO_COMPILER_PATCH then 
-    mk_super_errors F._super_errors;
-#end
-
     mk_absname F._absname;
     mk_compact F._compact;
     mk_I F._I;
@@ -962,10 +933,6 @@ end;;
 module Make_ocamldoc_options (F : Ocamldoc_options) =
 struct
   let list = [
-#if undefined  BS_NO_COMPILER_PATCH then 
-    mk_super_errors F._super_errors;
-#end
-
     mk_absname F._absname;
     mk_I F._I;
     mk_impl F._impl;

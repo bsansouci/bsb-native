@@ -1,3 +1,4 @@
+configure
 ocamlc
 ocamlc.opt
 expunge

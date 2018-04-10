@@ -13715,10 +13715,10 @@ let version = Sys.ocaml_version
 let standard_library_default = (Filename.dirname Sys.executable_name) // "lib" // "ocaml"
 
 let standard_library =
- 
-  try 
+
+  try
     Sys.getenv "BSLIB"
-  with Not_found -> 
+  with Not_found ->
 
     standard_library_default
 
@@ -13726,7 +13726,7 @@ let extension = if Sys.win32 || Sys.cygwin then ".exe" else ""
 let standard_runtime = (Filename.dirname Sys.executable_name) // "bin" // "ocamlrun" ^ extension
 let ccomp_type = "cc"
 let bytecomp_c_compiler = "gcc -O  -Wall -D_FILE_OFFSET_BITS=64 -D_REENTRANT -O "
-let bytecomp_c_libraries = "-lpthread"
+let bytecomp_c_libraries = "-lcurses -lpthread"
 let native_c_compiler = "gcc -O  -D_FILE_OFFSET_BITS=64 -D_REENTRANT"
 let native_c_libraries = ""
 let native_pack_linker = "ld -r -arch x86_64  -o "
@@ -13774,8 +13774,8 @@ let ext_asm = ".s"
 let ext_lib = ".a"
 let ext_dll = ".so"
 
-let host = "x86_64-apple-darwin17.5.0"
-let target = "x86_64-apple-darwin17.5.0"
+let host = "x86_64-apple-darwin17.4.0"
+let target = "x86_64-apple-darwin17.4.0"
 
 let default_executable_name =
   match Sys.os_type with

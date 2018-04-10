@@ -98,3 +98,5 @@ jscomp/build_tests/*/lib/
 *.so
 bin/ninja.exe
 tmp/
+vendor/ocaml/lib
+vendor/ocaml/bin
