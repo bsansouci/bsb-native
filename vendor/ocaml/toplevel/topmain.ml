@@ -60,6 +60,10 @@ let print_version_num () =
 module Options = Main_args.Make_bytetop_options (struct
   let set r () = r := true
   let clear r () = r := false
+#if undefined  BS_NO_COMPILER_PATCH then 
+  let _super_errors () = Super_packed.Super_main.setup ()
+#end
+
 
   let _absname = set Location.absname
   let _I dir =

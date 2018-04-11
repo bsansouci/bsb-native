@@ -70,6 +70,10 @@ let show_config () =
 ;;
 
 module Options = Main_args.Make_bytecomp_options (struct
+#if undefined  BS_NO_COMPILER_PATCH then 
+  let _super_errors () = Super_packed.Super_main.setup ()
+#end
+
   let set r () = r := true
   let unset r () = r := false
   let _a = set make_archive
