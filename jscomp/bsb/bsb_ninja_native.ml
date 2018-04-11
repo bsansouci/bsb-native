@@ -416,76 +416,89 @@ let link oc ret ~entries ~file_groups ~static_libraries ~c_linker_flags ~namespa
     acc
   ) ret entries
     
-let pack oc ret ?build_library ~backend ~file_groups ~namespace () =
-  let output_cma_or_cmxa, rule_name, suffix_cmo_or_cmx =
-    begin match backend with
-    (* These cases could benefit from a better error message. *)
-    | Bsb_config_types.Js       -> assert false
-    | Bsb_config_types.Bytecode -> 
-      Literals.library_file ^ Literals.suffix_cma , 
-      Rules.build_cma_library , 
-      Literals.suffix_cmo
-    | Bsb_config_types.Native   -> 
-      Literals.library_file ^ Literals.suffix_cmxa, 
-      Rules.build_cmxa_library, 
-      Literals.suffix_cmx
-  end in
-  (* TODO(sansouci): we pack all source files of the dependency, but we could just pack the
-     files that are used by the main project. *)
-  let all_cmo_or_cmx_files, all_cmi_files =
-    List.fold_left (fun acc group -> 
-      String_map.fold (fun _ (v : Bsb_db.module_info) (all_cmo_or_cmx_files, all_cmi_files) -> 
-        let mlname = match v.ml with
-            | Ml_source (input, _, _) ->
-            let input = (Ext_path.chop_extension_if_any input)  in
-            begin match namespace with 
-              | None    -> Some (input)
-              | Some ns -> Some ((Ext_namespace.make ~ns input))
-            end
-            | Ml_empty -> None
-          in
-          let mliname = match v.mli with
-            | Mli_source (input, _, _) ->
-            let input = (Ext_path.chop_extension_if_any input)  in
-            begin match namespace with 
-              | None    -> Some (input)
-              | Some ns -> Some ((Ext_namespace.make ~ns input))
-            end
-            | Mli_empty -> None 
-          in
-          begin match (mlname, mliname) with
-          | None, None -> failwith "Got a source file without an ml or mli file. This should not happen."
-          | Some name, Some _ ->
-            ((name ^ suffix_cmo_or_cmx)     :: all_cmo_or_cmx_files,
-             (name ^ Literals.suffix_cmi)   :: all_cmi_files)
-          | Some name, None ->
-            ((name ^ suffix_cmo_or_cmx)     :: all_cmo_or_cmx_files,
-             (name ^ Literals.suffix_cmi)   :: all_cmi_files)
-          | None, Some name ->
-            (all_cmo_or_cmx_files,
-             (name ^ Literals.suffix_cmi)   :: all_cmi_files)
-          end    
-    ) group.Bsb_parse_sources.sources acc) 
-    ([], [])
-    file_groups in
-  let shadows = match build_library with
-  | None -> []
-  | Some build_library -> [{
-      Bsb_ninja_util.key = "build_library";
-      op = Bsb_ninja_util.Overwrite ("-build-library " ^ build_library)
-    }]
-  in
-  (* In the case that a library is just an interface file, we don't do anything *)
-  if List.length all_cmo_or_cmx_files > 0 then begin
-    output_build oc
-      ~output:output_cma_or_cmxa
-      ~input:""
-      ~inputs:all_cmo_or_cmx_files
-      ~implicit_deps:all_cmi_files
-      ~shadows
-      ~rule:rule_name;
-    ret @ []
-  end else ret
+let pack oc ret ~entries ?build_library ~backend ~file_groups ~namespace () =
+  (* List.fold_left (fun acc project_entry ->
+    let main_module_name =
+      begin match project_entry with
+      | Bsb_config_types.JsTarget {main_module_name}       -> assert false
+      | Bsb_config_types.NativeTarget {main_module_name} 
+      | Bsb_config_types.BytecodeTarget {main_module_name} -> main_module_name
+      end in *)
+    let output_cma_or_cmxa, rule_name, suffix_cmo_or_cmx =
+      begin match backend with
+      (* These cases could benefit from a better error message. *)
+      | Bsb_config_types.Js       -> assert false
+      | Bsb_config_types.Bytecode -> 
+        Literals.library_file ^ Literals.suffix_cma , 
+        Rules.build_cma_library , 
+        Literals.suffix_cmo
+      | Bsb_config_types.Native   -> 
+        Literals.library_file ^ Literals.suffix_cmxa, 
+        Rules.build_cmxa_library, 
+        Literals.suffix_cmx
+    end in
+    (* TODO(sansouci): we pack all source files of the dependency, but we could just pack the
+       files that are used by the main project. *)
+    let all_cmo_or_cmx_files, all_cmi_files =
+      List.fold_left (fun acc group -> 
+        String_map.fold (fun _ (v : Bsb_db.module_info) (all_cmo_or_cmx_files, all_cmi_files) -> 
+          let mlname = match v.ml with
+              | Ml_source (input, _, _) ->
+              let input = (Ext_path.chop_extension_if_any input)  in
+              begin match namespace with 
+                | None    -> Some (input)
+                | Some ns -> Some ((Ext_namespace.make ~ns input))
+              end
+              | Ml_empty -> None
+            in
+            let mliname = match v.mli with
+              | Mli_source (input, _, _) ->
+              let input = (Ext_path.chop_extension_if_any input)  in
+              begin match namespace with 
+                | None    -> Some (input)
+                | Some ns -> Some ((Ext_namespace.make ~ns input))
+              end
+              | Mli_empty -> None 
+            in
+            begin match (mlname, mliname) with
+            | None, None -> failwith "Got a source file without an ml or mli file. This should not happen."
+            | Some name, Some _ ->
+              ((name ^ suffix_cmo_or_cmx)     :: all_cmo_or_cmx_files,
+               (name ^ Literals.suffix_cmi)   :: all_cmi_files)
+            | Some name, None ->
+              ((name ^ suffix_cmo_or_cmx)     :: all_cmo_or_cmx_files,
+               (name ^ Literals.suffix_cmi)   :: all_cmi_files)
+            | None, Some name ->
+              (all_cmo_or_cmx_files,
+               (name ^ Literals.suffix_cmi)   :: all_cmi_files)
+            end    
+      ) group.Bsb_parse_sources.sources acc) 
+      ([], [])
+      file_groups in
+    (* let shadows = [{
+      Bsb_ninja_util.key = "main_module";
+      op = Bsb_ninja_util.Overwrite main_module_name
+    }] in *)
+    let shadows = [] in
+    let shadows = match build_library with
+    | None -> shadows
+    | Some build_library -> {
+        Bsb_ninja_util.key = "build_library";
+        op = Bsb_ninja_util.Overwrite ("-build-library " ^ build_library)
+      } :: shadows
+    in
+    (* In the case that a library is just an interface file, we don't do anything *)
+    if List.length all_cmo_or_cmx_files > 0 then begin
+      output_build oc
+        ~output:output_cma_or_cmxa
+        ~input:""
+        ~inputs:all_cmo_or_cmx_files
+        ~implicit_deps:all_cmi_files
+        ~shadows
+        ~rule:rule_name;
+      ret @ []
+    end else ret
+  (* ) ret entries *)
 
 let handle_file_groups oc
   ~custom_rules
@@ -494,14 +507,18 @@ let handle_file_groups oc
   ~entries
   ~compile_target
   ~backend
-  ~package_specs
-  ~js_post_build_cmd
-  ~files_to_install
-  ~static_libraries
-  ~c_linker_flags
+  ~external_static_libraries
+  ~external_c_linker_flags
   ~external_deps_for_linking
   ~ocaml_dir
-  ~bs_suffix
+  ~config:{
+    Bsb_config_types.bs_suffix;
+    c_linker_flags;
+    static_libraries;
+    package_specs;
+    js_post_build_cmd;
+    files_to_install;
+  }
   (file_groups  :  Bsb_parse_sources.file_group list) namespace st =
   let file_groups = List.filter (fun (group : Bsb_parse_sources.file_group) ->
     match backend with 
@@ -519,11 +536,31 @@ let handle_file_groups oc
       ~bs_suffix
       files_to_install
   ) st file_groups in
+  let static_libraries = external_static_libraries @ static_libraries in
+  let c_linker_flags = external_c_linker_flags @ c_linker_flags in
   match build_library with
   | None -> 
     if is_top_level then
       link oc ret ~entries ~file_groups ~static_libraries ~c_linker_flags ~namespace ~external_deps_for_linking ~ocaml_dir
     else
-      pack oc ret ~backend ~file_groups ~namespace ()
+      let (librarie_to_pack, executables_to_link) = List.fold_left Bsb_config_types.(fun (l, e) x -> 
+        match x with 
+        | JsTarget {kind = Binary} 
+        | NativeTarget {kind = Binary}
+        | BytecodeTarget {kind = Binary} -> (l, x :: e)
+        | JsTarget {kind = Both} 
+        | NativeTarget {kind = Both}
+        | BytecodeTarget {kind = Both} -> (x :: l, x :: e)
+        | _ -> (x :: l, e)
+      ) ([], []) entries in
+      let ret = link oc ret 
+        ~entries:executables_to_link 
+        ~file_groups
+        ~static_libraries
+        ~c_linker_flags
+        ~namespace
+        ~external_deps_for_linking
+        ~ocaml_dir in
+      pack oc ret ~entries:librarie_to_pack ~backend ~file_groups ~namespace ()
   | Some build_library -> 
-    pack oc ret ~build_library ~backend ~file_groups ~namespace ()
+    pack oc ret ~entries ~build_library ~backend ~file_groups ~namespace ()

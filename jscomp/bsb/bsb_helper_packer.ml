@@ -36,6 +36,7 @@ let module_of_filename filename =
   | len -> String.sub str 0 len
 
 let pack pack_byte_or_native 
+  ~main_module
   ~batch_files
   ~includes
   ~ocamlfind_packages
@@ -66,21 +67,36 @@ let pack pack_byte_or_native
         m)
     String_map.empty
     batch_files in
-  let domain =
-    String_map.fold
-      (fun k _ acc -> String_set.add k acc)
-      dependency_graph String_set.empty in
-  
   let all_object_files = match build_library with 
   | None -> 
-    let sorted_tasks = Bsb_helper_dep_graph.sort_files_by_dependencies ~domain dependency_graph in
-    List.rev (Queue.fold
-    (fun acc v -> match String_map.find_opt v module_to_filepath with
-      | Some file -> (file ^ suffix_object_files) :: acc
-      | None -> Bsb_exception.missing_object_file v
-      )
-    []
-    sorted_tasks)
+    begin match main_module with 
+    | None -> 
+      let domain =
+        String_map.fold
+          (fun k _ acc -> String_set.add k acc)
+          dependency_graph String_set.empty in
+      let sorted_tasks = Bsb_helper_dep_graph.sort_files_by_dependencies ~domain dependency_graph in
+      List.rev (Queue.fold
+      (fun acc v -> match String_map.find_opt v module_to_filepath with
+        | Some file -> (file ^ suffix_object_files) :: acc
+        | None -> Bsb_exception.missing_object_file v
+        )
+      []
+      sorted_tasks)
+    | Some main_module -> 
+      let tasks = Bsb_helper_dep_graph.simple_collect_from_main dependency_graph main_module in
+      let namespace = match namespace with 
+        | None -> ""
+        | Some namespace -> "-" ^ namespace
+      in
+      Queue.fold
+        (fun acc v -> match String_map.find_opt v module_to_filepath with
+          | Some file -> (file ^ namespace ^ suffix_object_files) :: acc
+          | None -> Bsb_exception.missing_object_file v
+          )
+        []
+        tasks
+    end
   | Some build_library -> 
     let tasks = Bsb_helper_dep_graph.simple_collect_from_main dependency_graph build_library in
     let namespace = match namespace with 

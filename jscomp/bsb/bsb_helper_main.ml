@@ -92,6 +92,7 @@ let link link_byte_or_native =
 let pack link_byte_or_native =
   Bsb_helper_packer.pack
     link_byte_or_native
+    ~main_module:!main_module
     ~includes:!includes
     ~batch_files:!batch_files
     ~ocamlfind_packages:!ocamlfind_packages

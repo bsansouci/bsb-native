@@ -89,10 +89,9 @@ let output_ninja_and_namespace_map
       ocamlfind_dependencies;
       ocaml_flags;
       ocaml_dependencies;
-    } : Bsb_config_types.t)
+    } as config : Bsb_config_types.t)
   =
   let custom_rules = Bsb_rule.reset generators in 
-
   let entries = List.filter (fun e -> match e with 
     | Bsb_config_types.JsTarget _       -> backend = Bsb_config_types.Js
     | Bsb_config_types.NativeTarget _   -> backend = Bsb_config_types.Native
@@ -352,14 +351,11 @@ let output_ninja_and_namespace_map
         ~entries
         ~compile_target:Bsb_ninja_native.Bytecode
         ~backend
-        ~package_specs
-        ~js_post_build_cmd
-        ~files_to_install
-        ~static_libraries:(external_static_libraries @ static_libraries)
-        ~c_linker_flags:(external_c_linker_flags @ c_linker_flags)
+        ~external_static_libraries
+        ~external_c_linker_flags
         ~external_deps_for_linking
         ~ocaml_dir
-        ~bs_suffix
+        ~config
         bs_file_groups
         namespace
         Bsb_ninja_file_groups.zero,
@@ -374,14 +370,11 @@ let output_ninja_and_namespace_map
         ~entries
         ~compile_target:Bsb_ninja_native.Native
         ~backend
-        ~package_specs
-        ~js_post_build_cmd
-        ~files_to_install
-        ~static_libraries:(external_static_libraries @ static_libraries)
-        ~c_linker_flags:(external_c_linker_flags @ c_linker_flags)
+        ~external_static_libraries
+        ~external_c_linker_flags
         ~external_deps_for_linking
         ~ocaml_dir
-        ~bs_suffix
+        ~config
         bs_file_groups
         namespace
         Bsb_ninja_file_groups.zero,

@@ -33,15 +33,13 @@ val handle_file_groups : out_channel ->
   entries:Bsb_config_types.entries_t list ->
   compile_target:compile_target_t ->
   backend:Bsb_config_types.compilation_kind_t ->
-  package_specs:Bsb_package_specs.t ->  
-  js_post_build_cmd:string option -> 
-  files_to_install:String_hash_set.t ->  
-  static_libraries:string list ->
-  c_linker_flags:string list ->
+  external_static_libraries:string list ->
+  external_c_linker_flags:string list ->
   external_deps_for_linking:string list ->
   ocaml_dir:string ->
-  bs_suffix:bool ->
+  config:Bsb_config_types.t ->
   Bsb_parse_sources.file_group list ->
   string option ->
   Bsb_ninja_file_groups.info -> 
   Bsb_ninja_file_groups.info
+  

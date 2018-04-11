@@ -59,7 +59,7 @@ let refmt_flags = ["--print"; "binary"]
 let refmt_v3 = "refmt.exe"
 let refmt_none = "refmt.exe"
 
-let main_entries = [Bsb_config_types.JsTarget { main_module_name="Index"; output_name=None}]
+let main_entries = [Bsb_config_types.JsTarget { kind = Library; main_module_name="Index"; output_name=None}]
 
 let allowed_build_kinds = [Bsb_config_types.Js; Bsb_config_types.Bytecode; Bsb_config_types.Native]
 

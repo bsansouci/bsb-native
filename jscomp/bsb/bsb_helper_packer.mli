@@ -25,6 +25,7 @@
 type pack_t = PackBytecode | PackNative
 
 val pack : pack_t -> 
+  main_module:string option ->
   batch_files:string list -> 
   includes:string list -> 
   ocamlfind_packages:string list -> 

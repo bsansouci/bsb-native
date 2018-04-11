@@ -66,16 +66,26 @@ let parse_entries name (field : Ext_json_types.t array) =
         let backend = ref "js" in
         let main = ref None in
         let output_name = ref None in
+        let kind = ref Bsb_config_types.Library in
         let _ = map
-                |? (Bsb_build_schemas.kind, `Str (fun x -> 
-                  Bsb_log.warn "@{<warn>Warning@} package %s: 'kind' field in 'entries' is deprecated and will be removed in the next release. Please use 'backend'.@." name;
-                  backend := x))
                 |? (Bsb_build_schemas.backend, `Str (fun x -> backend := x))
-                |? (Bsb_build_schemas.main, `Str (fun x -> 
-                  Bsb_log.warn "@{<warn>Warning@} package %s: 'main' field in 'entries' is deprecated and will be removed in the next release. Please use 'main-module'.@." name;
-                  main := Some x))
                 |? (Bsb_build_schemas.main_module, `Str (fun x -> main := Some x))
                 |? (Bsb_build_schemas.output_name, `Str (fun x -> output_name := Some x))
+                |? (Bsb_build_schemas.kind, `Str (fun x -> 
+                  (* Only accept binary for now, until I can figure out how we can let the user link in specific entries from their project. 
+                     If a project has 2 bytecode entries which are libraries, right now they'll conflict because we create the same lib.cma for both.
+                     And the user has no way to specify sub-dependencies.
+                  *)
+                  if x = Literals.binary then
+                    kind := Bsb_config_types.Binary
+                  else if (x = Literals.native 
+                       || x = Literals.bytecode 
+                       || x = Literals.js) then begin
+                    Bsb_log.warn "@{<warn>Warning@} package %s: 'kind' field in 'entries' is deprecated and will be removed in the next release. Please use 'backend'.@." name;
+                    backend := x;
+                  end else 
+                    Bsb_exception.config_error entry "Field 'kind' not recognized. Should be empty or 'binary'" 
+                  ))
         in
           
         let main_module_name = begin match !main with
@@ -86,13 +96,13 @@ let parse_entries name (field : Ext_json_types.t array) =
           | Some main_module_name -> main_module_name
         end in
         if !backend = Literals.native then
-          Some (Bsb_config_types.NativeTarget {main_module_name; output_name=(!output_name)})
+          Some (Bsb_config_types.NativeTarget {kind = !kind; main_module_name; output_name=(!output_name)})
         else if !backend = Literals.bytecode then
-          Some (Bsb_config_types.BytecodeTarget {main_module_name; output_name=(!output_name)})
+          Some (Bsb_config_types.BytecodeTarget {kind = !kind; main_module_name; output_name=(!output_name)})
         else if !backend = Literals.js then
-          Some (Bsb_config_types.JsTarget {main_module_name; output_name=None})
+          Some (Bsb_config_types.JsTarget {kind = !kind; main_module_name; output_name=None})
         else
-          Bsb_exception.config_error entry "Missing field 'kind'. That field is required and its value be 'js', 'native' or 'bytecode'"
+          Bsb_exception.config_error entry "Missing field 'backend'. That field is required and its value be 'js', 'native' or 'bytecode'"
       | entry -> Bsb_exception.config_error entry "Unrecognized object inside array 'entries' field.") 
     field
 

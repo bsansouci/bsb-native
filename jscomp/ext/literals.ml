@@ -122,7 +122,9 @@ let escaped_j_delimiter =  "*j" (* not user level syntax allowed *)
 let native = "native"
 let bytecode = "bytecode"
 let js = "js"
-
+let library = "library"
+let binary = "binary"
+let both = "both"
 
 
 (** Used when produce node compatible paths *)
