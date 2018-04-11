@@ -135,8 +135,6 @@ let reason = "reason"
 let react_jsx = "react-jsx"
 
 let entries = "entries"
-let kind = "kind"
-let main = "main"
 let cut_generators = "cut-generators"
 let generators = "generators"
 let command = "command"
@@ -148,6 +146,7 @@ let number = "number"
 let error = "error"
 let suffix = "suffix"
 
+let kind = "kind"
 let main_module = "main-module"
 let backend = "backend"
 let bs_super_errors = "bs-super-errors"
@@ -2059,6 +2058,10 @@ val native : string
 val bytecode : string
 val js : string
 
+val library : string
+val binary : string
+val both : string
+
 val node_sep : string 
 val node_parent : string 
 val node_current : string 
@@ -2189,7 +2192,9 @@ let escaped_j_delimiter =  "*j" (* not user level syntax allowed *)
 let native = "native"
 let bytecode = "bytecode"
 let js = "js"
-
+let library = "library"
+let binary = "binary"
+let both = "both"
 
 
 (** Used when produce node compatible paths *)
@@ -10327,9 +10332,12 @@ type dependency =
   }
 type dependencies = dependency list 
 
+type kind_t = Library | Binary | Both
+
 type entries_record_t = {
     main_module_name: string;
     output_name: string option;
+    kind: kind_t;
 }
 
 type entries_t = 
@@ -10502,7 +10510,7 @@ let refmt_flags = ["--print"; "binary"]
 let refmt_v3 = "refmt.exe"
 let refmt_none = "refmt.exe"
 
-let main_entries = [Bsb_config_types.JsTarget { main_module_name="Index"; output_name=None}]
+let main_entries = [Bsb_config_types.JsTarget { kind = Library; main_module_name="Index"; output_name=None}]
 
 let allowed_build_kinds = [Bsb_config_types.Js; Bsb_config_types.Bytecode; Bsb_config_types.Native]
 
@@ -10907,16 +10915,26 @@ let parse_entries name (field : Ext_json_types.t array) =
         let backend = ref "js" in
         let main = ref None in
         let output_name = ref None in
+        let kind = ref Bsb_config_types.Library in
         let _ = map
-                |? (Bsb_build_schemas.kind, `Str (fun x -> 
-                  Bsb_log.warn "@{<warn>Warning@} package %s: 'kind' field in 'entries' is deprecated and will be removed in the next release. Please use 'backend'.@." name;
-                  backend := x))
                 |? (Bsb_build_schemas.backend, `Str (fun x -> backend := x))
-                |? (Bsb_build_schemas.main, `Str (fun x -> 
-                  Bsb_log.warn "@{<warn>Warning@} package %s: 'main' field in 'entries' is deprecated and will be removed in the next release. Please use 'main-module'.@." name;
-                  main := Some x))
                 |? (Bsb_build_schemas.main_module, `Str (fun x -> main := Some x))
                 |? (Bsb_build_schemas.output_name, `Str (fun x -> output_name := Some x))
+                |? (Bsb_build_schemas.kind, `Str (fun x -> 
+                  (* Only accept binary for now, until I can figure out how we can let the user link in specific entries from their project. 
+                     If a project has 2 bytecode entries which are libraries, right now they'll conflict because we create the same lib.cma for both.
+                     And the user has no way to specify sub-dependencies.
+                  *)
+                  if x = Literals.binary then
+                    kind := Bsb_config_types.Binary
+                  else if (x = Literals.native 
+                       || x = Literals.bytecode 
+                       || x = Literals.js) then begin
+                    Bsb_log.warn "@{<warn>Warning@} package %s: 'kind' field in 'entries' is deprecated and will be removed in the next release. Please use 'backend'.@." name;
+                    backend := x;
+                  end else 
+                    Bsb_exception.config_error entry "Field 'kind' not recognized. Should be empty or 'binary'" 
+                  ))
         in
           
         let main_module_name = begin match !main with
@@ -10927,13 +10945,13 @@ let parse_entries name (field : Ext_json_types.t array) =
           | Some main_module_name -> main_module_name
         end in
         if !backend = Literals.native then
-          Some (Bsb_config_types.NativeTarget {main_module_name; output_name=(!output_name)})
+          Some (Bsb_config_types.NativeTarget {kind = !kind; main_module_name; output_name=(!output_name)})
         else if !backend = Literals.bytecode then
-          Some (Bsb_config_types.BytecodeTarget {main_module_name; output_name=(!output_name)})
+          Some (Bsb_config_types.BytecodeTarget {kind = !kind; main_module_name; output_name=(!output_name)})
         else if !backend = Literals.js then
-          Some (Bsb_config_types.JsTarget {main_module_name; output_name=None})
+          Some (Bsb_config_types.JsTarget {kind = !kind; main_module_name; output_name=None})
         else
-          Bsb_exception.config_error entry "Missing field 'kind'. That field is required and its value be 'js', 'native' or 'bytecode'"
+          Bsb_exception.config_error entry "Missing field 'backend'. That field is required and its value be 'js', 'native' or 'bytecode'"
       | entry -> Bsb_exception.config_error entry "Unrecognized object inside array 'entries' field.") 
     field
 
@@ -13006,18 +13024,16 @@ val handle_file_groups : out_channel ->
   entries:Bsb_config_types.entries_t list ->
   compile_target:compile_target_t ->
   backend:Bsb_config_types.compilation_kind_t ->
-  package_specs:Bsb_package_specs.t ->  
-  js_post_build_cmd:string option -> 
-  files_to_install:String_hash_set.t ->  
-  static_libraries:string list ->
-  c_linker_flags:string list ->
+  external_static_libraries:string list ->
+  external_c_linker_flags:string list ->
   external_deps_for_linking:string list ->
   ocaml_dir:string ->
-  bs_suffix:bool ->
+  config:Bsb_config_types.t ->
   Bsb_parse_sources.file_group list ->
   string option ->
   Bsb_ninja_file_groups.info -> 
   Bsb_ninja_file_groups.info
+  
 
 end = struct
 #1 "bsb_ninja_native.ml"
@@ -13439,76 +13455,89 @@ let link oc ret ~entries ~file_groups ~static_libraries ~c_linker_flags ~namespa
     acc
   ) ret entries
     
-let pack oc ret ?build_library ~backend ~file_groups ~namespace () =
-  let output_cma_or_cmxa, rule_name, suffix_cmo_or_cmx =
-    begin match backend with
-    (* These cases could benefit from a better error message. *)
-    | Bsb_config_types.Js       -> assert false
-    | Bsb_config_types.Bytecode -> 
-      Literals.library_file ^ Literals.suffix_cma , 
-      Rules.build_cma_library , 
-      Literals.suffix_cmo
-    | Bsb_config_types.Native   -> 
-      Literals.library_file ^ Literals.suffix_cmxa, 
-      Rules.build_cmxa_library, 
-      Literals.suffix_cmx
-  end in
-  (* TODO(sansouci): we pack all source files of the dependency, but we could just pack the
-     files that are used by the main project. *)
-  let all_cmo_or_cmx_files, all_cmi_files =
-    List.fold_left (fun acc group -> 
-      String_map.fold (fun _ (v : Bsb_db.module_info) (all_cmo_or_cmx_files, all_cmi_files) -> 
-        let mlname = match v.ml with
-            | Ml_source (input, _, _) ->
-            let input = (Ext_path.chop_extension_if_any input)  in
-            begin match namespace with 
-              | None    -> Some (input)
-              | Some ns -> Some ((Ext_namespace.make ~ns input))
-            end
-            | Ml_empty -> None
-          in
-          let mliname = match v.mli with
-            | Mli_source (input, _, _) ->
-            let input = (Ext_path.chop_extension_if_any input)  in
-            begin match namespace with 
-              | None    -> Some (input)
-              | Some ns -> Some ((Ext_namespace.make ~ns input))
-            end
-            | Mli_empty -> None 
-          in
-          begin match (mlname, mliname) with
-          | None, None -> failwith "Got a source file without an ml or mli file. This should not happen."
-          | Some name, Some _ ->
-            ((name ^ suffix_cmo_or_cmx)     :: all_cmo_or_cmx_files,
-             (name ^ Literals.suffix_cmi)   :: all_cmi_files)
-          | Some name, None ->
-            ((name ^ suffix_cmo_or_cmx)     :: all_cmo_or_cmx_files,
-             (name ^ Literals.suffix_cmi)   :: all_cmi_files)
-          | None, Some name ->
-            (all_cmo_or_cmx_files,
-             (name ^ Literals.suffix_cmi)   :: all_cmi_files)
-          end    
-    ) group.Bsb_parse_sources.sources acc) 
-    ([], [])
-    file_groups in
-  let shadows = match build_library with
-  | None -> []
-  | Some build_library -> [{
-      Bsb_ninja_util.key = "build_library";
-      op = Bsb_ninja_util.Overwrite ("-build-library " ^ build_library)
-    }]
-  in
-  (* In the case that a library is just an interface file, we don't do anything *)
-  if List.length all_cmo_or_cmx_files > 0 then begin
-    output_build oc
-      ~output:output_cma_or_cmxa
-      ~input:""
-      ~inputs:all_cmo_or_cmx_files
-      ~implicit_deps:all_cmi_files
-      ~shadows
-      ~rule:rule_name;
-    ret @ []
-  end else ret
+let pack oc ret ~entries ?build_library ~backend ~file_groups ~namespace () =
+  (* List.fold_left (fun acc project_entry ->
+    let main_module_name =
+      begin match project_entry with
+      | Bsb_config_types.JsTarget {main_module_name}       -> assert false
+      | Bsb_config_types.NativeTarget {main_module_name} 
+      | Bsb_config_types.BytecodeTarget {main_module_name} -> main_module_name
+      end in *)
+    let output_cma_or_cmxa, rule_name, suffix_cmo_or_cmx =
+      begin match backend with
+      (* These cases could benefit from a better error message. *)
+      | Bsb_config_types.Js       -> assert false
+      | Bsb_config_types.Bytecode -> 
+        Literals.library_file ^ Literals.suffix_cma , 
+        Rules.build_cma_library , 
+        Literals.suffix_cmo
+      | Bsb_config_types.Native   -> 
+        Literals.library_file ^ Literals.suffix_cmxa, 
+        Rules.build_cmxa_library, 
+        Literals.suffix_cmx
+    end in
+    (* TODO(sansouci): we pack all source files of the dependency, but we could just pack the
+       files that are used by the main project. *)
+    let all_cmo_or_cmx_files, all_cmi_files =
+      List.fold_left (fun acc group -> 
+        String_map.fold (fun _ (v : Bsb_db.module_info) (all_cmo_or_cmx_files, all_cmi_files) -> 
+          let mlname = match v.ml with
+              | Ml_source (input, _, _) ->
+              let input = (Ext_path.chop_extension_if_any input)  in
+              begin match namespace with 
+                | None    -> Some (input)
+                | Some ns -> Some ((Ext_namespace.make ~ns input))
+              end
+              | Ml_empty -> None
+            in
+            let mliname = match v.mli with
+              | Mli_source (input, _, _) ->
+              let input = (Ext_path.chop_extension_if_any input)  in
+              begin match namespace with 
+                | None    -> Some (input)
+                | Some ns -> Some ((Ext_namespace.make ~ns input))
+              end
+              | Mli_empty -> None 
+            in
+            begin match (mlname, mliname) with
+            | None, None -> failwith "Got a source file without an ml or mli file. This should not happen."
+            | Some name, Some _ ->
+              ((name ^ suffix_cmo_or_cmx)     :: all_cmo_or_cmx_files,
+               (name ^ Literals.suffix_cmi)   :: all_cmi_files)
+            | Some name, None ->
+              ((name ^ suffix_cmo_or_cmx)     :: all_cmo_or_cmx_files,
+               (name ^ Literals.suffix_cmi)   :: all_cmi_files)
+            | None, Some name ->
+              (all_cmo_or_cmx_files,
+               (name ^ Literals.suffix_cmi)   :: all_cmi_files)
+            end    
+      ) group.Bsb_parse_sources.sources acc) 
+      ([], [])
+      file_groups in
+    (* let shadows = [{
+      Bsb_ninja_util.key = "main_module";
+      op = Bsb_ninja_util.Overwrite main_module_name
+    }] in *)
+    let shadows = [] in
+    let shadows = match build_library with
+    | None -> shadows
+    | Some build_library -> {
+        Bsb_ninja_util.key = "build_library";
+        op = Bsb_ninja_util.Overwrite ("-build-library " ^ build_library)
+      } :: shadows
+    in
+    (* In the case that a library is just an interface file, we don't do anything *)
+    if List.length all_cmo_or_cmx_files > 0 then begin
+      output_build oc
+        ~output:output_cma_or_cmxa
+        ~input:""
+        ~inputs:all_cmo_or_cmx_files
+        ~implicit_deps:all_cmi_files
+        ~shadows
+        ~rule:rule_name;
+      ret @ []
+    end else ret
+  (* ) ret entries *)
 
 let handle_file_groups oc
   ~custom_rules
@@ -13517,14 +13546,18 @@ let handle_file_groups oc
   ~entries
   ~compile_target
   ~backend
-  ~package_specs
-  ~js_post_build_cmd
-  ~files_to_install
-  ~static_libraries
-  ~c_linker_flags
+  ~external_static_libraries
+  ~external_c_linker_flags
   ~external_deps_for_linking
   ~ocaml_dir
-  ~bs_suffix
+  ~config:{
+    Bsb_config_types.bs_suffix;
+    c_linker_flags;
+    static_libraries;
+    package_specs;
+    js_post_build_cmd;
+    files_to_install;
+  }
   (file_groups  :  Bsb_parse_sources.file_group list) namespace st =
   let file_groups = List.filter (fun (group : Bsb_parse_sources.file_group) ->
     match backend with 
@@ -13542,14 +13575,34 @@ let handle_file_groups oc
       ~bs_suffix
       files_to_install
   ) st file_groups in
+  let static_libraries = external_static_libraries @ static_libraries in
+  let c_linker_flags = external_c_linker_flags @ c_linker_flags in
   match build_library with
   | None -> 
     if is_top_level then
       link oc ret ~entries ~file_groups ~static_libraries ~c_linker_flags ~namespace ~external_deps_for_linking ~ocaml_dir
     else
-      pack oc ret ~backend ~file_groups ~namespace ()
+      let (librarie_to_pack, executables_to_link) = List.fold_left Bsb_config_types.(fun (l, e) x -> 
+        match x with 
+        | JsTarget {kind = Binary} 
+        | NativeTarget {kind = Binary}
+        | BytecodeTarget {kind = Binary} -> (l, x :: e)
+        | JsTarget {kind = Both} 
+        | NativeTarget {kind = Both}
+        | BytecodeTarget {kind = Both} -> (x :: l, x :: e)
+        | _ -> (x :: l, e)
+      ) ([], []) entries in
+      let ret = link oc ret 
+        ~entries:executables_to_link 
+        ~file_groups
+        ~static_libraries
+        ~c_linker_flags
+        ~namespace
+        ~external_deps_for_linking
+        ~ocaml_dir in
+      pack oc ret ~entries:librarie_to_pack ~backend ~file_groups ~namespace ()
   | Some build_library -> 
-    pack oc ret ~build_library ~backend ~file_groups ~namespace ()
+    pack oc ret ~entries ~build_library ~backend ~file_groups ~namespace ()
 
 end
 module Config : sig 
@@ -13774,8 +13827,8 @@ let ext_asm = ".s"
 let ext_lib = ".a"
 let ext_dll = ".so"
 
-let host = "x86_64-apple-darwin17.4.0"
-let target = "x86_64-apple-darwin17.4.0"
+let host = "x86_64-apple-darwin17.5.0"
+let target = "x86_64-apple-darwin17.5.0"
 
 let default_executable_name =
   match Sys.os_type with
@@ -17589,10 +17642,9 @@ let output_ninja_and_namespace_map
       ocamlfind_dependencies;
       ocaml_flags;
       ocaml_dependencies;
-    } : Bsb_config_types.t)
+    } as config : Bsb_config_types.t)
   =
   let custom_rules = Bsb_rule.reset generators in 
-
   let entries = List.filter (fun e -> match e with 
     | Bsb_config_types.JsTarget _       -> backend = Bsb_config_types.Js
     | Bsb_config_types.NativeTarget _   -> backend = Bsb_config_types.Native
@@ -17852,14 +17904,11 @@ let output_ninja_and_namespace_map
         ~entries
         ~compile_target:Bsb_ninja_native.Bytecode
         ~backend
-        ~package_specs
-        ~js_post_build_cmd
-        ~files_to_install
-        ~static_libraries:(external_static_libraries @ static_libraries)
-        ~c_linker_flags:(external_c_linker_flags @ c_linker_flags)
+        ~external_static_libraries
+        ~external_c_linker_flags
         ~external_deps_for_linking
         ~ocaml_dir
-        ~bs_suffix
+        ~config
         bs_file_groups
         namespace
         Bsb_ninja_file_groups.zero,
@@ -17874,14 +17923,11 @@ let output_ninja_and_namespace_map
         ~entries
         ~compile_target:Bsb_ninja_native.Native
         ~backend
-        ~package_specs
-        ~js_post_build_cmd
-        ~files_to_install
-        ~static_libraries:(external_static_libraries @ static_libraries)
-        ~c_linker_flags:(external_c_linker_flags @ c_linker_flags)
+        ~external_static_libraries
+        ~external_c_linker_flags
         ~external_deps_for_linking
         ~ocaml_dir
-        ~bs_suffix
+        ~config
         bs_file_groups
         namespace
         Bsb_ninja_file_groups.zero,

@@ -28005,6 +28005,10 @@ val native : string
 val bytecode : string
 val js : string
 
+val library : string
+val binary : string
+val both : string
+
 val node_sep : string 
 val node_parent : string 
 val node_current : string 
@@ -28135,7 +28139,9 @@ let escaped_j_delimiter =  "*j" (* not user level syntax allowed *)
 let native = "native"
 let bytecode = "bytecode"
 let js = "js"
-
+let library = "library"
+let binary = "binary"
+let both = "both"
 
 
 (** Used when produce node compatible paths *)
