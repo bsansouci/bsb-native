@@ -119,6 +119,8 @@ TOPLEVEL=toplevel/genprintval.cmo toplevel/toploop.cmo \
   toplevel/trace.cmo toplevel/topdirs.cmo toplevel/topmain.cmo
 
 BYTESTART=driver/main.cmo
+driver/main.cmo: super_packed.cmo driver/main.ml
+	$(CAMLC) $(COMPFLAGS) -c driver/main.ml
 
 OPTSTART=driver/optmain.cmo
 
