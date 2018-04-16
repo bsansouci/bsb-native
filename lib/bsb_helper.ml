@@ -7297,7 +7297,6 @@ let get_build_artifacts_location cwd =
       dir // Bsb_config.lib_lit // Bsb_config.node_modules // project_name
   end
 
-
 end
 module Set_gen
 = struct

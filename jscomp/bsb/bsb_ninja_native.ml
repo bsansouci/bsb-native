@@ -565,7 +565,7 @@ let handle_file_groups oc
     | Bsb_config_types.Bytecode -> List.mem Bsb_parse_sources.Bytecode group.Bsb_parse_sources.backend
   ) file_groups in 
   let (entries, entries_that_have_ppxes, local_ppx_deps, local_ppx_module_names, ppx_entries) = Bsb_ninja_file_groups.get_local_ppx_deps backend entries in
-  if entries_that_have_ppxes = [] then
+  if build_just_ppx && entries_that_have_ppxes = [] then
     comp_info
   else begin
     (* @Speed The work to figure out in which group an entry is in could be done while parsing the 
