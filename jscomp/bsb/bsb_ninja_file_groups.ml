@@ -104,6 +104,8 @@ let emit_impl_build
     ~no_intf_file:(no_intf_file : bool) 
     js_post_build_cmd
     ~is_re
+    ~local_ppx_flags
+    ~local_ppx_deps
     namespace
     filename_sans_extension
   : info =    
@@ -128,6 +130,11 @@ let emit_impl_build
     make_common_shadows is_re package_specs
       (Filename.dirname file_cmi)
       group_dir_index in
+  let shadows = List.map (fun f -> 
+    Bsb_ninja_util.{
+     key = "ppx_flags"; 
+     op = AppendList ["-ppx"; f]
+   }) local_ppx_flags in
   begin
     Bsb_ninja_util.output_build oc
       ~output:output_mlast
@@ -135,7 +142,9 @@ let emit_impl_build
       ~rule:( if is_re then 
                 Bsb_rule.build_ast_and_module_sets_from_re
               else
-                Bsb_rule.build_ast_and_module_sets);
+                Bsb_rule.build_ast_and_module_sets)
+      ~implicit_deps:local_ppx_deps
+      ~shadows;
     Bsb_ninja_util.output_build
       oc
       ~output:output_mlastd
@@ -175,6 +184,8 @@ let emit_intf_build
     (group_dir_index : Bsb_dir_index.t)
     oc
     ~is_re
+    ~local_ppx_flags
+    ~local_ppx_deps
     namespace
     filename_sans_extension
   : info =
@@ -192,6 +203,11 @@ let emit_intf_build
     make_common_shadows is_re package_specs
       (Filename.dirname output_cmi)
       group_dir_index in
+  let shadows = List.map (fun f -> 
+    Bsb_ninja_util.{
+     key = "ppx_flags"; 
+     op = AppendList ["-ppx"; f]
+   }) local_ppx_flags in
   Bsb_ninja_util.output_build oc
     ~output:output_mliast
       (* TODO: we can get rid of absloute path if we fixed the location to be 
@@ -201,7 +217,9 @@ let emit_intf_build
               (if is_re then filename_sans_extension ^ Literals.suffix_rei 
                else filename_sans_extension ^ Literals.suffix_mli))
     ~rule:(if is_re then Bsb_rule.build_ast_and_module_sets_from_rei
-           else Bsb_rule.build_ast_and_module_sets);
+           else Bsb_rule.build_ast_and_module_sets)
+    ~implicit_deps:local_ppx_deps
+    ~shadows;
   Bsb_ninja_util.output_build oc
     ~output:output_mliastd
     ~input:output_mliast
@@ -226,6 +244,8 @@ let handle_module_info
     (package_specs : Bsb_package_specs.t) 
     js_post_build_cmd
     ~bs_suffix
+    ~local_ppx_flags
+    ~local_ppx_deps
     oc  module_name 
     ( module_info : Bsb_db.module_info)
     namespace
@@ -240,6 +260,8 @@ let handle_module_info
       ~bs_suffix
       ~no_intf_file:false
       ~is_re:impl_is_re
+      ~local_ppx_flags
+      ~local_ppx_deps
       js_post_build_cmd      
       namespace
       input_impl  @ 
@@ -248,6 +270,8 @@ let handle_module_info
       group_dir_index
       oc         
       ~is_re:intf_is_re
+      ~local_ppx_flags
+      ~local_ppx_deps
       namespace
       input_intf 
   | Ml_source(input,is_re,_), Mli_empty ->
@@ -259,6 +283,8 @@ let handle_module_info
       ~no_intf_file:true
       js_post_build_cmd      
       ~is_re
+      ~local_ppx_flags
+      ~local_ppx_deps
       namespace
       input 
   | Ml_empty, Mli_source(input,is_re,_) ->    
@@ -267,6 +293,8 @@ let handle_module_info
       group_dir_index
       oc         
       ~is_re
+      ~local_ppx_flags
+      ~local_ppx_deps
       namespace
       input 
   | Ml_empty, Mli_empty -> zero
@@ -278,6 +306,8 @@ let handle_file_group
     ~custom_rules 
     ~package_specs 
     ~js_post_build_cmd  
+    ~local_ppx_flags 
+    ~local_ppx_deps
     (files_to_install : String_hash_set.t) 
     (namespace  : string option)
     acc 
@@ -296,6 +326,8 @@ let handle_file_group
         String_hash_set.add files_to_install (Bsb_db.filename_sans_suffix_of_module_info module_info);
       (handle_module_info 
         ~bs_suffix
+        ~local_ppx_flags
+        ~local_ppx_deps
          group.dir_index 
          package_specs js_post_build_cmd 
          oc 
@@ -305,6 +337,59 @@ let handle_file_group
       ) @  acc
     ) group.sources  acc 
 
+(* Divide the entries into 3 groups:
+  - entries: all the non-ppx entries that we'd like to pack or link
+  - entries_that_have_ppxes: subset of `entries` which have dependencies on local ppxes
+  - ppx_entries: entries that are ppxes, a disjoint set from `entries`
+  
+  Also returns a list of ppx module names and ppx executable paths.
+ *)
+let get_local_ppx_deps backend entries =
+  List.fold_left Bsb_config_types.(fun (entries, entries_that_have_ppxes, local_ppx_deps, module_names, ppx_entries) project_entry ->
+    let dry entry_backend ppx kind main_module_name output_name =
+        let (entries, entries_that_have_ppxes) = if backend = entry_backend && kind <> Ppx then 
+          if ppx <> [] then
+            (project_entry :: entries, project_entry :: entries_that_have_ppxes)
+          else
+            (project_entry :: entries, entries_that_have_ppxes)
+        else 
+          (entries, entries_that_have_ppxes) in
+        let (local_ppx_deps, module_names, ppx_entries) = if kind = Ppx then 
+          let (output, module_name) =
+          begin match entry_backend with
+          | Js       -> assert false
+          | Bytecode -> 
+            (match output_name with 
+              | None -> 
+                let extension = if Ext_sys.is_windows_or_cygwin then ".exe" else "" in
+                (String.lowercase main_module_name) ^ ".byte" ^ extension
+              | Some name -> name
+            ), main_module_name
+          | Native   -> 
+            (match output_name with 
+              | None -> 
+                let extension = if Ext_sys.is_windows_or_cygwin then ".exe" else "" in
+                (String.lowercase main_module_name) ^ ".native" ^ extension
+              | Some name -> name
+            ), main_module_name
+          end in
+        let output = if Ext_sys.is_windows_or_cygwin then output else "./" ^ output in
+        (output :: local_ppx_deps, module_name :: module_names, project_entry :: ppx_entries)
+        else
+          (local_ppx_deps, module_names, ppx_entries ) in
+        (entries, entries_that_have_ppxes, local_ppx_deps, module_names, ppx_entries)
+      in
+      match project_entry with
+      | JsTarget { ppx; kind; main_module_name; output_name } -> 
+        dry Js ppx kind main_module_name output_name
+        
+      | NativeTarget { ppx; kind; main_module_name; output_name } -> 
+        dry Native ppx kind main_module_name output_name
+        
+      | BytecodeTarget { ppx; kind; main_module_name; output_name } -> 
+        dry Bytecode ppx kind main_module_name output_name
+    
+  ) ([], [], [], [], []) entries
 
 let handle_file_groups
     oc ~package_specs 
@@ -313,18 +398,74 @@ let handle_file_groups
     ~files_to_install 
     ~custom_rules
     ~backend
+    ~entries
     (file_groups  :  Bsb_parse_sources.file_group list)
     namespace (st : info) : info  =
   let file_groups = List.filter (fun (group : Bsb_parse_sources.file_group) ->
     match backend with 
-    | Bsb_config_types.Js       -> List.mem Bsb_parse_sources.Js group.Bsb_parse_sources.backend
+    | Bsb_config_types.Js       -> 
+      not group.is_ppx && List.mem Bsb_parse_sources.Js group.Bsb_parse_sources.backend
     | Bsb_config_types.Native   -> List.mem Bsb_parse_sources.Native group.Bsb_parse_sources.backend
     | Bsb_config_types.Bytecode -> List.mem Bsb_parse_sources.Bytecode group.Bsb_parse_sources.backend
   ) file_groups in 
+  let (entries, entries_that_have_ppxes, local_ppx_deps, local_ppx_module_names, _) = get_local_ppx_deps backend entries in
+  let (local_ppx_deps, local_ppx_module_names) = begin
+    let rec loop_over_ppx (new_local_ppx_deps, new_local_ppx_module_names) local_ppx_deps local_ppx_module_names = 
+      begin match (local_ppx_deps, local_ppx_module_names) with 
+      | ([], []) -> (new_local_ppx_deps, new_local_ppx_module_names)
+      | (ppx_dep :: ppx_dep_rest, ppx_name :: ppx_name_rest) ->
+        let rec is_ppx_used entries = begin match entries with 
+          | [] -> false
+          | Bsb_config_types.JsTarget { ppx; } :: rest
+          | Bsb_config_types.NativeTarget { ppx; } :: rest
+          | Bsb_config_types.BytecodeTarget { ppx; } :: rest ->
+            if List.mem ppx_name ppx then true
+            else is_ppx_used rest 
+        end in
+        if is_ppx_used entries then 
+          loop_over_ppx (ppx_dep :: new_local_ppx_deps, ppx_name :: new_local_ppx_module_names) ppx_dep_rest ppx_name_rest
+        else 
+          loop_over_ppx (new_local_ppx_deps, new_local_ppx_module_names) ppx_dep_rest ppx_name_rest
+      | _ -> assert false
+    end in
+    loop_over_ppx ([], []) local_ppx_deps local_ppx_module_names
+  end in
   List.fold_left 
-    (handle_file_group 
-       oc  ~bs_suffix ~package_specs ~custom_rules ~js_post_build_cmd
-       files_to_install 
-       namespace
+    (fun comp_info (group : Bsb_parse_sources.file_group) -> 
+      if group.is_ppx then
+        comp_info
+      else begin
+        let local_ppx_flags = (String_map.fold (fun  module_name _  acc ->
+          if acc = [] then begin
+            List.fold_left Bsb_config_types.(fun acc e -> 
+              match e with 
+              | JsTarget { main_module_name; ppx = _ :: _ as ppx } when main_module_name = module_name -> ppx
+              | NativeTarget { main_module_name; ppx = _ :: _  } when main_module_name = module_name -> assert false
+              | BytecodeTarget { main_module_name; ppx = _ :: _  } when main_module_name = module_name -> assert false
+              | _ -> acc
+            ) acc entries_that_have_ppxes
+          end else 
+            acc
+        ) group.sources []) in
+        (*  map over the flags to find ppxes's full paths if they exist.  *)
+        let (local_ppx_flags, local_ppx_deps) = List.fold_left (fun (new_local_ppx_flags, new_local_ppx_deps) flag_exec -> 
+          (* @Hack You could potentially have a bug here where the exec_path name is the same as a module name
+            inside main-module but eeeeh that'd be weird! *)
+          let rec loop = fun local_ppx_deps local_ppx_module_names -> 
+            match (local_ppx_deps, local_ppx_module_names) with
+            | (exec_path :: local_ppx_deps, ppx_name :: local_ppx_module_names) -> 
+              if flag_exec = ppx_name then (exec_path :: new_local_ppx_flags, exec_path :: new_local_ppx_deps)
+              else loop local_ppx_deps local_ppx_module_names
+            | _ -> (flag_exec :: new_local_ppx_flags, new_local_ppx_deps)
+          in
+          loop local_ppx_deps local_ppx_module_names
+        ) ([], []) local_ppx_flags in
+        handle_file_group 
+         oc  ~bs_suffix ~package_specs ~custom_rules ~js_post_build_cmd ~local_ppx_flags ~local_ppx_deps
+         files_to_install 
+         namespace
+         comp_info
+        group
+      end
     ) 
     st  file_groups

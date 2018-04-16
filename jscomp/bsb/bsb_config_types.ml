@@ -30,12 +30,13 @@ type dependency =
   }
 type dependencies = dependency list 
 
-type kind_t = Library | Binary | Both
+type kind_t = Library | Ppx
 
 type entries_record_t = {
     main_module_name: string;
     output_name: string option;
     kind: kind_t;
+    ppx: string list
 }
 
 type entries_t = 

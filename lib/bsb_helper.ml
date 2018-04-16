@@ -3533,8 +3533,7 @@ val bytecode : string
 val js : string
 
 val library : string
-val binary : string
-val both : string
+val ppx : string
 
 val node_sep : string 
 val node_parent : string 
@@ -3667,8 +3666,7 @@ let native = "native"
 let bytecode = "bytecode"
 let js = "js"
 let library = "library"
-let binary = "binary"
-let both = "both"
+let ppx = "ppx"
 
 
 (** Used when produce node compatible paths *)
@@ -5072,6 +5070,8 @@ let ocamlfind_dependencies = "ocamlfind-dependencies"
 let ocaml_flags = "ocaml-flags"
 let ocaml_dependencies = "ocaml-dependencies"
 let output_name = "output-name"
+let ppx = "ppx"
+let ocaml_lib_includes = "ocaml_lib_includes"
 
 end
 module Bsb_config : sig 
@@ -7296,6 +7296,7 @@ let get_build_artifacts_location cwd =
       let project_name = Filename.basename cwd in
       dir // Bsb_config.lib_lit // Bsb_config.node_modules // project_name
   end
+
 
 end
 module Set_gen

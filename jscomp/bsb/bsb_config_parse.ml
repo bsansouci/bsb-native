@@ -67,24 +67,33 @@ let parse_entries name (field : Ext_json_types.t array) =
         let main = ref None in
         let output_name = ref None in
         let kind = ref Bsb_config_types.Library in
+        let ppx = match String_map.find_opt Bsb_build_schemas.ppx map with 
+          | Some (Arr {loc_start; content = s }) -> Bsb_build_util.get_list_string s
+          | Some (Str {str} )                    -> [ str ]
+          | None                                 -> []
+          | _ -> Bsb_exception.config_error entry "Field 'ppx' not recognized. Should be a string or an array of strings." 
+        in
         let _ = map
                 |? (Bsb_build_schemas.backend, `Str (fun x -> backend := x))
                 |? (Bsb_build_schemas.main_module, `Str (fun x -> main := Some x))
                 |? (Bsb_build_schemas.output_name, `Str (fun x -> output_name := Some x))
-                |? (Bsb_build_schemas.kind, `Str (fun x -> 
-                  (* Only accept binary for now, until I can figure out how we can let the user link in specific entries from their project. 
+                  (* Only accept ppx for now, until I can figure out how we can let the user link in specific entries from their project. 
                      If a project has 2 bytecode entries which are libraries, right now they'll conflict because we create the same lib.cma for both.
                      And the user has no way to specify sub-dependencies.
                   *)
-                  if x = Literals.binary then
-                    kind := Bsb_config_types.Binary
-                  else if (x = Literals.native 
+                |? (Bsb_build_schemas.type_, `Str (fun x -> 
+                if x = Literals.ppx then
+                    kind := Bsb_config_types.Ppx
+                else 
+                  Bsb_exception.config_error entry "Field 'kind' not recognized. Should be empty or 'ppx'" ))
+                |? (Bsb_build_schemas.kind, `Str (fun x -> 
+                  if (x = Literals.native 
                        || x = Literals.bytecode 
                        || x = Literals.js) then begin
                     Bsb_log.warn "@{<warn>Warning@} package %s: 'kind' field in 'entries' is deprecated and will be removed in the next release. Please use 'backend'.@." name;
                     backend := x;
                   end else 
-                    Bsb_exception.config_error entry "Field 'kind' not recognized. Should be empty or 'binary'" 
+                    Bsb_exception.config_error entry "Field 'kind' not recognized. Please use 'backend'." 
                   ))
         in
           
@@ -96,12 +105,15 @@ let parse_entries name (field : Ext_json_types.t array) =
           | Some main_module_name -> main_module_name
         end in
         if !backend = Literals.native then
-          Some (Bsb_config_types.NativeTarget {kind = !kind; main_module_name; output_name=(!output_name)})
+          Some (Bsb_config_types.NativeTarget {kind = !kind; main_module_name; output_name=(!output_name); ppx})
         else if !backend = Literals.bytecode then
-          Some (Bsb_config_types.BytecodeTarget {kind = !kind; main_module_name; output_name=(!output_name)})
-        else if !backend = Literals.js then
-          Some (Bsb_config_types.JsTarget {kind = !kind; main_module_name; output_name=None})
-        else
+          Some (Bsb_config_types.BytecodeTarget {kind = !kind; main_module_name; output_name=(!output_name); ppx})
+        else if !backend = Literals.js then begin
+          if !kind = Ppx then
+            Bsb_exception.config_error entry "Ppx can't be compiled to JS for now. Please set the backend to be `bytecode` or `native`.";
+          
+          Some (Bsb_config_types.JsTarget {kind = !kind; main_module_name; output_name=None; ppx})
+        end else
           Bsb_exception.config_error entry "Missing field 'backend'. That field is required and its value be 'js', 'native' or 'bytecode'"
       | entry -> Bsb_exception.config_error entry "Unrecognized object inside array 'entries' field.") 
     field
@@ -349,6 +361,7 @@ let interpret_json
              cut_generators = !cut_generators;
              traverse = false;
              backend = [Bsb_parse_sources.Js; Bsb_parse_sources.Native; Bsb_parse_sources.Bytecode];
+             is_ppx = false;
              namespace; 
             }  x in 
         if generate_watch_metadata then

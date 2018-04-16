@@ -30,7 +30,6 @@ val handle_file_groups : out_channel ->
   custom_rules:Bsb_rule.t String_map.t -> 
   is_top_level:bool ->
   build_library:string option ->
-  entries:Bsb_config_types.entries_t list ->
   compile_target:compile_target_t ->
   backend:Bsb_config_types.compilation_kind_t ->
   external_static_libraries:string list ->
@@ -38,6 +37,7 @@ val handle_file_groups : out_channel ->
   external_deps_for_linking:string list ->
   ocaml_dir:string ->
   config:Bsb_config_types.t ->
+  ?build_just_ppx: bool ->
   Bsb_parse_sources.file_group list ->
   string option ->
   Bsb_ninja_file_groups.info -> 

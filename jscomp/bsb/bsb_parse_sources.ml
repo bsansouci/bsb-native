@@ -52,6 +52,7 @@ type  file_group =
     dir_index : Bsb_dir_index.t  ;
     generators : build_generator list ; 
     backend: compilation_kind_t list;
+    is_ppx: bool;
     (* output of [generators] should be added to [sources],
        if it is [.ml,.mli,.re,.rei]
     *)
@@ -89,6 +90,7 @@ type cxt = {
   traverse : bool;
   namespace : string option;
   backend: compilation_kind_t list;
+  is_ppx: bool;
 }
 
 let collect_pub_modules 
@@ -382,6 +384,7 @@ let rec
      dir_index = cxt.dir_index ;
      generators ; 
      backend = !backend;
+     is_ppx = cxt.is_ppx;
     } in 
   let children, children_update_queue, children_globbed_dirs =     
     match sub_dirs_field, 
@@ -467,11 +470,12 @@ and parsing_single_source package_name ({not_dev; dir_index ; cwd} as cxt ) (x :
          cwd = Ext_path.concat cwd (Ext_filename.simple_convert_node_path_to_os_path dir)}
         String_map.empty  
   | Obj {map} ->
-    let current_dir_index = 
+    let (current_dir_index, is_ppx) = 
       match String_map.find_opt Bsb_build_schemas.type_ map with 
-      | Some (Str {str="dev"}) -> Bsb_dir_index.get_dev_index ()
-      | Some _ -> Bsb_exception.config_error x {|type field expect "dev" literal |}
-      | None -> dir_index in 
+      | Some (Str {str="dev"}) -> (Bsb_dir_index.get_dev_index (), false)
+      | Some (Str {str="ppx"}) -> (dir_index, true)
+      | Some _ -> Bsb_exception.config_error x {|type field expect "dev" or "ppx" literal |}
+      | None -> (dir_index, false) in 
     if not_dev && not (Bsb_dir_index.is_lib_dir current_dir_index) then empty 
     else 
       let dir = 
@@ -488,7 +492,8 @@ and parsing_single_source package_name ({not_dev; dir_index ; cwd} as cxt ) (x :
       parsing_source_dir_map 
         package_name
         {cxt with dir_index = current_dir_index; 
-                  cwd= Ext_path.concat cwd dir} map
+                  cwd= Ext_path.concat cwd dir;
+                  is_ppx=is_ppx } map
   | _ -> empty 
 and  parsing_arr_sources package_name cxt (file_groups : Ext_json_types.t array)  = 
   Array.fold_left (fun  origin x ->

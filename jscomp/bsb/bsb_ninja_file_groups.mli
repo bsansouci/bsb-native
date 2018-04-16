@@ -28,6 +28,10 @@ type info =  string list
 
 val zero : info
 
+val get_local_ppx_deps : 
+  Bsb_config_types.compilation_kind_t -> 
+  Bsb_config_types.entries_t list -> 
+  (Bsb_config_types.entries_t list * Bsb_config_types.entries_t list * string list * string list * Bsb_config_types.entries_t list)
 
 val handle_file_groups :
   out_channel ->
@@ -37,6 +41,7 @@ val handle_file_groups :
   files_to_install:String_hash_set.t ->  
   custom_rules:Bsb_rule.t String_map.t ->
   backend:Bsb_config_types.compilation_kind_t -> 
+  entries:Bsb_config_types.entries_t list ->
   Bsb_parse_sources.file_group list ->
   string option ->
   info -> info

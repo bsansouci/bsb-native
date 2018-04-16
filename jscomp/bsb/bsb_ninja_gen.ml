@@ -91,8 +91,7 @@ let output_ninja_and_namespace_map
       ocaml_dependencies;
     } as config : Bsb_config_types.t)
   =
-  let custom_rules = Bsb_rule.reset generators in 
-  let entries = List.filter (fun e -> match e with 
+  let has_any_entry = List.exists (fun e -> match e with 
     | Bsb_config_types.JsTarget _       -> backend = Bsb_config_types.Js
     | Bsb_config_types.NativeTarget _   -> backend = Bsb_config_types.Native
     | Bsb_config_types.BytecodeTarget _ -> backend = Bsb_config_types.Bytecode
@@ -102,8 +101,10 @@ let output_ninja_and_namespace_map
     | Bsb_config_types.Native   -> "native"
     | Bsb_config_types.Bytecode -> "bytecode"
   end in
-  if entries = [] && is_top_level then
+  if not has_any_entry && is_top_level then
     Bsb_exception.missing_entry nested;
+  
+  let custom_rules = Bsb_rule.reset generators in 
   
   let use_ocamlfind = ocamlfind_dependencies <> [] || external_ocamlfind_dependencies <> [] in
   
@@ -117,13 +118,14 @@ let output_ninja_and_namespace_map
 
 
   let ocaml_lib = Bsb_build_util.get_ocaml_lib_dir ~is_js:(backend = Bsb_config_types.Js) root_project_dir in
+  let native_ocaml_lib = Bsb_build_util.get_ocaml_lib_dir ~is_js:false root_project_dir in
 
   let ocaml_flags = (List.fold_left (fun acc v ->
     match v with
     | "compiler-libs" ->
       (if use_ocamlfind then
         "-package +compiler-libs.common " else
-        "-I " ^ (ocaml_lib // "compiler-libs")) ^ acc
+        "-I " ^ (native_ocaml_lib // "compiler-libs")) ^ acc
     | "threads" -> "-thread " ^ acc
     | _ -> acc
   ) ocaml_flags ocaml_dependencies) in
@@ -268,15 +270,18 @@ let output_ninja_and_namespace_map
         acc 
 
   in 
-  let emit_bsc_lib_includes source_dirs = 
+  let emit_lib_includes source_dirs = 
     let common_include_flags =
       (all_includes (if namespace = None then source_dirs
       else Filename.current_dir_name :: source_dirs)) in
-    let post_ocamlfind_include_flags =
-      (if use_ocamlfind then common_include_flags else
-      (ocaml_lib :: common_include_flags)) in
     Bsb_ninja_util.output_kv
       Bsb_build_schemas.bsc_lib_includes
+       (Bsb_build_util.flag_concat dash_i @@ (ocaml_lib :: common_include_flags)) oc;
+    let post_ocamlfind_include_flags =
+      (if use_ocamlfind then common_include_flags else
+      (native_ocaml_lib :: common_include_flags)) in
+    Bsb_ninja_util.output_kv
+      Bsb_build_schemas.ocaml_lib_includes
        (Bsb_build_util.flag_concat dash_i @@ post_ocamlfind_include_flags) oc
   in
   let  bs_groups, bsc_lib_dirs, static_resources =
@@ -285,10 +290,10 @@ let output_ninja_and_namespace_map
       let bs_group, source_dirs,static_resources  =
         List.fold_left 
           (fun (acc, dirs,acc_resources) 
-            ({Bsb_parse_sources.sources ; dir; resources } as x : Bsb_parse_sources.file_group) ->
+            ({Bsb_parse_sources.sources ; dir; resources; is_ppx } as x : Bsb_parse_sources.file_group) ->
             merge_module_info_map  acc  sources ,  
             (if Bsb_parse_sources.is_empty x then dirs else  dir::dirs) , 
-            ( if resources = [] then acc_resources
+            ( if resources = [] || is_ppx then acc_resources
               else Ext_list.map_append (fun x -> dir // x ) resources  acc_resources)
           ) (String_map.empty,[],[]) bs_file_groups in
       has_reason_files := Bsb_db.sanity_check bs_group || !has_reason_files;     
@@ -297,11 +302,14 @@ let output_ninja_and_namespace_map
       let bs_groups = Array.init  (number_of_dev_groups + 1 ) (fun i -> String_map.empty) in
       let source_dirs = Array.init (number_of_dev_groups + 1 ) (fun i -> []) in
       let static_resources =
-        List.fold_left (fun acc_resources  ({Bsb_parse_sources.sources; dir; resources; dir_index})  ->
-            let dir_index = (dir_index :> int) in 
-            bs_groups.(dir_index) <- merge_module_info_map bs_groups.(dir_index) sources ;
-            source_dirs.(dir_index) <- dir :: source_dirs.(dir_index);
-            Ext_list.map_append (fun x -> dir//x) resources  resources
+        List.fold_left (fun acc_resources  ({Bsb_parse_sources.sources; dir; resources; dir_index; is_ppx})  ->
+            if not is_ppx then begin 
+              let dir_index = (dir_index :> int) in 
+              bs_groups.(dir_index) <- merge_module_info_map bs_groups.(dir_index) sources ;
+              source_dirs.(dir_index) <- dir :: source_dirs.(dir_index);
+              Ext_list.map_append (fun x -> dir//x) resources  acc_resources
+            end else 
+              acc_resources
           ) [] bs_file_groups in
       let lib = bs_groups.((Bsb_dir_index.lib_dir_index :> int)) in               
       has_reason_files := Bsb_db.sanity_check lib || !has_reason_files;
@@ -318,7 +326,7 @@ let output_ninja_and_namespace_map
   
   output_reason_config ();
   Bsb_db.write_build_cache ~dir:cwd_lib_bs bs_groups ;
-  emit_bsc_lib_includes bsc_lib_dirs;
+  emit_lib_includes bsc_lib_dirs;
   List.iter 
   (fun output -> 
      Bsb_ninja_util.output_build
@@ -330,6 +338,22 @@ let output_ninja_and_namespace_map
   match backend with
   | Bsb_config_types.Js -> 
     if List.mem Bsb_config_types.Js allowed_build_kinds then
+      let maybe_ppx_comp_info = Bsb_ninja_native.handle_file_groups oc
+        ~custom_rules
+        ~is_top_level
+        ~build_library
+        (* This will be ignored. *)
+        ~compile_target:Bsb_ninja_native.Bytecode
+        ~backend
+        ~external_static_libraries
+        ~external_c_linker_flags
+        ~external_deps_for_linking
+        ~ocaml_dir
+        ~config
+        ~build_just_ppx:true
+        bs_file_groups
+        namespace
+        Bsb_ninja_file_groups.zero in
       (Bsb_ninja_file_groups.handle_file_groups oc
         ~bs_suffix
         ~custom_rules
@@ -337,9 +361,10 @@ let output_ninja_and_namespace_map
         ~js_post_build_cmd
         ~files_to_install
         ~backend
+        ~entries
         bs_file_groups 
         namespace
-        Bsb_ninja_file_groups.zero, 
+        maybe_ppx_comp_info, 
       true)
     else (Bsb_ninja_file_groups.zero, false)
   | Bsb_config_types.Bytecode ->
@@ -348,7 +373,6 @@ let output_ninja_and_namespace_map
         ~custom_rules
         ~is_top_level
         ~build_library
-        ~entries
         ~compile_target:Bsb_ninja_native.Bytecode
         ~backend
         ~external_static_libraries
@@ -367,7 +391,6 @@ let output_ninja_and_namespace_map
         ~custom_rules
         ~is_top_level
         ~build_library
-        ~entries
         ~compile_target:Bsb_ninja_native.Native
         ~backend
         ~external_static_libraries

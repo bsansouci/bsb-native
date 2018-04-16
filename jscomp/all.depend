@@ -917,12 +917,13 @@ bsb/bsb_namespace_map_gen.cmx : ext/string_map.cmx ext/literals.cmx \
 bsb/bsb_ninja_check.cmx : ext/ext_array.cmx bsb/bsb_log.cmx \
     bsb/bsb_config_types.cmx common/bs_version.cmx bsb/bsb_ninja_check.cmi
 bsb/bsb_ninja_file_groups.cmx : ext/string_set.cmx ext/string_map.cmx \
-    ext/string_hash_set.cmx ext/literals.cmx ext/ext_string.cmx \
-    ext/ext_pervasives.cmx ext/ext_path.cmx ext/ext_namespace.cmx \
-    ext/ext_list.cmx bsb/bsb_rule.cmx bsb/bsb_parse_sources.cmx \
-    bsb/bsb_package_specs.cmx bsb/bsb_ninja_util.cmx \
-    bsb/bsb_ninja_global_vars.cmx bsb/bsb_dir_index.cmx bsb/bsb_db.cmx \
-    bsb/bsb_config_types.cmx bsb/bsb_config.cmx bsb/bsb_build_schemas.cmx \
+    ext/string_hash_set.cmx ext/literals.cmx ext/ext_sys.cmx \
+    ext/ext_string.cmx ext/ext_pervasives.cmx ext/ext_path.cmx \
+    ext/ext_namespace.cmx ext/ext_list.cmx bsb/bsb_rule.cmx \
+    bsb/bsb_parse_sources.cmx bsb/bsb_package_specs.cmx \
+    bsb/bsb_ninja_util.cmx bsb/bsb_ninja_global_vars.cmx \
+    bsb/bsb_dir_index.cmx bsb/bsb_db.cmx bsb/bsb_config_types.cmx \
+    bsb/bsb_config.cmx bsb/bsb_build_schemas.cmx \
     bsb/bsb_ninja_file_groups.cmi
 bsb/bsb_ninja_gen.cmx : ext/string_map.cmx ext/literals.cmx ext/ext_sys.cmx \
     ext/ext_string.cmx ext/ext_path.cmx ext/ext_list.cmx ext/ext_bytes.cmx \
@@ -1016,9 +1017,9 @@ bsb/bsb_ninja_file_groups.cmi : ext/string_map.cmi ext/string_hash_set.cmi \
     bsb/bsb_rule.cmi bsb/bsb_parse_sources.cmi bsb/bsb_package_specs.cmi \
     bsb/bsb_config_types.cmx
 bsb/bsb_ninja_gen.cmi : bsb/bsb_config_types.cmx
-bsb/bsb_ninja_native.cmi : ext/string_map.cmi ext/string_hash_set.cmi \
-    bsb/bsb_rule.cmi bsb/bsb_parse_sources.cmi bsb/bsb_package_specs.cmi \
-    bsb/bsb_ninja_file_groups.cmi bsb/bsb_config_types.cmx
+bsb/bsb_ninja_native.cmi : ext/string_map.cmi bsb/bsb_rule.cmi \
+    bsb/bsb_parse_sources.cmi bsb/bsb_ninja_file_groups.cmi \
+    bsb/bsb_config_types.cmx
 bsb/bsb_ninja_regen.cmi : bsb/bsb_package_specs.cmi bsb/bsb_config_types.cmx
 bsb/bsb_ninja_util.cmi : bsb/bsb_rule.cmi
 bsb/bsb_package_specs.cmi : ext/ext_json_types.cmx

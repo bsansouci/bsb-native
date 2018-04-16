@@ -46,6 +46,7 @@ type  file_group =
     dir_index : Bsb_dir_index.t; 
     generators : build_generator list;
     backend: compilation_kind_t list;
+    is_ppx: bool;
   } 
 
 (** when [is_empty file_group]
@@ -74,6 +75,7 @@ type cxt = {
   traverse : bool;
   namespace : string option;
   backend: compilation_kind_t list;
+  is_ppx: bool;
 }
 
 

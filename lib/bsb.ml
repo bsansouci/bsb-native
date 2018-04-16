@@ -158,6 +158,8 @@ let ocamlfind_dependencies = "ocamlfind-dependencies"
 let ocaml_flags = "ocaml-flags"
 let ocaml_dependencies = "ocaml-dependencies"
 let output_name = "output-name"
+let ppx = "ppx"
+let ocaml_lib_includes = "ocaml_lib_includes"
 
 end
 module Ext_bytes : sig 
@@ -2059,8 +2061,7 @@ val bytecode : string
 val js : string
 
 val library : string
-val binary : string
-val both : string
+val ppx : string
 
 val node_sep : string 
 val node_parent : string 
@@ -2193,8 +2194,7 @@ let native = "native"
 let bytecode = "bytecode"
 let js = "js"
 let library = "library"
-let binary = "binary"
-let both = "both"
+let ppx = "ppx"
 
 
 (** Used when produce node compatible paths *)
@@ -6283,6 +6283,7 @@ let get_build_artifacts_location cwd =
       dir // Bsb_config.lib_lit // Bsb_config.node_modules // project_name
   end
 
+
 end
 module Bsb_unix : sig 
 #1 "bsb_unix.mli"
@@ -9287,6 +9288,7 @@ type  file_group =
     dir_index : Bsb_dir_index.t; 
     generators : build_generator list;
     backend: compilation_kind_t list;
+    is_ppx: bool;
   } 
 
 (** when [is_empty file_group]
@@ -9315,6 +9317,7 @@ type cxt = {
   traverse : bool;
   namespace : string option;
   backend: compilation_kind_t list;
+  is_ppx: bool;
 }
 
 
@@ -9406,6 +9409,7 @@ type  file_group =
     dir_index : Bsb_dir_index.t  ;
     generators : build_generator list ; 
     backend: compilation_kind_t list;
+    is_ppx: bool;
     (* output of [generators] should be added to [sources],
        if it is [.ml,.mli,.re,.rei]
     *)
@@ -9443,6 +9447,7 @@ type cxt = {
   traverse : bool;
   namespace : string option;
   backend: compilation_kind_t list;
+  is_ppx: bool;
 }
 
 let collect_pub_modules 
@@ -9736,6 +9741,7 @@ let rec
      dir_index = cxt.dir_index ;
      generators ; 
      backend = !backend;
+     is_ppx = cxt.is_ppx;
     } in 
   let children, children_update_queue, children_globbed_dirs =     
     match sub_dirs_field, 
@@ -9821,11 +9827,12 @@ and parsing_single_source package_name ({not_dev; dir_index ; cwd} as cxt ) (x :
          cwd = Ext_path.concat cwd (Ext_filename.simple_convert_node_path_to_os_path dir)}
         String_map.empty  
   | Obj {map} ->
-    let current_dir_index = 
+    let (current_dir_index, is_ppx) = 
       match String_map.find_opt Bsb_build_schemas.type_ map with 
-      | Some (Str {str="dev"}) -> Bsb_dir_index.get_dev_index ()
-      | Some _ -> Bsb_exception.config_error x {|type field expect "dev" literal |}
-      | None -> dir_index in 
+      | Some (Str {str="dev"}) -> (Bsb_dir_index.get_dev_index (), false)
+      | Some (Str {str="ppx"}) -> (dir_index, true)
+      | Some _ -> Bsb_exception.config_error x {|type field expect "dev" or "ppx" literal |}
+      | None -> (dir_index, false) in 
     if not_dev && not (Bsb_dir_index.is_lib_dir current_dir_index) then empty 
     else 
       let dir = 
@@ -9842,7 +9849,8 @@ and parsing_single_source package_name ({not_dev; dir_index ; cwd} as cxt ) (x :
       parsing_source_dir_map 
         package_name
         {cxt with dir_index = current_dir_index; 
-                  cwd= Ext_path.concat cwd dir} map
+                  cwd= Ext_path.concat cwd dir;
+                  is_ppx=is_ppx } map
   | _ -> empty 
 and  parsing_arr_sources package_name cxt (file_groups : Ext_json_types.t array)  = 
   Array.fold_left (fun  origin x ->
@@ -10332,12 +10340,13 @@ type dependency =
   }
 type dependencies = dependency list 
 
-type kind_t = Library | Binary | Both
+type kind_t = Library | Ppx
 
 type entries_record_t = {
     main_module_name: string;
     output_name: string option;
     kind: kind_t;
+    ppx: string list
 }
 
 type entries_t = 
@@ -10510,7 +10519,7 @@ let refmt_flags = ["--print"; "binary"]
 let refmt_v3 = "refmt.exe"
 let refmt_none = "refmt.exe"
 
-let main_entries = [Bsb_config_types.JsTarget { kind = Library; main_module_name="Index"; output_name=None}]
+let main_entries = [Bsb_config_types.JsTarget { kind = Library; main_module_name="Index"; output_name=None; ppx = []}]
 
 let allowed_build_kinds = [Bsb_config_types.Js; Bsb_config_types.Bytecode; Bsb_config_types.Native]
 
@@ -10916,24 +10925,33 @@ let parse_entries name (field : Ext_json_types.t array) =
         let main = ref None in
         let output_name = ref None in
         let kind = ref Bsb_config_types.Library in
+        let ppx = match String_map.find_opt Bsb_build_schemas.ppx map with 
+          | Some (Arr {loc_start; content = s }) -> Bsb_build_util.get_list_string s
+          | Some (Str {str} )                    -> [ str ]
+          | None                                 -> []
+          | _ -> Bsb_exception.config_error entry "Field 'ppx' not recognized. Should be a string or an array of strings." 
+        in
         let _ = map
                 |? (Bsb_build_schemas.backend, `Str (fun x -> backend := x))
                 |? (Bsb_build_schemas.main_module, `Str (fun x -> main := Some x))
                 |? (Bsb_build_schemas.output_name, `Str (fun x -> output_name := Some x))
-                |? (Bsb_build_schemas.kind, `Str (fun x -> 
-                  (* Only accept binary for now, until I can figure out how we can let the user link in specific entries from their project. 
+                  (* Only accept ppx for now, until I can figure out how we can let the user link in specific entries from their project. 
                      If a project has 2 bytecode entries which are libraries, right now they'll conflict because we create the same lib.cma for both.
                      And the user has no way to specify sub-dependencies.
                   *)
-                  if x = Literals.binary then
-                    kind := Bsb_config_types.Binary
-                  else if (x = Literals.native 
+                |? (Bsb_build_schemas.type_, `Str (fun x -> 
+                if x = Literals.ppx then
+                    kind := Bsb_config_types.Ppx
+                else 
+                  Bsb_exception.config_error entry "Field 'kind' not recognized. Should be empty or 'ppx'" ))
+                |? (Bsb_build_schemas.kind, `Str (fun x -> 
+                  if (x = Literals.native 
                        || x = Literals.bytecode 
                        || x = Literals.js) then begin
                     Bsb_log.warn "@{<warn>Warning@} package %s: 'kind' field in 'entries' is deprecated and will be removed in the next release. Please use 'backend'.@." name;
                     backend := x;
                   end else 
-                    Bsb_exception.config_error entry "Field 'kind' not recognized. Should be empty or 'binary'" 
+                    Bsb_exception.config_error entry "Field 'kind' not recognized. Please use 'backend'." 
                   ))
         in
           
@@ -10945,12 +10963,15 @@ let parse_entries name (field : Ext_json_types.t array) =
           | Some main_module_name -> main_module_name
         end in
         if !backend = Literals.native then
-          Some (Bsb_config_types.NativeTarget {kind = !kind; main_module_name; output_name=(!output_name)})
+          Some (Bsb_config_types.NativeTarget {kind = !kind; main_module_name; output_name=(!output_name); ppx})
         else if !backend = Literals.bytecode then
-          Some (Bsb_config_types.BytecodeTarget {kind = !kind; main_module_name; output_name=(!output_name)})
-        else if !backend = Literals.js then
-          Some (Bsb_config_types.JsTarget {kind = !kind; main_module_name; output_name=None})
-        else
+          Some (Bsb_config_types.BytecodeTarget {kind = !kind; main_module_name; output_name=(!output_name); ppx})
+        else if !backend = Literals.js then begin
+          if !kind = Ppx then
+            Bsb_exception.config_error entry "Ppx can't be compiled to JS for now. Please set the backend to be `bytecode` or `native`.";
+          
+          Some (Bsb_config_types.JsTarget {kind = !kind; main_module_name; output_name=None; ppx})
+        end else
           Bsb_exception.config_error entry "Missing field 'backend'. That field is required and its value be 'js', 'native' or 'bytecode'"
       | entry -> Bsb_exception.config_error entry "Unrecognized object inside array 'entries' field.") 
     field
@@ -11198,6 +11219,7 @@ let interpret_json
              cut_generators = !cut_generators;
              traverse = false;
              backend = [Bsb_parse_sources.Js; Bsb_parse_sources.Native; Bsb_parse_sources.Bytecode];
+             is_ppx = false;
              namespace; 
             }  x in 
         if generate_watch_metadata then
@@ -12253,41 +12275,41 @@ let build_package_gen_mlast_simple =
     
 let build_package_build_cmi_bytecode = 
   define
-    ~command:"${ocamlfind}${ocamlc} ${bs_super_errors_ocamlfind} ${bs_package_includes} ${bsc_lib_includes} ${bsc_extra_includes} ${ocamlfind_dependencies} ${ocaml_flags} \
+    ~command:"${ocamlfind}${ocamlc} ${bs_super_errors_ocamlfind} ${bs_package_includes} ${ocaml_lib_includes} ${bsc_extra_includes} ${ocamlfind_dependencies} ${ocaml_flags} \
               -o ${out} ${warnings} -no-alias-deps -w -49 -g -c -intf-suffix .mliast_simple -impl ${in} ${postbuild}"
     "build_package_build_cmi_bytecode"
 
 let build_package_build_cmi_native = 
   define
-    ~command:"${ocamlfind}${ocamlopt} ${bs_super_errors_ocamlfind} ${bs_package_includes} ${bsc_lib_includes} ${bsc_extra_includes} ${ocamlfind_dependencies} ${ocaml_flags} \
+    ~command:"${ocamlfind}${ocamlopt} ${bs_super_errors_ocamlfind} ${bs_package_includes} ${ocaml_lib_includes} ${bsc_extra_includes} ${ocamlfind_dependencies} ${ocaml_flags} \
               -o ${out} ${warnings} -no-alias-deps -w -49 -g -c -intf-suffix .mliast_simple -impl ${in} ${postbuild}"
     "build_package_build_cmi_native"
 
 
 let build_cmo_cmi_bytecode =
   define
-    ~command:"${ocamlfind}${ocamlc} ${open_flag} ${bs_super_errors_ocamlfind} ${bs_package_includes} ${bsc_lib_includes} ${bsc_extra_includes} ${ocamlfind_dependencies} ${ocaml_flags} \
+    ~command:"${ocamlfind}${ocamlc} ${open_flag} ${bs_super_errors_ocamlfind} ${bs_package_includes} ${ocaml_lib_includes} ${bsc_extra_includes} ${ocamlfind_dependencies} ${ocaml_flags} \
               -o ${out} ${warnings} -g -c -intf-suffix .mliast_simple -impl ${in}_simple ${postbuild}"
     ~depfile:"${in}.d"
     "build_cmo_cmi_bytecode"
     
 let build_cmi_bytecode =
   define
-    ~command:"${ocamlfind}${ocamlc} ${open_flag} ${bs_super_errors_ocamlfind} ${bs_package_includes} ${bsc_lib_includes} ${bsc_extra_includes} ${ocamlfind_dependencies} ${ocaml_flags} \
+    ~command:"${ocamlfind}${ocamlc} ${open_flag} ${bs_super_errors_ocamlfind} ${bs_package_includes} ${ocaml_lib_includes} ${bsc_extra_includes} ${ocamlfind_dependencies} ${ocaml_flags} \
               -o ${out} ${warnings} -g -c -intf ${in}_simple ${postbuild}"
     ~depfile:"${in}.d"
     "build_cmi_bytecode"
 
 let build_cmx_cmi_native =
   define
-    ~command:"${ocamlfind}${ocamlopt} ${open_flag} ${bs_super_errors_ocamlfind} ${bs_package_includes} ${bsc_lib_includes} ${bsc_extra_includes} ${ocamlfind_dependencies} ${ocaml_flags} \
+    ~command:"${ocamlfind}${ocamlopt} ${open_flag} ${bs_super_errors_ocamlfind} ${bs_package_includes} ${ocaml_lib_includes} ${bsc_extra_includes} ${ocamlfind_dependencies} ${ocaml_flags} \
               -o ${out} ${warnings} -g -c -intf-suffix .mliast_simple -impl ${in}_simple ${postbuild}"
     ~depfile:"${in}.d"
     "build_cmx_cmi_native"
 
 let build_cmi_native =
   define
-    ~command:"${ocamlfind}${ocamlopt} ${open_flag} ${bs_super_errors_ocamlfind} ${bs_package_includes} ${bsc_lib_includes} ${bsc_extra_includes} ${ocamlfind_dependencies} ${ocaml_flags} \
+    ~command:"${ocamlfind}${ocamlopt} ${open_flag} ${bs_super_errors_ocamlfind} ${bs_package_includes} ${ocaml_lib_includes} ${bsc_extra_includes} ${ocamlfind_dependencies} ${ocaml_flags} \
               -o ${out} ${warnings} -g -c -intf ${in}_simple ${postbuild}"
     ~depfile:"${in}.d"
     "build_cmi_native"
@@ -12310,14 +12332,14 @@ let linking_native =
 let build_cma_library =
   define
     ~command:"${bsb_helper} ${bsb_helper_verbose} ${build_library} ${ocaml_dependencies} ${warnings} ${namespace} ${bs_super_errors} ${static_libraries} ${ocamlfind_dependencies} \
-              ${bs_package_includes} ${bsc_lib_includes} ${bsc_extra_includes} \
+              ${bs_package_includes} ${ocaml_lib_includes} ${bsc_extra_includes} \
               ${in} -pack-bytecode-library"
     "build_cma_library"
 
 let build_cmxa_library =
   define
     ~command:"${bsb_helper} ${bsb_helper_verbose} ${build_library} ${ocaml_dependencies} ${warnings} ${namespace} ${bs_super_errors} ${static_libraries} ${ocamlfind_dependencies} \
-              ${bs_package_includes} ${bsc_lib_includes} ${bsc_extra_includes} \
+              ${bs_package_includes} ${ocaml_lib_includes} ${bsc_extra_includes} \
               ${in} -pack-native-library"
     "build_cmxa_library"
 
@@ -12640,6 +12662,10 @@ type info =  string list
 
 val zero : info
 
+val get_local_ppx_deps : 
+  Bsb_config_types.compilation_kind_t -> 
+  Bsb_config_types.entries_t list -> 
+  (Bsb_config_types.entries_t list * Bsb_config_types.entries_t list * string list * string list * Bsb_config_types.entries_t list)
 
 val handle_file_groups :
   out_channel ->
@@ -12649,6 +12675,7 @@ val handle_file_groups :
   files_to_install:String_hash_set.t ->  
   custom_rules:Bsb_rule.t String_map.t ->
   backend:Bsb_config_types.compilation_kind_t -> 
+  entries:Bsb_config_types.entries_t list ->
   Bsb_parse_sources.file_group list ->
   string option ->
   info -> info
@@ -12761,6 +12788,8 @@ let emit_impl_build
     ~no_intf_file:(no_intf_file : bool) 
     js_post_build_cmd
     ~is_re
+    ~local_ppx_flags
+    ~local_ppx_deps
     namespace
     filename_sans_extension
   : info =    
@@ -12785,6 +12814,11 @@ let emit_impl_build
     make_common_shadows is_re package_specs
       (Filename.dirname file_cmi)
       group_dir_index in
+  let shadows = List.map (fun f -> 
+    Bsb_ninja_util.{
+     key = "ppx_flags"; 
+     op = AppendList ["-ppx"; f]
+   }) local_ppx_flags in
   begin
     Bsb_ninja_util.output_build oc
       ~output:output_mlast
@@ -12792,7 +12826,9 @@ let emit_impl_build
       ~rule:( if is_re then 
                 Bsb_rule.build_ast_and_module_sets_from_re
               else
-                Bsb_rule.build_ast_and_module_sets);
+                Bsb_rule.build_ast_and_module_sets)
+      ~implicit_deps:local_ppx_deps
+      ~shadows;
     Bsb_ninja_util.output_build
       oc
       ~output:output_mlastd
@@ -12832,6 +12868,8 @@ let emit_intf_build
     (group_dir_index : Bsb_dir_index.t)
     oc
     ~is_re
+    ~local_ppx_flags
+    ~local_ppx_deps
     namespace
     filename_sans_extension
   : info =
@@ -12849,6 +12887,11 @@ let emit_intf_build
     make_common_shadows is_re package_specs
       (Filename.dirname output_cmi)
       group_dir_index in
+  let shadows = List.map (fun f -> 
+    Bsb_ninja_util.{
+     key = "ppx_flags"; 
+     op = AppendList ["-ppx"; f]
+   }) local_ppx_flags in
   Bsb_ninja_util.output_build oc
     ~output:output_mliast
       (* TODO: we can get rid of absloute path if we fixed the location to be 
@@ -12858,7 +12901,9 @@ let emit_intf_build
               (if is_re then filename_sans_extension ^ Literals.suffix_rei 
                else filename_sans_extension ^ Literals.suffix_mli))
     ~rule:(if is_re then Bsb_rule.build_ast_and_module_sets_from_rei
-           else Bsb_rule.build_ast_and_module_sets);
+           else Bsb_rule.build_ast_and_module_sets)
+    ~implicit_deps:local_ppx_deps
+    ~shadows;
   Bsb_ninja_util.output_build oc
     ~output:output_mliastd
     ~input:output_mliast
@@ -12883,6 +12928,8 @@ let handle_module_info
     (package_specs : Bsb_package_specs.t) 
     js_post_build_cmd
     ~bs_suffix
+    ~local_ppx_flags
+    ~local_ppx_deps
     oc  module_name 
     ( module_info : Bsb_db.module_info)
     namespace
@@ -12897,6 +12944,8 @@ let handle_module_info
       ~bs_suffix
       ~no_intf_file:false
       ~is_re:impl_is_re
+      ~local_ppx_flags
+      ~local_ppx_deps
       js_post_build_cmd      
       namespace
       input_impl  @ 
@@ -12905,6 +12954,8 @@ let handle_module_info
       group_dir_index
       oc         
       ~is_re:intf_is_re
+      ~local_ppx_flags
+      ~local_ppx_deps
       namespace
       input_intf 
   | Ml_source(input,is_re,_), Mli_empty ->
@@ -12916,6 +12967,8 @@ let handle_module_info
       ~no_intf_file:true
       js_post_build_cmd      
       ~is_re
+      ~local_ppx_flags
+      ~local_ppx_deps
       namespace
       input 
   | Ml_empty, Mli_source(input,is_re,_) ->    
@@ -12924,6 +12977,8 @@ let handle_module_info
       group_dir_index
       oc         
       ~is_re
+      ~local_ppx_flags
+      ~local_ppx_deps
       namespace
       input 
   | Ml_empty, Mli_empty -> zero
@@ -12935,6 +12990,8 @@ let handle_file_group
     ~custom_rules 
     ~package_specs 
     ~js_post_build_cmd  
+    ~local_ppx_flags 
+    ~local_ppx_deps
     (files_to_install : String_hash_set.t) 
     (namespace  : string option)
     acc 
@@ -12953,6 +13010,8 @@ let handle_file_group
         String_hash_set.add files_to_install (Bsb_db.filename_sans_suffix_of_module_info module_info);
       (handle_module_info 
         ~bs_suffix
+        ~local_ppx_flags
+        ~local_ppx_deps
          group.dir_index 
          package_specs js_post_build_cmd 
          oc 
@@ -12962,6 +13021,59 @@ let handle_file_group
       ) @  acc
     ) group.sources  acc 
 
+(* Divide the entries into 3 groups:
+  - entries: all the non-ppx entries that we'd like to pack or link
+  - entries_that_have_ppxes: subset of `entries` which have dependencies on local ppxes
+  - ppx_entries: entries that are ppxes, a disjoint set from `entries`
+  
+  Also returns a list of ppx module names and ppx executable paths.
+ *)
+let get_local_ppx_deps backend entries =
+  List.fold_left Bsb_config_types.(fun (entries, entries_that_have_ppxes, local_ppx_deps, module_names, ppx_entries) project_entry ->
+    let dry entry_backend ppx kind main_module_name output_name =
+        let (entries, entries_that_have_ppxes) = if backend = entry_backend && kind <> Ppx then 
+          if ppx <> [] then
+            (project_entry :: entries, project_entry :: entries_that_have_ppxes)
+          else
+            (project_entry :: entries, entries_that_have_ppxes)
+        else 
+          (entries, entries_that_have_ppxes) in
+        let (local_ppx_deps, module_names, ppx_entries) = if kind = Ppx then 
+          let (output, module_name) =
+          begin match entry_backend with
+          | Js       -> assert false
+          | Bytecode -> 
+            (match output_name with 
+              | None -> 
+                let extension = if Ext_sys.is_windows_or_cygwin then ".exe" else "" in
+                (String.lowercase main_module_name) ^ ".byte" ^ extension
+              | Some name -> name
+            ), main_module_name
+          | Native   -> 
+            (match output_name with 
+              | None -> 
+                let extension = if Ext_sys.is_windows_or_cygwin then ".exe" else "" in
+                (String.lowercase main_module_name) ^ ".native" ^ extension
+              | Some name -> name
+            ), main_module_name
+          end in
+        let output = if Ext_sys.is_windows_or_cygwin then output else "./" ^ output in
+        (output :: local_ppx_deps, module_name :: module_names, project_entry :: ppx_entries)
+        else
+          (local_ppx_deps, module_names, ppx_entries ) in
+        (entries, entries_that_have_ppxes, local_ppx_deps, module_names, ppx_entries)
+      in
+      match project_entry with
+      | JsTarget { ppx; kind; main_module_name; output_name } -> 
+        dry Js ppx kind main_module_name output_name
+        
+      | NativeTarget { ppx; kind; main_module_name; output_name } -> 
+        dry Native ppx kind main_module_name output_name
+        
+      | BytecodeTarget { ppx; kind; main_module_name; output_name } -> 
+        dry Bytecode ppx kind main_module_name output_name
+    
+  ) ([], [], [], [], []) entries
 
 let handle_file_groups
     oc ~package_specs 
@@ -12970,19 +13082,75 @@ let handle_file_groups
     ~files_to_install 
     ~custom_rules
     ~backend
+    ~entries
     (file_groups  :  Bsb_parse_sources.file_group list)
     namespace (st : info) : info  =
   let file_groups = List.filter (fun (group : Bsb_parse_sources.file_group) ->
     match backend with 
-    | Bsb_config_types.Js       -> List.mem Bsb_parse_sources.Js group.Bsb_parse_sources.backend
+    | Bsb_config_types.Js       -> 
+      not group.is_ppx && List.mem Bsb_parse_sources.Js group.Bsb_parse_sources.backend
     | Bsb_config_types.Native   -> List.mem Bsb_parse_sources.Native group.Bsb_parse_sources.backend
     | Bsb_config_types.Bytecode -> List.mem Bsb_parse_sources.Bytecode group.Bsb_parse_sources.backend
   ) file_groups in 
+  let (entries, entries_that_have_ppxes, local_ppx_deps, local_ppx_module_names, _) = get_local_ppx_deps backend entries in
+  let (local_ppx_deps, local_ppx_module_names) = begin
+    let rec loop_over_ppx (new_local_ppx_deps, new_local_ppx_module_names) local_ppx_deps local_ppx_module_names = 
+      begin match (local_ppx_deps, local_ppx_module_names) with 
+      | ([], []) -> (new_local_ppx_deps, new_local_ppx_module_names)
+      | (ppx_dep :: ppx_dep_rest, ppx_name :: ppx_name_rest) ->
+        let rec is_ppx_used entries = begin match entries with 
+          | [] -> false
+          | Bsb_config_types.JsTarget { ppx; } :: rest
+          | Bsb_config_types.NativeTarget { ppx; } :: rest
+          | Bsb_config_types.BytecodeTarget { ppx; } :: rest ->
+            if List.mem ppx_name ppx then true
+            else is_ppx_used rest 
+        end in
+        if is_ppx_used entries then 
+          loop_over_ppx (ppx_dep :: new_local_ppx_deps, ppx_name :: new_local_ppx_module_names) ppx_dep_rest ppx_name_rest
+        else 
+          loop_over_ppx (new_local_ppx_deps, new_local_ppx_module_names) ppx_dep_rest ppx_name_rest
+      | _ -> assert false
+    end in
+    loop_over_ppx ([], []) local_ppx_deps local_ppx_module_names
+  end in
   List.fold_left 
-    (handle_file_group 
-       oc  ~bs_suffix ~package_specs ~custom_rules ~js_post_build_cmd
-       files_to_install 
-       namespace
+    (fun comp_info (group : Bsb_parse_sources.file_group) -> 
+      if group.is_ppx then
+        comp_info
+      else begin
+        let local_ppx_flags = (String_map.fold (fun  module_name _  acc ->
+          if acc = [] then begin
+            List.fold_left Bsb_config_types.(fun acc e -> 
+              match e with 
+              | JsTarget { main_module_name; ppx = _ :: _ as ppx } when main_module_name = module_name -> ppx
+              | NativeTarget { main_module_name; ppx = _ :: _  } when main_module_name = module_name -> assert false
+              | BytecodeTarget { main_module_name; ppx = _ :: _  } when main_module_name = module_name -> assert false
+              | _ -> acc
+            ) acc entries_that_have_ppxes
+          end else 
+            acc
+        ) group.sources []) in
+        (*  map over the flags to find ppxes's full paths if they exist.  *)
+        let (local_ppx_flags, local_ppx_deps) = List.fold_left (fun (new_local_ppx_flags, new_local_ppx_deps) flag_exec -> 
+          (* @Hack You could potentially have a bug here where the exec_path name is the same as a module name
+            inside main-module but eeeeh that'd be weird! *)
+          let rec loop = fun local_ppx_deps local_ppx_module_names -> 
+            match (local_ppx_deps, local_ppx_module_names) with
+            | (exec_path :: local_ppx_deps, ppx_name :: local_ppx_module_names) -> 
+              if flag_exec = ppx_name then (exec_path :: new_local_ppx_flags, exec_path :: new_local_ppx_deps)
+              else loop local_ppx_deps local_ppx_module_names
+            | _ -> (flag_exec :: new_local_ppx_flags, new_local_ppx_deps)
+          in
+          loop local_ppx_deps local_ppx_module_names
+        ) ([], []) local_ppx_flags in
+        handle_file_group 
+         oc  ~bs_suffix ~package_specs ~custom_rules ~js_post_build_cmd ~local_ppx_flags ~local_ppx_deps
+         files_to_install 
+         namespace
+         comp_info
+        group
+      end
     ) 
     st  file_groups
 
@@ -13021,7 +13189,6 @@ val handle_file_groups : out_channel ->
   custom_rules:Bsb_rule.t String_map.t -> 
   is_top_level:bool ->
   build_library:string option ->
-  entries:Bsb_config_types.entries_t list ->
   compile_target:compile_target_t ->
   backend:Bsb_config_types.compilation_kind_t ->
   external_static_libraries:string list ->
@@ -13029,6 +13196,7 @@ val handle_file_groups : out_channel ->
   external_deps_for_linking:string list ->
   ocaml_dir:string ->
   config:Bsb_config_types.t ->
+  ?build_just_ppx: bool ->
   Bsb_parse_sources.file_group list ->
   string option ->
   Bsb_ninja_file_groups.info -> 
@@ -13134,9 +13302,11 @@ let emit_impl_build
   (package_specs : Bsb_package_specs.t)
   (group_dir_index : Bsb_dir_index.t) 
   oc 
+  ~local_ppx_deps
   ~bs_suffix
   ~no_intf_file:(no_intf_file : bool) 
   ~compile_target
+  ~local_ppx_flags
   js_post_build_cmd
   ~is_re
   namespace
@@ -13163,17 +13333,20 @@ let emit_impl_build
   in
   let output_js =
     Bsb_package_specs.get_list_of_output_js package_specs bs_suffix output_filename_sans_extension in 
-  let common_shadows = 
-    make_common_shadows is_re package_specs
-      (Filename.dirname output_cmi)
-      group_dir_index in
+  let shadows = List.map (fun f -> 
+    Bsb_ninja_util.{
+     key = "ppx_flags"; 
+     op = AppendList ["-ppx"; f]
+   }) local_ppx_flags in
   output_build oc
     ~output:output_mlast
     ~input
     ~rule:(if is_re then
             Rules.build_ast_and_module_sets_from_re_gen_simple
           else
-            Rules.build_ast_and_module_sets_gen_simple);
+            Rules.build_ast_and_module_sets_gen_simple)
+    ~implicit_deps:local_ppx_deps
+    ~shadows;
   let bin_deps_rule = begin match compile_target with
   | Bytecode -> Rules.build_bin_deps_bytecode
   | Native   -> Rules.build_bin_deps_native
@@ -13187,15 +13360,19 @@ let emit_impl_build
               else Some [{key = Bsb_build_schemas.bsb_dir_group; 
                           op = Bsb_ninja_util.Overwrite (string_of_int (group_dir_index :> int)) }])
   ;
+  let common_shadows = 
+    make_common_shadows is_re package_specs
+      (Filename.dirname output_cmi)
+      group_dir_index in
   let rule_name = begin match compile_target with
   | Bytecode -> Rules.build_cmo_cmi_bytecode
   | Native   -> Rules.build_cmx_cmi_native
   end in
   let cm_outputs, deps =
     if no_intf_file then
-      [output_cmi], []
+      [output_cmi], [output_mlastd]
     else    
-      [], [output_cmi]
+      [], [output_cmi; output_mlastd]
   in
   let deps = match namespace with 
     | None -> deps
@@ -13222,8 +13399,10 @@ let emit_intf_build
     (package_specs : Bsb_package_specs.t)
     (group_dir_index : Bsb_dir_index.t)
     oc
+    ~local_ppx_deps
     ~is_re
     ~compile_target
+    ~local_ppx_flags
     namespace
     filename_sans_extension
   : info =
@@ -13237,10 +13416,11 @@ let emit_intf_build
       Ext_namespace.make ~ns filename_sans_extension
   in 
   let output_cmi = output_filename_sans_extension ^ Literals.suffix_cmi in  
-  let common_shadows = 
-    make_common_shadows is_re package_specs
-      (Filename.dirname output_cmi)
-      group_dir_index in
+  let shadows = List.map (fun f -> 
+    Bsb_ninja_util.{
+     key = "ppx_flags"; 
+     op = AppendList ["-ppx"; f]
+   }) local_ppx_flags in
   Bsb_ninja_util.output_build oc
     ~output:output_mliast
       (* TODO: we can get rid of absloute path if we fixed the location to be 
@@ -13250,7 +13430,13 @@ let emit_intf_build
               (if is_re then filename_sans_extension ^ Literals.suffix_rei 
                else filename_sans_extension ^ Literals.suffix_mli))
     ~rule:(if is_re then Bsb_rule.build_ast_and_module_sets_from_rei_gen_simple
-           else Bsb_rule.build_ast_and_module_sets_gen_simple);
+           else Bsb_rule.build_ast_and_module_sets_gen_simple)
+    ~implicit_deps:local_ppx_deps
+    ~shadows;
+  let common_shadows = 
+    make_common_shadows is_re package_specs
+      (Filename.dirname output_cmi)
+      group_dir_index in
   Bsb_ninja_util.output_build oc
     ~output:output_mliastd
     ~input:output_mliast
@@ -13274,6 +13460,7 @@ let emit_intf_build
     ~shadows:common_shadows
     ~output:output_cmi
     ~input:output_mliast
+    ~implicit_deps:[output_mliastd]
     ~rule;
   [output_mliastd]
 
@@ -13281,8 +13468,10 @@ let handle_module_info
   (group_dir_index : Bsb_dir_index.t)
   (package_specs : Bsb_package_specs.t) 
   js_post_build_cmd
+  ~local_ppx_deps
   ~compile_target
   ~bs_suffix
+  ~local_ppx_flags
   oc  module_name 
   ( module_info : Bsb_db.module_info)
   namespace  =
@@ -13293,29 +13482,35 @@ let handle_module_info
       package_specs
       group_dir_index
       oc 
+      ~local_ppx_deps
       ~bs_suffix
       ~no_intf_file:false
       ~is_re:impl_is_re
       ~compile_target
+      ~local_ppx_flags
       js_post_build_cmd      
       namespace
       input_impl  @ 
     emit_intf_build 
       package_specs
       group_dir_index
-      oc         
+      oc
+      ~local_ppx_deps
       ~is_re:intf_is_re
       ~compile_target
+      ~local_ppx_flags
       namespace
       input_intf 
   | Ml_source(input,is_re,_), Mli_empty ->
     emit_impl_build 
       package_specs
       group_dir_index
-      oc 
+      oc
+      ~local_ppx_deps
       ~bs_suffix
       ~no_intf_file:true
       ~compile_target
+      ~local_ppx_flags
       js_post_build_cmd      
       ~is_re
       namespace
@@ -13324,21 +13519,25 @@ let handle_module_info
     emit_intf_build 
       package_specs
       group_dir_index
-      oc         
+      oc
+      ~local_ppx_deps        
       ~is_re
       ~compile_target
+      ~local_ppx_flags
       namespace
       input 
   | Ml_empty, Mli_empty -> zero
 
 
 let handle_file_group oc
+  ~local_ppx_deps
   ~custom_rules
   ~compile_target
   ~package_specs
   ~js_post_build_cmd
   ~namespace
   ~bs_suffix
+  ~local_ppx_flags
   (files_to_install : String_hash_set.t)
   acc
   (group: Bsb_parse_sources.file_group) : Bsb_ninja_file_groups.info =
@@ -13353,9 +13552,11 @@ let handle_file_group oc
           String_set.mem module_name set in
       if installable then 
         String_hash_set.add files_to_install (Bsb_db.filename_sans_suffix_of_module_info module_info);
-      (handle_module_info 
+      (handle_module_info
+        ~local_ppx_deps
         ~bs_suffix
         ~compile_target
+        ~local_ppx_flags
         group.dir_index 
         package_specs 
         js_post_build_cmd 
@@ -13366,12 +13567,12 @@ let handle_file_group oc
       ) @  acc
     ) group.sources  acc 
 
-let link oc ret ~entries ~file_groups ~static_libraries ~c_linker_flags ~namespace ~external_deps_for_linking ~ocaml_dir =
-  List.fold_left (fun acc project_entry ->
-    let output, rule_name, library_file_name, suffix_cmo_or_cmx, main_module_name, shadows =
+let link oc comp_info ~entries ~file_groups ~static_libraries ~c_linker_flags ~namespace ~external_deps_for_linking ~ocaml_dir =
+  List.fold_left (fun comp_info project_entry ->
+    let output, rule_name, library_file_name, suffix_cmo_or_cmx, main_module_name, shadows, is_ppx =
       begin match project_entry with
-      | Bsb_config_types.JsTarget {main_module_name}       -> assert false
-      | Bsb_config_types.BytecodeTarget {main_module_name; output_name} -> 
+      | Bsb_config_types.JsTarget {main_module_name; kind; }       -> assert false
+      | Bsb_config_types.BytecodeTarget {main_module_name; output_name; kind; } -> 
         (match output_name with 
           | None -> 
             let extension = if Ext_sys.is_windows_or_cygwin then ".exe" else "" in
@@ -13382,8 +13583,9 @@ let link oc ret ~entries ~file_groups ~static_libraries ~c_linker_flags ~namespa
         "lib" ^ Literals.suffix_cma, 
         Literals.suffix_cmo, 
         main_module_name, 
-        []
-      | Bsb_config_types.NativeTarget {main_module_name; output_name}   -> 
+        [],
+        kind = Ppx
+      | Bsb_config_types.NativeTarget {main_module_name; output_name; kind;}   -> 
         (match output_name with 
           | None -> 
             let extension = if Ext_sys.is_windows_or_cygwin then ".exe" else "" in
@@ -13394,47 +13596,50 @@ let link oc ret ~entries ~file_groups ~static_libraries ~c_linker_flags ~namespa
         "lib" ^ Literals.suffix_cmxa, 
         Literals.suffix_cmx, 
         main_module_name,
-        []
+        [],
+        kind = Ppx
       end in
     let (all_mlast_files, all_cmo_or_cmx_files, all_cmi_files) =
-      List.fold_left (fun acc group -> 
-        String_map.fold (fun _ (v : Bsb_db.module_info) (all_mlast_files, all_cmo_or_cmx_files, all_cmi_files) -> 
-          let mlname = match v.ml with
-            | Ml_source (input, _, _) ->
-            let input = (Ext_path.chop_extension_if_any input)  in
-            begin match namespace with 
-              | None    -> Some (input, input)
-              | Some ns -> Some (input, (Ext_namespace.make ~ns input))
-            end
-            | Ml_empty -> None
-          in
-          let mliname = match v.mli with
-            | Mli_source (input, _, _) ->
-            let input = (Ext_path.chop_extension_if_any input)  in
-            begin match namespace with 
-              | None    -> Some (input, input)
-              | Some ns -> Some (input, (Ext_namespace.make ~ns input))
-            end
-            | Mli_empty -> None 
-          in
-          begin match (mlname, mliname) with
-          | None, None -> failwith "Got a source file without an ml or mli file. This should not happen."
-          | Some (name, namespacedName), Some _ ->
-            ((name ^ Literals.suffix_mlast) :: all_mlast_files,
-             (namespacedName ^ suffix_cmo_or_cmx)     :: all_cmo_or_cmx_files,
-             (namespacedName ^ Literals.suffix_cmi)   :: all_cmi_files)
-          | Some (name, namespacedName), None ->
-            ((name ^ Literals.suffix_mlast) :: all_mlast_files,
-             (namespacedName ^ suffix_cmo_or_cmx)     :: all_cmo_or_cmx_files,
-             (namespacedName ^ Literals.suffix_cmi)   :: all_cmi_files)
-          | None, Some (_, namespacedName) ->
-            (all_mlast_files,
-             all_cmo_or_cmx_files,
-             (namespacedName ^ Literals.suffix_cmi)   :: all_cmi_files)
-          end    
-        ) group.Bsb_parse_sources.sources acc) 
-      ([], [], [])
-      file_groups in
+      List.fold_left (fun acc (group : Bsb_parse_sources.file_group) -> 
+        if group.is_ppx = is_ppx then
+          String_map.fold (fun _ (v : Bsb_db.module_info) (all_mlast_files, all_cmo_or_cmx_files, all_cmi_files) -> 
+            let mlname = match v.ml with
+              | Ml_source (input, _, _) ->
+              let input = (Ext_path.chop_extension_if_any input)  in
+              begin match namespace with 
+                | None    -> Some (input, input)
+                | Some ns -> Some (input, (Ext_namespace.make ~ns input))
+              end
+              | Ml_empty -> None
+            in
+            let mliname = match v.mli with
+              | Mli_source (input, _, _) ->
+              let input = (Ext_path.chop_extension_if_any input)  in
+              begin match namespace with 
+                | None    -> Some (input, input)
+                | Some ns -> Some (input, (Ext_namespace.make ~ns input))
+              end
+              | Mli_empty -> None 
+            in
+            begin match (mlname, mliname) with
+            | None, None -> failwith "Got a source file without an ml or mli file. This should not happen."
+            | Some (name, namespacedName), Some _ ->
+              ((name ^ Literals.suffix_mlast) :: all_mlast_files,
+               (namespacedName ^ suffix_cmo_or_cmx)     :: all_cmo_or_cmx_files,
+               (namespacedName ^ Literals.suffix_cmi)   :: all_cmi_files)
+            | Some (name, namespacedName), None ->
+              ((name ^ Literals.suffix_mlast) :: all_mlast_files,
+               (namespacedName ^ suffix_cmo_or_cmx)     :: all_cmo_or_cmx_files,
+               (namespacedName ^ Literals.suffix_cmi)   :: all_cmi_files)
+            | None, Some (_, namespacedName) ->
+              (all_mlast_files,
+               all_cmo_or_cmx_files,
+               (namespacedName ^ Literals.suffix_cmi)   :: all_cmi_files)
+            end    
+          ) group.sources acc
+        else acc
+      ) ([], [], []) file_groups 
+    in
     let shadows = shadows @ [{
       Bsb_ninja_util.key = "main_module";
       op = Bsb_ninja_util.Overwrite main_module_name
@@ -13452,10 +13657,10 @@ let link oc ret ~entries ~file_groups ~static_libraries ~c_linker_flags ~namespa
         @ (List.map (fun path -> Ext_bytes.ninja_escaped path) (all_cmi_files @ all_cmo_or_cmx_files @ static_libraries)))
       ~shadows
       ~rule:rule_name;
-    acc
-  ) ret entries
+    comp_info
+  ) comp_info entries
     
-let pack oc ret ~entries ?build_library ~backend ~file_groups ~namespace () =
+let pack oc comp_info ~entries ?build_library ~backend ~file_groups ~namespace () =
   (* List.fold_left (fun acc project_entry ->
     let main_module_name =
       begin match project_entry with
@@ -13535,15 +13740,14 @@ let pack oc ret ~entries ?build_library ~backend ~file_groups ~namespace () =
         ~implicit_deps:all_cmi_files
         ~shadows
         ~rule:rule_name;
-      ret @ []
-    end else ret
-  (* ) ret entries *)
+    end;
+    comp_info
+  (* ) comp_info entries *)
 
 let handle_file_groups oc
   ~custom_rules
   ~is_top_level
   ~build_library
-  ~entries
   ~compile_target
   ~backend
   ~external_static_libraries
@@ -13551,6 +13755,7 @@ let handle_file_groups oc
   ~external_deps_for_linking
   ~ocaml_dir
   ~config:{
+    entries;
     Bsb_config_types.bs_suffix;
     c_linker_flags;
     static_libraries;
@@ -13558,51 +13763,87 @@ let handle_file_groups oc
     js_post_build_cmd;
     files_to_install;
   }
-  (file_groups  :  Bsb_parse_sources.file_group list) namespace st =
+  ?build_just_ppx:(build_just_ppx=false)
+  (file_groups  :  Bsb_parse_sources.file_group list) namespace comp_info =
   let file_groups = List.filter (fun (group : Bsb_parse_sources.file_group) ->
     match backend with 
     | Bsb_config_types.Js       -> List.mem Bsb_parse_sources.Js group.Bsb_parse_sources.backend
     | Bsb_config_types.Native   -> List.mem Bsb_parse_sources.Native group.Bsb_parse_sources.backend
     | Bsb_config_types.Bytecode -> List.mem Bsb_parse_sources.Bytecode group.Bsb_parse_sources.backend
   ) file_groups in 
-  let ret = List.fold_left (
-    handle_file_group oc
-      ~custom_rules 
-      ~compile_target
-      ~package_specs
-      ~js_post_build_cmd 
-      ~namespace
-      ~bs_suffix
-      files_to_install
-  ) st file_groups in
-  let static_libraries = external_static_libraries @ static_libraries in
-  let c_linker_flags = external_c_linker_flags @ c_linker_flags in
-  match build_library with
-  | None -> 
-    if is_top_level then
-      link oc ret ~entries ~file_groups ~static_libraries ~c_linker_flags ~namespace ~external_deps_for_linking ~ocaml_dir
-    else
-      let (librarie_to_pack, executables_to_link) = List.fold_left Bsb_config_types.(fun (l, e) x -> 
-        match x with 
-        | JsTarget {kind = Binary} 
-        | NativeTarget {kind = Binary}
-        | BytecodeTarget {kind = Binary} -> (l, x :: e)
-        | JsTarget {kind = Both} 
-        | NativeTarget {kind = Both}
-        | BytecodeTarget {kind = Both} -> (x :: l, x :: e)
-        | _ -> (x :: l, e)
-      ) ([], []) entries in
-      let ret = link oc ret 
-        ~entries:executables_to_link 
+  let (entries, entries_that_have_ppxes, local_ppx_deps, local_ppx_module_names, ppx_entries) = Bsb_ninja_file_groups.get_local_ppx_deps backend entries in
+  if entries_that_have_ppxes = [] then
+    comp_info
+  else begin
+    (* @Speed The work to figure out in which group an entry is in could be done while parsing the 
+       bsconfig, which would probably be faster. 
+    *)
+    let comp_info = List.fold_left (fun comp_info (group : Bsb_parse_sources.file_group) ->
+      if (build_just_ppx && group.is_ppx || not build_just_ppx) then begin
+        (* When building a ppx we want to compile the source code to the backend specified by the 
+           entry, not the one specified from the commandline. *)
+        let (local_ppx_flags, compile_target) = (String_map.fold (fun  module_name _  (acc, compile_target) ->
+          if acc = [] then begin
+            List.fold_left Bsb_config_types.(fun (acc, (compile_target : compile_target_t)) e -> 
+              match e with 
+              | JsTarget { main_module_name; ppx } when main_module_name = module_name -> assert false
+              | NativeTarget { main_module_name; ppx } when main_module_name = module_name -> (ppx, Native)
+              | BytecodeTarget { main_module_name; ppx; } when main_module_name = module_name -> (ppx, Bytecode)
+              | _ -> (acc, compile_target)
+            ) (acc, compile_target) entries_that_have_ppxes
+          end else 
+            (acc, compile_target)
+        ) group.sources ([], compile_target)) in
+        (*  map over the flags to find ppxes's full paths if they exist.  *)
+        let (local_ppx_flags, local_ppx_deps) = List.fold_left (fun (new_local_ppx_flags, new_local_ppx_deps) flag_exec -> 
+          (* @Hack You could potentially have a bug here where the exec_path name is the same as a module name
+            inside main-module but eeeeh that'd be weird! *)
+          let rec loop = fun local_ppx_deps local_ppx_module_names -> 
+            match (local_ppx_deps, local_ppx_module_names) with
+            | (exec_path :: local_ppx_deps, ppx_name :: local_ppx_module_names) -> 
+              if flag_exec = ppx_name then (exec_path :: new_local_ppx_flags, exec_path :: new_local_ppx_deps)
+              else loop local_ppx_deps local_ppx_module_names
+            | _ -> (flag_exec :: new_local_ppx_flags, new_local_ppx_deps)
+          in
+          loop local_ppx_deps local_ppx_module_names
+        ) ([], []) local_ppx_flags in
+        handle_file_group oc
+          ~local_ppx_deps
+          ~custom_rules 
+          ~compile_target
+          ~package_specs
+          ~js_post_build_cmd 
+          ~namespace
+          ~bs_suffix
+          ~local_ppx_flags
+          files_to_install
+          comp_info
+          group
+      end else comp_info
+    ) comp_info file_groups in
+    let static_libraries = external_static_libraries @ static_libraries in
+    let c_linker_flags = external_c_linker_flags @ c_linker_flags in
+    let comp_info = link oc comp_info 
+        ~entries:ppx_entries 
         ~file_groups
         ~static_libraries
         ~c_linker_flags
         ~namespace
         ~external_deps_for_linking
         ~ocaml_dir in
-      pack oc ret ~entries:librarie_to_pack ~backend ~file_groups ~namespace ()
-  | Some build_library -> 
-    pack oc ret ~entries ~build_library ~backend ~file_groups ~namespace ()
+    match build_library with
+    | None -> 
+      if build_just_ppx then
+        comp_info
+      else begin
+        if is_top_level then
+          link oc comp_info ~entries ~file_groups ~static_libraries ~c_linker_flags ~namespace ~external_deps_for_linking ~ocaml_dir
+        else
+          pack oc comp_info ~entries ~backend ~file_groups ~namespace ()
+      end
+    | Some build_library -> 
+      pack oc comp_info ~entries ~build_library ~backend ~file_groups ~namespace ()
+  end
 
 end
 module Config : sig 
@@ -17644,8 +17885,7 @@ let output_ninja_and_namespace_map
       ocaml_dependencies;
     } as config : Bsb_config_types.t)
   =
-  let custom_rules = Bsb_rule.reset generators in 
-  let entries = List.filter (fun e -> match e with 
+  let has_any_entry = List.exists (fun e -> match e with 
     | Bsb_config_types.JsTarget _       -> backend = Bsb_config_types.Js
     | Bsb_config_types.NativeTarget _   -> backend = Bsb_config_types.Native
     | Bsb_config_types.BytecodeTarget _ -> backend = Bsb_config_types.Bytecode
@@ -17655,8 +17895,10 @@ let output_ninja_and_namespace_map
     | Bsb_config_types.Native   -> "native"
     | Bsb_config_types.Bytecode -> "bytecode"
   end in
-  if entries = [] && is_top_level then
+  if not has_any_entry && is_top_level then
     Bsb_exception.missing_entry nested;
+  
+  let custom_rules = Bsb_rule.reset generators in 
   
   let use_ocamlfind = ocamlfind_dependencies <> [] || external_ocamlfind_dependencies <> [] in
   
@@ -17670,13 +17912,14 @@ let output_ninja_and_namespace_map
 
 
   let ocaml_lib = Bsb_build_util.get_ocaml_lib_dir ~is_js:(backend = Bsb_config_types.Js) root_project_dir in
+  let native_ocaml_lib = Bsb_build_util.get_ocaml_lib_dir ~is_js:false root_project_dir in
 
   let ocaml_flags = (List.fold_left (fun acc v ->
     match v with
     | "compiler-libs" ->
       (if use_ocamlfind then
         "-package +compiler-libs.common " else
-        "-I " ^ (ocaml_lib // "compiler-libs")) ^ acc
+        "-I " ^ (native_ocaml_lib // "compiler-libs")) ^ acc
     | "threads" -> "-thread " ^ acc
     | _ -> acc
   ) ocaml_flags ocaml_dependencies) in
@@ -17821,15 +18064,18 @@ let output_ninja_and_namespace_map
         acc 
 
   in 
-  let emit_bsc_lib_includes source_dirs = 
+  let emit_lib_includes source_dirs = 
     let common_include_flags =
       (all_includes (if namespace = None then source_dirs
       else Filename.current_dir_name :: source_dirs)) in
-    let post_ocamlfind_include_flags =
-      (if use_ocamlfind then common_include_flags else
-      (ocaml_lib :: common_include_flags)) in
     Bsb_ninja_util.output_kv
       Bsb_build_schemas.bsc_lib_includes
+       (Bsb_build_util.flag_concat dash_i @@ (ocaml_lib :: common_include_flags)) oc;
+    let post_ocamlfind_include_flags =
+      (if use_ocamlfind then common_include_flags else
+      (native_ocaml_lib :: common_include_flags)) in
+    Bsb_ninja_util.output_kv
+      Bsb_build_schemas.ocaml_lib_includes
        (Bsb_build_util.flag_concat dash_i @@ post_ocamlfind_include_flags) oc
   in
   let  bs_groups, bsc_lib_dirs, static_resources =
@@ -17838,10 +18084,10 @@ let output_ninja_and_namespace_map
       let bs_group, source_dirs,static_resources  =
         List.fold_left 
           (fun (acc, dirs,acc_resources) 
-            ({Bsb_parse_sources.sources ; dir; resources } as x : Bsb_parse_sources.file_group) ->
+            ({Bsb_parse_sources.sources ; dir; resources; is_ppx } as x : Bsb_parse_sources.file_group) ->
             merge_module_info_map  acc  sources ,  
             (if Bsb_parse_sources.is_empty x then dirs else  dir::dirs) , 
-            ( if resources = [] then acc_resources
+            ( if resources = [] || is_ppx then acc_resources
               else Ext_list.map_append (fun x -> dir // x ) resources  acc_resources)
           ) (String_map.empty,[],[]) bs_file_groups in
       has_reason_files := Bsb_db.sanity_check bs_group || !has_reason_files;     
@@ -17850,11 +18096,14 @@ let output_ninja_and_namespace_map
       let bs_groups = Array.init  (number_of_dev_groups + 1 ) (fun i -> String_map.empty) in
       let source_dirs = Array.init (number_of_dev_groups + 1 ) (fun i -> []) in
       let static_resources =
-        List.fold_left (fun acc_resources  ({Bsb_parse_sources.sources; dir; resources; dir_index})  ->
-            let dir_index = (dir_index :> int) in 
-            bs_groups.(dir_index) <- merge_module_info_map bs_groups.(dir_index) sources ;
-            source_dirs.(dir_index) <- dir :: source_dirs.(dir_index);
-            Ext_list.map_append (fun x -> dir//x) resources  resources
+        List.fold_left (fun acc_resources  ({Bsb_parse_sources.sources; dir; resources; dir_index; is_ppx})  ->
+            if not is_ppx then begin 
+              let dir_index = (dir_index :> int) in 
+              bs_groups.(dir_index) <- merge_module_info_map bs_groups.(dir_index) sources ;
+              source_dirs.(dir_index) <- dir :: source_dirs.(dir_index);
+              Ext_list.map_append (fun x -> dir//x) resources  acc_resources
+            end else 
+              acc_resources
           ) [] bs_file_groups in
       let lib = bs_groups.((Bsb_dir_index.lib_dir_index :> int)) in               
       has_reason_files := Bsb_db.sanity_check lib || !has_reason_files;
@@ -17871,7 +18120,7 @@ let output_ninja_and_namespace_map
   
   output_reason_config ();
   Bsb_db.write_build_cache ~dir:cwd_lib_bs bs_groups ;
-  emit_bsc_lib_includes bsc_lib_dirs;
+  emit_lib_includes bsc_lib_dirs;
   List.iter 
   (fun output -> 
      Bsb_ninja_util.output_build
@@ -17883,6 +18132,22 @@ let output_ninja_and_namespace_map
   match backend with
   | Bsb_config_types.Js -> 
     if List.mem Bsb_config_types.Js allowed_build_kinds then
+      let maybe_ppx_comp_info = Bsb_ninja_native.handle_file_groups oc
+        ~custom_rules
+        ~is_top_level
+        ~build_library
+        (* This will be ignored. *)
+        ~compile_target:Bsb_ninja_native.Bytecode
+        ~backend
+        ~external_static_libraries
+        ~external_c_linker_flags
+        ~external_deps_for_linking
+        ~ocaml_dir
+        ~config
+        ~build_just_ppx:true
+        bs_file_groups
+        namespace
+        Bsb_ninja_file_groups.zero in
       (Bsb_ninja_file_groups.handle_file_groups oc
         ~bs_suffix
         ~custom_rules
@@ -17890,9 +18155,10 @@ let output_ninja_and_namespace_map
         ~js_post_build_cmd
         ~files_to_install
         ~backend
+        ~entries
         bs_file_groups 
         namespace
-        Bsb_ninja_file_groups.zero, 
+        maybe_ppx_comp_info, 
       true)
     else (Bsb_ninja_file_groups.zero, false)
   | Bsb_config_types.Bytecode ->
@@ -17901,7 +18167,6 @@ let output_ninja_and_namespace_map
         ~custom_rules
         ~is_top_level
         ~build_library
-        ~entries
         ~compile_target:Bsb_ninja_native.Bytecode
         ~backend
         ~external_static_libraries
@@ -17920,7 +18185,6 @@ let output_ninja_and_namespace_map
         ~custom_rules
         ~is_top_level
         ~build_library
-        ~entries
         ~compile_target:Bsb_ninja_native.Native
         ~backend
         ~external_static_libraries

@@ -205,41 +205,41 @@ let build_package_gen_mlast_simple =
     
 let build_package_build_cmi_bytecode = 
   define
-    ~command:"${ocamlfind}${ocamlc} ${bs_super_errors_ocamlfind} ${bs_package_includes} ${bsc_lib_includes} ${bsc_extra_includes} ${ocamlfind_dependencies} ${ocaml_flags} \
+    ~command:"${ocamlfind}${ocamlc} ${bs_super_errors_ocamlfind} ${bs_package_includes} ${ocaml_lib_includes} ${bsc_extra_includes} ${ocamlfind_dependencies} ${ocaml_flags} \
               -o ${out} ${warnings} -no-alias-deps -w -49 -g -c -intf-suffix .mliast_simple -impl ${in} ${postbuild}"
     "build_package_build_cmi_bytecode"
 
 let build_package_build_cmi_native = 
   define
-    ~command:"${ocamlfind}${ocamlopt} ${bs_super_errors_ocamlfind} ${bs_package_includes} ${bsc_lib_includes} ${bsc_extra_includes} ${ocamlfind_dependencies} ${ocaml_flags} \
+    ~command:"${ocamlfind}${ocamlopt} ${bs_super_errors_ocamlfind} ${bs_package_includes} ${ocaml_lib_includes} ${bsc_extra_includes} ${ocamlfind_dependencies} ${ocaml_flags} \
               -o ${out} ${warnings} -no-alias-deps -w -49 -g -c -intf-suffix .mliast_simple -impl ${in} ${postbuild}"
     "build_package_build_cmi_native"
 
 
 let build_cmo_cmi_bytecode =
   define
-    ~command:"${ocamlfind}${ocamlc} ${open_flag} ${bs_super_errors_ocamlfind} ${bs_package_includes} ${bsc_lib_includes} ${bsc_extra_includes} ${ocamlfind_dependencies} ${ocaml_flags} \
+    ~command:"${ocamlfind}${ocamlc} ${open_flag} ${bs_super_errors_ocamlfind} ${bs_package_includes} ${ocaml_lib_includes} ${bsc_extra_includes} ${ocamlfind_dependencies} ${ocaml_flags} \
               -o ${out} ${warnings} -g -c -intf-suffix .mliast_simple -impl ${in}_simple ${postbuild}"
     ~depfile:"${in}.d"
     "build_cmo_cmi_bytecode"
     
 let build_cmi_bytecode =
   define
-    ~command:"${ocamlfind}${ocamlc} ${open_flag} ${bs_super_errors_ocamlfind} ${bs_package_includes} ${bsc_lib_includes} ${bsc_extra_includes} ${ocamlfind_dependencies} ${ocaml_flags} \
+    ~command:"${ocamlfind}${ocamlc} ${open_flag} ${bs_super_errors_ocamlfind} ${bs_package_includes} ${ocaml_lib_includes} ${bsc_extra_includes} ${ocamlfind_dependencies} ${ocaml_flags} \
               -o ${out} ${warnings} -g -c -intf ${in}_simple ${postbuild}"
     ~depfile:"${in}.d"
     "build_cmi_bytecode"
 
 let build_cmx_cmi_native =
   define
-    ~command:"${ocamlfind}${ocamlopt} ${open_flag} ${bs_super_errors_ocamlfind} ${bs_package_includes} ${bsc_lib_includes} ${bsc_extra_includes} ${ocamlfind_dependencies} ${ocaml_flags} \
+    ~command:"${ocamlfind}${ocamlopt} ${open_flag} ${bs_super_errors_ocamlfind} ${bs_package_includes} ${ocaml_lib_includes} ${bsc_extra_includes} ${ocamlfind_dependencies} ${ocaml_flags} \
               -o ${out} ${warnings} -g -c -intf-suffix .mliast_simple -impl ${in}_simple ${postbuild}"
     ~depfile:"${in}.d"
     "build_cmx_cmi_native"
 
 let build_cmi_native =
   define
-    ~command:"${ocamlfind}${ocamlopt} ${open_flag} ${bs_super_errors_ocamlfind} ${bs_package_includes} ${bsc_lib_includes} ${bsc_extra_includes} ${ocamlfind_dependencies} ${ocaml_flags} \
+    ~command:"${ocamlfind}${ocamlopt} ${open_flag} ${bs_super_errors_ocamlfind} ${bs_package_includes} ${ocaml_lib_includes} ${bsc_extra_includes} ${ocamlfind_dependencies} ${ocaml_flags} \
               -o ${out} ${warnings} -g -c -intf ${in}_simple ${postbuild}"
     ~depfile:"${in}.d"
     "build_cmi_native"
@@ -262,14 +262,14 @@ let linking_native =
 let build_cma_library =
   define
     ~command:"${bsb_helper} ${bsb_helper_verbose} ${build_library} ${ocaml_dependencies} ${warnings} ${namespace} ${bs_super_errors} ${static_libraries} ${ocamlfind_dependencies} \
-              ${bs_package_includes} ${bsc_lib_includes} ${bsc_extra_includes} \
+              ${bs_package_includes} ${ocaml_lib_includes} ${bsc_extra_includes} \
               ${in} -pack-bytecode-library"
     "build_cma_library"
 
 let build_cmxa_library =
   define
     ~command:"${bsb_helper} ${bsb_helper_verbose} ${build_library} ${ocaml_dependencies} ${warnings} ${namespace} ${bs_super_errors} ${static_libraries} ${ocamlfind_dependencies} \
-              ${bs_package_includes} ${bsc_lib_includes} ${bsc_extra_includes} \
+              ${bs_package_includes} ${ocaml_lib_includes} ${bsc_extra_includes} \
               ${in} -pack-native-library"
     "build_cmxa_library"
 

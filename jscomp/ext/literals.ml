@@ -123,8 +123,7 @@ let native = "native"
 let bytecode = "bytecode"
 let js = "js"
 let library = "library"
-let binary = "binary"
-let both = "both"
+let ppx = "ppx"
 
 
 (** Used when produce node compatible paths *)

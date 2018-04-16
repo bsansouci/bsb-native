@@ -9948,8 +9948,7 @@ val bytecode : string
 val js : string
 
 val library : string
-val binary : string
-val both : string
+val ppx : string
 
 val node_sep : string 
 val node_parent : string 
@@ -10082,8 +10081,7 @@ let native = "native"
 let bytecode = "bytecode"
 let js = "js"
 let library = "library"
-let binary = "binary"
-let both = "both"
+let ppx = "ppx"
 
 
 (** Used when produce node compatible paths *)
