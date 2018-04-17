@@ -32,15 +32,13 @@
 
   
 val regenerate_ninja :
-  ?acc_libraries_for_linking:(string list) * (string list) * (string list) * (string list) * Depend.StringSet.t ->
-  ?main_bs_super_errors:bool ->
+  ?dependency_info: Bsb_dependency_info.t ->
   is_top_level:bool ->
   not_dev:bool ->
-  override_package_specs:Bsb_package_specs.t option ->
-  generate_watch_metadata: bool -> 
   forced: bool -> 
   root_project_dir:string ->
   build_library:string option ->
   backend: Bsb_config_types.compilation_kind_t ->
+  main_config : Bsb_config_types.t ->
   string ->  string ->  string -> 
-  Bsb_config_types.t option 
+  bool

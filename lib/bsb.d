@@ -131,9 +131,11 @@
 ../lib/bsb.ml : ./bsb/bsb_package_specs.mli
 ../lib/bsb.ml : ./bsb/bsb_parse_sources.mli
 ../lib/bsb.ml : ../vendor/ocaml/parsing/location.ml
+../lib/bsb.ml : ./bsb/bsb_dependency_info.ml
 ../lib/bsb.ml : ../vendor/ocaml/parsing/asttypes.mli
 ../lib/bsb.ml : ../vendor/ocaml/parsing/location.mli
 ../lib/bsb.ml : ../vendor/ocaml/parsing/longident.ml
+../lib/bsb.ml : ./bsb/bsb_dependency_info.mli
 ../lib/bsb.ml : ../vendor/ocaml/parsing/longident.mli
 ../lib/bsb.ml : ../vendor/ocaml/parsing/parsetree.mli
 ../lib/bsb.ml : ./bsb/bsb_namespace_map_gen.ml

@@ -25,7 +25,6 @@
 
 type info =  string list  
 
-
 val zero : info
 
 val get_local_ppx_deps : 
@@ -42,6 +41,8 @@ val handle_file_groups :
   custom_rules:Bsb_rule.t String_map.t ->
   backend:Bsb_config_types.compilation_kind_t -> 
   entries:Bsb_config_types.entries_t list ->
+  dependency_info:Bsb_dependency_info.t -> 
+  root_project_dir:string ->
   Bsb_parse_sources.file_group list ->
   string option ->
   info -> info

@@ -7016,7 +7016,7 @@ module type S =
     val of_list : (key * 'a) list -> 'a t 
     val of_array : (key * 'a ) array -> 'a t 
     val add_list : (key * 'b) list -> 'b t -> 'b t
-
+    val update : key -> ('a option -> 'a option) -> 'a t -> 'a t
   end
 
 end
@@ -7154,6 +7154,13 @@ let rec remove x (tree : _ Map_gen.t as 'a) : 'a = match tree with
     else
       bal l v d (remove x r)
 
+let update k fn (tree : _ Map_gen.t as 'a) : 'a =
+  let cur = find_opt k tree in
+  match (cur, fn cur) with
+  | None, None -> tree
+  | None, Some v -> add k v tree
+  | Some v, None -> remove k tree
+  | Some v1, Some v2 -> adjust k (fun () -> assert false) (fun _ -> v2) tree
 
 let rec split x (tree : _ Map_gen.t as 'a) : 'a * _ option * 'a  = match tree with 
   | Empty ->
@@ -9954,6 +9961,8 @@ val node_sep : string
 val node_parent : string 
 val node_current : string 
 
+val dot_static_libraries : string
+
 end = struct
 #1 "literals.ml"
 (* Copyright (C) 2015-2016 Bloomberg Finance L.P.
@@ -10089,6 +10098,7 @@ let node_sep = "/"
 let node_parent = ".."
 let node_current = "."
 
+let dot_static_libraries = ".static_libraries"
 
 end
 module Bs_ast_invariant : sig 

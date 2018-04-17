@@ -33,18 +33,15 @@ let (//) = Ext_path.combine
     otherwise return Some info
 *)
 let regenerate_ninja
-  ?acc_libraries_for_linking
-  ?main_bs_super_errors
+  ?dependency_info
   ~is_top_level
   ~not_dev
-  ~override_package_specs
-  ~generate_watch_metadata
   ~forced
   ~root_project_dir
   ~build_library
   ~backend
-  cwd bsc_dir ocaml_dir 
-  : _ option =
+  ~main_config:(main_config : Bsb_config_types.t)
+  cwd bsc_dir ocaml_dir  =
   let build_artifacts_dir = Bsb_build_util.get_build_artifacts_location cwd in
   let output_deps = build_artifacts_dir // Bsb_config.lib_bs // bsdeps in
   let check_result  =
@@ -55,8 +52,7 @@ let regenerate_ninja
     Bsb_log.info
       "@{<info>BSB check@} build spec : %a @." Bsb_ninja_check.pp_check_result check_result in 
   begin match check_result  with 
-    | Good ->
-      None  (* Fast path, no need regenerate ninja *)
+    | Good -> false  (* Fast path, no need regenerate ninja *)
     | Bsb_forced 
     | Bsb_bsc_version_mismatch 
     | Bsb_file_not_exist 
@@ -74,19 +70,11 @@ let regenerate_ninja
       end ; 
       (* Generate the nested folder before anything else... *)
       Bsb_build_util.mkp (build_artifacts_dir // Bsb_config.lib_bs // nested);
-      
-      let config = 
-        Bsb_config_parse.interpret_json 
-          ~override_package_specs
-          ~bsc_dir
-          ~generate_watch_metadata
-          ~not_dev
-          ~backend
-          cwd in 
+
       begin 
         Bsb_merlin_gen.merlin_file_gen ~cwd ~backend
-          (bsc_dir // bsppx_exe) config;
-        let acc_libraries_for_linking = match acc_libraries_for_linking with 
+          (bsc_dir // bsppx_exe) main_config;
+        let dependency_info = match dependency_info with 
         | None -> 
           (* Either there's a `root_project_entry` (meaning we're currently building 
              an external dependency) or not, then we use the top level project's entry.
@@ -96,11 +84,26 @@ let regenerate_ninja
              If we're aiming at building Native or Bytecode, we do walk the external 
              dep graph and build a topologically sorted list of all of them. *)
           begin match backend with
-          | Bsb_config_types.Js -> ([], [], [], [], Depend.StringSet.empty) (* No work for the JS flow! *)
+          | Bsb_config_types.Js -> 
+            Bsb_dependency_info.{
+              all_external_deps = [];
+              all_ocamlfind_dependencies = [];
+              all_ocaml_dependencies = Depend.StringSet.empty;
+              all_clibs = [];
+              all_c_linker_flags = [];
+              all_toplevel_ppxes = String_map.empty;
+            }
           | Bsb_config_types.Bytecode
           | Bsb_config_types.Native ->
             if not is_top_level then 
-              ([], [], [], [], Depend.StringSet.empty)
+              Bsb_dependency_info.{
+                all_external_deps = [];
+                all_ocamlfind_dependencies = [];
+                all_ocaml_dependencies = Depend.StringSet.empty;
+                all_clibs = [];
+                all_c_linker_flags = [];
+                all_toplevel_ppxes = String_map.empty;
+              }
             else begin
               (* @Speed Manually walk the external dep graph. Optimize this. 
                 
@@ -120,56 +123,79 @@ let regenerate_ninja
                 
                    Ben - August 9th 2017
               *)
-              let all_external_deps = ref [] in 
-              let all_clibs = ref [] in
-              let all_c_linker_flags = ref [] in
-              let all_ocamlfind_dependencies = ref [] in
-              let all_ocaml_dependencies = ref Depend.StringSet.empty in
+              let dependency_info : Bsb_dependency_info.t = {
+                all_external_deps = [];
+                all_ocamlfind_dependencies = [];
+                all_ocaml_dependencies = Depend.StringSet.empty;
+                all_clibs = [];
+                all_c_linker_flags = [];
+                all_toplevel_ppxes = String_map.empty;
+              } in
+              
+              let all_ppxes = ref String_map.empty in
+              
               Bsb_build_util.walk_all_deps cwd
                 (fun {top; cwd} ->
-                  if not top then begin
+                  if top then begin
+                    dependency_info.all_toplevel_ppxes <- List.fold_left (fun all_toplevel_ppxes ({package_name} : Bsb_config_types.dependency) ->
+                      match String_map.find_opt package_name !all_ppxes with
+                      | None -> all_toplevel_ppxes
+                      | Some v -> String_map.add package_name v all_toplevel_ppxes
+                    ) dependency_info.all_toplevel_ppxes main_config.bs_dependencies;
+                   end else begin 
                     let build_artifacts_dir = Bsb_build_util.get_build_artifacts_location cwd in
                     (* @Speed We don't need to read the full config, just the right fields.
                        Then again we also should cache this info so we don't have to crawl anything. *)
-                    let innerConfig = 
+                    let inner_config = 
                       Bsb_config_parse.interpret_json 
-                        ~override_package_specs
+                        ~override_package_specs:(Some main_config.package_specs)
                         ~bsc_dir
                         ~generate_watch_metadata:false
                         ~not_dev:true
                         ~backend
                         cwd in
+                    all_ppxes := List.fold_left Bsb_config_types.(fun all_ppxes e -> 
+                      match e with
+                      | JsTarget {kind = Ppx}
+                      | NativeTarget {kind = Ppx}
+                      | BytecodeTarget {kind = Ppx} -> 
+                          String_map.update inner_config.Bsb_config_types.package_name (function
+                            | None -> Some [e]
+                            | Some l -> Some (e :: l)
+                          ) all_ppxes
+                      | _ -> all_ppxes
+                     ) !all_ppxes inner_config.Bsb_config_types.entries;
                     begin match backend with 
                     | Bsb_config_types.Js ->  assert false
                     | Bsb_config_types.Bytecode 
-                      when List.mem Bsb_config_types.Bytecode Bsb_config_types.(innerConfig.allowed_build_kinds) -> 
-                        all_external_deps := (build_artifacts_dir // Bsb_config.lib_ocaml // "bytecode") :: !all_external_deps;
-                        all_c_linker_flags := (List.rev Bsb_config_types.(innerConfig.c_linker_flags)) 
-                          @ !all_c_linker_flags;
-                        all_clibs := (List.rev Bsb_config_types.(innerConfig.static_libraries)) 
-                          @ !all_clibs;
-                        all_ocamlfind_dependencies := Bsb_config_types.(config.ocamlfind_dependencies) @ !all_ocamlfind_dependencies;
-                        all_ocaml_dependencies := List.fold_left (fun acc v -> Depend.StringSet.add v acc) !all_ocaml_dependencies Bsb_config_types.(config.ocaml_dependencies);
+                      when List.mem Bsb_config_types.Bytecode Bsb_config_types.(inner_config.allowed_build_kinds) -> 
+                        dependency_info.all_external_deps <- (build_artifacts_dir // Bsb_config.lib_ocaml // "bytecode") :: dependency_info.all_external_deps;
+                        dependency_info.all_c_linker_flags <- (List.rev Bsb_config_types.(inner_config.c_linker_flags)) 
+                          @ dependency_info.all_c_linker_flags;
+                        dependency_info.all_clibs <- (List.rev Bsb_config_types.(inner_config.static_libraries)) 
+                          @ dependency_info.all_clibs;
+                        dependency_info.all_ocamlfind_dependencies <- Bsb_config_types.(inner_config.ocamlfind_dependencies) @ dependency_info.all_ocamlfind_dependencies;
+                        dependency_info.all_ocaml_dependencies <- List.fold_left (fun acc v -> Depend.StringSet.add v acc) dependency_info.all_ocaml_dependencies Bsb_config_types.(inner_config.ocaml_dependencies);
                         
                     | Bsb_config_types.Native 
-                      when List.mem Bsb_config_types.Native Bsb_config_types.(innerConfig.allowed_build_kinds) -> 
-                        all_external_deps := (build_artifacts_dir // Bsb_config.lib_ocaml // "native") :: !all_external_deps;
-                        all_c_linker_flags := (List.rev Bsb_config_types.(innerConfig.c_linker_flags)) 
-                          @ !all_c_linker_flags;
-                        all_clibs := (List.rev Bsb_config_types.(innerConfig.static_libraries)) 
-                          @ !all_clibs;
-                        all_ocamlfind_dependencies := Bsb_config_types.(config.ocamlfind_dependencies) @ !all_ocamlfind_dependencies;
-                        all_ocaml_dependencies := List.fold_left (fun acc v -> Depend.StringSet.add v acc) !all_ocaml_dependencies Bsb_config_types.(config.ocaml_dependencies);
+                      when List.mem Bsb_config_types.Native Bsb_config_types.(inner_config.allowed_build_kinds) -> 
+                        dependency_info.all_external_deps <- (build_artifacts_dir // Bsb_config.lib_ocaml // "native") :: dependency_info.all_external_deps;
+                        dependency_info.all_c_linker_flags <- (List.rev Bsb_config_types.(inner_config.c_linker_flags)) 
+                          @ dependency_info.all_c_linker_flags;
+                        dependency_info.all_clibs <- (List.rev Bsb_config_types.(inner_config.static_libraries)) 
+                          @ dependency_info.all_clibs;
+                        dependency_info.all_ocamlfind_dependencies <- Bsb_config_types.(inner_config.ocamlfind_dependencies) @ dependency_info.all_ocamlfind_dependencies;
+                        dependency_info.all_ocaml_dependencies <- List.fold_left (fun acc v -> Depend.StringSet.add v acc) dependency_info.all_ocaml_dependencies Bsb_config_types.(inner_config.ocaml_dependencies);
                         
                     | _ -> ()
                     end;
-                    if List.mem backend Bsb_config_types.(innerConfig.allowed_build_kinds)
-                       && Bsb_config_types.(config.build_script) <> None then begin
+                    if List.mem backend Bsb_config_types.(inner_config.allowed_build_kinds)
+                       && Bsb_config_types.(inner_config.build_script) <> None then begin
                       let artifacts_installed = ref [] in
-                      let filename = build_artifacts_dir // ".static_libraries"in
+                      let filename = build_artifacts_dir // Literals.dot_static_libraries in
                       if not (Sys.file_exists filename) then 
                         ()
-                        (* Bsb_exception.missing_static_libraries_file (Bsb_config_types.(innerConfig.package_name))  *)
+                        (* Bsb_exception.missing_static_libraries_file (Bsb_config_types.(inner_config.package_name))  *)
                       else begin
                         let ic = open_in_bin filename in
                         (try
@@ -178,38 +204,36 @@ let regenerate_ninja
                            done
                          with End_of_file -> ());
                         close_in ic;
-                        all_clibs := !artifacts_installed @ !all_clibs;
+                        dependency_info.all_clibs <- !artifacts_installed @ dependency_info.all_clibs;
                       end
                     end
                    end
                 );
-              (List.rev !all_external_deps, List.rev !all_clibs, List.rev !all_c_linker_flags, List.rev !all_ocamlfind_dependencies, !all_ocaml_dependencies)
+              dependency_info.all_external_deps <- List.rev dependency_info.all_external_deps;
+              dependency_info.all_ocamlfind_dependencies <- List.rev dependency_info.all_ocamlfind_dependencies;
+              dependency_info
             end
           end
         | Some all_deps -> all_deps in
-        let main_bs_super_errors = begin match main_bs_super_errors with 
-          | None -> config.Bsb_config_types.bs_super_errors
-          | Some bs_super_errors -> bs_super_errors
-        end in 
         Bsb_ninja_gen.output_ninja_and_namespace_map 
           ~cwd 
           ~bsc_dir 
           ~not_dev
-          ~acc_libraries_for_linking 
+          ~dependency_info 
           ~ocaml_dir 
           ~root_project_dir 
           ~is_top_level 
           ~backend 
-          ~main_bs_super_errors
+          ~main_bs_super_errors:main_config.bs_super_errors
           ~build_library
-          config;
+          main_config;
         (* PR2184: we still need record empty dir 
             since it may add files in the future *)  
         Bsb_ninja_check.record ~cwd ~file:output_deps 
-          (Literals.bsconfig_json::config.globbed_dirs) 
+          (Literals.bsconfig_json::main_config.globbed_dirs) 
           backend
           build_library;
-        Some config 
+        true
       end 
   end
 

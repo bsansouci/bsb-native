@@ -131,3 +131,5 @@ val ppx : string
 val node_sep : string 
 val node_parent : string 
 val node_current : string 
+
+val dot_static_libraries : string

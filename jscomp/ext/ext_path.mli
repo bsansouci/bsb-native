@@ -26,7 +26,7 @@ type t
 
 
 
-
+val sep_char : char
 
 (**
    [combine path1 path2]

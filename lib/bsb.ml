@@ -2067,6 +2067,8 @@ val node_sep : string
 val node_parent : string 
 val node_current : string 
 
+val dot_static_libraries : string
+
 end = struct
 #1 "literals.ml"
 (* Copyright (C) 2015-2016 Bloomberg Finance L.P.
@@ -2202,6 +2204,7 @@ let node_sep = "/"
 let node_parent = ".."
 let node_current = "."
 
+let dot_static_libraries = ".static_libraries"
 
 end
 module Ext_path : sig 
@@ -2234,7 +2237,7 @@ type t
 
 
 
-
+val sep_char : char
 
 (**
    [combine path1 path2]
@@ -2300,6 +2303,7 @@ val concat : string -> string -> string
 
 val check_suffix_case : 
   string -> string -> bool
+
 end = struct
 #1 "ext_path.ml"
 (* Copyright (C) 2017 Authors of BuckleScript
@@ -3419,7 +3423,7 @@ module type S =
     val of_list : (key * 'a) list -> 'a t 
     val of_array : (key * 'a ) array -> 'a t 
     val add_list : (key * 'b) list -> 'b t -> 'b t
-
+    val update : key -> ('a option -> 'a option) -> 'a t -> 'a t
   end
 
 end
@@ -3557,6 +3561,13 @@ let rec remove x (tree : _ Map_gen.t as 'a) : 'a = match tree with
     else
       bal l v d (remove x r)
 
+let update k fn (tree : _ Map_gen.t as 'a) : 'a =
+  let cur = find_opt k tree in
+  match (cur, fn cur) with
+  | None, None -> tree
+  | None, Some v -> add k v tree
+  | Some v, None -> remove k tree
+  | Some v1, Some v2 -> adjust k (fun () -> assert false) (fun _ -> v2) tree
 
 let rec split x (tree : _ Map_gen.t as 'a) : 'a * _ option * 'a  = match tree with 
   | Empty ->
@@ -10792,6 +10803,8 @@ let (//) = Ext_path.combine
 let sourcedirs_meta = ".sourcedirs.json"
 
 let generate_sourcedirs_meta cwd (res : Bsb_parse_sources.t) = 
+  (* Just in case this is called early on, create the directory structure. *)
+  Bsb_build_util.mkp (cwd // Bsb_config.lib_bs);
   let ochan = open_out_bin (cwd // Bsb_config.lib_bs // sourcedirs_meta) in
   let v = 
     Ext_json_noloc.(
@@ -10961,6 +10974,10 @@ let parse_entries name (field : Ext_json_types.t array) =
             Bsb_exception.config_error entry "Missing field 'main-module'. That field is required its value needs to be the main module for the target"
           | Some main_module_name -> main_module_name
         end in
+        
+        if !kind = Bsb_config_types.Ppx && !backend <> Literals.bytecode then
+          Bsb_exception.config_error entry "Ppx can only be compiled to bytecode for now. Set `backend` to `bytecode`.";
+          
         if !backend = Literals.native then
           Some (Bsb_config_types.NativeTarget {kind = !kind; main_module_name; output_name=(!output_name); ppx})
         else if !backend = Literals.bytecode then
@@ -11305,2544 +11322,6 @@ let interpret_json
       | None -> failwith "no sources specified, please checkout the schema for more details"
     end
   | _ -> failwith "bsconfig.json expect a json object {}"
-
-end
-module Bsb_merlin_gen : sig 
-#1 "bsb_merlin_gen.mli"
-(* Copyright (C) 2015-2016 Bloomberg Finance L.P.
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Lesser General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * In addition to the permissions granted to you by the LGPL, you may combine
- * or link a "work that uses the Library" with a publicly distributed version
- * of this file to produce a combined library or application, then distribute
- * that combined work under the terms of your choosing, with no requirement
- * to comply with the obligations normally placed on you by section 4 of the
- * LGPL version 3 (or the corresponding section of a later version of the LGPL
- * should you choose to use a later version).
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Lesser General Public License for more details.
- *
- * You should have received a copy of the GNU Lesser General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
-
-
-
-
-val merlin_file_gen : 
-    cwd:string -> backend:Bsb_config_types.compilation_kind_t -> string  -> Bsb_config_types.t ->  unit 
-
-end = struct
-#1 "bsb_merlin_gen.ml"
-(* Copyright (C) 2015-2016 Bloomberg Finance L.P.
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Lesser General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * In addition to the permissions granted to you by the LGPL, you may combine
- * or link a "work that uses the Library" with a publicly distributed version
- * of this file to produce a combined library or application, then distribute
- * that combined work under the terms of your choosing, with no requirement
- * to comply with the obligations normally placed on you by section 4 of the
- * LGPL version 3 (or the corresponding section of a later version of the LGPL
- * should you choose to use a later version).
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Lesser General Public License for more details.
- *
- * You should have received a copy of the GNU Lesser General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
-
-
-let merlin = ".merlin"
-let merlin_header = "####{BSB GENERATED: NO EDIT"
-let merlin_trailer = "####BSB GENERATED: NO EDIT}"
-let merlin_trailer_length = String.length merlin_trailer
-let (//) = Ext_path.combine
-
-(** [new_content] should start end finish with newline *)
-let revise_merlin merlin new_content =
-  if Sys.file_exists merlin then
-    let merlin_chan = open_in_bin merlin in
-    let size = in_channel_length merlin_chan in
-    let s = really_input_string merlin_chan size in
-    let () =  close_in merlin_chan in
-
-    let header =  Ext_string.find s ~sub:merlin_header  in
-    let tail = Ext_string.find s ~sub:merlin_trailer in
-    if header < 0  && tail < 0 then (* locked region not added yet *)
-      let ochan = open_out_bin merlin in
-      output_string ochan s ;
-      output_string ochan "\n";
-      output_string ochan merlin_header;
-      Buffer.output_buffer ochan new_content;
-      output_string ochan merlin_trailer ;
-      output_string ochan "\n";
-      close_out ochan
-    else if header >=0 && tail >= 0  then
-      (* there is one, hit it everytime,
-         should be fixed point
-      *)
-      let ochan = open_out_bin merlin in
-      output_string ochan (String.sub s 0 header) ;
-      output_string ochan merlin_header;
-      Buffer.output_buffer ochan new_content;
-      output_string ochan merlin_trailer ;
-      output_string ochan (Ext_string.tail_from s (tail +  merlin_trailer_length));
-      close_out ochan
-    else failwith ("the .merlin is corrupted, locked region by bsb is not consistent ")
-  else
-    let ochan = open_out_bin merlin in
-    output_string ochan merlin_header ;
-    Buffer.output_buffer ochan new_content;
-    output_string ochan merlin_trailer ;
-    output_string ochan "\n";
-    close_out ochan
-
-(* ATTENTION: order matters here, need resolve global properties before
-   merlin generation
-*)
-let merlin_flg_ppx = "\nFLG -ppx " 
-let merlin_s = "\nS "
-let merlin_b = "\nB "
-
-let merlin_pkg = "\nPKG"
-let merlin_flg = "\nFLG "
-let bs_flg_prefix = "-bs-"
-
-let output_merlin_namespace buffer ns= 
-  match ns with 
-  | None -> ()
-  | Some x -> 
-    Buffer.add_string buffer merlin_b ; 
-    Buffer.add_string buffer Bsb_config.lib_bs ; 
-    Buffer.add_string buffer merlin_flg ; 
-    Buffer.add_string buffer "-open ";
-    Buffer.add_string buffer x 
-
-let bsc_flg_to_merlin_ocamlc_flg ~backend bsc_flags  =
-  merlin_flg ^ 
-  String.concat Ext_string.single_space 
-    (List.filter (fun x -> not (Ext_string.starts_with x bs_flg_prefix )) @@ 
-     if backend = Bsb_config_types.Js then Literals.dash_nostdlib::bsc_flags else bsc_flags) 
-
-(* No need for [-warn-error] in merlin  *)     
-let warning_to_merlin_flg (warning: Bsb_warning.t option) : string=     
-  merlin_flg ^ Bsb_warning.get_warning_flag warning
-
-
-let merlin_file_gen ~cwd ~backend
-    built_in_ppx
-    ({bs_file_groups = res_files ; 
-      generate_merlin;
-      ppx_flags;
-      bs_dependencies;
-      bs_dev_dependencies;
-      bsc_flags; 
-      built_in_dependency;
-      external_includes; 
-      reason_react_jsx ; 
-      ocamlfind_dependencies;
-      namespace;
-      package_name;
-      warning; 
-     } : Bsb_config_types.t)
-  =
-  if generate_merlin then begin
-    let buffer = Buffer.create 1024 in
-    output_merlin_namespace buffer namespace; 
-    ppx_flags
-    |> List.iter (fun x ->
-        Buffer.add_string buffer (merlin_flg_ppx ^ x )
-      );
-    (match reason_react_jsx with
-     | Some s -> 
-       begin 
-         Buffer.add_string buffer (merlin_flg_ppx ^ s)
-       end
-     | None -> ());
-    Buffer.add_string buffer (merlin_flg_ppx  ^ built_in_ppx);
-    (*
-    (match external_includes with 
-    | [] -> ()
-    | _ -> 
-
-      Buffer.add_string buffer (merlin_flg ^ Bsb_build_util.flag_concat "-I" external_includes
-      ));
-    *)
-    external_includes 
-    |> List.iter (fun path -> 
-        Buffer.add_string buffer merlin_s ;
-        Buffer.add_string buffer path ;
-        Buffer.add_string buffer merlin_b;
-        Buffer.add_string buffer path ;
-      ); 
-    if backend = Bsb_config_types.Js then begin
-      (match built_in_dependency with
-       | None -> ()
-       | Some package -> 
-         let path = package.package_install_path in 
-         Buffer.add_string buffer (merlin_s ^ path );
-         Buffer.add_string buffer (merlin_b ^ path)                      
-      );
-    end;
-
-    let bsc_string_flag = bsc_flg_to_merlin_ocamlc_flg ~backend bsc_flags in 
-    Buffer.add_string buffer bsc_string_flag ;
-    Buffer.add_string buffer (warning_to_merlin_flg  warning); 
-    bs_dependencies 
-    |> List.iter (fun package ->
-        let path = package.Bsb_config_types.package_install_path in
-        Buffer.add_string buffer merlin_s ;
-        Buffer.add_string buffer path ;
-        Buffer.add_string buffer merlin_b;
-        Buffer.add_string buffer path ;
-      );
-    bs_dev_dependencies (**TODO: shall we generate .merlin for dev packages ?*)
-    |> List.iter (fun package ->    
-        let path = package.Bsb_config_types.package_install_path in
-        Buffer.add_string buffer merlin_s ;
-        Buffer.add_string buffer path ;
-        Buffer.add_string buffer merlin_b;
-        Buffer.add_string buffer path ;
-      );
-    
-    let nested = match backend with
-      | Bsb_config_types.Js       -> "js"
-      | Bsb_config_types.Native   -> "native"
-      | Bsb_config_types.Bytecode -> "bytecode" 
-    in
-    res_files |> List.iter (fun (x : Bsb_parse_sources.file_group) -> 
-        if not (Bsb_parse_sources.is_empty x) then 
-          begin
-            Buffer.add_string buffer merlin_s;
-            Buffer.add_string buffer x.dir ;
-            Buffer.add_string buffer merlin_b;
-            Buffer.add_string buffer (Bsb_config.lib_bs // nested // x.dir) ;
-          end
-      ) ;
-    if List.length ocamlfind_dependencies > 0 then begin
-      Buffer.add_string buffer merlin_pkg;
-      ocamlfind_dependencies |> List.iter (fun x ->
-        Buffer.add_string buffer " ";
-        Buffer.add_string buffer x;
-      );
-    end;
-    Buffer.add_string buffer "\n";
-    revise_merlin (cwd // merlin) buffer 
-  end
-
-
-
-end
-module Bsb_ninja_check : sig 
-#1 "bsb_ninja_check.mli"
-(* Copyright (C) 2015-2016 Bloomberg Finance L.P.
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Lesser General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * In addition to the permissions granted to you by the LGPL, you may combine
- * or link a "work that uses the Library" with a publicly distributed version
- * of this file to produce a combined library or application, then distribute
- * that combined work under the terms of your choosing, with no requirement
- * to comply with the obligations normally placed on you by section 4 of the
- * LGPL version 3 (or the corresponding section of a later version of the LGPL
- * should you choose to use a later version).
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Lesser General Public License for more details.
- *
- * You should have received a copy of the GNU Lesser General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
-
-(**
-   This module is used to check whether [build.ninja] needs
-   be regenerated. Everytime [bsb] run [regenerate_ninja], 
-   bsb will try to [check] if it is needed, 
-   if needed, bsb will regenerate ninja file and store the 
-   metadata again
-*)
-
-
-
-
-
-type check_result = 
-  | Good
-  | Bsb_file_not_exist (** We assume that it is a clean repo *)  
-  | Bsb_source_directory_changed
-  | Bsb_bsc_version_mismatch  
-  | Bsb_forced
-  | Bsb_different_cmdline_arg
-  | Other of string
-
-val pp_check_result : Format.formatter -> check_result -> unit
-
-(** [record cwd file relevant_file_or_dirs]
-    The data structure we decided to whether regenerate [build.ninja] 
-    or not. 
-    Note that if we don't record absolute path,  ninja will not notice  its build spec changed, 
-    it will not trigger  rebuild behavior, 
-    It may not be desired behavior, since there is some subtlies here (__FILE__ or __dirname)
-
-    We serialize such data structure and call {!check} to decide
-    [build.ninja] should be regenerated
-*)
-val record : cwd:string -> file:string -> string list -> Bsb_config_types.compilation_kind_t -> string option -> unit
-
-
-(** check if [build.ninja] should be regenerated *)
-val check :
-  cwd:string ->  
-  forced:bool -> file:string -> Bsb_config_types.compilation_kind_t -> string option -> check_result
-
-end = struct
-#1 "bsb_ninja_check.ml"
-(* Copyright (C) 2015-2016 Bloomberg Finance L.P.
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Lesser General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * In addition to the permissions granted to you by the LGPL, you may combine
- * or link a "work that uses the Library" with a publicly distributed version
- * of this file to produce a combined library or application, then distribute
- * that combined work under the terms of your choosing, with no requirement
- * to comply with the obligations normally placed on you by section 4 of the
- * LGPL version 3 (or the corresponding section of a later version of the LGPL
- * should you choose to use a later version).
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Lesser General Public License for more details.
- *
- * You should have received a copy of the GNU Lesser General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
-
-type dep_info = {
-  dir_or_file : string ;
-  st_mtime : float
-}
-
-type t =
-  { file_stamps : dep_info array ;
-    source_directory :  string ;
-    bsb_version : string;
-    bsc_version : string;
-    cmdline_build_kind: Bsb_config_types.compilation_kind_t;
-    cmdline_build_library: string option;
-  }
-
-
-let magic_number = "BS_DEP_INFOS_20170822"
-let bsb_version = "20170822+dev"
-(* TODO: for such small data structure, maybe text format is better *)
-
-let write (fname : string)  (x : t) =
-  let oc = open_out_bin fname in
-  output_string oc magic_number ;
-  output_value oc x ;
-  close_out oc
-
-
-
-
-
-type check_result =
-  | Good
-  | Bsb_file_not_exist (** We assume that it is a clean repo *)
-  | Bsb_source_directory_changed
-  | Bsb_bsc_version_mismatch
-  | Bsb_forced
-  | Bsb_different_cmdline_arg
-  | Other of string
-
-let pp_check_result fmt (check_resoult : check_result) =
-  Format.pp_print_string fmt (match check_resoult with
-      | Good -> "OK"
-      | Bsb_file_not_exist -> "Dependencies information missing"
-      | Bsb_source_directory_changed ->
-        "Bsb source directory changed"
-      | Bsb_bsc_version_mismatch ->
-        "Bsc or bsb version mismatch"
-      | Bsb_forced ->
-        "Bsb forced rebuild"
-      | Bsb_different_cmdline_arg ->
-        "Bsb called with a different build argument"
-      | Other s -> s)
-
-let rec check_aux cwd xs i finish =
-  if i = finish then Good
-  else
-    let k = Array.unsafe_get  xs i  in
-    let current_file = k.dir_or_file in
-    let stat = Unix.stat  (Filename.concat cwd  current_file) in
-    if stat.st_mtime <= k.st_mtime then
-      check_aux cwd xs (i + 1 ) finish
-    else Other current_file
-
-
-let read (fname : string) cont =
-  match open_in_bin fname with   (* Windows binary mode*)
-  | ic ->
-    let buffer = really_input_string ic (String.length magic_number) in
-    if (buffer <> magic_number) then Bsb_bsc_version_mismatch
-    else
-      let res : t = input_value ic  in
-      close_in ic ;
-      cont res
-  | exception _ -> Bsb_file_not_exist
-
-let record ~cwd ~file  file_or_dirs cmdline_build_kind cmdline_build_library =
-  let file_stamps = 
-    Ext_array.of_list_map
-      (fun  x -> 
-         {dir_or_file = x ;
-          st_mtime = (Unix.stat (Filename.concat cwd  x )).st_mtime
-         })  file_or_dirs
-  in 
-  write file
-    { file_stamps ;
-      source_directory = cwd ;
-      bsb_version ;
-      bsc_version = Bs_version.version;
-      cmdline_build_kind = cmdline_build_kind;
-      cmdline_build_library = cmdline_build_library; }
-
-(** check time stamp for all files
-    TODO: those checks system call can be saved later
-    Return a reason
-    Even forced, we still need walk through a little
-    bit in case we found a different version of compiler
-*)
-let check ~cwd ~forced ~file cmdline_build_kind cmdline_build_library : check_result =
-  read file  begin  function  {
-    file_stamps = xs; 
-    source_directory; 
-    bsb_version = old_version; 
-    cmdline_build_kind = old_cmdline_build_kind; 
-    cmdline_build_library = old_cmdline_build_library;
-    bsc_version
-  } ->
-    if old_version <> bsb_version then Bsb_bsc_version_mismatch else
-    if cwd <> source_directory then Bsb_source_directory_changed else
-    if bsc_version <> Bs_version.version then Bsb_bsc_version_mismatch else
-    if forced then Bsb_forced else (* No need walk through *)
-    if cmdline_build_kind <> old_cmdline_build_kind
-      || cmdline_build_library <> old_cmdline_build_library then Bsb_different_cmdline_arg
-    else
-      try
-        check_aux cwd xs  0 (Array.length xs)
-      with e ->
-        begin
-          Bsb_log.info
-            "@{<info>Stat miss %s@}@."
-            (Printexc.to_string e);
-          Bsb_file_not_exist
-        end
-  end
-
-end
-module Bsb_file : sig 
-#1 "bsb_file.mli"
-
-
-
-(** return [true] if copied *)
-val install_if_exists : destdir:string -> string -> bool
-
-
-end = struct
-#1 "bsb_file.ml"
-
-
-open Unix
-
-let set_infos filename infos =
-  Unix.utimes filename infos.st_atime infos.st_mtime;
-  Unix.chmod filename infos.st_perm
-  (** it is not necessary to call [chown] since it is within the same user 
-    and {!Unix.chown} is not implemented under Windows
-   *)
-  (*
-  try
-    Unix.chown filename infos.st_uid infos.st_gid
-  with Unix_error(EPERM,_,_) -> ()
-*)
-
-let buffer_size = 8192;;
-let buffer = Bytes.create buffer_size;;
-
-let file_copy input_name output_name =
-  let fd_in = openfile input_name [O_RDONLY] 0 in
-  let fd_out = openfile output_name [O_WRONLY; O_CREAT; O_TRUNC] 0o666 in
-  let rec copy_loop () =
-    match read fd_in buffer 0 buffer_size with
-    |  0 -> ()
-    | r -> ignore (write fd_out buffer 0 r); copy_loop ()
-  in
-  copy_loop ();
-  close fd_in;
-  close fd_out;;
-
-
-let copy_with_permission input_name output_name =
-    file_copy input_name output_name ;
-    set_infos output_name (Unix.lstat input_name)  
-
-let install_if_exists ~destdir input_name = 
-    if Sys.file_exists input_name then 
-      let output_name = (Filename.concat destdir (Filename.basename input_name)) in
-      match Unix.stat output_name , Unix.stat input_name with
-      | {st_mtime = output_stamp}, {st_mtime = input_stamp} when input_stamp <= output_stamp 
-        -> false
-      | _ -> copy_with_permission input_name output_name; true 
-      | exception _ -> copy_with_permission input_name output_name; true
-    else false
-
-end
-module Bsb_namespace_map_gen : sig 
-#1 "bsb_namespace_map_gen.mli"
-(* Copyright (C) 2017 Authors of BuckleScript
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Lesser General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * In addition to the permissions granted to you by the LGPL, you may combine
- * or link a "work that uses the Library" with a publicly distributed version
- * of this file to produce a combined library or application, then distribute
- * that combined work under the terms of your choosing, with no requirement
- * to comply with the obligations normally placed on you by section 4 of the
- * LGPL version 3 (or the corresponding section of a later version of the LGPL
- * should you choose to use a later version).
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Lesser General Public License for more details.
- *
- * You should have received a copy of the GNU Lesser General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
-
-(** [output dir namespace file_groups]
-    when [build.ninja] is generated, we output a module map [.mlmap] file 
-    such [.mlmap] file will be consumed by [bsc.exe] to generate [.cmi] file
- *)
-val output : 
-  dir:string ->
-  string -> 
-  Bsb_parse_sources.file_group list ->
-  unit 
-end = struct
-#1 "bsb_namespace_map_gen.ml"
-(* Copyright (C) 2017 Authors of BuckleScript
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Lesser General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * In addition to the permissions granted to you by the LGPL, you may combine
- * or link a "work that uses the Library" with a publicly distributed version
- * of this file to produce a combined library or application, then distribute
- * that combined work under the terms of your choosing, with no requirement
- * to comply with the obligations normally placed on you by section 4 of the
- * LGPL version 3 (or the corresponding section of a later version of the LGPL
- * should you choose to use a later version).
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Lesser General Public License for more details.
- *
- * You should have received a copy of the GNU Lesser General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
-
-let (//) = Ext_path.combine
-
-
-
-
-
-
-let output ~dir namespace 
-    (file_groups : Bsb_parse_sources.file_group list)
-  = 
-  let fname = namespace ^ Literals.suffix_mlmap in 
-  let oc = open_out_bin (dir// fname ) in 
-  List.iter
-    (fun  (x : Bsb_parse_sources.file_group) ->
-      String_map.iter (fun k _ -> 
-        output_string oc k ;
-        output_string oc "\n"
-      ) x.sources 
-     )  file_groups ;
-  close_out oc 
-
-end
-module Bsb_ninja_global_vars
-= struct
-#1 "bsb_ninja_global_vars.ml"
-(* Copyright (C) 2017 Authors of BuckleScript
- * 
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Lesser General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * In addition to the permissions granted to you by the LGPL, you may combine
- * or link a "work that uses the Library" with a publicly distributed version
- * of this file to produce a combined library or application, then distribute
- * that combined work under the terms of your choosing, with no requirement
- * to comply with the obligations normally placed on you by section 4 of the
- * LGPL version 3 (or the corresponding section of a later version of the LGPL
- * should you choose to use a later version).
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Lesser General Public License for more details.
- * 
- * You should have received a copy of the GNU Lesser General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
-
-
- 
-let bs_package_flags = "bs_package_flags"
-
-let bsc = "bsc" 
-
-let src_root_dir = "src_root_dir"
-let bsb_helper = "bsb_helper"
-
-let bsc_flags = "bsc_flags"
-
-let ppx_flags = "ppx_flags"
-
-let bs_package_includes = "bs_package_includes"
-
-let bs_package_dev_includes = "bs_package_dev_includes"
-
-let refmt = "refmt"
-
-let reason_react_jsx = "reason_react_jsx"
-
-let refmt_flags = "refmt_flags"
-
-let postbuild = "postbuild"
-
-let namespace = "namespace" 
-
-let package_sep = "-"
-
-let warnings = "warnings"
-
-let build_artifacts_dir = "build_artifacts_dir"
-
-let bs_super_errors = "bs_super_errors"
-let bs_super_errors_ocamlfind = "bs_super_errors_ocamlfind"
-
-let ocamlc = "ocamlc"
-let ocamlopt = "ocamlopt"
-let ocamlfind = "ocamlfind"
-let ocamlfind_dependencies = "ocamlfind_dependencies"
-let external_deps_for_linking = "external_deps_for_linking"
-let open_flag = "open_flag"
-let ocaml_flags = "ocaml_flags"
-let berror = "berror"
-let ocaml_dependencies = "ocaml_dependencies"
-let bsb_helper_warnings = "bsb_helper_warnings"
-let bsb_helper_verbose = "bsb_helper_verbose"
-
-end
-module Bsb_rule : sig 
-#1 "bsb_rule.mli"
-(* Copyright (C) 2015-2016 Bloomberg Finance L.P.
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Lesser General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * In addition to the permissions granted to you by the LGPL, you may combine
- * or link a "work that uses the Library" with a publicly distributed version
- * of this file to produce a combined library or application, then distribute
- * that combined work under the terms of your choosing, with no requirement
- * to comply with the obligations normally placed on you by section 4 of the
- * LGPL version 3 (or the corresponding section of a later version of the LGPL
- * should you choose to use a later version).
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Lesser General Public License for more details.
- *
- * You should have received a copy of the GNU Lesser General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
-
-
-
-
-type t  
-
-val get_name : t  -> out_channel -> string
-
-val build_ast_and_module_sets : t
-val build_ast_and_module_sets_from_re : t 
-val build_ast_and_module_sets_from_rei : t 
-
-val build_ast_and_module_sets_gen_simple : t
-val build_ast_and_module_sets_from_re_gen_simple : t 
-val build_ast_and_module_sets_from_rei_gen_simple : t 
-
-val build_bin_deps : t 
-val build_bin_deps_bytecode : t 
-val build_bin_deps_native : t 
-val reload : t 
-val copy_resources : t
-val build_cmj_js : t
-val build_cmj_cmi_js : t 
-val build_cmi : t
-val build_cmo_cmi_bytecode : t
-val build_cmi_bytecode : t
-val build_cmx_cmi_native : t
-val build_cmi_native : t
-val linking_bytecode : t
-val linking_native : t
-val build_cma_library : t
-val build_cmxa_library : t
-
-val build_package : t 
-val build_package_gen_mlast_simple : t
-val build_package_build_cmi_bytecode : t
-val build_package_build_cmi_native : t
-
-
-(** rules are generally composed of built-in rules and customized rules, there are two design choices:
-    1. respect custom rules with the same name, then we need adjust our built-in 
-    rules dynamically in case the conflict.
-    2. respect our built-in rules, then we only need re-load custom rules for each bsconfig.json
-*)
-
-
-(** Since now we generate ninja files per bsconfig.json in a single process, 
-    we must make sure it is re-entrant
-*)
-val reset : string String_map.t -> t String_map.t
-
-val define :
-    command:string ->
-    ?depfile:string ->
-    ?restat:unit ->
-    ?description:string ->
-    string -> 
-    t
-
-end = struct
-#1 "bsb_rule.ml"
-(* Copyright (C) 2015-2016 Bloomberg Finance L.P.
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Lesser General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * In addition to the permissions granted to you by the LGPL, you may combine
- * or link a "work that uses the Library" with a publicly distributed version
- * of this file to produce a combined library or application, then distribute
- * that combined work under the terms of your choosing, with no requirement
- * to comply with the obligations normally placed on you by section 4 of the
- * LGPL version 3 (or the corresponding section of a later version of the LGPL
- * should you choose to use a later version).
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Lesser General Public License for more details.
- *
- * You should have received a copy of the GNU Lesser General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
-
-
-
-let rule_id = ref 0
-let rule_names = ref String_set.empty
-(** To make it re-entrant across multiple ninja files, 
-    We must reset [rule_id]
-*)
-let ask_name name =
-  let current_id = !rule_id in
-  let () = incr rule_id in
-  match String_set.find name !rule_names with
-  | exception Not_found ->
-    rule_names := String_set.add name !rule_names ;
-    name
-  | _ ->
-    begin (* could be improved later
-             1. instead of having a global id, having a unique id per rule name
-             2. the rule id is increased only when actually used
-          *)
-      let new_name =  (name ^ Printf.sprintf "_%d" current_id) in
-      rule_names := String_set.add new_name  !rule_names ;
-      new_name
-    end
-
-type t = { 
-  mutable used : bool; 
-  rule_name : string; 
-  name : out_channel -> string 
-}
-
-let get_name (x : t) oc = x.name oc
-let print_rule oc ~description ?restat ?depfile ~command   name  =
-  output_string oc "rule "; output_string oc name ; output_string oc "\n";
-  output_string oc "  command = "; output_string oc command; output_string oc "\n";
-  begin match depfile with
-    | None -> ()
-    | Some f ->
-      output_string oc "  depfile = "; output_string oc f; output_string oc  "\n"
-  end;
-  begin match restat with
-    | None -> ()
-    | Some () ->
-      output_string oc "  restat = 1"; output_string oc  "\n"
-  end;
-
-  output_string oc "  description = " ; output_string oc description; output_string oc "\n"
-
-
-
-
-(** allocate an unique name for such rule*)
-let define
-    ~command
-    ?depfile
-    ?restat
-    ?(description = "\027[34mBuilding\027[39m \027[2m${out}\027[22m") (* blue, dim *)
-    name
-  =
-  let rule_name = ask_name name  in 
-  let rec self = {
-    used  = false;
-    rule_name ;
-    name = fun oc ->
-      if not self.used then
-        begin
-          print_rule oc ~description ?depfile ?restat ~command rule_name;
-          self.used <- true
-        end ;
-      rule_name
-  } in self
-
-
-(** FIXME: We don't need set [-o ${out}] when building ast 
-    since the default is already good -- it does not*)
-let build_ast_and_module_sets =
-  define
-    ~command:"${bsc}  ${pp_flags} ${ppx_flags} ${bs_super_errors} ${warnings} ${bsc_flags} -c -o ${out} -bs-syntax-only -bs-binary-ast ${in}"
-    "build_ast_and_module_sets"
-    
-let build_ast_and_module_sets_from_re =
-  define
-    ~command:"${bsc} -pp \"${refmt} ${refmt_flags}\" ${reason_react_jsx}  ${ppx_flags} ${bs_super_errors} ${warnings} ${bsc_flags} -c -o ${out} -bs-syntax-only -bs-binary-ast -impl ${in}"
-    "build_ast_and_module_sets_from_re"
-    
-let build_ast_and_module_sets_from_rei =
-  define
-    ~command:"${bsc} -pp \"${refmt} ${refmt_flags}\" ${reason_react_jsx} ${ppx_flags} ${bs_super_errors} ${warnings} ${bsc_flags}  -c -o ${out} -bs-syntax-only -bs-binary-ast -intf ${in}"
-    "build_ast_and_module_sets_from_rei"
-
-
-(* We need those because they'll generate the mlast_simple for us (and the previous three won't for performance reason). *)
-let build_ast_and_module_sets_gen_simple =
-  define
-    ~command:"${bsc}  ${pp_flags} ${ppx_flags} ${bs_super_errors} ${warnings} ${bsc_flags} -c -o ${out} -bs-syntax-only -bs-simple-binary-ast -bs-binary-ast ${in}"
-    "build_ast_and_module_sets_gen_simple"
-    
-let build_ast_and_module_sets_from_re_gen_simple =
-  define
-    ~command:"${bsc} -pp \"${refmt} ${refmt_flags}\" ${reason_react_jsx}  ${ppx_flags} ${bs_super_errors} ${warnings} ${bsc_flags} -c -o ${out} -bs-syntax-only -bs-simple-binary-ast -bs-binary-ast -impl ${in}"
-    "build_ast_and_module_sets_from_re_gen_simple"
-    
-let build_ast_and_module_sets_from_rei_gen_simple =
-  define
-    ~command:"${bsc} -pp \"${refmt} ${refmt_flags}\" ${reason_react_jsx} ${ppx_flags} ${bs_super_errors} ${warnings} ${bsc_flags} -c -o ${out} -bs-syntax-only -bs-simple-binary-ast -bs-binary-ast -intf ${in}"
-    "build_ast_and_module_sets_from_rei_gen_simple"
-
-
-let build_bin_deps =
-  define
-    ~command:"${bsb_helper} ${namespace} -g ${bsb_dir_group} -MD ${in}"
-    "build_deps"
-let build_bin_deps_bytecode =
-  define
-    ~command:"${bsb_helper} ${namespace} -g ${bsb_dir_group} -MD-bytecode ${in}"
-    "build_deps_bytecode"
-
-let build_bin_deps_native =
-  define
-    ~command:"${bsb_helper} ${namespace} -g ${bsb_dir_group} -MD-native ${in}"
-    "build_deps_native"
-    
-let reload =
-  define
-    ~command:"${bsbuild} -init"
-    "reload"
-
-let copy_resources =
-  let name = "copy_resource" in
-  if Ext_sys.is_windows_or_cygwin then
-    define ~command:"cmd.exe /C copy /Y ${in} ${out} > null"
-      name
-  else
-    define
-      ~command:"cp ${in} ${out}"
-      name
-
-
-
-(* only generate mll no mli generated *)
-(* actually we would prefer generators in source ?
-   generator are divided into two categories:
-   1. not system dependent (ocamllex,ocamlyacc)
-   2. system dependent - has to be run on client's machine
-*)
-
-
-(**************************************)
-(* below are rules not local any more *)
-(**************************************)
-
-(* [bsc_lib_includes] are fixed for libs *)
-let build_cmj_js =
-  define
-    ~command:"${bsc} ${bs_super_errors} ${bs_package_flags} -bs-assume-has-mli -bs-no-builtin-ppx-ml -bs-no-implicit-include  \
-              ${bs_package_includes} ${bsc_lib_includes} ${bsc_extra_includes} ${warnings} ${bsc_flags} -o ${out} -c  ${in} $postbuild"
-    ~depfile:"${in}.d"
-    "build_cmj_only"
-
-let build_cmj_cmi_js =
-  define
-    ~command:"${bsc} ${bs_super_errors} ${bs_package_flags} -bs-assume-no-mli -bs-no-builtin-ppx-ml -bs-no-implicit-include \
-              ${bs_package_includes} ${bsc_lib_includes} ${bsc_extra_includes} ${warnings} ${bsc_flags} -o ${out} -c  ${in} $postbuild"
-    ~depfile:"${in}.d"
-    "build_cmj_cmi" (* the compiler should never consult [.cmi] when [.mli] does not exist *)
-let build_cmi =
-  define
-    ~command:"${bsc} ${bs_super_errors} ${bs_package_flags} -bs-no-builtin-ppx-mli -bs-no-implicit-include \
-              ${bs_package_includes} ${bsc_lib_includes} ${bsc_extra_includes} ${warnings} ${bsc_flags} -o ${out} -c  ${in}"
-    ~depfile:"${in}.d"
-    "build_cmi" (* the compiler should always consult [.cmi], current the vanilla ocaml compiler only consult [.cmi] when [.mli] found*)
-
-let build_package = 
-  define
-    ~command:"${bsc} -w -49 -no-alias-deps -c ${in}"
-    "build_package"
-
-let build_package_gen_mlast_simple = 
-  define
-    ~command:"${bsc} -w -49 -no-alias-deps -bs-binary-ast -bs-simple-binary-ast -c ${in}"
-    "build_package_gen_mlast_simple"
-    
-let build_package_build_cmi_bytecode = 
-  define
-    ~command:"${ocamlfind}${ocamlc} ${bs_super_errors_ocamlfind} ${bs_package_includes} ${ocaml_lib_includes} ${bsc_extra_includes} ${ocamlfind_dependencies} ${ocaml_flags} \
-              -o ${out} ${warnings} -no-alias-deps -w -49 -g -c -intf-suffix .mliast_simple -impl ${in} ${postbuild}"
-    "build_package_build_cmi_bytecode"
-
-let build_package_build_cmi_native = 
-  define
-    ~command:"${ocamlfind}${ocamlopt} ${bs_super_errors_ocamlfind} ${bs_package_includes} ${ocaml_lib_includes} ${bsc_extra_includes} ${ocamlfind_dependencies} ${ocaml_flags} \
-              -o ${out} ${warnings} -no-alias-deps -w -49 -g -c -intf-suffix .mliast_simple -impl ${in} ${postbuild}"
-    "build_package_build_cmi_native"
-
-
-let build_cmo_cmi_bytecode =
-  define
-    ~command:"${ocamlfind}${ocamlc} ${open_flag} ${bs_super_errors_ocamlfind} ${bs_package_includes} ${ocaml_lib_includes} ${bsc_extra_includes} ${ocamlfind_dependencies} ${ocaml_flags} \
-              -o ${out} ${warnings} -g -c -intf-suffix .mliast_simple -impl ${in}_simple ${postbuild}"
-    ~depfile:"${in}.d"
-    "build_cmo_cmi_bytecode"
-    
-let build_cmi_bytecode =
-  define
-    ~command:"${ocamlfind}${ocamlc} ${open_flag} ${bs_super_errors_ocamlfind} ${bs_package_includes} ${ocaml_lib_includes} ${bsc_extra_includes} ${ocamlfind_dependencies} ${ocaml_flags} \
-              -o ${out} ${warnings} -g -c -intf ${in}_simple ${postbuild}"
-    ~depfile:"${in}.d"
-    "build_cmi_bytecode"
-
-let build_cmx_cmi_native =
-  define
-    ~command:"${ocamlfind}${ocamlopt} ${open_flag} ${bs_super_errors_ocamlfind} ${bs_package_includes} ${ocaml_lib_includes} ${bsc_extra_includes} ${ocamlfind_dependencies} ${ocaml_flags} \
-              -o ${out} ${warnings} -g -c -intf-suffix .mliast_simple -impl ${in}_simple ${postbuild}"
-    ~depfile:"${in}.d"
-    "build_cmx_cmi_native"
-
-let build_cmi_native =
-  define
-    ~command:"${ocamlfind}${ocamlopt} ${open_flag} ${bs_super_errors_ocamlfind} ${bs_package_includes} ${ocaml_lib_includes} ${bsc_extra_includes} ${ocamlfind_dependencies} ${ocaml_flags} \
-              -o ${out} ${warnings} -g -c -intf ${in}_simple ${postbuild}"
-    ~depfile:"${in}.d"
-    "build_cmi_native"
-    
-    
-
-let linking_bytecode =
-  define
-    ~command:"${bsb_helper} ${bsb_helper_verbose} ${ocaml_dependencies} ${warnings} ${namespace} -bs-main ${main_module} ${bs_super_errors} ${static_libraries} \
-              ${ocamlfind_dependencies} ${external_deps_for_linking} ${in} -link-bytecode ${out}"
-    "linking_bytecode"
-
-let linking_native =
-  define
-    ~command:"${bsb_helper} ${bsb_helper_verbose} ${ocaml_dependencies} ${warnings} ${namespace} -bs-main ${main_module} ${bs_super_errors} ${static_libraries} \
-              ${ocamlfind_dependencies} ${external_deps_for_linking} ${in} -link-native ${out}"
-    "linking_native"
-
-
-let build_cma_library =
-  define
-    ~command:"${bsb_helper} ${bsb_helper_verbose} ${build_library} ${ocaml_dependencies} ${warnings} ${namespace} ${bs_super_errors} ${static_libraries} ${ocamlfind_dependencies} \
-              ${bs_package_includes} ${ocaml_lib_includes} ${bsc_extra_includes} \
-              ${in} -pack-bytecode-library"
-    "build_cma_library"
-
-let build_cmxa_library =
-  define
-    ~command:"${bsb_helper} ${bsb_helper_verbose} ${build_library} ${ocaml_dependencies} ${warnings} ${namespace} ${bs_super_errors} ${static_libraries} ${ocamlfind_dependencies} \
-              ${bs_package_includes} ${ocaml_lib_includes} ${bsc_extra_includes} \
-              ${in} -pack-native-library"
-    "build_cmxa_library"
-
-(* a snapshot of rule_names environment*)
-let built_in_rule_names = !rule_names 
-let built_in_rule_id = !rule_id
-
-let reset (custom_rules : string String_map.t) = 
-  begin 
-    rule_id := built_in_rule_id;
-    rule_names := built_in_rule_names;
-
-    build_ast_and_module_sets.used <- false ;
-    build_ast_and_module_sets_from_re.used <- false ;  
-    build_ast_and_module_sets_from_rei.used <- false ;
-    
-    build_ast_and_module_sets_gen_simple.used <- false ;
-    build_ast_and_module_sets_from_re_gen_simple.used <- false ;  
-    build_ast_and_module_sets_from_rei_gen_simple.used <- false ;
-
-    build_bin_deps.used <- false;
-    build_bin_deps_bytecode.used <- false;
-    build_bin_deps_native.used <- false;
-  
-    reload.used <- false; 
-    copy_resources.used <- false ;
-    build_cmj_js.used <- false;
-    build_cmj_cmi_js.used <- false ;
-    build_cmi.used <- false ;
-    
-    build_cmo_cmi_bytecode.used <- false;
-    build_cmi_bytecode.used <- false;
-    build_cmx_cmi_native.used <- false;
-    build_cmi_native.used <- false;
-    linking_bytecode.used <- false;
-    linking_native.used <- false;
-    build_cma_library.used <- false;
-    build_cmxa_library.used <- false;
-    
-    build_package.used <- false;
-
-    build_package_gen_mlast_simple.used <- false;
-    build_package_build_cmi_bytecode.used <- false;
-    build_package_build_cmi_native.used <- false;
-    
-    String_map.mapi (fun name command -> 
-        define ~command name
-      ) custom_rules
-  end
-
-end
-module Bsb_ninja_util : sig 
-#1 "bsb_ninja_util.mli"
-(* Copyright (C) 2015-2016 Bloomberg Finance L.P.
- * 
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Lesser General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * In addition to the permissions granted to you by the LGPL, you may combine
- * or link a "work that uses the Library" with a publicly distributed version
- * of this file to produce a combined library or application, then distribute
- * that combined work under the terms of your choosing, with no requirement
- * to comply with the obligations normally placed on you by section 4 of the
- * LGPL version 3 (or the corresponding section of a later version of the LGPL
- * should you choose to use a later version).
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Lesser General Public License for more details.
- * 
- * You should have received a copy of the GNU Lesser General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
-
-
-
-
-type override = 
-  | Append of string 
-  | AppendList of string list 
-  | AppendVar of string
-  
-  | Overwrite of string 
-  
-  | OverwriteVar of string 
-
-type shadow = { key : string ; op : override }
-(** output should always be marked explicitly,
-   otherwise the build system can not figure out clearly
-   however, for the command we don't need pass `-o`
-*)
-val output_build :
-  ?order_only_deps:string list ->
-  ?implicit_deps:string list ->
-  ?outputs:string list ->
-  ?implicit_outputs: string list ->  
-  ?inputs:string list ->
-  ?shadows:shadow list ->
-  ?restat:unit ->
-  output:string ->
-  input:string ->
-  rule:Bsb_rule.t -> out_channel -> unit
-
-
-val phony  :
-  ?order_only_deps:string list ->
-  inputs:string list -> output:string -> out_channel -> unit
-
-val output_kv : string ->  string -> out_channel -> unit 
-val output_kvs : (string * string) array -> out_channel -> unit
-
-
-end = struct
-#1 "bsb_ninja_util.ml"
-(* Copyright (C) 2015-2016 Bloomberg Finance L.P.
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Lesser General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * In addition to the permissions granted to you by the LGPL, you may combine
- * or link a "work that uses the Library" with a publicly distributed version
- * of this file to produce a combined library or application, then distribute
- * that combined work under the terms of your choosing, with no requirement
- * to comply with the obligations normally placed on you by section 4 of the
- * LGPL version 3 (or the corresponding section of a later version of the LGPL
- * should you choose to use a later version).
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Lesser General Public License for more details.
- *
- * You should have received a copy of the GNU Lesser General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
-
-
-
-
-type override = 
-  | Append of string 
-  | AppendList of string list
-  (* Append s 
-     s
-  *)
-  | AppendVar of string 
-  (* AppendVar s 
-     $s
-  *)
-  | Overwrite of string 
-
-  | OverwriteVar of string 
-    (*
-      OverwriteVar s 
-      $s
-    *)
-
-type shadow = 
-  { key : string ; op : override }
-
-let output_build
-    ?(order_only_deps=[])
-    ?(implicit_deps=[])
-    ?(outputs=[])
-    ?(implicit_outputs=[])
-    ?(inputs=[])
-    ?(shadows=([] : shadow list))
-    ?restat
-    ~output
-    ~input
-    ~rule
-    oc =
-  let rule = Bsb_rule.get_name rule  oc in (* Trigger building if not used *)
-  output_string oc "build ";
-  output_string oc output ;
-  outputs |> List.iter (fun s -> output_string oc Ext_string.single_space ; output_string oc s  );
-  begin match implicit_outputs with
-    | [] -> ()
-    | _ ->
-      output_string oc " | ";
-      implicit_outputs |> List.iter (fun s -> output_string oc Ext_string.single_space ; output_string oc s)
-  end;
-  output_string oc " : ";
-  output_string oc rule;
-  output_string oc Ext_string.single_space;
-  output_string oc input;
-  inputs |> List.iter (fun s ->   output_string oc Ext_string.single_space ; output_string oc s);
-  begin match implicit_deps with
-    | [] -> ()
-    | _ ->
-      begin
-        output_string oc " | ";
-        implicit_deps
-        |>
-        List.iter (fun s -> output_string oc Ext_string.single_space; output_string oc s )
-      end
-  end;
-  begin match order_only_deps with
-    | [] -> ()
-    | _ ->
-      begin
-        output_string oc " || ";
-        order_only_deps
-        |>
-        List.iter (fun s -> output_string oc Ext_string.single_space ; output_string oc s)
-      end
-  end;
-  output_string oc "\n";
-  begin match shadows with
-    | [] -> ()
-    | xs ->
-      List.iter (fun {key=k; op= v} ->
-          output_string oc "  " ;
-          output_string oc k ;
-          output_string oc " = ";
-          match v with
-          | Overwrite s -> 
-            output_string oc s ; 
-            output_string oc "\n"
-          | OverwriteVar s ->
-            output_string oc "$";
-            output_string oc s ; 
-            output_string oc "\n"
-          | AppendList ls -> 
-            output_string oc "$" ;
-            output_string oc k;
-            List.iter 
-              (fun s ->
-                 output_string oc Ext_string.single_space;
-                 output_string oc s 
-                 ) ls;
-            output_string oc "\n"
-          | Append s ->
-            output_string oc "$" ;
-            output_string oc k;
-            output_string oc Ext_string.single_space;
-            output_string oc s ; output_string oc "\n"
-          | AppendVar s ->   
-            output_string oc "$" ;
-            output_string oc k;
-            output_string oc Ext_string.single_space;
-            output_string oc "$";
-            output_string oc s ; 
-            output_string oc "\n"
-        ) xs
-  end;
-  begin match restat with
-    | None -> ()
-    | Some () ->
-      output_string oc Ext_string.single_space ;
-      output_string oc "restat = 1 \n"
-  end
-
-
-let phony ?(order_only_deps=[]) ~inputs ~output oc =
-  output_string oc "build ";
-  output_string oc output ;
-  output_string oc " : ";
-  output_string oc "phony";
-  output_string oc Ext_string.single_space;
-  inputs |> List.iter (fun s ->   output_string oc Ext_string.single_space ; output_string oc s);
-  begin match order_only_deps with
-    | [] -> ()
-    | _ ->
-      begin
-        output_string oc " || ";
-        order_only_deps
-        |>
-        List.iter (fun s -> output_string oc Ext_string.single_space ; output_string oc s)
-      end
-  end;
-  output_string oc "\n"
-
-let output_kv key value oc  =
-  output_string oc key ;
-  output_string oc " = ";
-  output_string oc value ;
-  output_string oc "\n"
-
-let output_kvs kvs oc =
-  Array.iter (fun (k,v) -> output_kv k v oc) kvs
-
-
-
-end
-module Bsb_ninja_file_groups : sig 
-#1 "bsb_ninja_file_groups.mli"
-(* Copyright (C) 2017 Authors of BuckleScript
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Lesser General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * In addition to the permissions granted to you by the LGPL, you may combine
- * or link a "work that uses the Library" with a publicly distributed version
- * of this file to produce a combined library or application, then distribute
- * that combined work under the terms of your choosing, with no requirement
- * to comply with the obligations normally placed on you by section 4 of the
- * LGPL version 3 (or the corresponding section of a later version of the LGPL
- * should you choose to use a later version).
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Lesser General Public License for more details.
- *
- * You should have received a copy of the GNU Lesser General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
-
-
-type info =  string list  
-
-
-val zero : info
-
-val get_local_ppx_deps : 
-  Bsb_config_types.compilation_kind_t -> 
-  Bsb_config_types.entries_t list -> 
-  (Bsb_config_types.entries_t list * Bsb_config_types.entries_t list * string list * string list * Bsb_config_types.entries_t list)
-
-val handle_file_groups :
-  out_channel ->
-  package_specs:Bsb_package_specs.t ->  
-  bs_suffix:bool ->
-  js_post_build_cmd:string option -> 
-  files_to_install:String_hash_set.t ->  
-  custom_rules:Bsb_rule.t String_map.t ->
-  backend:Bsb_config_types.compilation_kind_t -> 
-  entries:Bsb_config_types.entries_t list ->
-  Bsb_parse_sources.file_group list ->
-  string option ->
-  info -> info
-
-end = struct
-#1 "bsb_ninja_file_groups.ml"
-(* Copyright (C) 2017 Authors of BuckleScript
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Lesser General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * In addition to the permissions granted to you by the LGPL, you may combine
- * or link a "work that uses the Library" with a publicly distributed version
- * of this file to produce a combined library or application, then distribute
- * that combined work under the terms of your choosing, with no requirement
- * to comply with the obligations normally placed on you by section 4 of the
- * LGPL version 3 (or the corresponding section of a later version of the LGPL
- * should you choose to use a later version).
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Lesser General Public License for more details.
- *
- * You should have received a copy of the GNU Lesser General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
-
-let (//) = Ext_path.combine
-
-type info =
-  string list   
-(* Figure out a list of files 
-   to be built before building cm*
-*)
-
-
-let zero : info =
-  [] 
-
-
-
-
-
-let handle_generators oc 
-    (group : Bsb_parse_sources.file_group) custom_rules =   
-  let map_to_source_dir = 
-    (fun x -> Bsb_config.proj_rel (group.dir //x )) in
-  group.generators
-  |> List.iter (fun  ({output; input; command}  : Bsb_parse_sources.build_generator)-> 
-      begin match String_map.find_opt command custom_rules with 
-        | None -> Ext_pervasives.failwithf ~loc:__LOC__ "custom rule %s used but  not defined" command
-        | Some rule -> 
-          begin match output, input with
-            | output::outputs, input::inputs -> 
-              Bsb_ninja_util.output_build oc 
-                ~outputs:(Ext_list.map map_to_source_dir  outputs)
-                ~inputs:(Ext_list.map map_to_source_dir inputs) 
-                ~output:(map_to_source_dir output)
-                ~input:(map_to_source_dir input)
-                ~rule
-            | [], _ 
-            | _, []  -> Ext_pervasives.failwithf ~loc:__LOC__ "either output or input can not be empty in rule %s" command
-          end
-      end
-    )
-
-
-let make_common_shadows 
-    is_re
-    package_specs 
-    dirname 
-    dir_index 
-  : Bsb_ninja_util.shadow list 
-  =
-  let shadows : Bsb_ninja_util.shadow list = 
-    { key = Bsb_ninja_global_vars.bs_package_flags;
-      op = 
-        Append
-          (Bsb_package_specs.package_flag_of_package_specs
-             package_specs dirname
-          )
-    } ::
-    (if Bsb_dir_index.is_lib_dir dir_index  then [] else
-       [{
-         key = Bsb_ninja_global_vars.bs_package_includes; 
-         op = AppendVar Bsb_ninja_global_vars.bs_package_dev_includes 
-       }
-        ;
-        { key = "bsc_extra_includes";
-          op = OverwriteVar (Bsb_dir_index.string_of_bsb_dev_include dir_index)
-        }
-       ]
-    )   
-  in 
-  if is_re then 
-    { key = Bsb_ninja_global_vars.bsc_flags; 
-      op = AppendList ["-bs-re-out"; "-bs-super-errors"]
-    } :: shadows
-  else shadows
-
-
-let emit_impl_build
-    (package_specs : Bsb_package_specs.t)
-    (group_dir_index : Bsb_dir_index.t) 
-    oc 
-    ~bs_suffix
-    ~no_intf_file:(no_intf_file : bool) 
-    js_post_build_cmd
-    ~is_re
-    ~local_ppx_flags
-    ~local_ppx_deps
-    namespace
-    filename_sans_extension
-  : info =    
-  let input = 
-    Bsb_config.proj_rel 
-      (if is_re then filename_sans_extension ^ Literals.suffix_re 
-       else filename_sans_extension ^ Literals.suffix_ml  ) in
-  let output_mlast = filename_sans_extension  ^ Literals.suffix_mlast in
-  let output_mlastd = filename_sans_extension ^ Literals.suffix_mlastd in
-  let output_filename_sans_extension = 
-    match namespace with 
-    | None -> 
-      filename_sans_extension 
-    | Some ns -> 
-      Ext_namespace.make ~ns filename_sans_extension
-  in 
-  let file_cmi =  output_filename_sans_extension ^ Literals.suffix_cmi in
-  let output_cmj =  output_filename_sans_extension ^ Literals.suffix_cmj in
-  let output_js =
-    Bsb_package_specs.get_list_of_output_js package_specs bs_suffix output_filename_sans_extension in 
-  let common_shadows = 
-    make_common_shadows is_re package_specs
-      (Filename.dirname file_cmi)
-      group_dir_index in
-  let shadows = List.map (fun f -> 
-    Bsb_ninja_util.{
-     key = "ppx_flags"; 
-     op = AppendList ["-ppx"; f]
-   }) local_ppx_flags in
-  begin
-    Bsb_ninja_util.output_build oc
-      ~output:output_mlast
-      ~input
-      ~rule:( if is_re then 
-                Bsb_rule.build_ast_and_module_sets_from_re
-              else
-                Bsb_rule.build_ast_and_module_sets)
-      ~implicit_deps:local_ppx_deps
-      ~shadows;
-    Bsb_ninja_util.output_build
-      oc
-      ~output:output_mlastd
-      ~input:output_mlast
-      ~rule:Bsb_rule.build_bin_deps
-      ?shadows:(if Bsb_dir_index.is_lib_dir group_dir_index then None
-                else Some [{Bsb_ninja_util.key = Bsb_build_schemas.bsb_dir_group ; 
-                            op = 
-                              Overwrite (string_of_int (group_dir_index :> int)) }])
-    ;
-    let shadows =
-      match js_post_build_cmd with
-      | None -> common_shadows
-      | Some cmd ->
-        {key = Bsb_ninja_global_vars.postbuild;
-         op = Overwrite ("&& " ^ cmd ^ Ext_string.single_space ^ String.concat Ext_string.single_space output_js)} 
-        :: common_shadows
-    in
-    let rule , cm_outputs, deps =
-      if no_intf_file then 
-        Bsb_rule.build_cmj_cmi_js, [file_cmi], []
-      else  Bsb_rule.build_cmj_js, []  , [file_cmi]
-    in
-    Bsb_ninja_util.output_build oc
-      ~output:output_cmj
-      ~shadows
-      ~implicit_outputs:  (output_js @ cm_outputs)
-      ~input:output_mlast
-      ~implicit_deps:deps
-      ~rule;
-    [output_mlastd] 
-  end 
-
-
-let emit_intf_build 
-    (package_specs : Bsb_package_specs.t)
-    (group_dir_index : Bsb_dir_index.t)
-    oc
-    ~is_re
-    ~local_ppx_flags
-    ~local_ppx_deps
-    namespace
-    filename_sans_extension
-  : info =
-  let output_mliast = filename_sans_extension ^ Literals.suffix_mliast in
-  let output_mliastd = filename_sans_extension ^ Literals.suffix_mliastd in
-  let output_filename_sans_extension = 
-    match namespace with 
-    | None -> 
-      filename_sans_extension 
-    | Some ns -> 
-      Ext_namespace.make ~ns filename_sans_extension
-  in 
-  let output_cmi = output_filename_sans_extension ^ Literals.suffix_cmi in  
-  let common_shadows = 
-    make_common_shadows is_re package_specs
-      (Filename.dirname output_cmi)
-      group_dir_index in
-  let shadows = List.map (fun f -> 
-    Bsb_ninja_util.{
-     key = "ppx_flags"; 
-     op = AppendList ["-ppx"; f]
-   }) local_ppx_flags in
-  Bsb_ninja_util.output_build oc
-    ~output:output_mliast
-      (* TODO: we can get rid of absloute path if we fixed the location to be 
-          [lib/bs], better for testing?
-      *)
-    ~input:(Bsb_config.proj_rel 
-              (if is_re then filename_sans_extension ^ Literals.suffix_rei 
-               else filename_sans_extension ^ Literals.suffix_mli))
-    ~rule:(if is_re then Bsb_rule.build_ast_and_module_sets_from_rei
-           else Bsb_rule.build_ast_and_module_sets)
-    ~implicit_deps:local_ppx_deps
-    ~shadows;
-  Bsb_ninja_util.output_build oc
-    ~output:output_mliastd
-    ~input:output_mliast
-    ~rule:Bsb_rule.build_bin_deps
-    ?shadows:(if Bsb_dir_index.is_lib_dir group_dir_index  then None
-              else Some [{
-                  key = Bsb_build_schemas.bsb_dir_group; 
-                  op = 
-                    Overwrite (string_of_int (group_dir_index :> int )) }])
-  ;
-  Bsb_ninja_util.output_build oc
-    ~shadows:common_shadows
-    ~output:output_cmi
-    ~input:output_mliast
-    ~rule:Bsb_rule.build_cmi;
-  [output_mliastd]
-
-
-
-let handle_module_info 
-    (group_dir_index : Bsb_dir_index.t)
-    (package_specs : Bsb_package_specs.t) 
-    js_post_build_cmd
-    ~bs_suffix
-    ~local_ppx_flags
-    ~local_ppx_deps
-    oc  module_name 
-    ( module_info : Bsb_db.module_info)
-    namespace
-  : info =
-  match module_info.ml, module_info.mli with
-  | Ml_source (input_impl,impl_is_re,_), 
-    Mli_source(input_intf, intf_is_re,_) ->
-    emit_impl_build 
-      package_specs
-      group_dir_index
-      oc 
-      ~bs_suffix
-      ~no_intf_file:false
-      ~is_re:impl_is_re
-      ~local_ppx_flags
-      ~local_ppx_deps
-      js_post_build_cmd      
-      namespace
-      input_impl  @ 
-    emit_intf_build 
-      package_specs
-      group_dir_index
-      oc         
-      ~is_re:intf_is_re
-      ~local_ppx_flags
-      ~local_ppx_deps
-      namespace
-      input_intf 
-  | Ml_source(input,is_re,_), Mli_empty ->
-    emit_impl_build 
-      package_specs
-      group_dir_index
-      oc 
-      ~bs_suffix
-      ~no_intf_file:true
-      js_post_build_cmd      
-      ~is_re
-      ~local_ppx_flags
-      ~local_ppx_deps
-      namespace
-      input 
-  | Ml_empty, Mli_source(input,is_re,_) ->    
-    emit_intf_build 
-      package_specs
-      group_dir_index
-      oc         
-      ~is_re
-      ~local_ppx_flags
-      ~local_ppx_deps
-      namespace
-      input 
-  | Ml_empty, Mli_empty -> zero
-
-
-let handle_file_group 
-    oc 
-    ~bs_suffix
-    ~custom_rules 
-    ~package_specs 
-    ~js_post_build_cmd  
-    ~local_ppx_flags 
-    ~local_ppx_deps
-    (files_to_install : String_hash_set.t) 
-    (namespace  : string option)
-    acc 
-    (group: Bsb_parse_sources.file_group ) 
-  : info =
-
-  handle_generators oc group custom_rules ;
-  String_map.fold (fun  module_name module_info  acc ->
-      let installable =
-        match group.public with
-        | Export_all -> true
-        | Export_none -> false
-        | Export_set set ->  
-          String_set.mem module_name set in
-      if installable then 
-        String_hash_set.add files_to_install (Bsb_db.filename_sans_suffix_of_module_info module_info);
-      (handle_module_info 
-        ~bs_suffix
-        ~local_ppx_flags
-        ~local_ppx_deps
-         group.dir_index 
-         package_specs js_post_build_cmd 
-         oc 
-         module_name 
-         module_info
-         namespace
-      ) @  acc
-    ) group.sources  acc 
-
-(* Divide the entries into 3 groups:
-  - entries: all the non-ppx entries that we'd like to pack or link
-  - entries_that_have_ppxes: subset of `entries` which have dependencies on local ppxes
-  - ppx_entries: entries that are ppxes, a disjoint set from `entries`
-  
-  Also returns a list of ppx module names and ppx executable paths.
- *)
-let get_local_ppx_deps backend entries =
-  List.fold_left Bsb_config_types.(fun (entries, entries_that_have_ppxes, local_ppx_deps, module_names, ppx_entries) project_entry ->
-    let dry entry_backend ppx kind main_module_name output_name =
-        let (entries, entries_that_have_ppxes) = if backend = entry_backend && kind <> Ppx then 
-          if ppx <> [] then
-            (project_entry :: entries, project_entry :: entries_that_have_ppxes)
-          else
-            (project_entry :: entries, entries_that_have_ppxes)
-        else 
-          (entries, entries_that_have_ppxes) in
-        let (local_ppx_deps, module_names, ppx_entries) = if kind = Ppx then 
-          let (output, module_name) =
-          begin match entry_backend with
-          | Js       -> assert false
-          | Bytecode -> 
-            (match output_name with 
-              | None -> 
-                let extension = if Ext_sys.is_windows_or_cygwin then ".exe" else "" in
-                (String.lowercase main_module_name) ^ ".byte" ^ extension
-              | Some name -> name
-            ), main_module_name
-          | Native   -> 
-            (match output_name with 
-              | None -> 
-                let extension = if Ext_sys.is_windows_or_cygwin then ".exe" else "" in
-                (String.lowercase main_module_name) ^ ".native" ^ extension
-              | Some name -> name
-            ), main_module_name
-          end in
-        let output = if Ext_sys.is_windows_or_cygwin then output else "./" ^ output in
-        (output :: local_ppx_deps, module_name :: module_names, project_entry :: ppx_entries)
-        else
-          (local_ppx_deps, module_names, ppx_entries ) in
-        (entries, entries_that_have_ppxes, local_ppx_deps, module_names, ppx_entries)
-      in
-      match project_entry with
-      | JsTarget { ppx; kind; main_module_name; output_name } -> 
-        dry Js ppx kind main_module_name output_name
-        
-      | NativeTarget { ppx; kind; main_module_name; output_name } -> 
-        dry Native ppx kind main_module_name output_name
-        
-      | BytecodeTarget { ppx; kind; main_module_name; output_name } -> 
-        dry Bytecode ppx kind main_module_name output_name
-    
-  ) ([], [], [], [], []) entries
-
-let handle_file_groups
-    oc ~package_specs 
-    ~bs_suffix
-    ~js_post_build_cmd
-    ~files_to_install 
-    ~custom_rules
-    ~backend
-    ~entries
-    (file_groups  :  Bsb_parse_sources.file_group list)
-    namespace (st : info) : info  =
-  let file_groups = List.filter (fun (group : Bsb_parse_sources.file_group) ->
-    match backend with 
-    | Bsb_config_types.Js       -> 
-      not group.is_ppx && List.mem Bsb_parse_sources.Js group.Bsb_parse_sources.backend
-    | Bsb_config_types.Native   -> List.mem Bsb_parse_sources.Native group.Bsb_parse_sources.backend
-    | Bsb_config_types.Bytecode -> List.mem Bsb_parse_sources.Bytecode group.Bsb_parse_sources.backend
-  ) file_groups in 
-  let (entries, entries_that_have_ppxes, local_ppx_deps, local_ppx_module_names, _) = get_local_ppx_deps backend entries in
-  let (local_ppx_deps, local_ppx_module_names) = begin
-    let rec loop_over_ppx (new_local_ppx_deps, new_local_ppx_module_names) local_ppx_deps local_ppx_module_names = 
-      begin match (local_ppx_deps, local_ppx_module_names) with 
-      | ([], []) -> (new_local_ppx_deps, new_local_ppx_module_names)
-      | (ppx_dep :: ppx_dep_rest, ppx_name :: ppx_name_rest) ->
-        let rec is_ppx_used entries = begin match entries with 
-          | [] -> false
-          | Bsb_config_types.JsTarget { ppx; } :: rest
-          | Bsb_config_types.NativeTarget { ppx; } :: rest
-          | Bsb_config_types.BytecodeTarget { ppx; } :: rest ->
-            if List.mem ppx_name ppx then true
-            else is_ppx_used rest 
-        end in
-        if is_ppx_used entries then 
-          loop_over_ppx (ppx_dep :: new_local_ppx_deps, ppx_name :: new_local_ppx_module_names) ppx_dep_rest ppx_name_rest
-        else 
-          loop_over_ppx (new_local_ppx_deps, new_local_ppx_module_names) ppx_dep_rest ppx_name_rest
-      | _ -> assert false
-    end in
-    loop_over_ppx ([], []) local_ppx_deps local_ppx_module_names
-  end in
-  List.fold_left 
-    (fun comp_info (group : Bsb_parse_sources.file_group) -> 
-      if group.is_ppx then
-        comp_info
-      else begin
-        let local_ppx_flags = (String_map.fold (fun  module_name _  acc ->
-          if acc = [] then begin
-            List.fold_left Bsb_config_types.(fun acc e -> 
-              match e with 
-              | JsTarget { main_module_name; ppx = _ :: _ as ppx } when main_module_name = module_name -> ppx
-              | NativeTarget { main_module_name; ppx = _ :: _  } when main_module_name = module_name -> assert false
-              | BytecodeTarget { main_module_name; ppx = _ :: _  } when main_module_name = module_name -> assert false
-              | _ -> acc
-            ) acc entries_that_have_ppxes
-          end else 
-            acc
-        ) group.sources []) in
-        (*  map over the flags to find ppxes's full paths if they exist.  *)
-        let (local_ppx_flags, local_ppx_deps) = List.fold_left (fun (new_local_ppx_flags, new_local_ppx_deps) flag_exec -> 
-          (* @Hack You could potentially have a bug here where the exec_path name is the same as a module name
-            inside main-module but eeeeh that'd be weird! *)
-          let rec loop = fun local_ppx_deps local_ppx_module_names -> 
-            match (local_ppx_deps, local_ppx_module_names) with
-            | (exec_path :: local_ppx_deps, ppx_name :: local_ppx_module_names) -> 
-              if flag_exec = ppx_name then (exec_path :: new_local_ppx_flags, exec_path :: new_local_ppx_deps)
-              else loop local_ppx_deps local_ppx_module_names
-            | _ -> (flag_exec :: new_local_ppx_flags, new_local_ppx_deps)
-          in
-          loop local_ppx_deps local_ppx_module_names
-        ) ([], []) local_ppx_flags in
-        handle_file_group 
-         oc  ~bs_suffix ~package_specs ~custom_rules ~js_post_build_cmd ~local_ppx_flags ~local_ppx_deps
-         files_to_install 
-         namespace
-         comp_info
-        group
-      end
-    ) 
-    st  file_groups
-
-end
-module Bsb_ninja_native : sig 
-#1 "bsb_ninja_native.mli"
-(* Copyright (C) 2015-2016 Bloomberg Finance L.P.
- * 
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Lesser General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * In addition to the permissions granted to you by the LGPL, you may combine
- * or link a "work that uses the Library" with a publicly distributed version
- * of this file to produce a combined library or application, then distribute
- * that combined work under the terms of your choosing, with no requirement
- * to comply with the obligations normally placed on you by section 4 of the
- * LGPL version 3 (or the corresponding section of a later version of the LGPL
- * should you choose to use a later version).
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Lesser General Public License for more details.
- * 
- * You should have received a copy of the GNU Lesser General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
-
-(* File following almost the same logic as bsb_ninja but slightly modified for 
-   native / bytecode compilation. *)
-type compile_target_t = Native | Bytecode
-  
-val handle_file_groups : out_channel ->
-  custom_rules:Bsb_rule.t String_map.t -> 
-  is_top_level:bool ->
-  build_library:string option ->
-  compile_target:compile_target_t ->
-  backend:Bsb_config_types.compilation_kind_t ->
-  external_static_libraries:string list ->
-  external_c_linker_flags:string list ->
-  external_deps_for_linking:string list ->
-  ocaml_dir:string ->
-  config:Bsb_config_types.t ->
-  ?build_just_ppx: bool ->
-  Bsb_parse_sources.file_group list ->
-  string option ->
-  Bsb_ninja_file_groups.info -> 
-  Bsb_ninja_file_groups.info
-  
-
-end = struct
-#1 "bsb_ninja_native.ml"
-(* Copyright (C) 2015-2016 Bloomberg Finance L.P.
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Lesser General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * In addition to the permissions granted to you by the LGPL, you may combine
- * or link a "work that uses the Library" with a publicly distributed version
- * of this file to produce a combined library or application, then distribute
- * that combined work under the terms of your choosing, with no requirement
- * to comply with the obligations normally placed on you by section 4 of the
- * LGPL version 3 (or the corresponding section of a later version of the LGPL
- * should you choose to use a later version).
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Lesser General Public License for more details.
- *
- * You should have received a copy of the GNU Lesser General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
-
-
-module Rules = Bsb_rule 
-
-type compile_target_t = Native | Bytecode
-
-type info =
-  string list  
-
-let zero : info =
-  [] 
-
-
-let output_build = Bsb_ninja_util.output_build
-
-let (//) = Ext_path.combine
-
-let install_file module_info files_to_install =
-  String_hash_set.add  files_to_install (Bsb_db.filename_sans_suffix_of_module_info module_info)
-
-let handle_generators oc 
-    (group : Bsb_parse_sources.file_group) custom_rules =   
-  let map_to_source_dir = 
-    (fun x -> Bsb_config.proj_rel (group.dir //x )) in
-  group.generators
-  |> List.iter (fun  ({output; input; command}  : Bsb_parse_sources.build_generator)-> 
-      begin match String_map.find_opt command custom_rules with 
-        | None -> Ext_pervasives.failwithf ~loc:__LOC__ "custom rule %s used but  not defined" command
-        | Some rule -> 
-          begin match output, input with
-            | output::outputs, input::inputs -> 
-              Bsb_ninja_util.output_build oc 
-                ~outputs:(Ext_list.map map_to_source_dir  outputs)
-                ~inputs:(Ext_list.map map_to_source_dir inputs) 
-                ~output:(map_to_source_dir output)
-                ~input:(map_to_source_dir input)
-                ~rule
-            | [], _ 
-            | _, []  -> Ext_pervasives.failwithf ~loc:__LOC__ "either output or input can not be empty in rule %s" command
-          end
-      end
-    )
-
-
-let make_common_shadows 
-    is_re
-    package_specs 
-    dirname 
-    dir_index 
-  : Bsb_ninja_util.shadow list 
-  =
-  let shadows : Bsb_ninja_util.shadow list = 
-    (if Bsb_dir_index.is_lib_dir dir_index  then [] else
-       [{
-         key = Bsb_ninja_global_vars.bs_package_includes; 
-         op = AppendVar Bsb_ninja_global_vars.bs_package_dev_includes 
-       }
-        ;
-        { key = "bsc_extra_includes";
-          op = OverwriteVar (Bsb_dir_index.string_of_bsb_dev_include dir_index)
-        }
-       ]
-    )   
-  in 
-  if is_re then 
-    { key = Bsb_ninja_global_vars.bsc_flags; 
-      op = AppendList ["-bs-re-out"; "-bs-super-errors"]
-    } :: shadows
-  else shadows
-
-let emit_impl_build
-  (package_specs : Bsb_package_specs.t)
-  (group_dir_index : Bsb_dir_index.t) 
-  oc 
-  ~local_ppx_deps
-  ~bs_suffix
-  ~no_intf_file:(no_intf_file : bool) 
-  ~compile_target
-  ~local_ppx_flags
-  js_post_build_cmd
-  ~is_re
-  namespace
-  filename_sans_extension
-  : info =
-  let input = 
-    Bsb_config.proj_rel 
-      (if is_re then filename_sans_extension ^ Literals.suffix_re 
-       else filename_sans_extension ^ Literals.suffix_ml  ) in
-  let output_mlast = filename_sans_extension  ^ Literals.suffix_mlast in
-  let output_mlastd = filename_sans_extension ^ Literals.suffix_mlastd in
-  let output_filename_sans_extension = 
-    match namespace with 
-    | None -> 
-      filename_sans_extension 
-    | Some ns -> 
-      Ext_namespace.make ~ns filename_sans_extension
-  in 
-  let output_cmi =  output_filename_sans_extension ^ Literals.suffix_cmi in
-  let output_cmx_or_cmo =
-    match compile_target with
-    | Bytecode -> output_filename_sans_extension ^ Literals.suffix_cmo
-    | Native   -> output_filename_sans_extension ^ Literals.suffix_cmx
-  in
-  let output_js =
-    Bsb_package_specs.get_list_of_output_js package_specs bs_suffix output_filename_sans_extension in 
-  let shadows = List.map (fun f -> 
-    Bsb_ninja_util.{
-     key = "ppx_flags"; 
-     op = AppendList ["-ppx"; f]
-   }) local_ppx_flags in
-  output_build oc
-    ~output:output_mlast
-    ~input
-    ~rule:(if is_re then
-            Rules.build_ast_and_module_sets_from_re_gen_simple
-          else
-            Rules.build_ast_and_module_sets_gen_simple)
-    ~implicit_deps:local_ppx_deps
-    ~shadows;
-  let bin_deps_rule = begin match compile_target with
-  | Bytecode -> Rules.build_bin_deps_bytecode
-  | Native   -> Rules.build_bin_deps_native
-  end in
-  output_build
-    oc
-    ~output:output_mlastd
-    ~input:output_mlast
-    ~rule:bin_deps_rule
-    ?shadows:(if Bsb_dir_index.is_lib_dir group_dir_index then None
-              else Some [{key = Bsb_build_schemas.bsb_dir_group; 
-                          op = Bsb_ninja_util.Overwrite (string_of_int (group_dir_index :> int)) }])
-  ;
-  let common_shadows = 
-    make_common_shadows is_re package_specs
-      (Filename.dirname output_cmi)
-      group_dir_index in
-  let rule_name = begin match compile_target with
-  | Bytecode -> Rules.build_cmo_cmi_bytecode
-  | Native   -> Rules.build_cmx_cmi_native
-  end in
-  let cm_outputs, deps =
-    if no_intf_file then
-      [output_cmi], [output_mlastd]
-    else    
-      [], [output_cmi; output_mlastd]
-  in
-  let deps = match namespace with 
-    | None -> deps
-    | Some ns -> (ns ^ Literals.suffix_cmi) :: deps
-  in
-  let shadows =
-    match js_post_build_cmd with
-    | None -> common_shadows
-    | Some cmd ->
-      {Bsb_ninja_util.key = Bsb_ninja_global_vars.postbuild;
-       op = Bsb_ninja_util.Overwrite ("&& " ^ cmd ^ Ext_string.single_space ^ String.concat Ext_string.single_space output_js)}
-        :: common_shadows
-  in
-  output_build oc
-    ~output:output_cmx_or_cmo
-    ~shadows
-    ~implicit_outputs:cm_outputs
-    ~input:output_mlast
-    ~implicit_deps:deps
-    ~rule:rule_name ;
-  [output_mlastd]
-
-let emit_intf_build 
-    (package_specs : Bsb_package_specs.t)
-    (group_dir_index : Bsb_dir_index.t)
-    oc
-    ~local_ppx_deps
-    ~is_re
-    ~compile_target
-    ~local_ppx_flags
-    namespace
-    filename_sans_extension
-  : info =
-  let output_mliast = filename_sans_extension ^ Literals.suffix_mliast in
-  let output_mliastd = filename_sans_extension ^ Literals.suffix_mliastd in
-  let output_filename_sans_extension = 
-    match namespace with 
-    | None -> 
-      filename_sans_extension 
-    | Some ns -> 
-      Ext_namespace.make ~ns filename_sans_extension
-  in 
-  let output_cmi = output_filename_sans_extension ^ Literals.suffix_cmi in  
-  let shadows = List.map (fun f -> 
-    Bsb_ninja_util.{
-     key = "ppx_flags"; 
-     op = AppendList ["-ppx"; f]
-   }) local_ppx_flags in
-  Bsb_ninja_util.output_build oc
-    ~output:output_mliast
-      (* TODO: we can get rid of absloute path if we fixed the location to be 
-          [lib/bs], better for testing?
-      *)
-    ~input:(Bsb_config.proj_rel 
-              (if is_re then filename_sans_extension ^ Literals.suffix_rei 
-               else filename_sans_extension ^ Literals.suffix_mli))
-    ~rule:(if is_re then Bsb_rule.build_ast_and_module_sets_from_rei_gen_simple
-           else Bsb_rule.build_ast_and_module_sets_gen_simple)
-    ~implicit_deps:local_ppx_deps
-    ~shadows;
-  let common_shadows = 
-    make_common_shadows is_re package_specs
-      (Filename.dirname output_cmi)
-      group_dir_index in
-  Bsb_ninja_util.output_build oc
-    ~output:output_mliastd
-    ~input:output_mliast
-    ~rule:Bsb_rule.build_bin_deps
-    ?shadows:(if Bsb_dir_index.is_lib_dir group_dir_index  then None
-              else Some [{
-                  key = Bsb_build_schemas.bsb_dir_group; 
-                  op = 
-                    Overwrite (string_of_int (group_dir_index :> int )) }]);
-    
-  let rule = begin match compile_target with
-  | Bytecode -> Rules.build_cmi_bytecode
-  | Native   -> Rules.build_cmi_native
-  end in
-  (* TODO(sansouci): Do we need this? *)
-  (* let deps = match namespace with 
-    | None -> []
-    | Some ns -> [ns ^ Literals.suffix_cmi]
-  in *)
-  Bsb_ninja_util.output_build oc
-    ~shadows:common_shadows
-    ~output:output_cmi
-    ~input:output_mliast
-    ~implicit_deps:[output_mliastd]
-    ~rule;
-  [output_mliastd]
-
-let handle_module_info  
-  (group_dir_index : Bsb_dir_index.t)
-  (package_specs : Bsb_package_specs.t) 
-  js_post_build_cmd
-  ~local_ppx_deps
-  ~compile_target
-  ~bs_suffix
-  ~local_ppx_flags
-  oc  module_name 
-  ( module_info : Bsb_db.module_info)
-  namespace  =
-  match module_info.ml, module_info.mli with
-  | Ml_source (input_impl,impl_is_re,_), 
-    Mli_source(input_intf, intf_is_re,_) -> 
-    emit_impl_build 
-      package_specs
-      group_dir_index
-      oc 
-      ~local_ppx_deps
-      ~bs_suffix
-      ~no_intf_file:false
-      ~is_re:impl_is_re
-      ~compile_target
-      ~local_ppx_flags
-      js_post_build_cmd      
-      namespace
-      input_impl  @ 
-    emit_intf_build 
-      package_specs
-      group_dir_index
-      oc
-      ~local_ppx_deps
-      ~is_re:intf_is_re
-      ~compile_target
-      ~local_ppx_flags
-      namespace
-      input_intf 
-  | Ml_source(input,is_re,_), Mli_empty ->
-    emit_impl_build 
-      package_specs
-      group_dir_index
-      oc
-      ~local_ppx_deps
-      ~bs_suffix
-      ~no_intf_file:true
-      ~compile_target
-      ~local_ppx_flags
-      js_post_build_cmd      
-      ~is_re
-      namespace
-      input 
-  | Ml_empty, Mli_source(input,is_re,_) ->
-    emit_intf_build 
-      package_specs
-      group_dir_index
-      oc
-      ~local_ppx_deps        
-      ~is_re
-      ~compile_target
-      ~local_ppx_flags
-      namespace
-      input 
-  | Ml_empty, Mli_empty -> zero
-
-
-let handle_file_group oc
-  ~local_ppx_deps
-  ~custom_rules
-  ~compile_target
-  ~package_specs
-  ~js_post_build_cmd
-  ~namespace
-  ~bs_suffix
-  ~local_ppx_flags
-  (files_to_install : String_hash_set.t)
-  acc
-  (group: Bsb_parse_sources.file_group) : Bsb_ninja_file_groups.info =
-  
-  handle_generators oc group custom_rules ;
-  String_map.fold (fun  module_name module_info  acc ->
-      let installable =
-        match group.public with
-        | Export_all -> true
-        | Export_none -> false
-        | Export_set set ->  
-          String_set.mem module_name set in
-      if installable then 
-        String_hash_set.add files_to_install (Bsb_db.filename_sans_suffix_of_module_info module_info);
-      (handle_module_info
-        ~local_ppx_deps
-        ~bs_suffix
-        ~compile_target
-        ~local_ppx_flags
-        group.dir_index 
-        package_specs 
-        js_post_build_cmd 
-        oc 
-        module_name 
-        module_info
-        namespace
-      ) @  acc
-    ) group.sources  acc 
-
-let link oc comp_info ~entries ~file_groups ~static_libraries ~c_linker_flags ~namespace ~external_deps_for_linking ~ocaml_dir =
-  List.fold_left (fun comp_info project_entry ->
-    let output, rule_name, library_file_name, suffix_cmo_or_cmx, main_module_name, shadows, is_ppx =
-      begin match project_entry with
-      | Bsb_config_types.JsTarget {main_module_name; kind; }       -> assert false
-      | Bsb_config_types.BytecodeTarget {main_module_name; output_name; kind; } -> 
-        (match output_name with 
-          | None -> 
-            let extension = if Ext_sys.is_windows_or_cygwin then ".exe" else "" in
-            (String.lowercase main_module_name) ^ ".byte" ^ extension
-          | Some name -> name
-        ), 
-        Rules.linking_bytecode, 
-        "lib" ^ Literals.suffix_cma, 
-        Literals.suffix_cmo, 
-        main_module_name, 
-        [],
-        kind = Ppx
-      | Bsb_config_types.NativeTarget {main_module_name; output_name; kind;}   -> 
-        (match output_name with 
-          | None -> 
-            let extension = if Ext_sys.is_windows_or_cygwin then ".exe" else "" in
-            (String.lowercase main_module_name) ^ ".native" ^ extension
-          | Some name -> name
-        ), 
-        Rules.linking_native  , 
-        "lib" ^ Literals.suffix_cmxa, 
-        Literals.suffix_cmx, 
-        main_module_name,
-        [],
-        kind = Ppx
-      end in
-    let (all_mlast_files, all_cmo_or_cmx_files, all_cmi_files) =
-      List.fold_left (fun acc (group : Bsb_parse_sources.file_group) -> 
-        if group.is_ppx = is_ppx then
-          String_map.fold (fun _ (v : Bsb_db.module_info) (all_mlast_files, all_cmo_or_cmx_files, all_cmi_files) -> 
-            let mlname = match v.ml with
-              | Ml_source (input, _, _) ->
-              let input = (Ext_path.chop_extension_if_any input)  in
-              begin match namespace with 
-                | None    -> Some (input, input)
-                | Some ns -> Some (input, (Ext_namespace.make ~ns input))
-              end
-              | Ml_empty -> None
-            in
-            let mliname = match v.mli with
-              | Mli_source (input, _, _) ->
-              let input = (Ext_path.chop_extension_if_any input)  in
-              begin match namespace with 
-                | None    -> Some (input, input)
-                | Some ns -> Some (input, (Ext_namespace.make ~ns input))
-              end
-              | Mli_empty -> None 
-            in
-            begin match (mlname, mliname) with
-            | None, None -> failwith "Got a source file without an ml or mli file. This should not happen."
-            | Some (name, namespacedName), Some _ ->
-              ((name ^ Literals.suffix_mlast) :: all_mlast_files,
-               (namespacedName ^ suffix_cmo_or_cmx)     :: all_cmo_or_cmx_files,
-               (namespacedName ^ Literals.suffix_cmi)   :: all_cmi_files)
-            | Some (name, namespacedName), None ->
-              ((name ^ Literals.suffix_mlast) :: all_mlast_files,
-               (namespacedName ^ suffix_cmo_or_cmx)     :: all_cmo_or_cmx_files,
-               (namespacedName ^ Literals.suffix_cmi)   :: all_cmi_files)
-            | None, Some (_, namespacedName) ->
-              (all_mlast_files,
-               all_cmo_or_cmx_files,
-               (namespacedName ^ Literals.suffix_cmi)   :: all_cmi_files)
-            end    
-          ) group.sources acc
-        else acc
-      ) ([], [], []) file_groups 
-    in
-    let shadows = shadows @ [{
-      Bsb_ninja_util.key = "main_module";
-      op = Bsb_ninja_util.Overwrite main_module_name
-    }; {
-      key = "static_libraries";
-      op = Bsb_ninja_util.Overwrite (Bsb_build_util.flag_concat "-add-clib" (c_linker_flags @ static_libraries))
-    }] in
-    output_build oc
-      ~output
-      ~input:""
-      ~inputs:all_mlast_files
-      ~implicit_deps:((List.map 
-                (fun dep -> (Ext_bytes.ninja_escaped dep) // library_file_name)
-                external_deps_for_linking)
-        @ (List.map (fun path -> Ext_bytes.ninja_escaped path) (all_cmi_files @ all_cmo_or_cmx_files @ static_libraries)))
-      ~shadows
-      ~rule:rule_name;
-    comp_info
-  ) comp_info entries
-    
-let pack oc comp_info ~entries ?build_library ~backend ~file_groups ~namespace () =
-  (* List.fold_left (fun acc project_entry ->
-    let main_module_name =
-      begin match project_entry with
-      | Bsb_config_types.JsTarget {main_module_name}       -> assert false
-      | Bsb_config_types.NativeTarget {main_module_name} 
-      | Bsb_config_types.BytecodeTarget {main_module_name} -> main_module_name
-      end in *)
-    let output_cma_or_cmxa, rule_name, suffix_cmo_or_cmx =
-      begin match backend with
-      (* These cases could benefit from a better error message. *)
-      | Bsb_config_types.Js       -> assert false
-      | Bsb_config_types.Bytecode -> 
-        Literals.library_file ^ Literals.suffix_cma , 
-        Rules.build_cma_library , 
-        Literals.suffix_cmo
-      | Bsb_config_types.Native   -> 
-        Literals.library_file ^ Literals.suffix_cmxa, 
-        Rules.build_cmxa_library, 
-        Literals.suffix_cmx
-    end in
-    (* TODO(sansouci): we pack all source files of the dependency, but we could just pack the
-       files that are used by the main project. *)
-    let all_cmo_or_cmx_files, all_cmi_files =
-      List.fold_left (fun acc group -> 
-        String_map.fold (fun _ (v : Bsb_db.module_info) (all_cmo_or_cmx_files, all_cmi_files) -> 
-          let mlname = match v.ml with
-              | Ml_source (input, _, _) ->
-              let input = (Ext_path.chop_extension_if_any input)  in
-              begin match namespace with 
-                | None    -> Some (input)
-                | Some ns -> Some ((Ext_namespace.make ~ns input))
-              end
-              | Ml_empty -> None
-            in
-            let mliname = match v.mli with
-              | Mli_source (input, _, _) ->
-              let input = (Ext_path.chop_extension_if_any input)  in
-              begin match namespace with 
-                | None    -> Some (input)
-                | Some ns -> Some ((Ext_namespace.make ~ns input))
-              end
-              | Mli_empty -> None 
-            in
-            begin match (mlname, mliname) with
-            | None, None -> failwith "Got a source file without an ml or mli file. This should not happen."
-            | Some name, Some _ ->
-              ((name ^ suffix_cmo_or_cmx)     :: all_cmo_or_cmx_files,
-               (name ^ Literals.suffix_cmi)   :: all_cmi_files)
-            | Some name, None ->
-              ((name ^ suffix_cmo_or_cmx)     :: all_cmo_or_cmx_files,
-               (name ^ Literals.suffix_cmi)   :: all_cmi_files)
-            | None, Some name ->
-              (all_cmo_or_cmx_files,
-               (name ^ Literals.suffix_cmi)   :: all_cmi_files)
-            end    
-      ) group.Bsb_parse_sources.sources acc) 
-      ([], [])
-      file_groups in
-    (* let shadows = [{
-      Bsb_ninja_util.key = "main_module";
-      op = Bsb_ninja_util.Overwrite main_module_name
-    }] in *)
-    let shadows = [] in
-    let shadows = match build_library with
-    | None -> shadows
-    | Some build_library -> {
-        Bsb_ninja_util.key = "build_library";
-        op = Bsb_ninja_util.Overwrite ("-build-library " ^ build_library)
-      } :: shadows
-    in
-    (* In the case that a library is just an interface file, we don't do anything *)
-    if List.length all_cmo_or_cmx_files > 0 then begin
-      output_build oc
-        ~output:output_cma_or_cmxa
-        ~input:""
-        ~inputs:all_cmo_or_cmx_files
-        ~implicit_deps:all_cmi_files
-        ~shadows
-        ~rule:rule_name;
-    end;
-    comp_info
-  (* ) comp_info entries *)
-
-let handle_file_groups oc
-  ~custom_rules
-  ~is_top_level
-  ~build_library
-  ~compile_target
-  ~backend
-  ~external_static_libraries
-  ~external_c_linker_flags
-  ~external_deps_for_linking
-  ~ocaml_dir
-  ~config:{
-    entries;
-    Bsb_config_types.bs_suffix;
-    c_linker_flags;
-    static_libraries;
-    package_specs;
-    js_post_build_cmd;
-    files_to_install;
-  }
-  ?build_just_ppx:(build_just_ppx=false)
-  (file_groups  :  Bsb_parse_sources.file_group list) namespace comp_info =
-  let file_groups = List.filter (fun (group : Bsb_parse_sources.file_group) ->
-    match backend with 
-    | Bsb_config_types.Js       -> List.mem Bsb_parse_sources.Js group.Bsb_parse_sources.backend
-    | Bsb_config_types.Native   -> List.mem Bsb_parse_sources.Native group.Bsb_parse_sources.backend
-    | Bsb_config_types.Bytecode -> List.mem Bsb_parse_sources.Bytecode group.Bsb_parse_sources.backend
-  ) file_groups in 
-  let (entries, entries_that_have_ppxes, local_ppx_deps, local_ppx_module_names, ppx_entries) = Bsb_ninja_file_groups.get_local_ppx_deps backend entries in
-  if build_just_ppx && entries_that_have_ppxes = [] then
-    comp_info
-  else begin
-    (* @Speed The work to figure out in which group an entry is in could be done while parsing the 
-       bsconfig, which would probably be faster. 
-    *)
-    let comp_info = List.fold_left (fun comp_info (group : Bsb_parse_sources.file_group) ->
-      if (build_just_ppx && group.is_ppx || not build_just_ppx) then begin
-        (* When building a ppx we want to compile the source code to the backend specified by the 
-           entry, not the one specified from the commandline. *)
-        let (local_ppx_flags, compile_target) = (String_map.fold (fun  module_name _  (acc, compile_target) ->
-          if acc = [] then begin
-            List.fold_left Bsb_config_types.(fun (acc, (compile_target : compile_target_t)) e -> 
-              match e with 
-              | JsTarget { main_module_name; ppx } when main_module_name = module_name -> assert false
-              | NativeTarget { main_module_name; ppx } when main_module_name = module_name -> (ppx, Native)
-              | BytecodeTarget { main_module_name; ppx; } when main_module_name = module_name -> (ppx, Bytecode)
-              | _ -> (acc, compile_target)
-            ) (acc, compile_target) entries_that_have_ppxes
-          end else 
-            (acc, compile_target)
-        ) group.sources ([], compile_target)) in
-        (*  map over the flags to find ppxes's full paths if they exist.  *)
-        let (local_ppx_flags, local_ppx_deps) = List.fold_left (fun (new_local_ppx_flags, new_local_ppx_deps) flag_exec -> 
-          (* @Hack You could potentially have a bug here where the exec_path name is the same as a module name
-            inside main-module but eeeeh that'd be weird! *)
-          let rec loop = fun local_ppx_deps local_ppx_module_names -> 
-            match (local_ppx_deps, local_ppx_module_names) with
-            | (exec_path :: local_ppx_deps, ppx_name :: local_ppx_module_names) -> 
-              if flag_exec = ppx_name then (exec_path :: new_local_ppx_flags, exec_path :: new_local_ppx_deps)
-              else loop local_ppx_deps local_ppx_module_names
-            | _ -> (flag_exec :: new_local_ppx_flags, new_local_ppx_deps)
-          in
-          loop local_ppx_deps local_ppx_module_names
-        ) ([], []) local_ppx_flags in
-        handle_file_group oc
-          ~local_ppx_deps
-          ~custom_rules 
-          ~compile_target
-          ~package_specs
-          ~js_post_build_cmd 
-          ~namespace
-          ~bs_suffix
-          ~local_ppx_flags
-          files_to_install
-          comp_info
-          group
-      end else comp_info
-    ) comp_info file_groups in
-    let static_libraries = external_static_libraries @ static_libraries in
-    let c_linker_flags = external_c_linker_flags @ c_linker_flags in
-    let comp_info = link oc comp_info 
-        ~entries:ppx_entries 
-        ~file_groups
-        ~static_libraries
-        ~c_linker_flags
-        ~namespace
-        ~external_deps_for_linking
-        ~ocaml_dir in
-    match build_library with
-    | None -> 
-      if build_just_ppx then
-        comp_info
-      else begin
-        if is_top_level then
-          link oc comp_info ~entries ~file_groups ~static_libraries ~c_linker_flags ~namespace ~external_deps_for_linking ~ocaml_dir
-        else
-          pack oc comp_info ~entries ~backend ~file_groups ~namespace ()
-      end
-    | Some build_library -> 
-      pack oc comp_info ~entries ~build_library ~backend ~file_groups ~namespace ()
-  end
 
 end
 module Config : sig 
@@ -17747,6 +15226,2660 @@ and add_class_declaration bv decl =
   add_class_expr bv decl.pci_expr
 
 end
+module Bsb_dependency_info : sig 
+#1 "bsb_dependency_info.mli"
+type path = string
+
+type t = {
+  mutable all_external_deps: path list;
+  mutable all_ocamlfind_dependencies: string list;
+  mutable all_ocaml_dependencies: Depend.StringSet.t;
+  mutable all_clibs: path list;
+  mutable all_c_linker_flags: string list;
+  mutable all_toplevel_ppxes: (Bsb_config_types.entries_t list) String_map.t;
+}
+
+(* Checks if a ppx is from a dependency, of the form "MyDep/PpxModuleName". 
+   This form is analogous to how ppx-flags works on the top level.
+   If yes, it'll change the path to be an absolute path to the PPX.
+ *)
+val check_if_dep : root_project_dir:string -> backend:Bsb_config_types.compilation_kind_t -> t -> string -> string
+
+end = struct
+#1 "bsb_dependency_info.ml"
+type path = string
+
+type t = {
+  mutable all_external_deps: path list;
+  mutable all_ocamlfind_dependencies: string list;
+  mutable all_ocaml_dependencies: Depend.StringSet.t;
+  mutable all_clibs: path list;
+  mutable all_c_linker_flags: string list;
+  mutable all_toplevel_ppxes: (Bsb_config_types.entries_t list) String_map.t;
+}
+
+let (//) = Ext_path.combine
+
+let check_if_dep ~root_project_dir ~backend (dependency_info : t) flag_exec =
+  let components = Ext_string.split_by (fun c -> c = Ext_path.sep_char) flag_exec in
+  match components with 
+  | [dep_name; entry_name] -> begin 
+    match String_map.find_opt dep_name dependency_info.all_toplevel_ppxes with
+    | None -> flag_exec
+    | Some l -> begin 
+      match List.filter Bsb_config_types.(function 
+        | JsTarget {main_module_name} 
+        | NativeTarget {main_module_name} 
+        | BytecodeTarget {main_module_name} -> main_module_name = entry_name) l with 
+      | [] -> Ext_pervasives.failwithf ~loc:__LOC__ "Couldn't find ppx called '%s' under dep '%s'" entry_name dep_name
+      | head :: _ -> 
+        let nested = begin match backend with
+          | Bsb_config_types.Js       -> "js"
+          | Bsb_config_types.Native   -> "native"
+          | Bsb_config_types.Bytecode -> "bytecode"
+        end in 
+        let extension = begin match head with
+          | Bsb_config_types.JsTarget _       -> assert false
+          | Bsb_config_types.NativeTarget _   -> ".native"
+          | Bsb_config_types.BytecodeTarget _ -> ".byte"
+        end in
+        root_project_dir // Literals.node_modules // dep_name // Bsb_config.lib_bs // nested // entry_name ^ extension
+      end
+    end
+  | _ -> flag_exec
+
+end
+module Bsb_merlin_gen : sig 
+#1 "bsb_merlin_gen.mli"
+(* Copyright (C) 2015-2016 Bloomberg Finance L.P.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * In addition to the permissions granted to you by the LGPL, you may combine
+ * or link a "work that uses the Library" with a publicly distributed version
+ * of this file to produce a combined library or application, then distribute
+ * that combined work under the terms of your choosing, with no requirement
+ * to comply with the obligations normally placed on you by section 4 of the
+ * LGPL version 3 (or the corresponding section of a later version of the LGPL
+ * should you choose to use a later version).
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
+
+
+
+
+val merlin_file_gen : 
+    cwd:string -> backend:Bsb_config_types.compilation_kind_t -> string  -> Bsb_config_types.t ->  unit 
+
+end = struct
+#1 "bsb_merlin_gen.ml"
+(* Copyright (C) 2015-2016 Bloomberg Finance L.P.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * In addition to the permissions granted to you by the LGPL, you may combine
+ * or link a "work that uses the Library" with a publicly distributed version
+ * of this file to produce a combined library or application, then distribute
+ * that combined work under the terms of your choosing, with no requirement
+ * to comply with the obligations normally placed on you by section 4 of the
+ * LGPL version 3 (or the corresponding section of a later version of the LGPL
+ * should you choose to use a later version).
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
+
+
+let merlin = ".merlin"
+let merlin_header = "####{BSB GENERATED: NO EDIT"
+let merlin_trailer = "####BSB GENERATED: NO EDIT}"
+let merlin_trailer_length = String.length merlin_trailer
+let (//) = Ext_path.combine
+
+(** [new_content] should start end finish with newline *)
+let revise_merlin merlin new_content =
+  if Sys.file_exists merlin then
+    let merlin_chan = open_in_bin merlin in
+    let size = in_channel_length merlin_chan in
+    let s = really_input_string merlin_chan size in
+    let () =  close_in merlin_chan in
+
+    let header =  Ext_string.find s ~sub:merlin_header  in
+    let tail = Ext_string.find s ~sub:merlin_trailer in
+    if header < 0  && tail < 0 then (* locked region not added yet *)
+      let ochan = open_out_bin merlin in
+      output_string ochan s ;
+      output_string ochan "\n";
+      output_string ochan merlin_header;
+      Buffer.output_buffer ochan new_content;
+      output_string ochan merlin_trailer ;
+      output_string ochan "\n";
+      close_out ochan
+    else if header >=0 && tail >= 0  then
+      (* there is one, hit it everytime,
+         should be fixed point
+      *)
+      let ochan = open_out_bin merlin in
+      output_string ochan (String.sub s 0 header) ;
+      output_string ochan merlin_header;
+      Buffer.output_buffer ochan new_content;
+      output_string ochan merlin_trailer ;
+      output_string ochan (Ext_string.tail_from s (tail +  merlin_trailer_length));
+      close_out ochan
+    else failwith ("the .merlin is corrupted, locked region by bsb is not consistent ")
+  else
+    let ochan = open_out_bin merlin in
+    output_string ochan merlin_header ;
+    Buffer.output_buffer ochan new_content;
+    output_string ochan merlin_trailer ;
+    output_string ochan "\n";
+    close_out ochan
+
+(* ATTENTION: order matters here, need resolve global properties before
+   merlin generation
+*)
+let merlin_flg_ppx = "\nFLG -ppx " 
+let merlin_s = "\nS "
+let merlin_b = "\nB "
+
+let merlin_pkg = "\nPKG"
+let merlin_flg = "\nFLG "
+let bs_flg_prefix = "-bs-"
+
+let output_merlin_namespace buffer ns= 
+  match ns with 
+  | None -> ()
+  | Some x -> 
+    Buffer.add_string buffer merlin_b ; 
+    Buffer.add_string buffer Bsb_config.lib_bs ; 
+    Buffer.add_string buffer merlin_flg ; 
+    Buffer.add_string buffer "-open ";
+    Buffer.add_string buffer x 
+
+let bsc_flg_to_merlin_ocamlc_flg ~backend bsc_flags  =
+  merlin_flg ^ 
+  String.concat Ext_string.single_space 
+    (List.filter (fun x -> not (Ext_string.starts_with x bs_flg_prefix )) @@ 
+     if backend = Bsb_config_types.Js then Literals.dash_nostdlib::bsc_flags else bsc_flags) 
+
+(* No need for [-warn-error] in merlin  *)     
+let warning_to_merlin_flg (warning: Bsb_warning.t option) : string=     
+  merlin_flg ^ Bsb_warning.get_warning_flag warning
+
+
+let merlin_file_gen ~cwd ~backend
+    built_in_ppx
+    ({bs_file_groups = res_files ; 
+      generate_merlin;
+      ppx_flags;
+      bs_dependencies;
+      bs_dev_dependencies;
+      bsc_flags; 
+      built_in_dependency;
+      external_includes; 
+      reason_react_jsx ; 
+      ocamlfind_dependencies;
+      namespace;
+      package_name;
+      warning; 
+     } : Bsb_config_types.t)
+  =
+  if generate_merlin then begin
+    let buffer = Buffer.create 1024 in
+    output_merlin_namespace buffer namespace; 
+    ppx_flags
+    |> List.iter (fun x ->
+        Buffer.add_string buffer (merlin_flg_ppx ^ x )
+      );
+    (match reason_react_jsx with
+     | Some s -> 
+       begin 
+         Buffer.add_string buffer (merlin_flg_ppx ^ s)
+       end
+     | None -> ());
+    Buffer.add_string buffer (merlin_flg_ppx  ^ built_in_ppx);
+    (*
+    (match external_includes with 
+    | [] -> ()
+    | _ -> 
+
+      Buffer.add_string buffer (merlin_flg ^ Bsb_build_util.flag_concat "-I" external_includes
+      ));
+    *)
+    external_includes 
+    |> List.iter (fun path -> 
+        Buffer.add_string buffer merlin_s ;
+        Buffer.add_string buffer path ;
+        Buffer.add_string buffer merlin_b;
+        Buffer.add_string buffer path ;
+      ); 
+    if backend = Bsb_config_types.Js then begin
+      (match built_in_dependency with
+       | None -> ()
+       | Some package -> 
+         let path = package.package_install_path in 
+         Buffer.add_string buffer (merlin_s ^ path );
+         Buffer.add_string buffer (merlin_b ^ path)                      
+      );
+    end;
+
+    let bsc_string_flag = bsc_flg_to_merlin_ocamlc_flg ~backend bsc_flags in 
+    Buffer.add_string buffer bsc_string_flag ;
+    Buffer.add_string buffer (warning_to_merlin_flg  warning); 
+    bs_dependencies 
+    |> List.iter (fun package ->
+        let path = package.Bsb_config_types.package_install_path in
+        Buffer.add_string buffer merlin_s ;
+        Buffer.add_string buffer path ;
+        Buffer.add_string buffer merlin_b;
+        Buffer.add_string buffer path ;
+      );
+    bs_dev_dependencies (**TODO: shall we generate .merlin for dev packages ?*)
+    |> List.iter (fun package ->    
+        let path = package.Bsb_config_types.package_install_path in
+        Buffer.add_string buffer merlin_s ;
+        Buffer.add_string buffer path ;
+        Buffer.add_string buffer merlin_b;
+        Buffer.add_string buffer path ;
+      );
+    
+    let nested = match backend with
+      | Bsb_config_types.Js       -> "js"
+      | Bsb_config_types.Native   -> "native"
+      | Bsb_config_types.Bytecode -> "bytecode" 
+    in
+    res_files |> List.iter (fun (x : Bsb_parse_sources.file_group) -> 
+        if not (Bsb_parse_sources.is_empty x) then 
+          begin
+            Buffer.add_string buffer merlin_s;
+            Buffer.add_string buffer x.dir ;
+            Buffer.add_string buffer merlin_b;
+            Buffer.add_string buffer (Bsb_config.lib_bs // nested // x.dir) ;
+          end
+      ) ;
+    if List.length ocamlfind_dependencies > 0 then begin
+      Buffer.add_string buffer merlin_pkg;
+      ocamlfind_dependencies |> List.iter (fun x ->
+        Buffer.add_string buffer " ";
+        Buffer.add_string buffer x;
+      );
+    end;
+    Buffer.add_string buffer "\n";
+    revise_merlin (cwd // merlin) buffer 
+  end
+
+
+
+end
+module Bsb_ninja_check : sig 
+#1 "bsb_ninja_check.mli"
+(* Copyright (C) 2015-2016 Bloomberg Finance L.P.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * In addition to the permissions granted to you by the LGPL, you may combine
+ * or link a "work that uses the Library" with a publicly distributed version
+ * of this file to produce a combined library or application, then distribute
+ * that combined work under the terms of your choosing, with no requirement
+ * to comply with the obligations normally placed on you by section 4 of the
+ * LGPL version 3 (or the corresponding section of a later version of the LGPL
+ * should you choose to use a later version).
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
+
+(**
+   This module is used to check whether [build.ninja] needs
+   be regenerated. Everytime [bsb] run [regenerate_ninja], 
+   bsb will try to [check] if it is needed, 
+   if needed, bsb will regenerate ninja file and store the 
+   metadata again
+*)
+
+
+
+
+
+type check_result = 
+  | Good
+  | Bsb_file_not_exist (** We assume that it is a clean repo *)  
+  | Bsb_source_directory_changed
+  | Bsb_bsc_version_mismatch  
+  | Bsb_forced
+  | Bsb_different_cmdline_arg
+  | Other of string
+
+val pp_check_result : Format.formatter -> check_result -> unit
+
+(** [record cwd file relevant_file_or_dirs]
+    The data structure we decided to whether regenerate [build.ninja] 
+    or not. 
+    Note that if we don't record absolute path,  ninja will not notice  its build spec changed, 
+    it will not trigger  rebuild behavior, 
+    It may not be desired behavior, since there is some subtlies here (__FILE__ or __dirname)
+
+    We serialize such data structure and call {!check} to decide
+    [build.ninja] should be regenerated
+*)
+val record : cwd:string -> file:string -> string list -> Bsb_config_types.compilation_kind_t -> string option -> unit
+
+
+(** check if [build.ninja] should be regenerated *)
+val check :
+  cwd:string ->  
+  forced:bool -> file:string -> Bsb_config_types.compilation_kind_t -> string option -> check_result
+
+end = struct
+#1 "bsb_ninja_check.ml"
+(* Copyright (C) 2015-2016 Bloomberg Finance L.P.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * In addition to the permissions granted to you by the LGPL, you may combine
+ * or link a "work that uses the Library" with a publicly distributed version
+ * of this file to produce a combined library or application, then distribute
+ * that combined work under the terms of your choosing, with no requirement
+ * to comply with the obligations normally placed on you by section 4 of the
+ * LGPL version 3 (or the corresponding section of a later version of the LGPL
+ * should you choose to use a later version).
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
+
+type dep_info = {
+  dir_or_file : string ;
+  st_mtime : float
+}
+
+type t =
+  { file_stamps : dep_info array ;
+    source_directory :  string ;
+    bsb_version : string;
+    bsc_version : string;
+    cmdline_build_kind: Bsb_config_types.compilation_kind_t;
+    cmdline_build_library: string option;
+  }
+
+
+let magic_number = "BS_DEP_INFOS_20170822"
+let bsb_version = "20170822+dev"
+(* TODO: for such small data structure, maybe text format is better *)
+
+let write (fname : string)  (x : t) =
+  let oc = open_out_bin fname in
+  output_string oc magic_number ;
+  output_value oc x ;
+  close_out oc
+
+
+
+
+
+type check_result =
+  | Good
+  | Bsb_file_not_exist (** We assume that it is a clean repo *)
+  | Bsb_source_directory_changed
+  | Bsb_bsc_version_mismatch
+  | Bsb_forced
+  | Bsb_different_cmdline_arg
+  | Other of string
+
+let pp_check_result fmt (check_resoult : check_result) =
+  Format.pp_print_string fmt (match check_resoult with
+      | Good -> "OK"
+      | Bsb_file_not_exist -> "Dependencies information missing"
+      | Bsb_source_directory_changed ->
+        "Bsb source directory changed"
+      | Bsb_bsc_version_mismatch ->
+        "Bsc or bsb version mismatch"
+      | Bsb_forced ->
+        "Bsb forced rebuild"
+      | Bsb_different_cmdline_arg ->
+        "Bsb called with a different build argument"
+      | Other s -> s)
+
+let rec check_aux cwd xs i finish =
+  if i = finish then Good
+  else
+    let k = Array.unsafe_get  xs i  in
+    let current_file = k.dir_or_file in
+    let stat = Unix.stat  (Filename.concat cwd  current_file) in
+    if stat.st_mtime <= k.st_mtime then
+      check_aux cwd xs (i + 1 ) finish
+    else Other current_file
+
+
+let read (fname : string) cont =
+  match open_in_bin fname with   (* Windows binary mode*)
+  | ic ->
+    let buffer = really_input_string ic (String.length magic_number) in
+    if (buffer <> magic_number) then Bsb_bsc_version_mismatch
+    else
+      let res : t = input_value ic  in
+      close_in ic ;
+      cont res
+  | exception _ -> Bsb_file_not_exist
+
+let record ~cwd ~file  file_or_dirs cmdline_build_kind cmdline_build_library =
+  let file_stamps = 
+    Ext_array.of_list_map
+      (fun  x -> 
+         {dir_or_file = x ;
+          st_mtime = (Unix.stat (Filename.concat cwd  x )).st_mtime
+         })  file_or_dirs
+  in 
+  write file
+    { file_stamps ;
+      source_directory = cwd ;
+      bsb_version ;
+      bsc_version = Bs_version.version;
+      cmdline_build_kind = cmdline_build_kind;
+      cmdline_build_library = cmdline_build_library; }
+
+(** check time stamp for all files
+    TODO: those checks system call can be saved later
+    Return a reason
+    Even forced, we still need walk through a little
+    bit in case we found a different version of compiler
+*)
+let check ~cwd ~forced ~file cmdline_build_kind cmdline_build_library : check_result =
+  read file  begin  function  {
+    file_stamps = xs; 
+    source_directory; 
+    bsb_version = old_version; 
+    cmdline_build_kind = old_cmdline_build_kind; 
+    cmdline_build_library = old_cmdline_build_library;
+    bsc_version
+  } ->
+    if old_version <> bsb_version then Bsb_bsc_version_mismatch else
+    if cwd <> source_directory then Bsb_source_directory_changed else
+    if bsc_version <> Bs_version.version then Bsb_bsc_version_mismatch else
+    if forced then Bsb_forced else (* No need walk through *)
+    if cmdline_build_kind <> old_cmdline_build_kind
+      || cmdline_build_library <> old_cmdline_build_library then Bsb_different_cmdline_arg
+    else
+      try
+        check_aux cwd xs  0 (Array.length xs)
+      with e ->
+        begin
+          Bsb_log.info
+            "@{<info>Stat miss %s@}@."
+            (Printexc.to_string e);
+          Bsb_file_not_exist
+        end
+  end
+
+end
+module Bsb_file : sig 
+#1 "bsb_file.mli"
+
+
+
+(** return [true] if copied *)
+val install_if_exists : destdir:string -> string -> bool
+
+
+end = struct
+#1 "bsb_file.ml"
+
+
+open Unix
+
+let set_infos filename infos =
+  Unix.utimes filename infos.st_atime infos.st_mtime;
+  Unix.chmod filename infos.st_perm
+  (** it is not necessary to call [chown] since it is within the same user 
+    and {!Unix.chown} is not implemented under Windows
+   *)
+  (*
+  try
+    Unix.chown filename infos.st_uid infos.st_gid
+  with Unix_error(EPERM,_,_) -> ()
+*)
+
+let buffer_size = 8192;;
+let buffer = Bytes.create buffer_size;;
+
+let file_copy input_name output_name =
+  let fd_in = openfile input_name [O_RDONLY] 0 in
+  let fd_out = openfile output_name [O_WRONLY; O_CREAT; O_TRUNC] 0o666 in
+  let rec copy_loop () =
+    match read fd_in buffer 0 buffer_size with
+    |  0 -> ()
+    | r -> ignore (write fd_out buffer 0 r); copy_loop ()
+  in
+  copy_loop ();
+  close fd_in;
+  close fd_out;;
+
+
+let copy_with_permission input_name output_name =
+    file_copy input_name output_name ;
+    set_infos output_name (Unix.lstat input_name)  
+
+let install_if_exists ~destdir input_name = 
+    if Sys.file_exists input_name then 
+      let output_name = (Filename.concat destdir (Filename.basename input_name)) in
+      match Unix.stat output_name , Unix.stat input_name with
+      | {st_mtime = output_stamp}, {st_mtime = input_stamp} when input_stamp <= output_stamp 
+        -> false
+      | _ -> copy_with_permission input_name output_name; true 
+      | exception _ -> copy_with_permission input_name output_name; true
+    else false
+
+end
+module Bsb_namespace_map_gen : sig 
+#1 "bsb_namespace_map_gen.mli"
+(* Copyright (C) 2017 Authors of BuckleScript
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * In addition to the permissions granted to you by the LGPL, you may combine
+ * or link a "work that uses the Library" with a publicly distributed version
+ * of this file to produce a combined library or application, then distribute
+ * that combined work under the terms of your choosing, with no requirement
+ * to comply with the obligations normally placed on you by section 4 of the
+ * LGPL version 3 (or the corresponding section of a later version of the LGPL
+ * should you choose to use a later version).
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
+
+(** [output dir namespace file_groups]
+    when [build.ninja] is generated, we output a module map [.mlmap] file 
+    such [.mlmap] file will be consumed by [bsc.exe] to generate [.cmi] file
+ *)
+val output : 
+  dir:string ->
+  string -> 
+  Bsb_parse_sources.file_group list ->
+  unit 
+end = struct
+#1 "bsb_namespace_map_gen.ml"
+(* Copyright (C) 2017 Authors of BuckleScript
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * In addition to the permissions granted to you by the LGPL, you may combine
+ * or link a "work that uses the Library" with a publicly distributed version
+ * of this file to produce a combined library or application, then distribute
+ * that combined work under the terms of your choosing, with no requirement
+ * to comply with the obligations normally placed on you by section 4 of the
+ * LGPL version 3 (or the corresponding section of a later version of the LGPL
+ * should you choose to use a later version).
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
+
+let (//) = Ext_path.combine
+
+
+
+
+
+
+let output ~dir namespace 
+    (file_groups : Bsb_parse_sources.file_group list)
+  = 
+  let fname = namespace ^ Literals.suffix_mlmap in 
+  let oc = open_out_bin (dir// fname ) in 
+  List.iter
+    (fun  (x : Bsb_parse_sources.file_group) ->
+      String_map.iter (fun k _ -> 
+        output_string oc k ;
+        output_string oc "\n"
+      ) x.sources 
+     )  file_groups ;
+  close_out oc 
+
+end
+module Bsb_ninja_global_vars
+= struct
+#1 "bsb_ninja_global_vars.ml"
+(* Copyright (C) 2017 Authors of BuckleScript
+ * 
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * In addition to the permissions granted to you by the LGPL, you may combine
+ * or link a "work that uses the Library" with a publicly distributed version
+ * of this file to produce a combined library or application, then distribute
+ * that combined work under the terms of your choosing, with no requirement
+ * to comply with the obligations normally placed on you by section 4 of the
+ * LGPL version 3 (or the corresponding section of a later version of the LGPL
+ * should you choose to use a later version).
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ * 
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
+
+
+ 
+let bs_package_flags = "bs_package_flags"
+
+let bsc = "bsc" 
+
+let src_root_dir = "src_root_dir"
+let bsb_helper = "bsb_helper"
+
+let bsc_flags = "bsc_flags"
+
+let ppx_flags = "ppx_flags"
+
+let bs_package_includes = "bs_package_includes"
+
+let bs_package_dev_includes = "bs_package_dev_includes"
+
+let refmt = "refmt"
+
+let reason_react_jsx = "reason_react_jsx"
+
+let refmt_flags = "refmt_flags"
+
+let postbuild = "postbuild"
+
+let namespace = "namespace" 
+
+let package_sep = "-"
+
+let warnings = "warnings"
+
+let build_artifacts_dir = "build_artifacts_dir"
+
+let bs_super_errors = "bs_super_errors"
+let bs_super_errors_ocamlfind = "bs_super_errors_ocamlfind"
+
+let ocamlc = "ocamlc"
+let ocamlopt = "ocamlopt"
+let ocamlfind = "ocamlfind"
+let ocamlfind_dependencies = "ocamlfind_dependencies"
+let external_deps_for_linking = "external_deps_for_linking"
+let open_flag = "open_flag"
+let ocaml_flags = "ocaml_flags"
+let berror = "berror"
+let ocaml_dependencies = "ocaml_dependencies"
+let bsb_helper_warnings = "bsb_helper_warnings"
+let bsb_helper_verbose = "bsb_helper_verbose"
+
+end
+module Bsb_rule : sig 
+#1 "bsb_rule.mli"
+(* Copyright (C) 2015-2016 Bloomberg Finance L.P.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * In addition to the permissions granted to you by the LGPL, you may combine
+ * or link a "work that uses the Library" with a publicly distributed version
+ * of this file to produce a combined library or application, then distribute
+ * that combined work under the terms of your choosing, with no requirement
+ * to comply with the obligations normally placed on you by section 4 of the
+ * LGPL version 3 (or the corresponding section of a later version of the LGPL
+ * should you choose to use a later version).
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
+
+
+
+
+type t  
+
+val get_name : t  -> out_channel -> string
+
+val build_ast_and_module_sets : t
+val build_ast_and_module_sets_from_re : t 
+val build_ast_and_module_sets_from_rei : t 
+
+val build_ast_and_module_sets_gen_simple : t
+val build_ast_and_module_sets_from_re_gen_simple : t 
+val build_ast_and_module_sets_from_rei_gen_simple : t 
+
+val build_bin_deps : t 
+val build_bin_deps_bytecode : t 
+val build_bin_deps_native : t 
+val reload : t 
+val copy_resources : t
+val build_cmj_js : t
+val build_cmj_cmi_js : t 
+val build_cmi : t
+val build_cmo_cmi_bytecode : t
+val build_cmi_bytecode : t
+val build_cmx_cmi_native : t
+val build_cmi_native : t
+val linking_bytecode : t
+val linking_native : t
+val build_cma_library : t
+val build_cmxa_library : t
+
+val build_package : t 
+val build_package_gen_mlast_simple : t
+val build_package_build_cmi_bytecode : t
+val build_package_build_cmi_native : t
+
+
+(** rules are generally composed of built-in rules and customized rules, there are two design choices:
+    1. respect custom rules with the same name, then we need adjust our built-in 
+    rules dynamically in case the conflict.
+    2. respect our built-in rules, then we only need re-load custom rules for each bsconfig.json
+*)
+
+
+(** Since now we generate ninja files per bsconfig.json in a single process, 
+    we must make sure it is re-entrant
+*)
+val reset : string String_map.t -> t String_map.t
+
+val define :
+    command:string ->
+    ?depfile:string ->
+    ?restat:unit ->
+    ?description:string ->
+    string -> 
+    t
+
+end = struct
+#1 "bsb_rule.ml"
+(* Copyright (C) 2015-2016 Bloomberg Finance L.P.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * In addition to the permissions granted to you by the LGPL, you may combine
+ * or link a "work that uses the Library" with a publicly distributed version
+ * of this file to produce a combined library or application, then distribute
+ * that combined work under the terms of your choosing, with no requirement
+ * to comply with the obligations normally placed on you by section 4 of the
+ * LGPL version 3 (or the corresponding section of a later version of the LGPL
+ * should you choose to use a later version).
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
+
+
+
+let rule_id = ref 0
+let rule_names = ref String_set.empty
+(** To make it re-entrant across multiple ninja files, 
+    We must reset [rule_id]
+*)
+let ask_name name =
+  let current_id = !rule_id in
+  let () = incr rule_id in
+  match String_set.find name !rule_names with
+  | exception Not_found ->
+    rule_names := String_set.add name !rule_names ;
+    name
+  | _ ->
+    begin (* could be improved later
+             1. instead of having a global id, having a unique id per rule name
+             2. the rule id is increased only when actually used
+          *)
+      let new_name =  (name ^ Printf.sprintf "_%d" current_id) in
+      rule_names := String_set.add new_name  !rule_names ;
+      new_name
+    end
+
+type t = { 
+  mutable used : bool; 
+  rule_name : string; 
+  name : out_channel -> string 
+}
+
+let get_name (x : t) oc = x.name oc
+let print_rule oc ~description ?restat ?depfile ~command   name  =
+  output_string oc "rule "; output_string oc name ; output_string oc "\n";
+  output_string oc "  command = "; output_string oc command; output_string oc "\n";
+  begin match depfile with
+    | None -> ()
+    | Some f ->
+      output_string oc "  depfile = "; output_string oc f; output_string oc  "\n"
+  end;
+  begin match restat with
+    | None -> ()
+    | Some () ->
+      output_string oc "  restat = 1"; output_string oc  "\n"
+  end;
+
+  output_string oc "  description = " ; output_string oc description; output_string oc "\n"
+
+
+
+
+(** allocate an unique name for such rule*)
+let define
+    ~command
+    ?depfile
+    ?restat
+    ?(description = "\027[34mBuilding\027[39m \027[2m${out}\027[22m") (* blue, dim *)
+    name
+  =
+  let rule_name = ask_name name  in 
+  let rec self = {
+    used  = false;
+    rule_name ;
+    name = fun oc ->
+      if not self.used then
+        begin
+          print_rule oc ~description ?depfile ?restat ~command rule_name;
+          self.used <- true
+        end ;
+      rule_name
+  } in self
+
+
+(** FIXME: We don't need set [-o ${out}] when building ast 
+    since the default is already good -- it does not*)
+let build_ast_and_module_sets =
+  define
+    ~command:"${bsc}  ${pp_flags} ${ppx_flags} ${bs_super_errors} ${warnings} ${bsc_flags} -c -o ${out} -bs-syntax-only -bs-binary-ast ${in}"
+    "build_ast_and_module_sets"
+    
+let build_ast_and_module_sets_from_re =
+  define
+    ~command:"${bsc} -pp \"${refmt} ${refmt_flags}\" ${reason_react_jsx}  ${ppx_flags} ${bs_super_errors} ${warnings} ${bsc_flags} -c -o ${out} -bs-syntax-only -bs-binary-ast -impl ${in}"
+    "build_ast_and_module_sets_from_re"
+    
+let build_ast_and_module_sets_from_rei =
+  define
+    ~command:"${bsc} -pp \"${refmt} ${refmt_flags}\" ${reason_react_jsx} ${ppx_flags} ${bs_super_errors} ${warnings} ${bsc_flags}  -c -o ${out} -bs-syntax-only -bs-binary-ast -intf ${in}"
+    "build_ast_and_module_sets_from_rei"
+
+
+(* We need those because they'll generate the mlast_simple for us (and the previous three won't for performance reason). *)
+let build_ast_and_module_sets_gen_simple =
+  define
+    ~command:"${bsc}  ${pp_flags} ${ppx_flags} ${bs_super_errors} ${warnings} ${bsc_flags} -c -o ${out} -bs-syntax-only -bs-simple-binary-ast -bs-binary-ast ${in}"
+    "build_ast_and_module_sets_gen_simple"
+    
+let build_ast_and_module_sets_from_re_gen_simple =
+  define
+    ~command:"${bsc} -pp \"${refmt} ${refmt_flags}\" ${reason_react_jsx}  ${ppx_flags} ${bs_super_errors} ${warnings} ${bsc_flags} -c -o ${out} -bs-syntax-only -bs-simple-binary-ast -bs-binary-ast -impl ${in}"
+    "build_ast_and_module_sets_from_re_gen_simple"
+    
+let build_ast_and_module_sets_from_rei_gen_simple =
+  define
+    ~command:"${bsc} -pp \"${refmt} ${refmt_flags}\" ${reason_react_jsx} ${ppx_flags} ${bs_super_errors} ${warnings} ${bsc_flags} -c -o ${out} -bs-syntax-only -bs-simple-binary-ast -bs-binary-ast -intf ${in}"
+    "build_ast_and_module_sets_from_rei_gen_simple"
+
+
+let build_bin_deps =
+  define
+    ~command:"${bsb_helper} ${namespace} -g ${bsb_dir_group} -MD ${in}"
+    "build_deps"
+let build_bin_deps_bytecode =
+  define
+    ~command:"${bsb_helper} ${namespace} -g ${bsb_dir_group} -MD-bytecode ${in}"
+    "build_deps_bytecode"
+
+let build_bin_deps_native =
+  define
+    ~command:"${bsb_helper} ${namespace} -g ${bsb_dir_group} -MD-native ${in}"
+    "build_deps_native"
+    
+let reload =
+  define
+    ~command:"${bsbuild} -init"
+    "reload"
+
+let copy_resources =
+  let name = "copy_resource" in
+  if Ext_sys.is_windows_or_cygwin then
+    define ~command:"cmd.exe /C copy /Y ${in} ${out} > null"
+      name
+  else
+    define
+      ~command:"cp ${in} ${out}"
+      name
+
+
+
+(* only generate mll no mli generated *)
+(* actually we would prefer generators in source ?
+   generator are divided into two categories:
+   1. not system dependent (ocamllex,ocamlyacc)
+   2. system dependent - has to be run on client's machine
+*)
+
+
+(**************************************)
+(* below are rules not local any more *)
+(**************************************)
+
+(* [bsc_lib_includes] are fixed for libs *)
+let build_cmj_js =
+  define
+    ~command:"${bsc} ${bs_super_errors} ${bs_package_flags} -bs-assume-has-mli -bs-no-builtin-ppx-ml -bs-no-implicit-include  \
+              ${bs_package_includes} ${bsc_lib_includes} ${bsc_extra_includes} ${warnings} ${bsc_flags} -o ${out} -c  ${in} $postbuild"
+    ~depfile:"${in}.d"
+    "build_cmj_only"
+
+let build_cmj_cmi_js =
+  define
+    ~command:"${bsc} ${bs_super_errors} ${bs_package_flags} -bs-assume-no-mli -bs-no-builtin-ppx-ml -bs-no-implicit-include \
+              ${bs_package_includes} ${bsc_lib_includes} ${bsc_extra_includes} ${warnings} ${bsc_flags} -o ${out} -c  ${in} $postbuild"
+    ~depfile:"${in}.d"
+    "build_cmj_cmi" (* the compiler should never consult [.cmi] when [.mli] does not exist *)
+let build_cmi =
+  define
+    ~command:"${bsc} ${bs_super_errors} ${bs_package_flags} -bs-no-builtin-ppx-mli -bs-no-implicit-include \
+              ${bs_package_includes} ${bsc_lib_includes} ${bsc_extra_includes} ${warnings} ${bsc_flags} -o ${out} -c  ${in}"
+    ~depfile:"${in}.d"
+    "build_cmi" (* the compiler should always consult [.cmi], current the vanilla ocaml compiler only consult [.cmi] when [.mli] found*)
+
+let build_package = 
+  define
+    ~command:"${bsc} -w -49 -no-alias-deps -c ${in}"
+    "build_package"
+
+let build_package_gen_mlast_simple = 
+  define
+    ~command:"${bsc} -w -49 -no-alias-deps -bs-binary-ast -bs-simple-binary-ast -c ${in}"
+    "build_package_gen_mlast_simple"
+    
+let build_package_build_cmi_bytecode = 
+  define
+    ~command:"${ocamlfind}${ocamlc} ${bs_super_errors_ocamlfind} ${bs_package_includes} ${ocaml_lib_includes} ${bsc_extra_includes} ${ocamlfind_dependencies} ${ocaml_flags} \
+              -o ${out} ${warnings} -no-alias-deps -w -49 -g -c -intf-suffix .mliast_simple -impl ${in} ${postbuild}"
+    "build_package_build_cmi_bytecode"
+
+let build_package_build_cmi_native = 
+  define
+    ~command:"${ocamlfind}${ocamlopt} ${bs_super_errors_ocamlfind} ${bs_package_includes} ${ocaml_lib_includes} ${bsc_extra_includes} ${ocamlfind_dependencies} ${ocaml_flags} \
+              -o ${out} ${warnings} -no-alias-deps -w -49 -g -c -intf-suffix .mliast_simple -impl ${in} ${postbuild}"
+    "build_package_build_cmi_native"
+
+
+let build_cmo_cmi_bytecode =
+  define
+    ~command:"${ocamlfind}${ocamlc} ${open_flag} ${bs_super_errors_ocamlfind} ${bs_package_includes} ${ocaml_lib_includes} ${bsc_extra_includes} ${ocamlfind_dependencies} ${ocaml_flags} \
+              -o ${out} ${warnings} -g -c -intf-suffix .mliast_simple -impl ${in}_simple ${postbuild}"
+    ~depfile:"${in}.d"
+    "build_cmo_cmi_bytecode"
+    
+let build_cmi_bytecode =
+  define
+    ~command:"${ocamlfind}${ocamlc} ${open_flag} ${bs_super_errors_ocamlfind} ${bs_package_includes} ${ocaml_lib_includes} ${bsc_extra_includes} ${ocamlfind_dependencies} ${ocaml_flags} \
+              -o ${out} ${warnings} -g -c -intf ${in}_simple ${postbuild}"
+    ~depfile:"${in}.d"
+    "build_cmi_bytecode"
+
+let build_cmx_cmi_native =
+  define
+    ~command:"${ocamlfind}${ocamlopt} ${open_flag} ${bs_super_errors_ocamlfind} ${bs_package_includes} ${ocaml_lib_includes} ${bsc_extra_includes} ${ocamlfind_dependencies} ${ocaml_flags} \
+              -o ${out} ${warnings} -g -c -intf-suffix .mliast_simple -impl ${in}_simple ${postbuild}"
+    ~depfile:"${in}.d"
+    "build_cmx_cmi_native"
+
+let build_cmi_native =
+  define
+    ~command:"${ocamlfind}${ocamlopt} ${open_flag} ${bs_super_errors_ocamlfind} ${bs_package_includes} ${ocaml_lib_includes} ${bsc_extra_includes} ${ocamlfind_dependencies} ${ocaml_flags} \
+              -o ${out} ${warnings} -g -c -intf ${in}_simple ${postbuild}"
+    ~depfile:"${in}.d"
+    "build_cmi_native"
+    
+    
+
+let linking_bytecode =
+  define
+    ~command:"${bsb_helper} ${bsb_helper_verbose} ${ocaml_dependencies} ${warnings} ${namespace} -bs-main ${main_module} ${bs_super_errors} ${static_libraries} \
+              ${ocamlfind_dependencies} ${external_deps_for_linking} ${in} -link-bytecode ${out}"
+    "linking_bytecode"
+
+let linking_native =
+  define
+    ~command:"${bsb_helper} ${bsb_helper_verbose} ${ocaml_dependencies} ${warnings} ${namespace} -bs-main ${main_module} ${bs_super_errors} ${static_libraries} \
+              ${ocamlfind_dependencies} ${external_deps_for_linking} ${in} -link-native ${out}"
+    "linking_native"
+
+
+let build_cma_library =
+  define
+    ~command:"${bsb_helper} ${bsb_helper_verbose} ${build_library} ${ocaml_dependencies} ${warnings} ${namespace} ${bs_super_errors} ${static_libraries} ${ocamlfind_dependencies} \
+              ${bs_package_includes} ${ocaml_lib_includes} ${bsc_extra_includes} \
+              ${in} -pack-bytecode-library"
+    "build_cma_library"
+
+let build_cmxa_library =
+  define
+    ~command:"${bsb_helper} ${bsb_helper_verbose} ${build_library} ${ocaml_dependencies} ${warnings} ${namespace} ${bs_super_errors} ${static_libraries} ${ocamlfind_dependencies} \
+              ${bs_package_includes} ${ocaml_lib_includes} ${bsc_extra_includes} \
+              ${in} -pack-native-library"
+    "build_cmxa_library"
+
+(* a snapshot of rule_names environment*)
+let built_in_rule_names = !rule_names 
+let built_in_rule_id = !rule_id
+
+let reset (custom_rules : string String_map.t) = 
+  begin 
+    rule_id := built_in_rule_id;
+    rule_names := built_in_rule_names;
+
+    build_ast_and_module_sets.used <- false ;
+    build_ast_and_module_sets_from_re.used <- false ;  
+    build_ast_and_module_sets_from_rei.used <- false ;
+    
+    build_ast_and_module_sets_gen_simple.used <- false ;
+    build_ast_and_module_sets_from_re_gen_simple.used <- false ;  
+    build_ast_and_module_sets_from_rei_gen_simple.used <- false ;
+
+    build_bin_deps.used <- false;
+    build_bin_deps_bytecode.used <- false;
+    build_bin_deps_native.used <- false;
+  
+    reload.used <- false; 
+    copy_resources.used <- false ;
+    build_cmj_js.used <- false;
+    build_cmj_cmi_js.used <- false ;
+    build_cmi.used <- false ;
+    
+    build_cmo_cmi_bytecode.used <- false;
+    build_cmi_bytecode.used <- false;
+    build_cmx_cmi_native.used <- false;
+    build_cmi_native.used <- false;
+    linking_bytecode.used <- false;
+    linking_native.used <- false;
+    build_cma_library.used <- false;
+    build_cmxa_library.used <- false;
+    
+    build_package.used <- false;
+
+    build_package_gen_mlast_simple.used <- false;
+    build_package_build_cmi_bytecode.used <- false;
+    build_package_build_cmi_native.used <- false;
+    
+    String_map.mapi (fun name command -> 
+        define ~command name
+      ) custom_rules
+  end
+
+end
+module Bsb_ninja_util : sig 
+#1 "bsb_ninja_util.mli"
+(* Copyright (C) 2015-2016 Bloomberg Finance L.P.
+ * 
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * In addition to the permissions granted to you by the LGPL, you may combine
+ * or link a "work that uses the Library" with a publicly distributed version
+ * of this file to produce a combined library or application, then distribute
+ * that combined work under the terms of your choosing, with no requirement
+ * to comply with the obligations normally placed on you by section 4 of the
+ * LGPL version 3 (or the corresponding section of a later version of the LGPL
+ * should you choose to use a later version).
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ * 
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
+
+
+
+
+type override = 
+  | Append of string 
+  | AppendList of string list 
+  | AppendVar of string
+  
+  | Overwrite of string 
+  
+  | OverwriteVar of string 
+
+type shadow = { key : string ; op : override }
+(** output should always be marked explicitly,
+   otherwise the build system can not figure out clearly
+   however, for the command we don't need pass `-o`
+*)
+val output_build :
+  ?order_only_deps:string list ->
+  ?implicit_deps:string list ->
+  ?outputs:string list ->
+  ?implicit_outputs: string list ->  
+  ?inputs:string list ->
+  ?shadows:shadow list ->
+  ?restat:unit ->
+  output:string ->
+  input:string ->
+  rule:Bsb_rule.t -> out_channel -> unit
+
+
+val phony  :
+  ?order_only_deps:string list ->
+  inputs:string list -> output:string -> out_channel -> unit
+
+val output_kv : string ->  string -> out_channel -> unit 
+val output_kvs : (string * string) array -> out_channel -> unit
+
+
+end = struct
+#1 "bsb_ninja_util.ml"
+(* Copyright (C) 2015-2016 Bloomberg Finance L.P.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * In addition to the permissions granted to you by the LGPL, you may combine
+ * or link a "work that uses the Library" with a publicly distributed version
+ * of this file to produce a combined library or application, then distribute
+ * that combined work under the terms of your choosing, with no requirement
+ * to comply with the obligations normally placed on you by section 4 of the
+ * LGPL version 3 (or the corresponding section of a later version of the LGPL
+ * should you choose to use a later version).
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
+
+
+
+
+type override = 
+  | Append of string 
+  | AppendList of string list
+  (* Append s 
+     s
+  *)
+  | AppendVar of string 
+  (* AppendVar s 
+     $s
+  *)
+  | Overwrite of string 
+
+  | OverwriteVar of string 
+    (*
+      OverwriteVar s 
+      $s
+    *)
+
+type shadow = 
+  { key : string ; op : override }
+
+let output_build
+    ?(order_only_deps=[])
+    ?(implicit_deps=[])
+    ?(outputs=[])
+    ?(implicit_outputs=[])
+    ?(inputs=[])
+    ?(shadows=([] : shadow list))
+    ?restat
+    ~output
+    ~input
+    ~rule
+    oc =
+  let rule = Bsb_rule.get_name rule  oc in (* Trigger building if not used *)
+  output_string oc "build ";
+  output_string oc output ;
+  outputs |> List.iter (fun s -> output_string oc Ext_string.single_space ; output_string oc s  );
+  begin match implicit_outputs with
+    | [] -> ()
+    | _ ->
+      output_string oc " | ";
+      implicit_outputs |> List.iter (fun s -> output_string oc Ext_string.single_space ; output_string oc s)
+  end;
+  output_string oc " : ";
+  output_string oc rule;
+  output_string oc Ext_string.single_space;
+  output_string oc input;
+  inputs |> List.iter (fun s ->   output_string oc Ext_string.single_space ; output_string oc s);
+  begin match implicit_deps with
+    | [] -> ()
+    | _ ->
+      begin
+        output_string oc " | ";
+        implicit_deps
+        |>
+        List.iter (fun s -> output_string oc Ext_string.single_space; output_string oc s )
+      end
+  end;
+  begin match order_only_deps with
+    | [] -> ()
+    | _ ->
+      begin
+        output_string oc " || ";
+        order_only_deps
+        |>
+        List.iter (fun s -> output_string oc Ext_string.single_space ; output_string oc s)
+      end
+  end;
+  output_string oc "\n";
+  begin match shadows with
+    | [] -> ()
+    | xs ->
+      List.iter (fun {key=k; op= v} ->
+          output_string oc "  " ;
+          output_string oc k ;
+          output_string oc " = ";
+          match v with
+          | Overwrite s -> 
+            output_string oc s ; 
+            output_string oc "\n"
+          | OverwriteVar s ->
+            output_string oc "$";
+            output_string oc s ; 
+            output_string oc "\n"
+          | AppendList ls -> 
+            output_string oc "$" ;
+            output_string oc k;
+            List.iter 
+              (fun s ->
+                 output_string oc Ext_string.single_space;
+                 output_string oc s 
+                 ) ls;
+            output_string oc "\n"
+          | Append s ->
+            output_string oc "$" ;
+            output_string oc k;
+            output_string oc Ext_string.single_space;
+            output_string oc s ; output_string oc "\n"
+          | AppendVar s ->   
+            output_string oc "$" ;
+            output_string oc k;
+            output_string oc Ext_string.single_space;
+            output_string oc "$";
+            output_string oc s ; 
+            output_string oc "\n"
+        ) xs
+  end;
+  begin match restat with
+    | None -> ()
+    | Some () ->
+      output_string oc Ext_string.single_space ;
+      output_string oc "restat = 1 \n"
+  end
+
+
+let phony ?(order_only_deps=[]) ~inputs ~output oc =
+  output_string oc "build ";
+  output_string oc output ;
+  output_string oc " : ";
+  output_string oc "phony";
+  output_string oc Ext_string.single_space;
+  inputs |> List.iter (fun s ->   output_string oc Ext_string.single_space ; output_string oc s);
+  begin match order_only_deps with
+    | [] -> ()
+    | _ ->
+      begin
+        output_string oc " || ";
+        order_only_deps
+        |>
+        List.iter (fun s -> output_string oc Ext_string.single_space ; output_string oc s)
+      end
+  end;
+  output_string oc "\n"
+
+let output_kv key value oc  =
+  output_string oc key ;
+  output_string oc " = ";
+  output_string oc value ;
+  output_string oc "\n"
+
+let output_kvs kvs oc =
+  Array.iter (fun (k,v) -> output_kv k v oc) kvs
+
+
+
+end
+module Bsb_ninja_file_groups : sig 
+#1 "bsb_ninja_file_groups.mli"
+(* Copyright (C) 2017 Authors of BuckleScript
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * In addition to the permissions granted to you by the LGPL, you may combine
+ * or link a "work that uses the Library" with a publicly distributed version
+ * of this file to produce a combined library or application, then distribute
+ * that combined work under the terms of your choosing, with no requirement
+ * to comply with the obligations normally placed on you by section 4 of the
+ * LGPL version 3 (or the corresponding section of a later version of the LGPL
+ * should you choose to use a later version).
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
+
+
+type info =  string list  
+
+val zero : info
+
+val get_local_ppx_deps : 
+  Bsb_config_types.compilation_kind_t -> 
+  Bsb_config_types.entries_t list -> 
+  (Bsb_config_types.entries_t list * Bsb_config_types.entries_t list * string list * string list * Bsb_config_types.entries_t list)
+
+val handle_file_groups :
+  out_channel ->
+  package_specs:Bsb_package_specs.t ->  
+  bs_suffix:bool ->
+  js_post_build_cmd:string option -> 
+  files_to_install:String_hash_set.t ->  
+  custom_rules:Bsb_rule.t String_map.t ->
+  backend:Bsb_config_types.compilation_kind_t -> 
+  entries:Bsb_config_types.entries_t list ->
+  dependency_info:Bsb_dependency_info.t -> 
+  root_project_dir:string ->
+  Bsb_parse_sources.file_group list ->
+  string option ->
+  info -> info
+
+end = struct
+#1 "bsb_ninja_file_groups.ml"
+(* Copyright (C) 2017 Authors of BuckleScript
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * In addition to the permissions granted to you by the LGPL, you may combine
+ * or link a "work that uses the Library" with a publicly distributed version
+ * of this file to produce a combined library or application, then distribute
+ * that combined work under the terms of your choosing, with no requirement
+ * to comply with the obligations normally placed on you by section 4 of the
+ * LGPL version 3 (or the corresponding section of a later version of the LGPL
+ * should you choose to use a later version).
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
+
+let (//) = Ext_path.combine
+
+type info =
+  string list   
+(* Figure out a list of files 
+   to be built before building cm*
+*)
+
+
+let zero : info =
+  [] 
+
+
+
+
+let handle_generators oc 
+    (group : Bsb_parse_sources.file_group) custom_rules =   
+  let map_to_source_dir = 
+    (fun x -> Bsb_config.proj_rel (group.dir //x )) in
+  group.generators
+  |> List.iter (fun  ({output; input; command}  : Bsb_parse_sources.build_generator)-> 
+      begin match String_map.find_opt command custom_rules with 
+        | None -> Ext_pervasives.failwithf ~loc:__LOC__ "custom rule %s used but  not defined" command
+        | Some rule -> 
+          begin match output, input with
+            | output::outputs, input::inputs -> 
+              Bsb_ninja_util.output_build oc 
+                ~outputs:(Ext_list.map map_to_source_dir  outputs)
+                ~inputs:(Ext_list.map map_to_source_dir inputs) 
+                ~output:(map_to_source_dir output)
+                ~input:(map_to_source_dir input)
+                ~rule
+            | [], _ 
+            | _, []  -> Ext_pervasives.failwithf ~loc:__LOC__ "either output or input can not be empty in rule %s" command
+          end
+      end
+    )
+
+
+let make_common_shadows 
+    is_re
+    package_specs 
+    dirname 
+    dir_index 
+  : Bsb_ninja_util.shadow list 
+  =
+  let shadows : Bsb_ninja_util.shadow list = 
+    { key = Bsb_ninja_global_vars.bs_package_flags;
+      op = 
+        Append
+          (Bsb_package_specs.package_flag_of_package_specs
+             package_specs dirname
+          )
+    } ::
+    (if Bsb_dir_index.is_lib_dir dir_index  then [] else
+       [{
+         key = Bsb_ninja_global_vars.bs_package_includes; 
+         op = AppendVar Bsb_ninja_global_vars.bs_package_dev_includes 
+       }
+        ;
+        { key = "bsc_extra_includes";
+          op = OverwriteVar (Bsb_dir_index.string_of_bsb_dev_include dir_index)
+        }
+       ]
+    )   
+  in 
+  if is_re then 
+    { key = Bsb_ninja_global_vars.bsc_flags; 
+      op = AppendList ["-bs-re-out"; "-bs-super-errors"]
+    } :: shadows
+  else shadows
+
+
+let emit_impl_build
+    (package_specs : Bsb_package_specs.t)
+    (group_dir_index : Bsb_dir_index.t) 
+    oc 
+    ~bs_suffix
+    ~no_intf_file:(no_intf_file : bool) 
+    js_post_build_cmd
+    ~is_re
+    ~local_ppx_flags
+    ~local_ppx_deps
+    namespace
+    filename_sans_extension
+  : info =    
+  let input = 
+    Bsb_config.proj_rel 
+      (if is_re then filename_sans_extension ^ Literals.suffix_re 
+       else filename_sans_extension ^ Literals.suffix_ml  ) in
+  let output_mlast = filename_sans_extension  ^ Literals.suffix_mlast in
+  let output_mlastd = filename_sans_extension ^ Literals.suffix_mlastd in
+  let output_filename_sans_extension = 
+    match namespace with 
+    | None -> 
+      filename_sans_extension 
+    | Some ns -> 
+      Ext_namespace.make ~ns filename_sans_extension
+  in 
+  let file_cmi =  output_filename_sans_extension ^ Literals.suffix_cmi in
+  let output_cmj =  output_filename_sans_extension ^ Literals.suffix_cmj in
+  let output_js =
+    Bsb_package_specs.get_list_of_output_js package_specs bs_suffix output_filename_sans_extension in 
+  let common_shadows = 
+    make_common_shadows is_re package_specs
+      (Filename.dirname file_cmi)
+      group_dir_index in
+  let shadows = List.map (fun f -> 
+    Bsb_ninja_util.{
+     key = "ppx_flags"; 
+     op = AppendList ["-ppx"; f]
+   }) local_ppx_flags in
+  begin
+    Bsb_ninja_util.output_build oc
+      ~output:output_mlast
+      ~input
+      ~rule:( if is_re then 
+                Bsb_rule.build_ast_and_module_sets_from_re
+              else
+                Bsb_rule.build_ast_and_module_sets)
+      ~implicit_deps:local_ppx_deps
+      ~shadows;
+    Bsb_ninja_util.output_build
+      oc
+      ~output:output_mlastd
+      ~input:output_mlast
+      ~rule:Bsb_rule.build_bin_deps
+      ?shadows:(if Bsb_dir_index.is_lib_dir group_dir_index then None
+                else Some [{Bsb_ninja_util.key = Bsb_build_schemas.bsb_dir_group ; 
+                            op = 
+                              Overwrite (string_of_int (group_dir_index :> int)) }])
+    ;
+    let shadows =
+      match js_post_build_cmd with
+      | None -> common_shadows
+      | Some cmd ->
+        {key = Bsb_ninja_global_vars.postbuild;
+         op = Overwrite ("&& " ^ cmd ^ Ext_string.single_space ^ String.concat Ext_string.single_space output_js)} 
+        :: common_shadows
+    in
+    let rule , cm_outputs, deps =
+      if no_intf_file then 
+        Bsb_rule.build_cmj_cmi_js, [file_cmi], []
+      else  Bsb_rule.build_cmj_js, []  , [file_cmi]
+    in
+    Bsb_ninja_util.output_build oc
+      ~output:output_cmj
+      ~shadows
+      ~implicit_outputs:  (output_js @ cm_outputs)
+      ~input:output_mlast
+      ~implicit_deps:deps
+      ~rule;
+    [output_mlastd] 
+  end 
+
+
+let emit_intf_build 
+    (package_specs : Bsb_package_specs.t)
+    (group_dir_index : Bsb_dir_index.t)
+    oc
+    ~is_re
+    ~local_ppx_flags
+    ~local_ppx_deps
+    namespace
+    filename_sans_extension
+  : info =
+  let output_mliast = filename_sans_extension ^ Literals.suffix_mliast in
+  let output_mliastd = filename_sans_extension ^ Literals.suffix_mliastd in
+  let output_filename_sans_extension = 
+    match namespace with 
+    | None -> 
+      filename_sans_extension 
+    | Some ns -> 
+      Ext_namespace.make ~ns filename_sans_extension
+  in 
+  let output_cmi = output_filename_sans_extension ^ Literals.suffix_cmi in  
+  let common_shadows = 
+    make_common_shadows is_re package_specs
+      (Filename.dirname output_cmi)
+      group_dir_index in
+  let shadows = List.map (fun f -> 
+    Bsb_ninja_util.{
+     key = "ppx_flags"; 
+     op = AppendList ["-ppx"; f]
+   }) local_ppx_flags in
+  Bsb_ninja_util.output_build oc
+    ~output:output_mliast
+      (* TODO: we can get rid of absloute path if we fixed the location to be 
+          [lib/bs], better for testing?
+      *)
+    ~input:(Bsb_config.proj_rel 
+              (if is_re then filename_sans_extension ^ Literals.suffix_rei 
+               else filename_sans_extension ^ Literals.suffix_mli))
+    ~rule:(if is_re then Bsb_rule.build_ast_and_module_sets_from_rei
+           else Bsb_rule.build_ast_and_module_sets)
+    ~implicit_deps:local_ppx_deps
+    ~shadows;
+  Bsb_ninja_util.output_build oc
+    ~output:output_mliastd
+    ~input:output_mliast
+    ~rule:Bsb_rule.build_bin_deps
+    ?shadows:(if Bsb_dir_index.is_lib_dir group_dir_index  then None
+              else Some [{
+                  key = Bsb_build_schemas.bsb_dir_group; 
+                  op = 
+                    Overwrite (string_of_int (group_dir_index :> int )) }])
+  ;
+  Bsb_ninja_util.output_build oc
+    ~shadows:common_shadows
+    ~output:output_cmi
+    ~input:output_mliast
+    ~rule:Bsb_rule.build_cmi;
+  [output_mliastd]
+
+
+
+let handle_module_info 
+    (group_dir_index : Bsb_dir_index.t)
+    (package_specs : Bsb_package_specs.t) 
+    js_post_build_cmd
+    ~bs_suffix
+    ~local_ppx_flags
+    ~local_ppx_deps
+    oc  module_name 
+    ( module_info : Bsb_db.module_info)
+    namespace
+  : info =
+  match module_info.ml, module_info.mli with
+  | Ml_source (input_impl,impl_is_re,_), 
+    Mli_source(input_intf, intf_is_re,_) ->
+    emit_impl_build 
+      package_specs
+      group_dir_index
+      oc 
+      ~bs_suffix
+      ~no_intf_file:false
+      ~is_re:impl_is_re
+      ~local_ppx_flags
+      ~local_ppx_deps
+      js_post_build_cmd      
+      namespace
+      input_impl  @ 
+    emit_intf_build 
+      package_specs
+      group_dir_index
+      oc         
+      ~is_re:intf_is_re
+      ~local_ppx_flags
+      ~local_ppx_deps
+      namespace
+      input_intf 
+  | Ml_source(input,is_re,_), Mli_empty ->
+    emit_impl_build 
+      package_specs
+      group_dir_index
+      oc 
+      ~bs_suffix
+      ~no_intf_file:true
+      js_post_build_cmd      
+      ~is_re
+      ~local_ppx_flags
+      ~local_ppx_deps
+      namespace
+      input 
+  | Ml_empty, Mli_source(input,is_re,_) ->    
+    emit_intf_build 
+      package_specs
+      group_dir_index
+      oc         
+      ~is_re
+      ~local_ppx_flags
+      ~local_ppx_deps
+      namespace
+      input 
+  | Ml_empty, Mli_empty -> zero
+
+
+let handle_file_group 
+    oc 
+    ~bs_suffix
+    ~custom_rules 
+    ~package_specs 
+    ~js_post_build_cmd  
+    ~local_ppx_flags 
+    ~local_ppx_deps
+    (files_to_install : String_hash_set.t) 
+    (namespace  : string option)
+    acc 
+    (group: Bsb_parse_sources.file_group ) 
+  : info =
+
+  handle_generators oc group custom_rules ;
+  String_map.fold (fun  module_name module_info  acc ->
+      let installable =
+        match group.public with
+        | Export_all -> true
+        | Export_none -> false
+        | Export_set set ->  
+          String_set.mem module_name set in
+      if installable then 
+        String_hash_set.add files_to_install (Bsb_db.filename_sans_suffix_of_module_info module_info);
+      (handle_module_info 
+        ~bs_suffix
+        ~local_ppx_flags
+        ~local_ppx_deps
+         group.dir_index 
+         package_specs js_post_build_cmd 
+         oc 
+         module_name 
+         module_info
+         namespace
+      ) @  acc
+    ) group.sources  acc 
+
+(* Divide the entries into 3 groups:
+  - entries: all the non-ppx entries that we'd like to pack or link
+  - entries_that_have_ppxes: subset of `entries` which have dependencies on local ppxes
+  - ppx_entries: entries that are ppxes, a disjoint set from `entries`
+  
+  Also returns a list of ppx module names and ppx executable paths.
+ *)
+let get_local_ppx_deps backend entries =
+  List.fold_left Bsb_config_types.(fun (entries, entries_that_have_ppxes, local_ppx_deps, module_names, ppx_entries) project_entry ->
+    let dry entry_backend ppx kind main_module_name output_name =
+        let (entries, entries_that_have_ppxes) = if backend = entry_backend && kind <> Ppx then 
+          if ppx <> [] then
+            (project_entry :: entries, project_entry :: entries_that_have_ppxes)
+          else
+            (project_entry :: entries, entries_that_have_ppxes)
+        else 
+          (entries, entries_that_have_ppxes) in
+        let (local_ppx_deps, module_names, ppx_entries) = if kind = Ppx then 
+          let (output, module_name) =
+          begin match entry_backend with
+          | Js       -> assert false
+          | Bytecode -> 
+            (match output_name with 
+              | None -> 
+                let extension = if Ext_sys.is_windows_or_cygwin then ".exe" else "" in
+                (String.lowercase main_module_name) ^ ".byte" ^ extension
+              | Some name -> name
+            ), main_module_name
+          | Native   -> 
+            (match output_name with 
+              | None -> 
+                let extension = if Ext_sys.is_windows_or_cygwin then ".exe" else "" in
+                (String.lowercase main_module_name) ^ ".native" ^ extension
+              | Some name -> name
+            ), main_module_name
+          end in
+        let output = if Ext_sys.is_windows_or_cygwin then output else "./" ^ output in
+        (output :: local_ppx_deps, module_name :: module_names, project_entry :: ppx_entries)
+        else
+          (local_ppx_deps, module_names, ppx_entries ) in
+        (entries, entries_that_have_ppxes, local_ppx_deps, module_names, ppx_entries)
+      in
+      match project_entry with
+      | JsTarget { ppx; kind; main_module_name; output_name } -> 
+        dry Js ppx kind main_module_name output_name
+        
+      | NativeTarget { ppx; kind; main_module_name; output_name } -> 
+        dry Native ppx kind main_module_name output_name
+        
+      | BytecodeTarget { ppx; kind; main_module_name; output_name } -> 
+        dry Bytecode ppx kind main_module_name output_name
+    
+  ) ([], [], [], [], []) entries
+
+let handle_file_groups
+    oc ~package_specs 
+    ~bs_suffix
+    ~js_post_build_cmd
+    ~files_to_install 
+    ~custom_rules
+    ~backend
+    ~entries
+    ~dependency_info
+    ~root_project_dir
+    (file_groups  :  Bsb_parse_sources.file_group list)
+    namespace (st : info) : info  =
+  let file_groups = List.filter (fun (group : Bsb_parse_sources.file_group) ->
+    match backend with 
+    | Bsb_config_types.Js       -> 
+      not group.is_ppx && List.mem Bsb_parse_sources.Js group.Bsb_parse_sources.backend
+    | Bsb_config_types.Native   -> List.mem Bsb_parse_sources.Native group.Bsb_parse_sources.backend
+    | Bsb_config_types.Bytecode -> List.mem Bsb_parse_sources.Bytecode group.Bsb_parse_sources.backend
+  ) file_groups in 
+  let (entries, entries_that_have_ppxes, local_ppx_deps, local_ppx_module_names, _) = get_local_ppx_deps backend entries in
+  let (local_ppx_deps, local_ppx_module_names) = begin
+    let rec loop_over_ppx (new_local_ppx_deps, new_local_ppx_module_names) local_ppx_deps local_ppx_module_names = 
+      begin match (local_ppx_deps, local_ppx_module_names) with 
+      | ([], []) -> (new_local_ppx_deps, new_local_ppx_module_names)
+      | (ppx_dep :: ppx_dep_rest, ppx_name :: ppx_name_rest) ->
+        let rec is_ppx_used entries = begin match entries with 
+          | [] -> false
+          | Bsb_config_types.JsTarget { ppx; } :: rest
+          | Bsb_config_types.NativeTarget { ppx; } :: rest
+          | Bsb_config_types.BytecodeTarget { ppx; } :: rest ->
+            if List.mem ppx_name ppx then true
+            else is_ppx_used rest 
+        end in
+        if is_ppx_used entries then 
+          loop_over_ppx (ppx_dep :: new_local_ppx_deps, ppx_name :: new_local_ppx_module_names) ppx_dep_rest ppx_name_rest
+        else 
+          loop_over_ppx (new_local_ppx_deps, new_local_ppx_module_names) ppx_dep_rest ppx_name_rest
+      | _ -> assert false
+    end in
+    loop_over_ppx ([], []) local_ppx_deps local_ppx_module_names
+  end in
+  List.fold_left 
+    (fun comp_info (group : Bsb_parse_sources.file_group) -> 
+      if group.is_ppx then
+        comp_info
+      else begin
+        let local_ppx_flags = (String_map.fold (fun  module_name _  acc ->
+          if acc = [] then begin
+            List.fold_left Bsb_config_types.(fun acc e -> 
+              match e with 
+              | JsTarget { main_module_name; ppx = _ :: _ as ppx } when main_module_name = module_name -> ppx
+              | NativeTarget { main_module_name; ppx = _ :: _  } when main_module_name = module_name -> assert false
+              | BytecodeTarget { main_module_name; ppx = _ :: _  } when main_module_name = module_name -> assert false
+              | _ -> acc
+            ) acc entries_that_have_ppxes
+          end else 
+            acc
+        ) group.sources []) in
+        (*  map over the flags to find ppxes's full paths if they exist.  *)
+        let (local_ppx_flags, local_ppx_deps) = List.fold_left (fun (new_local_ppx_flags, new_local_ppx_deps) flag_exec -> 
+          (* @Hack You could potentially have a bug here where the exec_path name is the same as a module name
+            inside main-module but eeeeh that'd be weird! *)
+          let rec loop = fun local_ppx_deps local_ppx_module_names -> 
+            match (local_ppx_deps, local_ppx_module_names) with
+            | (exec_path :: local_ppx_deps, ppx_name :: local_ppx_module_names) -> 
+              if flag_exec = ppx_name then (exec_path :: new_local_ppx_flags, exec_path :: new_local_ppx_deps)
+              else loop local_ppx_deps local_ppx_module_names
+            | _ -> ((Bsb_dependency_info.check_if_dep ~root_project_dir ~backend dependency_info flag_exec) :: new_local_ppx_flags, new_local_ppx_deps)
+          in
+          loop local_ppx_deps local_ppx_module_names
+        ) ([], []) local_ppx_flags in
+        handle_file_group 
+         oc  ~bs_suffix ~package_specs ~custom_rules ~js_post_build_cmd ~local_ppx_flags ~local_ppx_deps
+         files_to_install 
+         namespace
+         comp_info
+        group
+      end
+    ) 
+    st  file_groups
+
+end
+module Bsb_ninja_native : sig 
+#1 "bsb_ninja_native.mli"
+(* Copyright (C) 2015-2016 Bloomberg Finance L.P.
+ * 
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * In addition to the permissions granted to you by the LGPL, you may combine
+ * or link a "work that uses the Library" with a publicly distributed version
+ * of this file to produce a combined library or application, then distribute
+ * that combined work under the terms of your choosing, with no requirement
+ * to comply with the obligations normally placed on you by section 4 of the
+ * LGPL version 3 (or the corresponding section of a later version of the LGPL
+ * should you choose to use a later version).
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ * 
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
+
+(* File following almost the same logic as bsb_ninja but slightly modified for 
+   native / bytecode compilation. *)
+type compile_target_t = Native | Bytecode
+  
+val handle_file_groups : out_channel ->
+  custom_rules:Bsb_rule.t String_map.t -> 
+  is_top_level:bool ->
+  build_library:string option ->
+  compile_target:compile_target_t ->
+  backend:Bsb_config_types.compilation_kind_t ->
+  dependency_info:Bsb_dependency_info.t ->
+  ocaml_lib:string ->
+  root_project_dir:string ->
+  config:Bsb_config_types.t ->
+  ?build_just_ppx: bool ->
+  Bsb_parse_sources.file_group list ->
+  string option ->
+  Bsb_ninja_file_groups.info -> 
+  Bsb_ninja_file_groups.info
+  
+
+end = struct
+#1 "bsb_ninja_native.ml"
+(* Copyright (C) 2015-2016 Bloomberg Finance L.P.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * In addition to the permissions granted to you by the LGPL, you may combine
+ * or link a "work that uses the Library" with a publicly distributed version
+ * of this file to produce a combined library or application, then distribute
+ * that combined work under the terms of your choosing, with no requirement
+ * to comply with the obligations normally placed on you by section 4 of the
+ * LGPL version 3 (or the corresponding section of a later version of the LGPL
+ * should you choose to use a later version).
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
+
+
+module Rules = Bsb_rule 
+
+type compile_target_t = Native | Bytecode
+
+type info =
+  string list  
+
+let zero : info =
+  [] 
+
+
+let output_build = Bsb_ninja_util.output_build
+
+let (//) = Ext_path.combine
+
+let install_file module_info files_to_install =
+  String_hash_set.add  files_to_install (Bsb_db.filename_sans_suffix_of_module_info module_info)
+
+let handle_generators oc 
+    (group : Bsb_parse_sources.file_group) custom_rules =   
+  let map_to_source_dir = 
+    (fun x -> Bsb_config.proj_rel (group.dir //x )) in
+  group.generators
+  |> List.iter (fun  ({output; input; command}  : Bsb_parse_sources.build_generator)-> 
+      begin match String_map.find_opt command custom_rules with 
+        | None -> Ext_pervasives.failwithf ~loc:__LOC__ "custom rule %s used but  not defined" command
+        | Some rule -> 
+          begin match output, input with
+            | output::outputs, input::inputs -> 
+              Bsb_ninja_util.output_build oc 
+                ~outputs:(Ext_list.map map_to_source_dir  outputs)
+                ~inputs:(Ext_list.map map_to_source_dir inputs) 
+                ~output:(map_to_source_dir output)
+                ~input:(map_to_source_dir input)
+                ~rule
+            | [], _ 
+            | _, []  -> Ext_pervasives.failwithf ~loc:__LOC__ "either output or input can not be empty in rule %s" command
+          end
+      end
+    )
+
+
+let make_common_shadows 
+    is_re
+    package_specs 
+    dirname 
+    dir_index 
+  : Bsb_ninja_util.shadow list 
+  =
+  let shadows : Bsb_ninja_util.shadow list = 
+    (if Bsb_dir_index.is_lib_dir dir_index  then [] else
+       [{
+         key = Bsb_ninja_global_vars.bs_package_includes; 
+         op = AppendVar Bsb_ninja_global_vars.bs_package_dev_includes 
+       }
+        ;
+        { key = "bsc_extra_includes";
+          op = OverwriteVar (Bsb_dir_index.string_of_bsb_dev_include dir_index)
+        }
+       ]
+    )   
+  in 
+  if is_re then 
+    { key = Bsb_ninja_global_vars.bsc_flags; 
+      op = AppendList ["-bs-re-out"; "-bs-super-errors"]
+    } :: shadows
+  else shadows
+
+let emit_impl_build
+  (package_specs : Bsb_package_specs.t)
+  (group_dir_index : Bsb_dir_index.t) 
+  oc 
+  ~local_ppx_deps
+  ~bs_suffix
+  ~no_intf_file:(no_intf_file : bool) 
+  ~compile_target
+  ~local_ppx_flags
+  ~ocaml_dependencies
+  ~ocaml_lib
+  ~is_ppx
+  js_post_build_cmd
+  ~is_re
+  namespace
+  filename_sans_extension
+  : info =
+  let input = 
+    Bsb_config.proj_rel 
+      (if is_re then filename_sans_extension ^ Literals.suffix_re 
+       else filename_sans_extension ^ Literals.suffix_ml  ) in
+  let output_mlast = filename_sans_extension  ^ Literals.suffix_mlast in
+  let output_mlastd = filename_sans_extension ^ Literals.suffix_mlastd in
+  let output_filename_sans_extension = 
+    match namespace with 
+    | None -> 
+      filename_sans_extension 
+    | Some ns -> 
+      Ext_namespace.make ~ns filename_sans_extension
+  in 
+  let output_cmi =  output_filename_sans_extension ^ Literals.suffix_cmi in
+  let output_cmx_or_cmo =
+    match compile_target with
+    | Bytecode -> output_filename_sans_extension ^ Literals.suffix_cmo
+    | Native   -> output_filename_sans_extension ^ Literals.suffix_cmx
+  in
+  let output_js =
+    Bsb_package_specs.get_list_of_output_js package_specs bs_suffix output_filename_sans_extension in 
+  let shadows = List.map (fun f -> 
+    Bsb_ninja_util.{
+     key = "ppx_flags"; 
+     op = AppendList ["-ppx"; f]
+   }) local_ppx_flags in
+  output_build oc
+    ~output:output_mlast
+    ~input
+    ~rule:(if is_re then
+            Rules.build_ast_and_module_sets_from_re_gen_simple
+          else
+            Rules.build_ast_and_module_sets_gen_simple)
+    ~implicit_deps:local_ppx_deps
+    ~shadows;
+  let bin_deps_rule = begin match compile_target with
+  | Bytecode -> Rules.build_bin_deps_bytecode
+  | Native   -> Rules.build_bin_deps_native
+  end in
+  output_build
+    oc
+    ~output:output_mlastd
+    ~input:output_mlast
+    ~rule:bin_deps_rule
+    ?shadows:(if Bsb_dir_index.is_lib_dir group_dir_index then None
+              else Some [{key = Bsb_build_schemas.bsb_dir_group; 
+                          op = Bsb_ninja_util.Overwrite (string_of_int (group_dir_index :> int)) }])
+  ;
+  let common_shadows = 
+    make_common_shadows is_re package_specs
+      (Filename.dirname output_cmi)
+      group_dir_index in
+  let rule_name = begin match compile_target with
+  | Bytecode -> Rules.build_cmo_cmi_bytecode
+  | Native   -> Rules.build_cmx_cmi_native
+  end in
+  let cm_outputs, deps =
+    if no_intf_file then
+      [output_cmi], [output_mlastd]
+    else    
+      [], [output_cmi; output_mlastd]
+  in
+  let deps = match namespace with 
+    | None -> deps
+    | Some ns -> (ns ^ Literals.suffix_cmi) :: deps
+  in
+  let common_shadows = if is_ppx && not (List.mem "compiler-libs" ocaml_dependencies) then 
+    {
+      Bsb_ninja_util.key = "ocaml_flags";
+      op = Bsb_ninja_util.AppendList ["-I " ^ (ocaml_lib // "compiler-libs")]
+    } :: common_shadows
+  else common_shadows in
+  let shadows =
+    match js_post_build_cmd with
+    | None -> common_shadows
+    | Some cmd ->
+      {Bsb_ninja_util.key = Bsb_ninja_global_vars.postbuild;
+       op = Bsb_ninja_util.Overwrite ("&& " ^ cmd ^ Ext_string.single_space ^ String.concat Ext_string.single_space output_js)}
+        :: common_shadows
+  in
+  output_build oc
+    ~output:output_cmx_or_cmo
+    ~shadows
+    ~implicit_outputs:cm_outputs
+    ~input:output_mlast
+    ~implicit_deps:deps
+    ~rule:rule_name ;
+  [output_mlastd]
+
+let emit_intf_build 
+    (package_specs : Bsb_package_specs.t)
+    (group_dir_index : Bsb_dir_index.t)
+    oc
+    ~local_ppx_deps
+    ~is_re
+    ~compile_target
+    ~local_ppx_flags
+    ~ocaml_dependencies
+    ~ocaml_lib
+    ~is_ppx
+    namespace
+    filename_sans_extension
+  : info =
+  let output_mliast = filename_sans_extension ^ Literals.suffix_mliast in
+  let output_mliastd = filename_sans_extension ^ Literals.suffix_mliastd in
+  let output_filename_sans_extension = 
+    match namespace with 
+    | None -> 
+      filename_sans_extension 
+    | Some ns -> 
+      Ext_namespace.make ~ns filename_sans_extension
+  in 
+  let output_cmi = output_filename_sans_extension ^ Literals.suffix_cmi in  
+  let shadows = List.map (fun f -> 
+    Bsb_ninja_util.{
+     key = "ppx_flags"; 
+     op = AppendList ["-ppx"; f]
+   }) local_ppx_flags in
+  Bsb_ninja_util.output_build oc
+    ~output:output_mliast
+      (* TODO: we can get rid of absloute path if we fixed the location to be 
+          [lib/bs], better for testing?
+      *)
+    ~input:(Bsb_config.proj_rel 
+              (if is_re then filename_sans_extension ^ Literals.suffix_rei 
+               else filename_sans_extension ^ Literals.suffix_mli))
+    ~rule:(if is_re then Bsb_rule.build_ast_and_module_sets_from_rei_gen_simple
+           else Bsb_rule.build_ast_and_module_sets_gen_simple)
+    ~implicit_deps:local_ppx_deps
+    ~shadows;
+  let common_shadows = 
+    make_common_shadows is_re package_specs
+      (Filename.dirname output_cmi)
+      group_dir_index in
+  Bsb_ninja_util.output_build oc
+    ~output:output_mliastd
+    ~input:output_mliast
+    ~rule:Bsb_rule.build_bin_deps
+    ?shadows:(if Bsb_dir_index.is_lib_dir group_dir_index  then None
+              else Some [{
+                  key = Bsb_build_schemas.bsb_dir_group; 
+                  op = 
+                    Overwrite (string_of_int (group_dir_index :> int )) }]);
+    
+  let rule = begin match compile_target with
+  | Bytecode -> Rules.build_cmi_bytecode
+  | Native   -> Rules.build_cmi_native
+  end in
+  let common_shadows = if is_ppx && not (List.mem "compiler-libs" ocaml_dependencies) then 
+    {
+      Bsb_ninja_util.key = "ocaml_flags";
+      op = Bsb_ninja_util.AppendList ["-I " ^ (ocaml_lib // "compiler-libs")]
+    } :: common_shadows
+  else common_shadows in
+  (* TODO(sansouci): Do we need this? *)
+  (* let deps = match namespace with 
+    | None -> []
+    | Some ns -> [ns ^ Literals.suffix_cmi]
+  in *)
+  Bsb_ninja_util.output_build oc
+    ~shadows:common_shadows
+    ~output:output_cmi
+    ~input:output_mliast
+    ~implicit_deps:[output_mliastd]
+    ~rule;
+  [output_mliastd]
+
+let handle_module_info  
+  (group_dir_index : Bsb_dir_index.t)
+  (package_specs : Bsb_package_specs.t) 
+  js_post_build_cmd
+  ~local_ppx_deps
+  ~compile_target
+  ~bs_suffix
+  ~local_ppx_flags
+  ~ocaml_dependencies
+  ~ocaml_lib
+  ~is_ppx
+  oc  module_name 
+  ( module_info : Bsb_db.module_info)
+  namespace  =
+  match module_info.ml, module_info.mli with
+  | Ml_source (input_impl,impl_is_re,_), 
+    Mli_source(input_intf, intf_is_re,_) -> 
+    emit_impl_build 
+      package_specs
+      group_dir_index
+      oc 
+      ~local_ppx_deps
+      ~bs_suffix
+      ~no_intf_file:false
+      ~is_re:impl_is_re
+      ~compile_target
+      ~local_ppx_flags
+      ~ocaml_dependencies
+      ~ocaml_lib
+      ~is_ppx
+      js_post_build_cmd      
+      namespace
+      input_impl  @ 
+    emit_intf_build 
+      package_specs
+      group_dir_index
+      oc
+      ~local_ppx_deps
+      ~is_re:intf_is_re
+      ~compile_target
+      ~local_ppx_flags
+      ~ocaml_dependencies
+      ~ocaml_lib
+      ~is_ppx
+      namespace
+      input_intf 
+  | Ml_source(input,is_re,_), Mli_empty ->
+    emit_impl_build 
+      package_specs
+      group_dir_index
+      oc
+      ~local_ppx_deps
+      ~bs_suffix
+      ~no_intf_file:true
+      ~compile_target
+      ~local_ppx_flags
+      ~ocaml_dependencies
+      ~ocaml_lib
+      ~is_ppx
+      js_post_build_cmd      
+      ~is_re
+      namespace
+      input 
+  | Ml_empty, Mli_source(input,is_re,_) ->
+    emit_intf_build 
+      package_specs
+      group_dir_index
+      oc
+      ~local_ppx_deps        
+      ~is_re
+      ~compile_target
+      ~local_ppx_flags
+      ~ocaml_dependencies
+      ~ocaml_lib
+      ~is_ppx
+      namespace
+      input 
+  | Ml_empty, Mli_empty -> zero
+
+
+let handle_file_group oc
+  ~local_ppx_deps
+  ~custom_rules
+  ~compile_target
+  ~package_specs
+  ~js_post_build_cmd
+  ~namespace
+  ~bs_suffix
+  ~local_ppx_flags
+  ~ocaml_dependencies
+  ~ocaml_lib
+  ~is_ppx
+  (files_to_install : String_hash_set.t)
+  acc
+  (group: Bsb_parse_sources.file_group) : Bsb_ninja_file_groups.info =
+  
+  handle_generators oc group custom_rules ;
+  String_map.fold (fun  module_name module_info  acc ->
+      let installable =
+        match group.public with
+        | Export_all -> true
+        | Export_none -> false
+        | Export_set set ->  
+          String_set.mem module_name set in
+      if installable then 
+        String_hash_set.add files_to_install (Bsb_db.filename_sans_suffix_of_module_info module_info);
+      (handle_module_info
+        ~local_ppx_deps
+        ~bs_suffix
+        ~compile_target
+        ~local_ppx_flags
+        ~ocaml_dependencies
+        ~ocaml_lib
+        ~is_ppx
+        group.dir_index 
+        package_specs 
+        js_post_build_cmd 
+        oc 
+        module_name 
+        module_info
+        namespace
+      ) @  acc
+    ) group.sources  acc 
+
+let link oc comp_info ~entries ~file_groups ~static_libraries ~c_linker_flags ~ocaml_dependencies ~namespace ~dependency_info:(dependency_info : Bsb_dependency_info.t) ~ocaml_lib =
+  List.fold_left (fun comp_info project_entry ->
+    let output, rule_name, library_file_name, suffix_cmo_or_cmx, main_module_name, shadows, is_ppx =
+      begin match project_entry with
+      | Bsb_config_types.JsTarget {main_module_name; kind; }       -> assert false
+      | Bsb_config_types.BytecodeTarget {main_module_name; output_name; kind; } -> 
+        (match output_name with 
+          | None -> 
+            let extension = if Ext_sys.is_windows_or_cygwin then ".exe" else "" in
+            (String.lowercase main_module_name) ^ ".byte" ^ extension
+          | Some name -> name
+        ), 
+        Rules.linking_bytecode, 
+        "lib" ^ Literals.suffix_cma, 
+        Literals.suffix_cmo, 
+        main_module_name, 
+        [],
+        kind = Ppx
+      | Bsb_config_types.NativeTarget {main_module_name; output_name; kind;}   -> 
+        (match output_name with 
+          | None -> 
+            let extension = if Ext_sys.is_windows_or_cygwin then ".exe" else "" in
+            (String.lowercase main_module_name) ^ ".native" ^ extension
+          | Some name -> name
+        ), 
+        Rules.linking_native  , 
+        "lib" ^ Literals.suffix_cmxa, 
+        Literals.suffix_cmx, 
+        main_module_name,
+        [],
+        kind = Ppx
+      end in
+    let (all_mlast_files, all_cmo_or_cmx_files, all_cmi_files) =
+      List.fold_left (fun acc (group : Bsb_parse_sources.file_group) -> 
+        if group.is_ppx = is_ppx then
+          String_map.fold (fun _ (v : Bsb_db.module_info) (all_mlast_files, all_cmo_or_cmx_files, all_cmi_files) -> 
+            let mlname = match v.ml with
+              | Ml_source (input, _, _) ->
+              let input = (Ext_path.chop_extension_if_any input)  in
+              begin match namespace with 
+                | None    -> Some (input, input)
+                | Some ns -> Some (input, (Ext_namespace.make ~ns input))
+              end
+              | Ml_empty -> None
+            in
+            let mliname = match v.mli with
+              | Mli_source (input, _, _) ->
+              let input = (Ext_path.chop_extension_if_any input)  in
+              begin match namespace with 
+                | None    -> Some (input, input)
+                | Some ns -> Some (input, (Ext_namespace.make ~ns input))
+              end
+              | Mli_empty -> None 
+            in
+            begin match (mlname, mliname) with
+            | None, None -> failwith "Got a source file without an ml or mli file. This should not happen."
+            | Some (name, namespacedName), Some _ ->
+              ((name ^ Literals.suffix_mlast) :: all_mlast_files,
+               (namespacedName ^ suffix_cmo_or_cmx)     :: all_cmo_or_cmx_files,
+               (namespacedName ^ Literals.suffix_cmi)   :: all_cmi_files)
+            | Some (name, namespacedName), None ->
+              ((name ^ Literals.suffix_mlast) :: all_mlast_files,
+               (namespacedName ^ suffix_cmo_or_cmx)     :: all_cmo_or_cmx_files,
+               (namespacedName ^ Literals.suffix_cmi)   :: all_cmi_files)
+            | None, Some (_, namespacedName) ->
+              (all_mlast_files,
+               all_cmo_or_cmx_files,
+               (namespacedName ^ Literals.suffix_cmi)   :: all_cmi_files)
+            end    
+          ) group.sources acc
+        else acc
+      ) ([], [], []) file_groups 
+    in
+    let shadows = shadows @ [{
+      Bsb_ninja_util.key = "main_module";
+      op = Bsb_ninja_util.Overwrite main_module_name
+    }; {
+      key = "static_libraries";
+      op = Bsb_ninja_util.Overwrite (Bsb_build_util.flag_concat "-add-clib" (c_linker_flags @ static_libraries))
+    }] in
+    let shadows = if is_ppx && not (List.mem "compiler-libs" ocaml_dependencies) then 
+      {
+        Bsb_ninja_util.key = "ocaml_dependencies";
+        op = Bsb_ninja_util.AppendList ["-add-ocaml-dependency"; "compiler-libs"]
+      } :: shadows
+    else shadows in
+    output_build oc
+      ~output
+      ~input:""
+      ~inputs:all_mlast_files
+      ~implicit_deps:((List.map 
+                (fun dep -> (Ext_bytes.ninja_escaped dep) // library_file_name)
+                dependency_info.all_external_deps)
+        @ (List.map (fun path -> Ext_bytes.ninja_escaped path) (all_cmi_files @ all_cmo_or_cmx_files @ static_libraries)))
+      ~shadows
+      ~rule:rule_name;
+    comp_info
+  ) comp_info entries
+    
+let pack oc comp_info ~entries ?build_library ~backend ~file_groups ~namespace () =
+  (* List.fold_left (fun acc project_entry ->
+    let main_module_name =
+      begin match project_entry with
+      | Bsb_config_types.JsTarget {main_module_name}       -> assert false
+      | Bsb_config_types.NativeTarget {main_module_name} 
+      | Bsb_config_types.BytecodeTarget {main_module_name} -> main_module_name
+      end in *)
+    let output_cma_or_cmxa, rule_name, suffix_cmo_or_cmx =
+      begin match backend with
+      (* These cases could benefit from a better error message. *)
+      | Bsb_config_types.Js       -> assert false
+      | Bsb_config_types.Bytecode -> 
+        Literals.library_file ^ Literals.suffix_cma , 
+        Rules.build_cma_library , 
+        Literals.suffix_cmo
+      | Bsb_config_types.Native   -> 
+        Literals.library_file ^ Literals.suffix_cmxa, 
+        Rules.build_cmxa_library, 
+        Literals.suffix_cmx
+    end in
+    (* TODO(sansouci): we pack all source files of the dependency, but we could just pack the
+       files that are used by the main project. *)
+    let all_cmo_or_cmx_files, all_cmi_files =
+      List.fold_left (fun acc group -> 
+        String_map.fold (fun _ (v : Bsb_db.module_info) (all_cmo_or_cmx_files, all_cmi_files) -> 
+          let mlname = match v.ml with
+              | Ml_source (input, _, _) ->
+              let input = (Ext_path.chop_extension_if_any input)  in
+              begin match namespace with 
+                | None    -> Some (input)
+                | Some ns -> Some ((Ext_namespace.make ~ns input))
+              end
+              | Ml_empty -> None
+            in
+            let mliname = match v.mli with
+              | Mli_source (input, _, _) ->
+              let input = (Ext_path.chop_extension_if_any input)  in
+              begin match namespace with 
+                | None    -> Some (input)
+                | Some ns -> Some ((Ext_namespace.make ~ns input))
+              end
+              | Mli_empty -> None 
+            in
+            begin match (mlname, mliname) with
+            | None, None -> failwith "Got a source file without an ml or mli file. This should not happen."
+            | Some name, Some _ ->
+              ((name ^ suffix_cmo_or_cmx)     :: all_cmo_or_cmx_files,
+               (name ^ Literals.suffix_cmi)   :: all_cmi_files)
+            | Some name, None ->
+              ((name ^ suffix_cmo_or_cmx)     :: all_cmo_or_cmx_files,
+               (name ^ Literals.suffix_cmi)   :: all_cmi_files)
+            | None, Some name ->
+              (all_cmo_or_cmx_files,
+               (name ^ Literals.suffix_cmi)   :: all_cmi_files)
+            end    
+      ) group.Bsb_parse_sources.sources acc) 
+      ([], [])
+      file_groups in
+    (* let shadows = [{
+      Bsb_ninja_util.key = "main_module";
+      op = Bsb_ninja_util.Overwrite main_module_name
+    }] in *)
+    let shadows = [] in
+    let shadows = match build_library with
+    | None -> shadows
+    | Some build_library -> {
+        Bsb_ninja_util.key = "build_library";
+        op = Bsb_ninja_util.Overwrite ("-build-library " ^ build_library)
+      } :: shadows
+    in
+    (* In the case that a library is just an interface file, we don't do anything *)
+    if List.length all_cmo_or_cmx_files > 0 then begin
+      output_build oc
+        ~output:output_cma_or_cmxa
+        ~input:""
+        ~inputs:all_cmo_or_cmx_files
+        ~implicit_deps:all_cmi_files
+        ~shadows
+        ~rule:rule_name;
+    end;
+    comp_info
+  (* ) comp_info entries *)
+
+let handle_file_groups oc
+  ~custom_rules
+  ~is_top_level
+  ~build_library
+  ~compile_target
+  ~backend
+  ~dependency_info:(dependency_info : Bsb_dependency_info.t)
+  ~ocaml_lib
+  ~root_project_dir
+  ~config:{
+    entries;
+    Bsb_config_types.bs_suffix;
+    c_linker_flags;
+    static_libraries;
+    package_specs;
+    js_post_build_cmd;
+    files_to_install;
+    ocaml_dependencies;
+  }
+  ?build_just_ppx:(build_just_ppx=false)
+  (file_groups  :  Bsb_parse_sources.file_group list) namespace comp_info =
+  let file_groups = List.filter (fun (group : Bsb_parse_sources.file_group) ->
+    match backend with 
+    | Bsb_config_types.Js       -> List.mem Bsb_parse_sources.Js group.Bsb_parse_sources.backend
+    | Bsb_config_types.Native   -> List.mem Bsb_parse_sources.Native group.Bsb_parse_sources.backend
+    | Bsb_config_types.Bytecode -> List.mem Bsb_parse_sources.Bytecode group.Bsb_parse_sources.backend
+  ) file_groups in 
+  let (entries, entries_that_have_ppxes, local_ppx_deps, local_ppx_module_names, ppx_entries) = Bsb_ninja_file_groups.get_local_ppx_deps backend entries in
+  (* @Speed The work to figure out in which group an entry is in could be done while parsing the 
+     bsconfig, which would probably be faster. 
+  *)
+  let comp_info = List.fold_left (fun comp_info (group : Bsb_parse_sources.file_group) ->
+    if (build_just_ppx && group.is_ppx || not build_just_ppx) then begin
+      (* When building a ppx we want to compile the source code to the backend specified by the 
+         entry, not the one specified from the commandline. *)
+      let (local_ppx_flags, compile_target) = (String_map.fold (fun  module_name _  (acc, compile_target) ->
+        if acc = [] then begin
+          let new_local_ppx_flags = List.fold_left Bsb_config_types.(fun acc e -> match e with 
+            | JsTarget { main_module_name; ppx } when main_module_name = module_name -> assert false
+            | NativeTarget { main_module_name; ppx }
+            | BytecodeTarget { main_module_name; ppx; } when main_module_name = module_name -> ppx
+            | _ -> acc
+            ) acc entries_that_have_ppxes in 
+          let new_compile_target = List.fold_left Bsb_config_types.(fun (compile_target: compile_target_t) e -> match e with 
+            | JsTarget {main_module_name} when main_module_name = module_name -> assert false
+            | NativeTarget { main_module_name; ppx } when main_module_name = module_name -> 
+              Native
+            | BytecodeTarget { main_module_name; ppx; } when main_module_name = module_name -> Bytecode
+            | _ -> compile_target
+          ) compile_target ppx_entries in
+          (new_local_ppx_flags, new_compile_target)
+        end else 
+          (acc, compile_target)
+      ) group.sources ([], compile_target)) in
+      (*  map over the flags to find ppxes's full paths if they exist.  *)
+      let (local_ppx_flags, local_ppx_deps) = List.fold_left (fun (new_local_ppx_flags, new_local_ppx_deps) flag_exec -> 
+        (* @Hack You could potentially have a bug here where the exec_path name is the same as a module name
+          inside main-module but eeeeh that'd be weird! *)
+        let rec loop = fun local_ppx_deps local_ppx_module_names -> 
+          match (local_ppx_deps, local_ppx_module_names) with
+          | (exec_path :: local_ppx_deps, ppx_name :: local_ppx_module_names) -> 
+            if flag_exec = ppx_name then (exec_path :: new_local_ppx_flags, exec_path :: new_local_ppx_deps)
+            else loop local_ppx_deps local_ppx_module_names
+          | _ -> ((Bsb_dependency_info.check_if_dep ~root_project_dir ~backend dependency_info flag_exec) :: new_local_ppx_flags, new_local_ppx_deps)
+        in
+        loop local_ppx_deps local_ppx_module_names
+      ) ([], []) local_ppx_flags in
+      handle_file_group oc
+        ~local_ppx_deps
+        ~custom_rules 
+        ~compile_target
+        ~package_specs
+        ~js_post_build_cmd 
+        ~namespace
+        ~bs_suffix
+        ~local_ppx_flags
+        ~ocaml_dependencies
+        ~ocaml_lib
+        ~is_ppx:group.is_ppx
+        files_to_install
+        comp_info
+        group
+    end else comp_info
+  ) comp_info file_groups in
+  let static_libraries = dependency_info.all_clibs @ static_libraries in
+  let c_linker_flags = dependency_info.all_c_linker_flags @ c_linker_flags in
+  let comp_info = link oc comp_info 
+      ~entries:ppx_entries 
+      ~file_groups
+      ~static_libraries
+      ~c_linker_flags
+      ~ocaml_dependencies
+      ~namespace
+      ~dependency_info
+      ~ocaml_lib in
+  match build_library with
+  | None -> 
+    if build_just_ppx then
+      comp_info
+    else begin
+      if is_top_level then
+        link oc comp_info ~entries ~file_groups ~static_libraries ~c_linker_flags ~ocaml_dependencies ~namespace ~dependency_info ~ocaml_lib
+      else
+        pack oc comp_info ~entries ~backend ~file_groups ~namespace ()
+    end
+  | Some build_library -> 
+    pack oc comp_info ~entries ~build_library ~backend ~file_groups ~namespace ()
+
+end
 module Bsb_ninja_gen : sig 
 #1 "bsb_ninja_gen.mli"
 (* Copyright (C) 2015-2016 Bloomberg Finance L.P.
@@ -17780,7 +17913,7 @@ val output_ninja_and_namespace_map :
   cwd:string ->
   bsc_dir:string ->  
   not_dev:bool -> 
-  acc_libraries_for_linking:string list * string list * string list * string list * Depend.StringSet.t ->
+  dependency_info:Bsb_dependency_info.t ->
   ocaml_dir:string ->
   root_project_dir:string ->
   is_top_level: bool ->
@@ -17846,7 +17979,7 @@ let output_ninja_and_namespace_map
     ~cwd 
     ~bsc_dir
     ~not_dev           
-    ~acc_libraries_for_linking:(external_deps_for_linking, external_static_libraries, external_c_linker_flags, external_ocamlfind_dependencies, external_ocaml_dependencies)
+    ~dependency_info
     ~ocaml_dir         
     ~root_project_dir
     ~is_top_level
@@ -17899,10 +18032,10 @@ let output_ninja_and_namespace_map
   
   let custom_rules = Bsb_rule.reset generators in 
   
-  let use_ocamlfind = ocamlfind_dependencies <> [] || external_ocamlfind_dependencies <> [] in
+  let use_ocamlfind = ocamlfind_dependencies <> [] || dependency_info.Bsb_dependency_info.all_ocamlfind_dependencies <> [] in
   
-  let external_ocaml_dependencies = List.fold_left (fun acc v -> Depend.StringSet.add v acc) external_ocaml_dependencies ocaml_dependencies in
-  let external_ocaml_dependencies = Depend.StringSet.elements external_ocaml_dependencies in
+  let all_ocaml_dependencies = List.fold_left (fun acc v -> Depend.StringSet.add v acc) dependency_info.all_ocaml_dependencies ocaml_dependencies in
+  let all_ocaml_dependencies = Depend.StringSet.elements all_ocaml_dependencies in
 
   let ocaml_flags =
     Bsb_build_util.flag_concat
@@ -18025,7 +18158,7 @@ let output_ninja_and_namespace_map
               else bs_super_errors;
           Bsb_ninja_global_vars.bs_super_errors, bs_super_errors;
           
-          Bsb_ninja_global_vars.external_deps_for_linking, Bsb_build_util.flag_concat dash_i external_deps_for_linking;
+          Bsb_ninja_global_vars.external_deps_for_linking, Bsb_build_util.flag_concat dash_i dependency_info.Bsb_dependency_info.all_external_deps;
           Bsb_ninja_global_vars.ocamlc, if use_ocamlfind then ocamlc
             else (ocaml_dir // ocamlc ^ ".opt");
           Bsb_ninja_global_vars.ocamlopt, if use_ocamlfind then ocamlopt
@@ -18037,8 +18170,8 @@ let output_ninja_and_namespace_map
                         Ben - January 20th 2018
            *)
           Bsb_ninja_global_vars.ocamlfind, if use_ocamlfind then ocamlfind ^ " " else "";
-          Bsb_ninja_global_vars.ocamlfind_dependencies,  Bsb_build_util.flag_concat "-package" (external_ocamlfind_dependencies @ ocamlfind_dependencies);
-          Bsb_ninja_global_vars.ocaml_dependencies, Bsb_build_util.flag_concat "-add-ocaml-dependency" external_ocaml_dependencies;
+          Bsb_ninja_global_vars.ocamlfind_dependencies,  Bsb_build_util.flag_concat "-package" (dependency_info.all_ocamlfind_dependencies @ ocamlfind_dependencies);
+          Bsb_ninja_global_vars.ocaml_dependencies, Bsb_build_util.flag_concat "-add-ocaml-dependency" all_ocaml_dependencies;
           
           (* @HACK 
               This might cause stale artifacts. This makes everything implicitly depend on the namespace file... 
@@ -18138,10 +18271,9 @@ let output_ninja_and_namespace_map
         (* This will be ignored. *)
         ~compile_target:Bsb_ninja_native.Bytecode
         ~backend
-        ~external_static_libraries
-        ~external_c_linker_flags
-        ~external_deps_for_linking
-        ~ocaml_dir
+        ~dependency_info
+        ~ocaml_lib:native_ocaml_lib
+        ~root_project_dir
         ~config
         ~build_just_ppx:true
         bs_file_groups
@@ -18155,6 +18287,8 @@ let output_ninja_and_namespace_map
         ~files_to_install
         ~backend
         ~entries
+        ~dependency_info
+        ~root_project_dir
         bs_file_groups 
         namespace
         maybe_ppx_comp_info, 
@@ -18168,10 +18302,9 @@ let output_ninja_and_namespace_map
         ~build_library
         ~compile_target:Bsb_ninja_native.Bytecode
         ~backend
-        ~external_static_libraries
-        ~external_c_linker_flags
-        ~external_deps_for_linking
-        ~ocaml_dir
+        ~dependency_info
+        ~ocaml_lib:native_ocaml_lib
+        ~root_project_dir
         ~config
         bs_file_groups
         namespace
@@ -18186,10 +18319,9 @@ let output_ninja_and_namespace_map
         ~build_library
         ~compile_target:Bsb_ninja_native.Native
         ~backend
-        ~external_static_libraries
-        ~external_c_linker_flags
-        ~external_deps_for_linking
-        ~ocaml_dir
+        ~dependency_info
+        ~ocaml_lib:native_ocaml_lib
+        ~root_project_dir
         ~config
         bs_file_groups
         namespace
@@ -18255,7 +18387,7 @@ let output_ninja_and_namespace_map
     else ("", "") in
     let rule = Bsb_rule.define ~command:("${ocamlc} unix.cma ${linked_internals} ${refmt} -open Bsb_internals -o ${out} ${impl} ${in}") "build_script" in
     let output = destdir // "build_script.exe" in
-    let p = Ext_bytes.ninja_escaped root_project_dir // "node_modules" // "bs-platform" in
+    let p = Ext_bytes.ninja_escaped root_project_dir // Literals.node_modules // "bs-platform" in
     Bsb_ninja_util.output_build oc
       ~order_only_deps:(static_resources @ all_info)
       ~input:""
@@ -18297,7 +18429,7 @@ let output_ninja_and_namespace_map
       (* @Todo @CrossPlatform Fix this super ghetto environment variable setup... This is not cross platform! *)
       let envvars = "export BSLIB=" ^ ocaml_lib ^ " && " 
                   ^ "export OCAML_SYSTHREADS=" ^ (ocaml_dir // "otherlibs" // "systhreads") ^ " && " 
-                  ^ "export PATH=" ^ (root_project_dir // "node_modules" // ".bin") ^ ":" ^ ocaml_dir ^ ":" ^ (root_project_dir // "node_modules" // "bs-platform" // "bin") ^ ":$$PATH && " in
+                  ^ "export PATH=" ^ (root_project_dir // Literals.node_modules // ".bin") ^ ":" ^ ocaml_dir ^ ":" ^ (root_project_dir // Literals.node_modules // "bs-platform" // "bin") ^ ":$$PATH && " in
       (* We move out of lib/bs/XYZ so that the command is ran from the root project. *)
       let rule = Bsb_rule.define ~command:("cd ../../.. && " ^ envvars ^ build_script) "build_script" in
       Bsb_ninja_util.output_build oc
@@ -18350,18 +18482,16 @@ module Bsb_ninja_regen : sig
 
   
 val regenerate_ninja :
-  ?acc_libraries_for_linking:(string list) * (string list) * (string list) * (string list) * Depend.StringSet.t ->
-  ?main_bs_super_errors:bool ->
+  ?dependency_info: Bsb_dependency_info.t ->
   is_top_level:bool ->
   not_dev:bool ->
-  override_package_specs:Bsb_package_specs.t option ->
-  generate_watch_metadata: bool -> 
   forced: bool -> 
   root_project_dir:string ->
   build_library:string option ->
   backend: Bsb_config_types.compilation_kind_t ->
+  main_config : Bsb_config_types.t ->
   string ->  string ->  string -> 
-  Bsb_config_types.t option 
+  bool
 
 end = struct
 #1 "bsb_ninja_regen.ml"
@@ -18400,18 +18530,15 @@ let (//) = Ext_path.combine
     otherwise return Some info
 *)
 let regenerate_ninja
-  ?acc_libraries_for_linking
-  ?main_bs_super_errors
+  ?dependency_info
   ~is_top_level
   ~not_dev
-  ~override_package_specs
-  ~generate_watch_metadata
   ~forced
   ~root_project_dir
   ~build_library
   ~backend
-  cwd bsc_dir ocaml_dir 
-  : _ option =
+  ~main_config:(main_config : Bsb_config_types.t)
+  cwd bsc_dir ocaml_dir  =
   let build_artifacts_dir = Bsb_build_util.get_build_artifacts_location cwd in
   let output_deps = build_artifacts_dir // Bsb_config.lib_bs // bsdeps in
   let check_result  =
@@ -18422,8 +18549,7 @@ let regenerate_ninja
     Bsb_log.info
       "@{<info>BSB check@} build spec : %a @." Bsb_ninja_check.pp_check_result check_result in 
   begin match check_result  with 
-    | Good ->
-      None  (* Fast path, no need regenerate ninja *)
+    | Good -> false  (* Fast path, no need regenerate ninja *)
     | Bsb_forced 
     | Bsb_bsc_version_mismatch 
     | Bsb_file_not_exist 
@@ -18441,19 +18567,11 @@ let regenerate_ninja
       end ; 
       (* Generate the nested folder before anything else... *)
       Bsb_build_util.mkp (build_artifacts_dir // Bsb_config.lib_bs // nested);
-      
-      let config = 
-        Bsb_config_parse.interpret_json 
-          ~override_package_specs
-          ~bsc_dir
-          ~generate_watch_metadata
-          ~not_dev
-          ~backend
-          cwd in 
+
       begin 
         Bsb_merlin_gen.merlin_file_gen ~cwd ~backend
-          (bsc_dir // bsppx_exe) config;
-        let acc_libraries_for_linking = match acc_libraries_for_linking with 
+          (bsc_dir // bsppx_exe) main_config;
+        let dependency_info = match dependency_info with 
         | None -> 
           (* Either there's a `root_project_entry` (meaning we're currently building 
              an external dependency) or not, then we use the top level project's entry.
@@ -18463,11 +18581,26 @@ let regenerate_ninja
              If we're aiming at building Native or Bytecode, we do walk the external 
              dep graph and build a topologically sorted list of all of them. *)
           begin match backend with
-          | Bsb_config_types.Js -> ([], [], [], [], Depend.StringSet.empty) (* No work for the JS flow! *)
+          | Bsb_config_types.Js -> 
+            Bsb_dependency_info.{
+              all_external_deps = [];
+              all_ocamlfind_dependencies = [];
+              all_ocaml_dependencies = Depend.StringSet.empty;
+              all_clibs = [];
+              all_c_linker_flags = [];
+              all_toplevel_ppxes = String_map.empty;
+            }
           | Bsb_config_types.Bytecode
           | Bsb_config_types.Native ->
             if not is_top_level then 
-              ([], [], [], [], Depend.StringSet.empty)
+              Bsb_dependency_info.{
+                all_external_deps = [];
+                all_ocamlfind_dependencies = [];
+                all_ocaml_dependencies = Depend.StringSet.empty;
+                all_clibs = [];
+                all_c_linker_flags = [];
+                all_toplevel_ppxes = String_map.empty;
+              }
             else begin
               (* @Speed Manually walk the external dep graph. Optimize this. 
                 
@@ -18487,56 +18620,79 @@ let regenerate_ninja
                 
                    Ben - August 9th 2017
               *)
-              let all_external_deps = ref [] in 
-              let all_clibs = ref [] in
-              let all_c_linker_flags = ref [] in
-              let all_ocamlfind_dependencies = ref [] in
-              let all_ocaml_dependencies = ref Depend.StringSet.empty in
+              let dependency_info : Bsb_dependency_info.t = {
+                all_external_deps = [];
+                all_ocamlfind_dependencies = [];
+                all_ocaml_dependencies = Depend.StringSet.empty;
+                all_clibs = [];
+                all_c_linker_flags = [];
+                all_toplevel_ppxes = String_map.empty;
+              } in
+              
+              let all_ppxes = ref String_map.empty in
+              
               Bsb_build_util.walk_all_deps cwd
                 (fun {top; cwd} ->
-                  if not top then begin
+                  if top then begin
+                    dependency_info.all_toplevel_ppxes <- List.fold_left (fun all_toplevel_ppxes ({package_name} : Bsb_config_types.dependency) ->
+                      match String_map.find_opt package_name !all_ppxes with
+                      | None -> all_toplevel_ppxes
+                      | Some v -> String_map.add package_name v all_toplevel_ppxes
+                    ) dependency_info.all_toplevel_ppxes main_config.bs_dependencies;
+                   end else begin 
                     let build_artifacts_dir = Bsb_build_util.get_build_artifacts_location cwd in
                     (* @Speed We don't need to read the full config, just the right fields.
                        Then again we also should cache this info so we don't have to crawl anything. *)
-                    let innerConfig = 
+                    let inner_config = 
                       Bsb_config_parse.interpret_json 
-                        ~override_package_specs
+                        ~override_package_specs:(Some main_config.package_specs)
                         ~bsc_dir
                         ~generate_watch_metadata:false
                         ~not_dev:true
                         ~backend
                         cwd in
+                    all_ppxes := List.fold_left Bsb_config_types.(fun all_ppxes e -> 
+                      match e with
+                      | JsTarget {kind = Ppx}
+                      | NativeTarget {kind = Ppx}
+                      | BytecodeTarget {kind = Ppx} -> 
+                          String_map.update inner_config.Bsb_config_types.package_name (function
+                            | None -> Some [e]
+                            | Some l -> Some (e :: l)
+                          ) all_ppxes
+                      | _ -> all_ppxes
+                     ) !all_ppxes inner_config.Bsb_config_types.entries;
                     begin match backend with 
                     | Bsb_config_types.Js ->  assert false
                     | Bsb_config_types.Bytecode 
-                      when List.mem Bsb_config_types.Bytecode Bsb_config_types.(innerConfig.allowed_build_kinds) -> 
-                        all_external_deps := (build_artifacts_dir // Bsb_config.lib_ocaml // "bytecode") :: !all_external_deps;
-                        all_c_linker_flags := (List.rev Bsb_config_types.(innerConfig.c_linker_flags)) 
-                          @ !all_c_linker_flags;
-                        all_clibs := (List.rev Bsb_config_types.(innerConfig.static_libraries)) 
-                          @ !all_clibs;
-                        all_ocamlfind_dependencies := Bsb_config_types.(config.ocamlfind_dependencies) @ !all_ocamlfind_dependencies;
-                        all_ocaml_dependencies := List.fold_left (fun acc v -> Depend.StringSet.add v acc) !all_ocaml_dependencies Bsb_config_types.(config.ocaml_dependencies);
+                      when List.mem Bsb_config_types.Bytecode Bsb_config_types.(inner_config.allowed_build_kinds) -> 
+                        dependency_info.all_external_deps <- (build_artifacts_dir // Bsb_config.lib_ocaml // "bytecode") :: dependency_info.all_external_deps;
+                        dependency_info.all_c_linker_flags <- (List.rev Bsb_config_types.(inner_config.c_linker_flags)) 
+                          @ dependency_info.all_c_linker_flags;
+                        dependency_info.all_clibs <- (List.rev Bsb_config_types.(inner_config.static_libraries)) 
+                          @ dependency_info.all_clibs;
+                        dependency_info.all_ocamlfind_dependencies <- Bsb_config_types.(inner_config.ocamlfind_dependencies) @ dependency_info.all_ocamlfind_dependencies;
+                        dependency_info.all_ocaml_dependencies <- List.fold_left (fun acc v -> Depend.StringSet.add v acc) dependency_info.all_ocaml_dependencies Bsb_config_types.(inner_config.ocaml_dependencies);
                         
                     | Bsb_config_types.Native 
-                      when List.mem Bsb_config_types.Native Bsb_config_types.(innerConfig.allowed_build_kinds) -> 
-                        all_external_deps := (build_artifacts_dir // Bsb_config.lib_ocaml // "native") :: !all_external_deps;
-                        all_c_linker_flags := (List.rev Bsb_config_types.(innerConfig.c_linker_flags)) 
-                          @ !all_c_linker_flags;
-                        all_clibs := (List.rev Bsb_config_types.(innerConfig.static_libraries)) 
-                          @ !all_clibs;
-                        all_ocamlfind_dependencies := Bsb_config_types.(config.ocamlfind_dependencies) @ !all_ocamlfind_dependencies;
-                        all_ocaml_dependencies := List.fold_left (fun acc v -> Depend.StringSet.add v acc) !all_ocaml_dependencies Bsb_config_types.(config.ocaml_dependencies);
+                      when List.mem Bsb_config_types.Native Bsb_config_types.(inner_config.allowed_build_kinds) -> 
+                        dependency_info.all_external_deps <- (build_artifacts_dir // Bsb_config.lib_ocaml // "native") :: dependency_info.all_external_deps;
+                        dependency_info.all_c_linker_flags <- (List.rev Bsb_config_types.(inner_config.c_linker_flags)) 
+                          @ dependency_info.all_c_linker_flags;
+                        dependency_info.all_clibs <- (List.rev Bsb_config_types.(inner_config.static_libraries)) 
+                          @ dependency_info.all_clibs;
+                        dependency_info.all_ocamlfind_dependencies <- Bsb_config_types.(inner_config.ocamlfind_dependencies) @ dependency_info.all_ocamlfind_dependencies;
+                        dependency_info.all_ocaml_dependencies <- List.fold_left (fun acc v -> Depend.StringSet.add v acc) dependency_info.all_ocaml_dependencies Bsb_config_types.(inner_config.ocaml_dependencies);
                         
                     | _ -> ()
                     end;
-                    if List.mem backend Bsb_config_types.(innerConfig.allowed_build_kinds)
-                       && Bsb_config_types.(config.build_script) <> None then begin
+                    if List.mem backend Bsb_config_types.(inner_config.allowed_build_kinds)
+                       && Bsb_config_types.(inner_config.build_script) <> None then begin
                       let artifacts_installed = ref [] in
-                      let filename = build_artifacts_dir // ".static_libraries"in
+                      let filename = build_artifacts_dir // Literals.dot_static_libraries in
                       if not (Sys.file_exists filename) then 
                         ()
-                        (* Bsb_exception.missing_static_libraries_file (Bsb_config_types.(innerConfig.package_name))  *)
+                        (* Bsb_exception.missing_static_libraries_file (Bsb_config_types.(inner_config.package_name))  *)
                       else begin
                         let ic = open_in_bin filename in
                         (try
@@ -18545,38 +18701,36 @@ let regenerate_ninja
                            done
                          with End_of_file -> ());
                         close_in ic;
-                        all_clibs := !artifacts_installed @ !all_clibs;
+                        dependency_info.all_clibs <- !artifacts_installed @ dependency_info.all_clibs;
                       end
                     end
                    end
                 );
-              (List.rev !all_external_deps, List.rev !all_clibs, List.rev !all_c_linker_flags, List.rev !all_ocamlfind_dependencies, !all_ocaml_dependencies)
+              dependency_info.all_external_deps <- List.rev dependency_info.all_external_deps;
+              dependency_info.all_ocamlfind_dependencies <- List.rev dependency_info.all_ocamlfind_dependencies;
+              dependency_info
             end
           end
         | Some all_deps -> all_deps in
-        let main_bs_super_errors = begin match main_bs_super_errors with 
-          | None -> config.Bsb_config_types.bs_super_errors
-          | Some bs_super_errors -> bs_super_errors
-        end in 
         Bsb_ninja_gen.output_ninja_and_namespace_map 
           ~cwd 
           ~bsc_dir 
           ~not_dev
-          ~acc_libraries_for_linking 
+          ~dependency_info 
           ~ocaml_dir 
           ~root_project_dir 
           ~is_top_level 
           ~backend 
-          ~main_bs_super_errors
+          ~main_bs_super_errors:main_config.bs_super_errors
           ~build_library
-          config;
+          main_config;
         (* PR2184: we still need record empty dir 
             since it may add files in the future *)  
         Bsb_ninja_check.record ~cwd ~file:output_deps 
-          (Literals.bsconfig_json::config.globbed_dirs) 
+          (Literals.bsconfig_json::main_config.globbed_dirs) 
           backend
           build_library;
-        Some config 
+        true
       end 
   end
 
@@ -18662,18 +18816,26 @@ let query_sources ({bs_file_groups} : Bsb_config_types.t) : Ext_json_noloc.t
 
 let query_current_package_sources cwd backend bsc_dir = 
   let ocaml_dir = Bsb_build_util.get_ocaml_dir bsc_dir in
-    let config_opt  = Bsb_ninja_regen.regenerate_ninja 
+    let main_config = 
+        Bsb_config_parse.interpret_json 
+          ~override_package_specs:None
+          ~bsc_dir
+          ~generate_watch_metadata:true
+          ~not_dev:false
+          ~backend
+          cwd in 
+    let did_regen = Bsb_ninja_regen.regenerate_ninja 
       ~is_top_level:true
       ~root_project_dir:cwd
       ~not_dev:false
-      ~override_package_specs:None
-      ~generate_watch_metadata:true
-      ~forced:true ~backend ~build_library:None cwd bsc_dir ocaml_dir in 
-    match config_opt with   
-    | None -> None
-     
-    | Some config ->
-      Some (query_sources config)
+      ~forced:true 
+      ~backend
+      ~build_library:None 
+      ~main_config 
+      cwd bsc_dir ocaml_dir in 
+    match did_regen with   
+    | false -> None
+    | true  -> Some (query_sources main_config)
 
 
 let query ~cwd ~bsc_dir ~backend str = 
@@ -19766,7 +19928,8 @@ val make_world_deps:
   string ->
   root_project_dir:string ->
   backend:Bsb_config_types.compilation_kind_t ->
-  (string list) * (string list) * (string list) * (string list) * Depend.StringSet.t
+  main_config:Bsb_config_types.t ->
+  Bsb_dependency_info.t
 
 end = struct
 #1 "bsb_world.ml"
@@ -19854,113 +20017,130 @@ let install_targets ~backend cwd (config : Bsb_config_types.t option) =
     end
 
 
-
-let build_bs_deps cwd ~root_project_dir ~backend ~main_bs_super_errors deps =
+let build_bs_deps cwd ~root_project_dir ~backend ~main_config:(main_config : Bsb_config_types.t) : Bsb_dependency_info.t =
   let bsc_dir = Bsb_build_util.get_bsc_dir cwd in
   let ocaml_dir = Bsb_build_util.get_ocaml_dir cwd in
   let vendor_ninja = bsc_dir // "ninja.exe" in
-  let all_external_deps = ref [] in
-  let all_ocamlfind_dependencies = ref [] in
-  let all_ocaml_dependencies = ref Depend.StringSet.empty in
-  let all_clibs = ref [] in
-  let all_c_linker_flags = ref [] in
+  let dependency_info = Bsb_dependency_info.{
+    all_external_deps = [];
+    all_ocamlfind_dependencies = [];
+    all_ocaml_dependencies = Depend.StringSet.empty;
+    all_clibs = [];
+    all_c_linker_flags = [];
+    all_toplevel_ppxes = String_map.empty;
+  } in
+  
+  let all_ppxes = ref String_map.empty in
   
   (* @Idea could this be parallelized? We're not taking advantage of ninja here 
      and it seems like we're just going one dep at a time when we could parallelize 
               Ben - August 9th 2017 *)
-  Bsb_build_util.walk_all_deps  cwd
-    (fun {top; cwd} ->
-       if not top then
-         begin 
-           let build_artifacts_dir = Bsb_build_util.get_build_artifacts_location cwd in
-           let config_opt = Bsb_ninja_regen.regenerate_ninja 
-             ~is_top_level:false
-             ~not_dev:true
-             ~generate_watch_metadata:false
-             ~override_package_specs:(Some deps) 
-             ~root_project_dir
-             ~forced:true
-             ~backend
-             ~main_bs_super_errors
-             ~build_library:None
-             cwd bsc_dir ocaml_dir in (* set true to force regenrate ninja file so we have [config_opt]*)
-           let config = begin match config_opt with 
-            | None ->
-            (* @Speed optimize this to _just_ read the static_libraries field. *)
-              Bsb_config_parse.interpret_json 
-                ~override_package_specs:(Some deps)
-                ~bsc_dir
-                ~generate_watch_metadata:false
-                ~not_dev:true
-                ~backend
-                cwd
-            | Some config -> config
-           end in
-           (* Append at the head for a correct topological sort. 
-              walk_all_deps does a simple DFS, so all we need to do is to append at the head of 
-              a list to build a topologically sorted list of external deps.*)
-            if List.mem backend Bsb_config_types.(config.allowed_build_kinds) then begin
-              all_c_linker_flags := (Bsb_config_types.(config.c_linker_flags)) @ !all_c_linker_flags;
-              all_clibs := (Bsb_config_types.(config.static_libraries)) @ !all_clibs;
-              all_ocamlfind_dependencies := Bsb_config_types.(config.ocamlfind_dependencies) @ !all_ocamlfind_dependencies;
-              all_ocaml_dependencies := List.fold_left (fun acc v -> Depend.StringSet.add v acc) !all_ocaml_dependencies Bsb_config_types.(config.ocaml_dependencies);
+  Bsb_build_util.walk_all_deps cwd ( fun {top; cwd} ->
+    if top then begin
+      dependency_info.all_toplevel_ppxes <- List.fold_left (fun all_toplevel_ppxes ({package_name} : Bsb_config_types.dependency) ->
+        match String_map.find_opt package_name !all_ppxes with
+        | None -> all_toplevel_ppxes
+        | Some v -> String_map.add package_name v all_toplevel_ppxes
+      ) dependency_info.all_toplevel_ppxes main_config.bs_dependencies
+    end else begin
+      let build_artifacts_dir = Bsb_build_util.get_build_artifacts_location cwd in
+      let config = 
+        Bsb_config_parse.interpret_json 
+          ~override_package_specs:(Some main_config.package_specs)
+          ~bsc_dir
+          ~generate_watch_metadata:false
+          ~not_dev:true
+          ~backend
+          cwd in
+      let _did_regen = 
+        Bsb_ninja_regen.regenerate_ninja 
+          ~dependency_info
+          ~is_top_level:false
+          ~not_dev:true
+          ~root_project_dir
+          ~forced:true
+          ~backend
+          ~build_library:None
+          ~main_config:config
+          cwd bsc_dir ocaml_dir in (* set true to force regenrate ninja file so we have [config_opt]*)
+      all_ppxes := List.fold_left Bsb_config_types.(fun all_ppxes e -> 
+        match e with
+        | JsTarget {kind = Ppx}
+        | NativeTarget {kind = Ppx}
+        | BytecodeTarget {kind = Ppx} -> 
+            String_map.update config.Bsb_config_types.package_name (function
+              | None -> Some [e]
+              | Some l -> Some (e :: l)
+            ) all_ppxes
+        | _ -> all_ppxes
+      ) !all_ppxes config.Bsb_config_types.entries;
+      
+      (* Append at the head for a correct topological sort. 
+         walk_all_deps does a simple DFS, so all we need to do is to append at the head of 
+         a list to build a topologically sorted list of external deps.
+       *)
+      if List.mem backend Bsb_config_types.(config.allowed_build_kinds) then begin
+        dependency_info.all_c_linker_flags <- (Bsb_config_types.(config.c_linker_flags)) @ dependency_info.all_c_linker_flags;
+        dependency_info.all_clibs <- (Bsb_config_types.(config.static_libraries)) @ dependency_info.all_clibs;
+        dependency_info.all_ocamlfind_dependencies <- Bsb_config_types.(config.ocamlfind_dependencies) @ dependency_info.all_ocamlfind_dependencies;
+        dependency_info.all_ocaml_dependencies <- List.fold_left (fun acc v -> Depend.StringSet.add v acc) dependency_info.all_ocaml_dependencies Bsb_config_types.(config.ocaml_dependencies);
 
-              let nested = begin match backend with 
-              | Bsb_config_types.Js -> "js"
-              | Bsb_config_types.Bytecode -> 
-                all_external_deps := (build_artifacts_dir // Bsb_config.lib_ocaml // "bytecode") :: !all_external_deps;
-                "bytecode"
-              | Bsb_config_types.Native -> 
-                all_external_deps := (build_artifacts_dir // Bsb_config.lib_ocaml // "native") :: !all_external_deps;
-                "native"
-              end in
-             let command = 
-              {Bsb_unix.cmd = vendor_ninja;
-                cwd = build_artifacts_dir // Bsb_config.lib_bs // nested;
-                args  = [|vendor_ninja|] ;
-                env = Array.append (Unix.environment ()) [| "BSB_BACKEND=" ^ nested |] ;
-               } in     
-             let eid =
-               Bsb_unix.run_command_execv
-               command in 
-             if eid <> 0 then   
-              Bsb_unix.command_fatal_error command eid;
-            
-             if Bsb_config_types.(config.build_script) <> None then begin
-               let filename = build_artifacts_dir // ".static_libraries" in
-               if not (Sys.file_exists filename) then 
-                ()
-                  (* Bsb_exception.missing_static_libraries_file (Bsb_config_types.(config.package_name))  *)
-               else begin
-                 let artifacts_installed = ref [] in
-                 let ic = open_in_bin filename in
-                 (try
-                   while true do
-                     artifacts_installed := (input_line ic) :: !artifacts_installed
-                   done
-                 with End_of_file -> ());
-                 close_in ic;
-                 all_clibs := !artifacts_installed @ !all_clibs;
-                end
-             end;
-             
-             (* When ninja is not regenerated, ninja will still do the build, 
-                still need reinstall check
-                Note that we can check if ninja print "no work to do", 
-                then don't need reinstall more
-             *)
-             install_targets ~backend build_artifacts_dir config_opt;
-           end
-         end
-    );
+        let nested = begin match backend with 
+        | Bsb_config_types.Js -> "js"
+        | Bsb_config_types.Bytecode -> 
+          dependency_info.all_external_deps <- (build_artifacts_dir // Bsb_config.lib_ocaml // "bytecode") :: dependency_info.all_external_deps;
+          "bytecode"
+        | Bsb_config_types.Native -> 
+          dependency_info.all_external_deps <- (build_artifacts_dir // Bsb_config.lib_ocaml // "native") :: dependency_info.all_external_deps;
+          "native"
+        end in
+        let command = 
+          {Bsb_unix.cmd = vendor_ninja;
+            cwd = build_artifacts_dir // Bsb_config.lib_bs // nested;
+            args  = [|vendor_ninja|] ;
+            env = Array.append (Unix.environment ()) [| "BSB_BACKEND=" ^ nested |] ;
+          } in     
+        let eid =
+          Bsb_unix.run_command_execv
+          command in 
+        if eid <> 0 then   
+          Bsb_unix.command_fatal_error command eid;
+      
+        if Bsb_config_types.(config.build_script) <> None then begin
+          let filename = build_artifacts_dir // Literals.dot_static_libraries in
+          if not (Sys.file_exists filename) then  ()
+            (* Bsb_exception.missing_static_libraries_file (Bsb_config_types.(config.package_name))  *)
+          else begin
+            let artifacts_installed = ref [] in
+            let ic = open_in_bin filename in
+            (try
+              while true do
+                artifacts_installed := (input_line ic) :: !artifacts_installed
+              done
+            with End_of_file -> ());
+            close_in ic;
+            dependency_info.all_clibs <- !artifacts_installed @ dependency_info.all_clibs;
+          end
+       end;
+       
+       (* When ninja is not regenerated, ninja will still do the build, 
+          still need reinstall check
+          Note that we can check if ninja print "no work to do", 
+          then don't need reinstall more
+        *)
+        install_targets ~backend build_artifacts_dir (Some config);
+      end     
+    end
+  );
   (* Reverse order here so the leaf deps are at the beginning *)
-  (List.rev !all_external_deps, !all_clibs, !all_c_linker_flags, List.rev !all_ocamlfind_dependencies, !all_ocaml_dependencies)
+  dependency_info.all_external_deps <- List.rev dependency_info.all_external_deps;
+  dependency_info.all_ocamlfind_dependencies <- List.rev dependency_info.all_ocamlfind_dependencies;
+  dependency_info
 
 
-let make_world_deps cwd ~root_project_dir ~backend =
+let make_world_deps cwd ~root_project_dir ~backend ~main_config =
   Bsb_log.info "Making the dependency world!@.";
-  let (deps, main_bs_super_errors) = Bsb_config_parse.simple_get_from_bsconfig () in
-  build_bs_deps cwd ~root_project_dir ~backend ~main_bs_super_errors deps
+  build_bs_deps cwd ~root_project_dir ~backend ~main_config
 
 end
 module Bsb_main : sig 
@@ -20193,19 +20373,23 @@ let () =
       let backend = get_backend () in
 
       (* print_endline __LOC__; *)
-      (* TODO(sansouci): Optimize this. Not passing acc_libraries_for_linking 
-         will cause regenerate_ninja to re-crawl the external dep graph (only 
-         for Native and Bytecode).  *)
-      let _config_opt =  
+      let main_config = 
+        Bsb_config_parse.interpret_json 
+          ~override_package_specs:None
+          ~bsc_dir
+          ~generate_watch_metadata:true
+          ~not_dev:true
+          ~backend
+          cwd in
+      let _did_regen =  
         Bsb_ninja_regen.regenerate_ninja 
-          ~override_package_specs:None 
           ~is_top_level:true
           ~not_dev:false 
-          ~generate_watch_metadata:true
           ~root_project_dir:cwd
           ~forced:true
           ~build_library:!build_library
           ~backend
+          ~main_config
           cwd bsc_dir ocaml_dir
       in
       let nested = get_string_backend backend in
@@ -20239,20 +20423,27 @@ let () =
               | make_world, force_regenerate, build_library ->
                 (* If -make-world is passed we first do that because we'll collect
                    the library files as we go. *)
-                let acc_libraries_for_linking = if make_world then
-                  Some (Bsb_world.make_world_deps cwd ~root_project_dir:cwd ~backend)
+                let main_config = 
+                  Bsb_config_parse.interpret_json 
+                    ~override_package_specs:None
+                    ~bsc_dir
+                    ~generate_watch_metadata:true
+                    ~not_dev:false
+                    ~backend
+                    cwd in
+                let dependency_info = if make_world then
+                  Some (Bsb_world.make_world_deps cwd ~root_project_dir:cwd ~backend ~main_config)
                 else None in
                 (* don't regenerate files when we only run [bsb -clean-world] *)
-                let _ = Bsb_ninja_regen.regenerate_ninja 
-                  ?acc_libraries_for_linking 
-                  ~generate_watch_metadata:true 
-                  ~override_package_specs:None 
+                let _did_regen = Bsb_ninja_regen.regenerate_ninja 
+                  ?dependency_info 
                   ~is_top_level:true
                   ~not_dev:false 
                   ~root_project_dir:cwd
                   ~forced:force_regenerate
                   ~build_library:build_library
                   ~backend
+                  ~main_config
                   cwd bsc_dir ocaml_dir in
                 if !watch_mode then begin
                   watch_exit ()
@@ -20274,20 +20465,27 @@ let () =
           
           let backend = get_backend () in
           
+          let main_config = 
+                  Bsb_config_parse.interpret_json 
+                    ~override_package_specs:None
+                    ~bsc_dir
+                    ~generate_watch_metadata:true
+                    ~not_dev:false
+                    ~backend
+                    cwd in
           (* [-make-world] should never be combined with [-package-specs] *)
-          let acc_libraries_for_linking = if !make_world then 
-            Some (Bsb_world.make_world_deps cwd ~root_project_dir:cwd ~backend)
+          let dependency_info = if !make_world then 
+            Some (Bsb_world.make_world_deps cwd ~root_project_dir:cwd ~backend ~main_config)
           else None in
-          let _ = Bsb_ninja_regen.regenerate_ninja 
-            ?acc_libraries_for_linking
-            ~generate_watch_metadata:true
-            ~override_package_specs:None
+          let _did_regen = Bsb_ninja_regen.regenerate_ninja 
+            ?dependency_info
             ~is_top_level:true
             ~not_dev:false
             ~root_project_dir:cwd
             ~forced:!force_regenerate
             ~build_library:!build_library
             ~backend
+            ~main_config
             cwd bsc_dir ocaml_dir in
           if !watch_mode then watch_exit ()
           else begin 

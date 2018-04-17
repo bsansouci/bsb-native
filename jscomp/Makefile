@@ -362,6 +362,7 @@ BSB_SRCS= bsb_config\
 	bsb_warning\
 	bsb_config_parse\
 	bsb_ninja_util \
+	bsb_dependency_info \
 	bsb_ninja_file_groups\
 	bsb_ninja_native \
 	bsb_merlin_gen\

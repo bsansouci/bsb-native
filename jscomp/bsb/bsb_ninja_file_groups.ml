@@ -37,7 +37,6 @@ let zero : info =
 
 
 
-
 let handle_generators oc 
     (group : Bsb_parse_sources.file_group) custom_rules =   
   let map_to_source_dir = 
@@ -399,6 +398,8 @@ let handle_file_groups
     ~custom_rules
     ~backend
     ~entries
+    ~dependency_info
+    ~root_project_dir
     (file_groups  :  Bsb_parse_sources.file_group list)
     namespace (st : info) : info  =
   let file_groups = List.filter (fun (group : Bsb_parse_sources.file_group) ->
@@ -456,7 +457,7 @@ let handle_file_groups
             | (exec_path :: local_ppx_deps, ppx_name :: local_ppx_module_names) -> 
               if flag_exec = ppx_name then (exec_path :: new_local_ppx_flags, exec_path :: new_local_ppx_deps)
               else loop local_ppx_deps local_ppx_module_names
-            | _ -> (flag_exec :: new_local_ppx_flags, new_local_ppx_deps)
+            | _ -> ((Bsb_dependency_info.check_if_dep ~root_project_dir ~backend dependency_info flag_exec) :: new_local_ppx_flags, new_local_ppx_deps)
           in
           loop local_ppx_deps local_ppx_module_names
         ) ([], []) local_ppx_flags in

@@ -32,10 +32,9 @@ val handle_file_groups : out_channel ->
   build_library:string option ->
   compile_target:compile_target_t ->
   backend:Bsb_config_types.compilation_kind_t ->
-  external_static_libraries:string list ->
-  external_c_linker_flags:string list ->
-  external_deps_for_linking:string list ->
-  ocaml_dir:string ->
+  dependency_info:Bsb_dependency_info.t ->
+  ocaml_lib:string ->
+  root_project_dir:string ->
   config:Bsb_config_types.t ->
   ?build_just_ppx: bool ->
   Bsb_parse_sources.file_group list ->

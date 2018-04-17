@@ -222,19 +222,23 @@ let () =
       let backend = get_backend () in
 
       (* print_endline __LOC__; *)
-      (* TODO(sansouci): Optimize this. Not passing acc_libraries_for_linking 
-         will cause regenerate_ninja to re-crawl the external dep graph (only 
-         for Native and Bytecode).  *)
-      let _config_opt =  
+      let main_config = 
+        Bsb_config_parse.interpret_json 
+          ~override_package_specs:None
+          ~bsc_dir
+          ~generate_watch_metadata:true
+          ~not_dev:true
+          ~backend
+          cwd in
+      let _did_regen =  
         Bsb_ninja_regen.regenerate_ninja 
-          ~override_package_specs:None 
           ~is_top_level:true
           ~not_dev:false 
-          ~generate_watch_metadata:true
           ~root_project_dir:cwd
           ~forced:true
           ~build_library:!build_library
           ~backend
+          ~main_config
           cwd bsc_dir ocaml_dir
       in
       let nested = get_string_backend backend in
@@ -268,20 +272,27 @@ let () =
               | make_world, force_regenerate, build_library ->
                 (* If -make-world is passed we first do that because we'll collect
                    the library files as we go. *)
-                let acc_libraries_for_linking = if make_world then
-                  Some (Bsb_world.make_world_deps cwd ~root_project_dir:cwd ~backend)
+                let main_config = 
+                  Bsb_config_parse.interpret_json 
+                    ~override_package_specs:None
+                    ~bsc_dir
+                    ~generate_watch_metadata:true
+                    ~not_dev:false
+                    ~backend
+                    cwd in
+                let dependency_info = if make_world then
+                  Some (Bsb_world.make_world_deps cwd ~root_project_dir:cwd ~backend ~main_config)
                 else None in
                 (* don't regenerate files when we only run [bsb -clean-world] *)
-                let _ = Bsb_ninja_regen.regenerate_ninja 
-                  ?acc_libraries_for_linking 
-                  ~generate_watch_metadata:true 
-                  ~override_package_specs:None 
+                let _did_regen = Bsb_ninja_regen.regenerate_ninja 
+                  ?dependency_info 
                   ~is_top_level:true
                   ~not_dev:false 
                   ~root_project_dir:cwd
                   ~forced:force_regenerate
                   ~build_library:build_library
                   ~backend
+                  ~main_config
                   cwd bsc_dir ocaml_dir in
                 if !watch_mode then begin
                   watch_exit ()
@@ -303,20 +314,27 @@ let () =
           
           let backend = get_backend () in
           
+          let main_config = 
+                  Bsb_config_parse.interpret_json 
+                    ~override_package_specs:None
+                    ~bsc_dir
+                    ~generate_watch_metadata:true
+                    ~not_dev:false
+                    ~backend
+                    cwd in
           (* [-make-world] should never be combined with [-package-specs] *)
-          let acc_libraries_for_linking = if !make_world then 
-            Some (Bsb_world.make_world_deps cwd ~root_project_dir:cwd ~backend)
+          let dependency_info = if !make_world then 
+            Some (Bsb_world.make_world_deps cwd ~root_project_dir:cwd ~backend ~main_config)
           else None in
-          let _ = Bsb_ninja_regen.regenerate_ninja 
-            ?acc_libraries_for_linking
-            ~generate_watch_metadata:true
-            ~override_package_specs:None
+          let _did_regen = Bsb_ninja_regen.regenerate_ninja 
+            ?dependency_info
             ~is_top_level:true
             ~not_dev:false
             ~root_project_dir:cwd
             ~forced:!force_regenerate
             ~build_library:!build_library
             ~backend
+            ~main_config
             cwd bsc_dir ocaml_dir in
           if !watch_mode then watch_exit ()
           else begin 

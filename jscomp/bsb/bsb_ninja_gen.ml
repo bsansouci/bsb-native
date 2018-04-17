@@ -53,7 +53,7 @@ let output_ninja_and_namespace_map
     ~cwd 
     ~bsc_dir
     ~not_dev           
-    ~acc_libraries_for_linking:(external_deps_for_linking, external_static_libraries, external_c_linker_flags, external_ocamlfind_dependencies, external_ocaml_dependencies)
+    ~dependency_info
     ~ocaml_dir         
     ~root_project_dir
     ~is_top_level
@@ -106,10 +106,10 @@ let output_ninja_and_namespace_map
   
   let custom_rules = Bsb_rule.reset generators in 
   
-  let use_ocamlfind = ocamlfind_dependencies <> [] || external_ocamlfind_dependencies <> [] in
+  let use_ocamlfind = ocamlfind_dependencies <> [] || dependency_info.Bsb_dependency_info.all_ocamlfind_dependencies <> [] in
   
-  let external_ocaml_dependencies = List.fold_left (fun acc v -> Depend.StringSet.add v acc) external_ocaml_dependencies ocaml_dependencies in
-  let external_ocaml_dependencies = Depend.StringSet.elements external_ocaml_dependencies in
+  let all_ocaml_dependencies = List.fold_left (fun acc v -> Depend.StringSet.add v acc) dependency_info.all_ocaml_dependencies ocaml_dependencies in
+  let all_ocaml_dependencies = Depend.StringSet.elements all_ocaml_dependencies in
 
   let ocaml_flags =
     Bsb_build_util.flag_concat
@@ -232,7 +232,7 @@ let output_ninja_and_namespace_map
               else bs_super_errors;
           Bsb_ninja_global_vars.bs_super_errors, bs_super_errors;
           
-          Bsb_ninja_global_vars.external_deps_for_linking, Bsb_build_util.flag_concat dash_i external_deps_for_linking;
+          Bsb_ninja_global_vars.external_deps_for_linking, Bsb_build_util.flag_concat dash_i dependency_info.Bsb_dependency_info.all_external_deps;
           Bsb_ninja_global_vars.ocamlc, if use_ocamlfind then ocamlc
             else (ocaml_dir // ocamlc ^ ".opt");
           Bsb_ninja_global_vars.ocamlopt, if use_ocamlfind then ocamlopt
@@ -244,8 +244,8 @@ let output_ninja_and_namespace_map
                         Ben - January 20th 2018
            *)
           Bsb_ninja_global_vars.ocamlfind, if use_ocamlfind then ocamlfind ^ " " else "";
-          Bsb_ninja_global_vars.ocamlfind_dependencies,  Bsb_build_util.flag_concat "-package" (external_ocamlfind_dependencies @ ocamlfind_dependencies);
-          Bsb_ninja_global_vars.ocaml_dependencies, Bsb_build_util.flag_concat "-add-ocaml-dependency" external_ocaml_dependencies;
+          Bsb_ninja_global_vars.ocamlfind_dependencies,  Bsb_build_util.flag_concat "-package" (dependency_info.all_ocamlfind_dependencies @ ocamlfind_dependencies);
+          Bsb_ninja_global_vars.ocaml_dependencies, Bsb_build_util.flag_concat "-add-ocaml-dependency" all_ocaml_dependencies;
           
           (* @HACK 
               This might cause stale artifacts. This makes everything implicitly depend on the namespace file... 
@@ -345,10 +345,9 @@ let output_ninja_and_namespace_map
         (* This will be ignored. *)
         ~compile_target:Bsb_ninja_native.Bytecode
         ~backend
-        ~external_static_libraries
-        ~external_c_linker_flags
-        ~external_deps_for_linking
-        ~ocaml_dir
+        ~dependency_info
+        ~ocaml_lib:native_ocaml_lib
+        ~root_project_dir
         ~config
         ~build_just_ppx:true
         bs_file_groups
@@ -362,6 +361,8 @@ let output_ninja_and_namespace_map
         ~files_to_install
         ~backend
         ~entries
+        ~dependency_info
+        ~root_project_dir
         bs_file_groups 
         namespace
         maybe_ppx_comp_info, 
@@ -375,10 +376,9 @@ let output_ninja_and_namespace_map
         ~build_library
         ~compile_target:Bsb_ninja_native.Bytecode
         ~backend
-        ~external_static_libraries
-        ~external_c_linker_flags
-        ~external_deps_for_linking
-        ~ocaml_dir
+        ~dependency_info
+        ~ocaml_lib:native_ocaml_lib
+        ~root_project_dir
         ~config
         bs_file_groups
         namespace
@@ -393,10 +393,9 @@ let output_ninja_and_namespace_map
         ~build_library
         ~compile_target:Bsb_ninja_native.Native
         ~backend
-        ~external_static_libraries
-        ~external_c_linker_flags
-        ~external_deps_for_linking
-        ~ocaml_dir
+        ~dependency_info
+        ~ocaml_lib:native_ocaml_lib
+        ~root_project_dir
         ~config
         bs_file_groups
         namespace
@@ -462,7 +461,7 @@ let output_ninja_and_namespace_map
     else ("", "") in
     let rule = Bsb_rule.define ~command:("${ocamlc} unix.cma ${linked_internals} ${refmt} -open Bsb_internals -o ${out} ${impl} ${in}") "build_script" in
     let output = destdir // "build_script.exe" in
-    let p = Ext_bytes.ninja_escaped root_project_dir // "node_modules" // "bs-platform" in
+    let p = Ext_bytes.ninja_escaped root_project_dir // Literals.node_modules // "bs-platform" in
     Bsb_ninja_util.output_build oc
       ~order_only_deps:(static_resources @ all_info)
       ~input:""
@@ -504,7 +503,7 @@ let output_ninja_and_namespace_map
       (* @Todo @CrossPlatform Fix this super ghetto environment variable setup... This is not cross platform! *)
       let envvars = "export BSLIB=" ^ ocaml_lib ^ " && " 
                   ^ "export OCAML_SYSTHREADS=" ^ (ocaml_dir // "otherlibs" // "systhreads") ^ " && " 
-                  ^ "export PATH=" ^ (root_project_dir // "node_modules" // ".bin") ^ ":" ^ ocaml_dir ^ ":" ^ (root_project_dir // "node_modules" // "bs-platform" // "bin") ^ ":$$PATH && " in
+                  ^ "export PATH=" ^ (root_project_dir // Literals.node_modules // ".bin") ^ ":" ^ ocaml_dir ^ ":" ^ (root_project_dir // Literals.node_modules // "bs-platform" // "bin") ^ ":$$PATH && " in
       (* We move out of lib/bs/XYZ so that the command is ran from the root project. *)
       let rule = Bsb_rule.define ~command:("cd ../../.. && " ^ envvars ^ build_script) "build_script" in
       Bsb_ninja_util.output_build oc

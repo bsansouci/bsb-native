@@ -43,18 +43,26 @@ let query_sources ({bs_file_groups} : Bsb_config_types.t) : Ext_json_noloc.t
 
 let query_current_package_sources cwd backend bsc_dir = 
   let ocaml_dir = Bsb_build_util.get_ocaml_dir bsc_dir in
-    let config_opt  = Bsb_ninja_regen.regenerate_ninja 
+    let main_config = 
+        Bsb_config_parse.interpret_json 
+          ~override_package_specs:None
+          ~bsc_dir
+          ~generate_watch_metadata:true
+          ~not_dev:false
+          ~backend
+          cwd in 
+    let did_regen = Bsb_ninja_regen.regenerate_ninja 
       ~is_top_level:true
       ~root_project_dir:cwd
       ~not_dev:false
-      ~override_package_specs:None
-      ~generate_watch_metadata:true
-      ~forced:true ~backend ~build_library:None cwd bsc_dir ocaml_dir in 
-    match config_opt with   
-    | None -> None
-     
-    | Some config ->
-      Some (query_sources config)
+      ~forced:true 
+      ~backend
+      ~build_library:None 
+      ~main_config 
+      cwd bsc_dir ocaml_dir in 
+    match did_regen with   
+    | false -> None
+    | true  -> Some (query_sources main_config)
 
 
 let query ~cwd ~bsc_dir ~backend str = 

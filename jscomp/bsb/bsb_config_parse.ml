@@ -104,6 +104,10 @@ let parse_entries name (field : Ext_json_types.t array) =
             Bsb_exception.config_error entry "Missing field 'main-module'. That field is required its value needs to be the main module for the target"
           | Some main_module_name -> main_module_name
         end in
+        
+        if !kind = Bsb_config_types.Ppx && !backend <> Literals.bytecode then
+          Bsb_exception.config_error entry "Ppx can only be compiled to bytecode for now. Set `backend` to `bytecode`.";
+          
         if !backend = Literals.native then
           Some (Bsb_config_types.NativeTarget {kind = !kind; main_module_name; output_name=(!output_name); ppx})
         else if !backend = Literals.bytecode then
