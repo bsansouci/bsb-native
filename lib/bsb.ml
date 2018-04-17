@@ -18667,20 +18667,16 @@ let regenerate_ninja
                     | Bsb_config_types.Bytecode 
                       when List.mem Bsb_config_types.Bytecode Bsb_config_types.(inner_config.allowed_build_kinds) -> 
                         dependency_info.all_external_deps <- (build_artifacts_dir // Bsb_config.lib_ocaml // "bytecode") :: dependency_info.all_external_deps;
-                        dependency_info.all_c_linker_flags <- (List.rev Bsb_config_types.(inner_config.c_linker_flags)) 
-                          @ dependency_info.all_c_linker_flags;
-                        dependency_info.all_clibs <- (List.rev Bsb_config_types.(inner_config.static_libraries)) 
-                          @ dependency_info.all_clibs;
+                        dependency_info.all_c_linker_flags <- Bsb_config_types.(inner_config.c_linker_flags) @ dependency_info.all_c_linker_flags;
+                        dependency_info.all_clibs <- Bsb_config_types.(inner_config.static_libraries) @ dependency_info.all_clibs;
                         dependency_info.all_ocamlfind_dependencies <- Bsb_config_types.(inner_config.ocamlfind_dependencies) @ dependency_info.all_ocamlfind_dependencies;
                         dependency_info.all_ocaml_dependencies <- List.fold_left (fun acc v -> Depend.StringSet.add v acc) dependency_info.all_ocaml_dependencies Bsb_config_types.(inner_config.ocaml_dependencies);
                         
                     | Bsb_config_types.Native 
                       when List.mem Bsb_config_types.Native Bsb_config_types.(inner_config.allowed_build_kinds) -> 
                         dependency_info.all_external_deps <- (build_artifacts_dir // Bsb_config.lib_ocaml // "native") :: dependency_info.all_external_deps;
-                        dependency_info.all_c_linker_flags <- (List.rev Bsb_config_types.(inner_config.c_linker_flags)) 
-                          @ dependency_info.all_c_linker_flags;
-                        dependency_info.all_clibs <- (List.rev Bsb_config_types.(inner_config.static_libraries)) 
-                          @ dependency_info.all_clibs;
+                        dependency_info.all_c_linker_flags <- Bsb_config_types.(inner_config.c_linker_flags) @ dependency_info.all_c_linker_flags;
+                        dependency_info.all_clibs <- Bsb_config_types.(inner_config.static_libraries) @ dependency_info.all_clibs;
                         dependency_info.all_ocamlfind_dependencies <- Bsb_config_types.(inner_config.ocamlfind_dependencies) @ dependency_info.all_ocamlfind_dependencies;
                         dependency_info.all_ocaml_dependencies <- List.fold_left (fun acc v -> Depend.StringSet.add v acc) dependency_info.all_ocaml_dependencies Bsb_config_types.(inner_config.ocaml_dependencies);
                         
