@@ -199,12 +199,17 @@ let regenerate_ninja
                              artifacts_installed := (input_line ic) :: !artifacts_installed
                            done
                          with End_of_file -> ());
-                        close_in ic;
+                         close_in ic;
                         (* This is just for the 3.0 release, so it goes a bit smoother. Once all of our packages 
-               are fixed we don't need to dedupe. 
-                        April 17th 2018
-             *)
-            dependency_info.all_clibs <- (List.filter (fun i -> not (List.mem i dependency_info.all_clibs)) !artifacts_installed) @ dependency_info.all_clibs;
+                           are fixed we don't need to dedupe. 
+                                    April 17th 2018
+                         *)
+                        dependency_info.all_clibs <- (List.filter (fun i -> 
+                          let is_already_linked = List.mem i dependency_info.all_clibs in
+                          if is_already_linked then 
+                Bsb_log.warn "@{<warn>Warning@} package %s: `static-libraries` doesn't need to have '%s' \
+                  as it's automatically linked by the build-script, you can safely remove it from that list.@." inner_config.package_name i;
+                          not is_already_linked) !artifacts_installed) @ dependency_info.all_clibs;
                       end
                     end
                    end
