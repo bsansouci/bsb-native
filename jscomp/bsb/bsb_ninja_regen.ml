@@ -200,7 +200,11 @@ let regenerate_ninja
                            done
                          with End_of_file -> ());
                         close_in ic;
-                        dependency_info.all_clibs <- !artifacts_installed @ dependency_info.all_clibs;
+                        (* This is just for the 3.0 release, so it goes a bit smoother. Once all of our packages 
+               are fixed we don't need to dedupe. 
+                        April 17th 2018
+             *)
+            dependency_info.all_clibs <- (List.filter (fun i -> not (List.mem i dependency_info.all_clibs)) !artifacts_installed) @ dependency_info.all_clibs;
                       end
                     end
                    end
