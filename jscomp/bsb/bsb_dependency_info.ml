@@ -16,7 +16,8 @@ let check_if_dep ~root_project_dir ~backend (dependency_info : t) flag_exec =
   match components with 
   | [dep_name; entry_name] -> begin 
     match String_map.find_opt dep_name dependency_info.all_toplevel_ppxes with
-    | None -> flag_exec
+    | None -> 
+      Ext_pervasives.failwithf ~loc:__LOC__ "No package named '%s' with ppx '%s'. Check the `entries` field in bsconfig.json." dep_name entry_name
     | Some l -> begin 
       match List.filter Bsb_config_types.(function 
         | JsTarget {main_module_name} 

@@ -10851,9 +10851,6 @@ module Bsb_config_parse : sig
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
 
-val simple_get_from_bsconfig : 
-    unit -> (Bsb_package_specs.t * bool)
-
 val entries_from_bsconfig : unit -> Bsb_config_types.entries_t list
 
 
@@ -10994,25 +10991,6 @@ let parse_entries name (field : Ext_json_types.t array) =
 
 
 
-let simple_get_from_bsconfig () = 
-  let json = Ext_json_parse.parse_json_from_file Literals.bsconfig_json in
-  begin match json with
-    | Obj {map} ->
-      let package_specs = begin 
-        match String_map.find_opt Bsb_build_schemas.package_specs map with 
-        | Some x ->
-          Bsb_package_specs.from_json x
-        | None -> 
-          Bsb_package_specs.default_package_specs
-      end in
-      let bs_super_errors = ref Bsb_default.bs_super_errors in
-      map 
-        |? (Bsb_build_schemas.bs_super_errors, `Bool (fun b -> bs_super_errors := b))
-        |> ignore;
-      (package_specs, !bs_super_errors)
-    | _ -> assert false
-  end
-
 let entries_from_bsconfig () = 
   let json = Ext_json_parse.parse_json_from_file Literals.bsconfig_json in
   begin match json with
@@ -11099,7 +11077,6 @@ let interpret_json
      1. if [build.ninja] does use [ninja] we need set a variable
      2. we need store it so that we can call ninja correctly
   *)
-  let entries = ref Bsb_default.main_entries in
   let cut_generators = ref false in 
   let config_json_chan = open_in_bin config_json  in
   let global_data = 
@@ -11214,7 +11191,6 @@ let interpret_json
                 end
               | _ -> acc ) String_map.empty  s  ))
     |? (Bsb_build_schemas.refmt_flags, `Arr (fun s -> refmt_flags := get_list_string s))
-    |? (Bsb_build_schemas.entries, `Arr (fun s -> entries := parse_entries package_name s))
     |? (Bsb_build_schemas.static_libraries, `Arr (fun s -> static_libraries := (List.map (fun v -> cwd // v) (get_list_string s))))
     |? (Bsb_build_schemas.c_linker_flags, `Arr (fun s -> c_linker_flags := (List.fold_left (fun acc v -> "-ccopt" :: v :: acc) [] (List.rev (get_list_string s))) @ !c_linker_flags))
     |? (Bsb_build_schemas.build_script, `Str (fun s -> build_script := Some s))
@@ -11260,6 +11236,12 @@ let interpret_json
           | Some (Obj {map }) -> Bsb_warning.from_map map 
           | Some config -> Bsb_exception.config_error config "expect an object"
         in 
+        let entries  = 
+          match String_map.find_opt Bsb_build_schemas.entries map with 
+          | None -> Bsb_default.main_entries 
+          | Some (Arr {content}) -> parse_entries package_name content
+          | Some config -> Bsb_exception.config_error config "`entries` should be an array"
+        in 
         let bs_suffix = 
           match String_map.find_opt Bsb_build_schemas.suffix map with 
           | None -> false  
@@ -11304,7 +11286,7 @@ let interpret_json
           built_in_dependency = !built_in_package;
           generate_merlin = !generate_merlin ;
           reason_react_jsx = !reason_react_jsx ;  
-          entries = !entries;
+          entries = entries;
           generators = !generators ; 
           cut_generators = !cut_generators;
           
@@ -15265,7 +15247,8 @@ let check_if_dep ~root_project_dir ~backend (dependency_info : t) flag_exec =
   match components with 
   | [dep_name; entry_name] -> begin 
     match String_map.find_opt dep_name dependency_info.all_toplevel_ppxes with
-    | None -> flag_exec
+    | None -> 
+      Ext_pervasives.failwithf ~loc:__LOC__ "No package named '%s' with ppx '%s'. Check the `entries` field in bsconfig.json." dep_name entry_name
     | Some l -> begin 
       match List.filter Bsb_config_types.(function 
         | JsTarget {main_module_name} 
@@ -18703,9 +18686,9 @@ let regenerate_ninja
                          *)
                         dependency_info.all_clibs <- (List.filter (fun i -> 
                           let is_already_linked = List.mem i dependency_info.all_clibs in
-                          if is_already_linked then 
-                Bsb_log.warn "@{<warn>Warning@} package %s: `static-libraries` doesn't need to have '%s' \
-                  as it's automatically linked by the build-script, you can safely remove it from that list.@." inner_config.package_name i;
+                            if is_already_linked then 
+                              Bsb_log.warn "@{<warn>Warning@} package %s: `static-libraries` doesn't need to have '%s' \
+                                            as it's automatically linked by the build-script, you can safely remove it from that list.@." inner_config.package_name i;
                           not is_already_linked) !artifacts_installed) @ dependency_info.all_clibs;
                       end
                     end

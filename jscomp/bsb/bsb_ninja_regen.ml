@@ -206,9 +206,9 @@ let regenerate_ninja
                          *)
                         dependency_info.all_clibs <- (List.filter (fun i -> 
                           let is_already_linked = List.mem i dependency_info.all_clibs in
-                          if is_already_linked then 
-                Bsb_log.warn "@{<warn>Warning@} package %s: `static-libraries` doesn't need to have '%s' \
-                  as it's automatically linked by the build-script, you can safely remove it from that list.@." inner_config.package_name i;
+                            if is_already_linked then 
+                              Bsb_log.warn "@{<warn>Warning@} package %s: `static-libraries` doesn't need to have '%s' \
+                                            as it's automatically linked by the build-script, you can safely remove it from that list.@." inner_config.package_name i;
                           not is_already_linked) !artifacts_installed) @ dependency_info.all_clibs;
                       end
                     end
