@@ -948,7 +948,7 @@ bsb/bsb_ninja_native.cmx : ext/string_set.cmx ext/string_map.cmx \
     bsb/bsb_ninja_file_groups.cmx bsb/bsb_dir_index.cmx \
     bsb/bsb_dependency_info.cmx bsb/bsb_db.cmx bsb/bsb_config_types.cmx \
     bsb/bsb_config.cmx bsb/bsb_build_util.cmx bsb/bsb_build_schemas.cmx \
-    bsb/bsb_ninja_native.cmi
+    common/bs_version.cmx bsb/bsb_ninja_native.cmi
 bsb/bsb_ninja_regen.cmx : ext/string_map.cmx ext/literals.cmx \
     ext/ext_path.cmx bsb/bsb_ninja_gen.cmx bsb/bsb_ninja_check.cmx \
     bsb/bsb_merlin_gen.cmx bsb/bsb_log.cmx bsb/bsb_dependency_info.cmx \

@@ -27,15 +27,18 @@ refmt.exe: refmt_main3.mli refmt_main3.ml
 reactjs_jsx_ppx_2.exe:reactjs_jsx_ppx_v2.mli reactjs_jsx_ppx_v2.ml
 	$(NATIVE) -w -40-30 -no-alias-deps -I +compiler-libs ocamlcommon.cmxa $^ -o $@
 
-bsb_internals.cma: bsb_internals.ml
+bsb_internals.cmo: bsb_internals.ml
 	$(BYTE) -c -w -40-30 -no-alias-deps  $^
-	
+
+bs_ppx_tools.exe: bs_ppx_tools.ml
+	$(BYTE) -w -17-40-30 -no-alias-deps  $^ -o $@
+
 bsc.exe: whole_compiler.mli whole_compiler.ml
 	$(NATIVE) $(OCAMLOPT_FLAGS) $^  -o $@
 
 
 
-all: bsc.exe bsb.exe bsppx.exe bsb_helper.exe  refmt.exe reactjs_jsx_ppx_2.exe bsb_internals.cma
+all: bsc.exe bsb.exe bsppx.exe bsb_helper.exe  refmt.exe reactjs_jsx_ppx_2.exe bsb_internals.cmo bs_ppx_tools.exe
 #  bspp.exe bsdep.exe
 # bspack.exe
 # bsppx.exe is needed for merlin

@@ -105,6 +105,7 @@ let emit_impl_build
   ~is_ppx
   js_post_build_cmd
   ~is_re
+  ~root_project_dir
   namespace
   filename_sans_extension
   : info =
@@ -134,6 +135,12 @@ let emit_impl_build
      key = "ppx_flags"; 
      op = AppendList ["-ppx"; f]
    }) local_ppx_flags in
+  let shadows = if is_ppx then 
+    {
+      Bsb_ninja_util.key = "ppx_flags"; 
+      op = AppendList ["-ppx"; Ext_bytes.ninja_escaped root_project_dir // Literals.node_modules // Bs_version.package_name // "lib" // "bs_ppx_tools.exe"];
+    } :: shadows
+  else shadows in
   output_build oc
     ~output:output_mlast
     ~input
@@ -177,7 +184,7 @@ let emit_impl_build
   let common_shadows = if is_ppx && not (List.mem "compiler-libs" ocaml_dependencies) then 
     {
       Bsb_ninja_util.key = "ocaml_flags";
-      op = Bsb_ninja_util.AppendList ["-I " ^ (ocaml_lib // "compiler-libs")]
+      op = Bsb_ninja_util.AppendList ["-I " ^ (Ext_bytes.ninja_escaped (ocaml_lib // "compiler-libs"))]
     } :: common_shadows
   else common_shadows in
   let shadows =
@@ -208,6 +215,7 @@ let emit_intf_build
     ~ocaml_dependencies
     ~ocaml_lib
     ~is_ppx
+    ~root_project_dir
     namespace
     filename_sans_extension
   : info =
@@ -226,6 +234,12 @@ let emit_intf_build
      key = "ppx_flags"; 
      op = AppendList ["-ppx"; f]
    }) local_ppx_flags in
+  let shadows = if is_ppx then 
+    {
+      Bsb_ninja_util.key = "ppx_flags"; 
+      op = AppendList ["-ppx"; Ext_bytes.ninja_escaped root_project_dir // Literals.node_modules // Bs_version.package_name // "lib" // "bs_ppx_tools.exe"];
+    } :: shadows
+  else shadows in
   Bsb_ninja_util.output_build oc
     ~output:output_mliast
       (* TODO: we can get rid of absloute path if we fixed the location to be 
@@ -242,6 +256,12 @@ let emit_intf_build
     make_common_shadows is_re package_specs
       (Filename.dirname output_cmi)
       group_dir_index in
+  let common_shadows = if is_ppx && not (List.mem "compiler-libs" ocaml_dependencies) then 
+    {
+      Bsb_ninja_util.key = "ocaml_flags";
+      op = Bsb_ninja_util.AppendList ["-I " ^ (Ext_bytes.ninja_escaped (ocaml_lib // "compiler-libs"))]
+    } :: common_shadows
+  else common_shadows in
   Bsb_ninja_util.output_build oc
     ~output:output_mliastd
     ~input:output_mliast
@@ -286,6 +306,7 @@ let handle_module_info
   ~ocaml_dependencies
   ~ocaml_lib
   ~is_ppx
+  ~root_project_dir
   oc  module_name 
   ( module_info : Bsb_db.module_info)
   namespace  =
@@ -305,6 +326,7 @@ let handle_module_info
       ~ocaml_dependencies
       ~ocaml_lib
       ~is_ppx
+      ~root_project_dir
       js_post_build_cmd      
       namespace
       input_impl  @ 
@@ -319,6 +341,7 @@ let handle_module_info
       ~ocaml_dependencies
       ~ocaml_lib
       ~is_ppx
+      ~root_project_dir
       namespace
       input_intf 
   | Ml_source(input,is_re,_), Mli_empty ->
@@ -334,6 +357,7 @@ let handle_module_info
       ~ocaml_dependencies
       ~ocaml_lib
       ~is_ppx
+      ~root_project_dir
       js_post_build_cmd      
       ~is_re
       namespace
@@ -350,6 +374,7 @@ let handle_module_info
       ~ocaml_dependencies
       ~ocaml_lib
       ~is_ppx
+      ~root_project_dir
       namespace
       input 
   | Ml_empty, Mli_empty -> zero
@@ -367,6 +392,7 @@ let handle_file_group oc
   ~ocaml_dependencies
   ~ocaml_lib
   ~is_ppx
+  ~root_project_dir
   (files_to_install : String_hash_set.t)
   acc
   (group: Bsb_parse_sources.file_group) : Bsb_ninja_file_groups.info =
@@ -389,6 +415,7 @@ let handle_file_group oc
         ~ocaml_dependencies
         ~ocaml_lib
         ~is_ppx
+        ~root_project_dir
         group.dir_index 
         package_specs 
         js_post_build_cmd 
@@ -399,7 +426,16 @@ let handle_file_group oc
       ) @  acc
     ) group.sources  acc 
 
-let link oc comp_info ~entries ~backend ~file_groups ~static_libraries ~c_linker_flags ~ocaml_dependencies ~namespace ~dependency_info:(dependency_info : Bsb_dependency_info.t) ~ocaml_lib =
+let link oc comp_info 
+  ~entries
+  ~backend
+  ~file_groups
+  ~static_libraries
+  ~c_linker_flags
+  ~ocaml_dependencies
+  ~namespace
+  ~dependency_info:(dependency_info : Bsb_dependency_info.t)
+  ~ocaml_lib =
   let backend = match backend with 
   | Bsb_config_types.Js -> Bsb_config_types.JsTarget
   | Bsb_config_types.Native -> Bsb_config_types.NativeTarget
@@ -498,9 +534,10 @@ let link oc comp_info ~entries ~backend ~file_groups ~static_libraries ~c_linker
           op = Bsb_ninja_util.Overwrite ""
         } :: shadows) 
       else 
-        (List.map 
-          (fun dep -> (Ext_bytes.ninja_escaped dep) // library_file_name) 
-          dependency_info.all_external_deps, 
+        (
+          List.map 
+            (fun dep -> (Ext_bytes.ninja_escaped dep) // library_file_name) 
+            dependency_info.all_external_deps, 
         shadows)
         in
       output_build oc
@@ -670,6 +707,7 @@ let handle_file_groups oc
         ~ocaml_dependencies
         ~ocaml_lib
         ~is_ppx:group.is_ppx
+        ~root_project_dir
         files_to_install
         comp_info
         group
