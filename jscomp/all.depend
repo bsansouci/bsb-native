@@ -879,7 +879,7 @@ bsb/bsb_db.cmx : ext/string_map.cmx ext/ext_string.cmx \
     bsb/bsb_exception.cmx bsb/bsb_db.cmi
 bsb/bsb_default.cmx : bsb/bsb_config_types.cmx bsb/bsb_default.cmi
 bsb/bsb_dependency_info.cmx : ext/string_map.cmx ext/literals.cmx \
-    ext/ext_string.cmx ext/ext_pervasives.cmx ext/ext_path.cmx \
+    ext/ext_string.cmx ext/ext_path.cmx bsb/bsb_exception.cmx \
     bsb/bsb_config_types.cmx bsb/bsb_config.cmx bsb/bsb_dependency_info.cmi
 bsb/bsb_dir_index.cmx : bsb/bsb_dir_index.cmi
 bsb/bsb_exception.cmx : ext/ext_string.cmx ext/ext_position.cmx \

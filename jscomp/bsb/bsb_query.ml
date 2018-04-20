@@ -49,7 +49,6 @@ let query_current_package_sources cwd backend bsc_dir =
           ~bsc_dir
           ~generate_watch_metadata:true
           ~not_dev:false
-          ~backend
           cwd in 
     let did_regen = Bsb_ninja_regen.regenerate_ninja 
       ~is_top_level:true

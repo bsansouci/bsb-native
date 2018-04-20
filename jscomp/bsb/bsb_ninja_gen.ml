@@ -91,10 +91,11 @@ let output_ninja_and_namespace_map
       ocaml_dependencies;
     } as config : Bsb_config_types.t)
   =
-  let has_any_entry = List.exists (fun e -> match e with 
-    | Bsb_config_types.JsTarget _       -> backend = Bsb_config_types.Js
-    | Bsb_config_types.NativeTarget _   -> backend = Bsb_config_types.Native
-    | Bsb_config_types.BytecodeTarget _ -> backend = Bsb_config_types.Bytecode
+  let has_any_entry = List.exists (fun e -> 
+      List.exists (fun b -> match b with 
+    | Bsb_config_types.JsTarget       -> backend = Bsb_config_types.Js
+    | Bsb_config_types.NativeTarget   -> backend = Bsb_config_types.Native
+    | Bsb_config_types.BytecodeTarget -> backend = Bsb_config_types.Bytecode) e.Bsb_config_types.backend
   ) entries in
   let nested = begin match backend with
     | Bsb_config_types.Js       -> "js"
@@ -130,7 +131,7 @@ let output_ninja_and_namespace_map
     | _ -> acc
   ) ocaml_flags ocaml_dependencies) in
 
-  let bs_super_errors = if main_bs_super_errors && not use_ocamlfind && backend != Bsb_config_types.Js then "-bs-super-errors" else "" in
+  let bs_super_errors = if main_bs_super_errors && not use_ocamlfind then "-bs-super-errors" else "" in
   let build_artifacts_dir = Bsb_build_util.get_build_artifacts_location cwd in
   let oc = open_out_bin (build_artifacts_dir // Bsb_config.lib_bs // nested // Literals.build_ninja) in
   let cwd_lib_bs = build_artifacts_dir // Bsb_config.lib_bs // nested in
@@ -147,11 +148,11 @@ let output_ninja_and_namespace_map
   
   let bs_package_includes = 
     Bsb_build_util.flag_concat dash_i @@ Ext_list.map 
-      (fun (x : Bsb_config_types.dependency) -> x.package_install_path) bs_dependencies
+      (fun (x : Bsb_config_types.dependency) -> x.package_install_path // nested) bs_dependencies
   in
   let bs_package_dev_includes = 
     Bsb_build_util.flag_concat dash_i @@ Ext_list.map 
-      (fun (x : Bsb_config_types.dependency) -> x.package_install_path) bs_dev_dependencies
+      (fun (x : Bsb_config_types.dependency) -> x.package_install_path // nested) bs_dev_dependencies
   in 
   let has_reason_files = ref false in
   let bs_package_flags , namespace_flag, open_flag = 

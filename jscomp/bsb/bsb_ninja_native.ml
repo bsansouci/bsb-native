@@ -399,113 +399,124 @@ let handle_file_group oc
       ) @  acc
     ) group.sources  acc 
 
-let link oc comp_info ~entries ~file_groups ~static_libraries ~c_linker_flags ~ocaml_dependencies ~namespace ~dependency_info:(dependency_info : Bsb_dependency_info.t) ~ocaml_lib =
-  List.fold_left (fun comp_info project_entry ->
-    let output, rule_name, library_file_name, suffix_cmo_or_cmx, main_module_name, shadows, is_ppx =
-      begin match project_entry with
-      | Bsb_config_types.JsTarget {main_module_name; kind; }       -> assert false
-      | Bsb_config_types.BytecodeTarget {main_module_name; output_name; kind; } -> 
-        (match output_name with 
-          | None -> 
-            let extension = if Ext_sys.is_windows_or_cygwin then ".exe" else "" in
-            (String.lowercase main_module_name) ^ ".byte" ^ extension
-          | Some name -> name
-        ), 
-        Rules.linking_bytecode, 
-        "lib" ^ Literals.suffix_cma, 
-        Literals.suffix_cmo, 
-        main_module_name, 
-        [],
-        kind = Ppx
-      | Bsb_config_types.NativeTarget {main_module_name; output_name; kind;}   -> 
-        (match output_name with 
-          | None -> 
-            let extension = if Ext_sys.is_windows_or_cygwin then ".exe" else "" in
-            (String.lowercase main_module_name) ^ ".native" ^ extension
-          | Some name -> name
-        ), 
-        Rules.linking_native  , 
-        "lib" ^ Literals.suffix_cmxa, 
-        Literals.suffix_cmx, 
-        main_module_name,
-        [],
-        kind = Ppx
-      end in
-    let (all_mlast_files, all_cmo_or_cmx_files, all_cmi_files) =
-      List.fold_left (fun acc (group : Bsb_parse_sources.file_group) -> 
-        if group.is_ppx = is_ppx then
-          String_map.fold (fun _ (v : Bsb_db.module_info) (all_mlast_files, all_cmo_or_cmx_files, all_cmi_files) -> 
-            let mlname = match v.ml with
-              | Ml_source (input, _, _) ->
-              let input = (Ext_path.chop_extension_if_any input)  in
-              begin match namespace with 
-                | None    -> Some (input, input)
-                | Some ns -> Some (input, (Ext_namespace.make ~ns input))
-              end
-              | Ml_empty -> None
-            in
-            let mliname = match v.mli with
-              | Mli_source (input, _, _) ->
-              let input = (Ext_path.chop_extension_if_any input)  in
-              begin match namespace with 
-                | None    -> Some (input, input)
-                | Some ns -> Some (input, (Ext_namespace.make ~ns input))
-              end
-              | Mli_empty -> None 
-            in
-            begin match (mlname, mliname) with
-            | None, None -> failwith "Got a source file without an ml or mli file. This should not happen."
-            | Some (name, namespacedName), Some _ ->
-              ((name ^ Literals.suffix_mlast) :: all_mlast_files,
-               (namespacedName ^ suffix_cmo_or_cmx)     :: all_cmo_or_cmx_files,
-               (namespacedName ^ Literals.suffix_cmi)   :: all_cmi_files)
-            | Some (name, namespacedName), None ->
-              ((name ^ Literals.suffix_mlast) :: all_mlast_files,
-               (namespacedName ^ suffix_cmo_or_cmx)     :: all_cmo_or_cmx_files,
-               (namespacedName ^ Literals.suffix_cmi)   :: all_cmi_files)
-            | None, Some (_, namespacedName) ->
-              (all_mlast_files,
-               all_cmo_or_cmx_files,
-               (namespacedName ^ Literals.suffix_cmi)   :: all_cmi_files)
-            end    
-          ) group.sources acc
-        else acc
-      ) ([], [], []) file_groups 
-    in
-    let shadows = shadows @ [{
-      Bsb_ninja_util.key = "main_module";
-      op = Bsb_ninja_util.Overwrite main_module_name
-    }; {
-      key = "static_libraries";
-      op = Bsb_ninja_util.Overwrite (Bsb_build_util.flag_concat "-add-clib" (c_linker_flags @ static_libraries))
-    }] in
-    let shadows = if is_ppx && not (List.mem "compiler-libs" ocaml_dependencies) then 
-      {
-        Bsb_ninja_util.key = "ocaml_dependencies";
-        op = Bsb_ninja_util.AppendList ["-add-ocaml-dependency"; "compiler-libs"]
-      } :: shadows
-    else shadows in
-    output_build oc
-      ~output
-      ~input:""
-      ~inputs:all_mlast_files
-      ~implicit_deps:((List.map 
-                (fun dep -> (Ext_bytes.ninja_escaped dep) // library_file_name)
-                dependency_info.all_external_deps)
-        @ (List.map (fun path -> Ext_bytes.ninja_escaped path) (all_cmi_files @ all_cmo_or_cmx_files @ static_libraries)))
-      ~shadows
-      ~rule:rule_name;
-    comp_info
+let link oc comp_info ~entries ~backend ~file_groups ~static_libraries ~c_linker_flags ~ocaml_dependencies ~namespace ~dependency_info:(dependency_info : Bsb_dependency_info.t) ~ocaml_lib =
+  let backend = match backend with 
+  | Bsb_config_types.Js -> Bsb_config_types.JsTarget
+  | Bsb_config_types.Native -> Bsb_config_types.NativeTarget
+  | Bsb_config_types.Bytecode -> Bsb_config_types.BytecodeTarget
+  in
+  List.fold_left (fun comp_info ({backend=all_backend; kind; output_name; main_module_name} : Bsb_config_types.entries_t) ->
+    List.fold_left Bsb_config_types.(fun com_info b -> 
+    if b = backend then begin
+      let output, rule_name, library_file_name, suffix_cmo_or_cmx, main_module_name, shadows, is_ppx =
+        begin match b with
+        | JsTarget       -> assert false
+        | BytecodeTarget -> 
+          (match output_name with 
+            | None -> 
+              let extension = if Ext_sys.is_windows_or_cygwin then ".exe" else "" in
+              (String.lowercase main_module_name) ^ ".byte" ^ extension
+            | Some name -> name
+          ), 
+          Rules.linking_bytecode, 
+          "lib" ^ Literals.suffix_cma, 
+          Literals.suffix_cmo, 
+          main_module_name, 
+          [],
+          kind = Ppx
+        | NativeTarget -> 
+          (match output_name with 
+            | None -> 
+              let extension = if Ext_sys.is_windows_or_cygwin then ".exe" else "" in
+              (String.lowercase main_module_name) ^ ".native" ^ extension
+            | Some name -> name
+          ), 
+          Rules.linking_native  , 
+          "lib" ^ Literals.suffix_cmxa, 
+          Literals.suffix_cmx, 
+          main_module_name,
+          [],
+          kind = Ppx
+        end in
+      let (all_mlast_files, all_cmo_or_cmx_files, all_cmi_files) =
+        List.fold_left (fun acc (group : Bsb_parse_sources.file_group) -> 
+          if group.is_ppx = is_ppx then
+            String_map.fold (fun _ (v : Bsb_db.module_info) (all_mlast_files, all_cmo_or_cmx_files, all_cmi_files) -> 
+              let mlname = match v.ml with
+                | Ml_source (input, _, _) ->
+                let input = (Ext_path.chop_extension_if_any input)  in
+                begin match namespace with 
+                  | None    -> Some (input, input)
+                  | Some ns -> Some (input, (Ext_namespace.make ~ns input))
+                end
+                | Ml_empty -> None
+              in
+              let mliname = match v.mli with
+                | Mli_source (input, _, _) ->
+                let input = (Ext_path.chop_extension_if_any input)  in
+                begin match namespace with 
+                  | None    -> Some (input, input)
+                  | Some ns -> Some (input, (Ext_namespace.make ~ns input))
+                end
+                | Mli_empty -> None 
+              in
+              begin match (mlname, mliname) with
+              | None, None -> failwith "Got a source file without an ml or mli file. This should not happen."
+              | Some (name, namespacedName), Some _ ->
+                ((name ^ Literals.suffix_mlast) :: all_mlast_files,
+                 (namespacedName ^ suffix_cmo_or_cmx)     :: all_cmo_or_cmx_files,
+                 (namespacedName ^ Literals.suffix_cmi)   :: all_cmi_files)
+              | Some (name, namespacedName), None ->
+                ((name ^ Literals.suffix_mlast) :: all_mlast_files,
+                 (namespacedName ^ suffix_cmo_or_cmx)     :: all_cmo_or_cmx_files,
+                 (namespacedName ^ Literals.suffix_cmi)   :: all_cmi_files)
+              | None, Some (_, namespacedName) ->
+                (all_mlast_files,
+                 all_cmo_or_cmx_files,
+                 (namespacedName ^ Literals.suffix_cmi)   :: all_cmi_files)
+              end    
+            ) group.sources acc
+          else acc
+        ) ([], [], []) file_groups 
+      in
+      let shadows = shadows @ [{
+        Bsb_ninja_util.key = "main_module";
+        op = Bsb_ninja_util.Overwrite main_module_name
+      }; {
+        key = "static_libraries";
+        op = Bsb_ninja_util.Overwrite (Bsb_build_util.flag_concat "-add-clib" (c_linker_flags @ static_libraries))
+      }] in
+      let shadows = if is_ppx && not (List.mem "compiler-libs" ocaml_dependencies) then 
+        {
+          Bsb_ninja_util.key = "ocaml_dependencies";
+          op = Bsb_ninja_util.AppendList ["-add-ocaml-dependency"; "compiler-libs"]
+        } :: shadows
+      else shadows in
+      let (external_deps_lib, shadows) = if is_ppx then 
+        ([], {
+          Bsb_ninja_util.key = "external_deps_for_linking";
+          op = Bsb_ninja_util.Overwrite ""
+        } :: shadows) 
+      else 
+        (List.map 
+          (fun dep -> (Ext_bytes.ninja_escaped dep) // library_file_name) 
+          dependency_info.all_external_deps, 
+        shadows)
+        in
+      output_build oc
+        ~output
+        ~input:""
+        ~inputs:all_mlast_files
+        ~implicit_deps:(external_deps_lib @ (List.map (fun path -> Ext_bytes.ninja_escaped path) (all_cmi_files @ all_cmo_or_cmx_files @ static_libraries)))
+        ~shadows
+        ~rule:rule_name;
+        comp_info
+      end else 
+        comp_info
+    ) comp_info all_backend
   ) comp_info entries
     
 let pack oc comp_info ~entries ?build_library ~backend ~file_groups ~namespace () =
-  (* List.fold_left (fun acc project_entry ->
-    let main_module_name =
-      begin match project_entry with
-      | Bsb_config_types.JsTarget {main_module_name}       -> assert false
-      | Bsb_config_types.NativeTarget {main_module_name} 
-      | Bsb_config_types.BytecodeTarget {main_module_name} -> main_module_name
-      end in *)
     let output_cma_or_cmxa, rule_name, suffix_cmo_or_cmx =
       begin match backend with
       (* These cases could benefit from a better error message. *)
@@ -557,10 +568,6 @@ let pack oc comp_info ~entries ?build_library ~backend ~file_groups ~namespace (
       ) group.Bsb_parse_sources.sources acc) 
       ([], [])
       file_groups in
-    (* let shadows = [{
-      Bsb_ninja_util.key = "main_module";
-      op = Bsb_ninja_util.Overwrite main_module_name
-    }] in *)
     let shadows = [] in
     let shadows = match build_library with
     | None -> shadows
@@ -614,28 +621,29 @@ let handle_file_groups oc
      bsconfig, which would probably be faster. 
   *)
   let comp_info = List.fold_left (fun comp_info (group : Bsb_parse_sources.file_group) ->
+    (* We always build ppxes, because it's easier than to try to determine whether the ppx is used or not. *)
     if (build_just_ppx && group.is_ppx || not build_just_ppx) then begin
       (* When building a ppx we want to compile the source code to the backend specified by the 
          entry, not the one specified from the commandline. *)
       let (local_ppx_flags, compile_target) = (String_map.fold (fun  module_name _  (acc, compile_target) ->
         if acc = [] then begin
           let new_local_ppx_flags = List.fold_left Bsb_config_types.(fun acc e -> match e with 
-            | JsTarget { main_module_name; ppx } when main_module_name = module_name -> assert false
-            | NativeTarget { main_module_name; ppx }
-            | BytecodeTarget { main_module_name; ppx; } when main_module_name = module_name -> ppx
+            | { main_module_name; ppx; } when main_module_name = module_name -> ppx
             | _ -> acc
             ) acc entries_that_have_ppxes in 
-          let new_compile_target = List.fold_left Bsb_config_types.(fun (compile_target: compile_target_t) e -> match e with 
-            | JsTarget {main_module_name} when main_module_name = module_name -> assert false
-            | NativeTarget { main_module_name; ppx } when main_module_name = module_name -> 
-              Native
-            | BytecodeTarget { main_module_name; ppx; } when main_module_name = module_name -> Bytecode
-            | _ -> compile_target
+          
+          let compile_target = List.fold_left (fun (compile_target: compile_target_t) { Bsb_config_types.main_module_name; } ->
+            if main_module_name = module_name then begin 
+              (* @Hack Only build PPXes to bytecode *)
+              Bytecode
+            end else 
+              compile_target
           ) compile_target ppx_entries in
-          (new_local_ppx_flags, new_compile_target)
+          (new_local_ppx_flags, compile_target)
         end else 
           (acc, compile_target)
       ) group.sources ([], compile_target)) in
+      
       (*  map over the flags to find ppxes's full paths if they exist.  *)
       let (local_ppx_flags, local_ppx_deps) = List.fold_left (fun (new_local_ppx_flags, new_local_ppx_deps) flag_exec -> 
         (* @Hack You could potentially have a bug here where the exec_path name is the same as a module name
@@ -649,6 +657,7 @@ let handle_file_groups oc
         in
         loop local_ppx_deps local_ppx_module_names
       ) ([], []) local_ppx_flags in
+      
       handle_file_group oc
         ~local_ppx_deps
         ~custom_rules 
@@ -666,10 +675,10 @@ let handle_file_groups oc
         group
     end else comp_info
   ) comp_info file_groups in
-  let static_libraries = dependency_info.all_clibs @ static_libraries in
-  let c_linker_flags = dependency_info.all_c_linker_flags @ c_linker_flags in
   let comp_info = link oc comp_info 
-      ~entries:ppx_entries 
+      ~entries:ppx_entries
+      (* @Hack Only build ppxes to bytecode for now *)
+      ~backend:Bytecode
       ~file_groups
       ~static_libraries
       ~c_linker_flags
@@ -677,13 +686,15 @@ let handle_file_groups oc
       ~namespace
       ~dependency_info
       ~ocaml_lib in
+  let static_libraries = dependency_info.all_clibs @ static_libraries in
+  let c_linker_flags = dependency_info.all_c_linker_flags @ c_linker_flags in
   match build_library with
   | None -> 
     if build_just_ppx then
       comp_info
     else begin
       if is_top_level then
-        link oc comp_info ~entries ~file_groups ~static_libraries ~c_linker_flags ~ocaml_dependencies ~namespace ~dependency_info ~ocaml_lib
+        link oc comp_info ~entries ~backend ~file_groups ~static_libraries ~c_linker_flags ~ocaml_dependencies ~namespace ~dependency_info ~ocaml_lib
       else
         pack oc comp_info ~entries ~backend ~file_groups ~namespace ()
     end

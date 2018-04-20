@@ -344,8 +344,10 @@ let handle_file_group
   Also returns a list of ppx module names and ppx executable paths.
  *)
 let get_local_ppx_deps backend entries =
-  List.fold_left Bsb_config_types.(fun (entries, entries_that_have_ppxes, local_ppx_deps, module_names, ppx_entries) project_entry ->
-    let dry entry_backend ppx kind main_module_name output_name =
+  List.fold_left Bsb_config_types.(
+    fun acc 
+        ({ ppx; kind; main_module_name; output_name; } as project_entry) ->
+    let dry (entries, entries_that_have_ppxes, local_ppx_deps, module_names, ppx_entries) entry_backend =
         let (entries, entries_that_have_ppxes) = if backend = entry_backend && kind <> Ppx then 
           if ppx <> [] then
             (project_entry :: entries, project_entry :: entries_that_have_ppxes)
@@ -378,16 +380,12 @@ let get_local_ppx_deps backend entries =
           (local_ppx_deps, module_names, ppx_entries ) in
         (entries, entries_that_have_ppxes, local_ppx_deps, module_names, ppx_entries)
       in
-      match project_entry with
-      | JsTarget { ppx; kind; main_module_name; output_name } -> 
-        dry Js ppx kind main_module_name output_name
-        
-      | NativeTarget { ppx; kind; main_module_name; output_name } -> 
-        dry Native ppx kind main_module_name output_name
-        
-      | BytecodeTarget { ppx; kind; main_module_name; output_name } -> 
-        dry Bytecode ppx kind main_module_name output_name
-    
+      List.fold_left (fun acc b -> 
+        match b with 
+        | JsTarget -> dry acc Js
+        | NativeTarget -> dry acc Native
+        | BytecodeTarget -> dry acc Bytecode
+      ) acc project_entry.backend;
   ) ([], [], [], [], []) entries
 
 let handle_file_groups
@@ -417,9 +415,7 @@ let handle_file_groups
       | (ppx_dep :: ppx_dep_rest, ppx_name :: ppx_name_rest) ->
         let rec is_ppx_used entries = begin match entries with 
           | [] -> false
-          | Bsb_config_types.JsTarget { ppx; } :: rest
-          | Bsb_config_types.NativeTarget { ppx; } :: rest
-          | Bsb_config_types.BytecodeTarget { ppx; } :: rest ->
+          | { Bsb_config_types.ppx; } :: rest ->
             if List.mem ppx_name ppx then true
             else is_ppx_used rest 
         end in
@@ -440,9 +436,11 @@ let handle_file_groups
           if acc = [] then begin
             List.fold_left Bsb_config_types.(fun acc e -> 
               match e with 
-              | JsTarget { main_module_name; ppx = _ :: _ as ppx } when main_module_name = module_name -> ppx
-              | NativeTarget { main_module_name; ppx = _ :: _  } when main_module_name = module_name -> assert false
-              | BytecodeTarget { main_module_name; ppx = _ :: _  } when main_module_name = module_name -> assert false
+              | { main_module_name; ppx = _ :: _ as ppx; backend } when main_module_name = module_name -> 
+                if List.mem JsTarget backend then
+                  ppx
+                else 
+                  acc
               | _ -> acc
             ) acc entries_that_have_ppxes
           end else 

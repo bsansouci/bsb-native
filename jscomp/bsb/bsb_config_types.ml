@@ -32,21 +32,24 @@ type dependencies = dependency list
 
 type kind_t = Library | Ppx
 
-type entries_record_t = {
+type backend_t = 
+    | JsTarget
+    | NativeTarget
+    | BytecodeTarget
+
+
+type entries_t = {
     main_module_name: string;
     output_name: string option;
     kind: kind_t;
-    ppx: string list
+    ppx: string list;
+    backend: backend_t list
 }
 
-type entries_t = 
-    | JsTarget of entries_record_t 
-    | NativeTarget of entries_record_t 
-    | BytecodeTarget of entries_record_t 
+type compilation_kind_t = Js | Bytecode | Native
 
 type reason_react_jsx = string option 
 
-type compilation_kind_t = Js | Bytecode | Native
 
 type refmt = 
   | Refmt_none

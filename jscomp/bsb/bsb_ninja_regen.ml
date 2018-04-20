@@ -152,13 +152,10 @@ let regenerate_ninja
                         ~bsc_dir
                         ~generate_watch_metadata:false
                         ~not_dev:true
-                        ~backend
                         cwd in
                     all_ppxes := List.fold_left Bsb_config_types.(fun all_ppxes e -> 
                       match e with
-                      | JsTarget {kind = Ppx}
-                      | NativeTarget {kind = Ppx}
-                      | BytecodeTarget {kind = Ppx} -> 
+                      | {kind = Ppx} -> 
                           String_map.update inner_config.Bsb_config_types.package_name (function
                             | None -> Some [e]
                             | Some l -> Some (e :: l)

@@ -62,10 +62,11 @@ let get_backend () =
     !cmdline_build_kind
   else
     let entries = Bsb_config_parse.entries_from_bsconfig () in 
-    begin match List.hd entries with
-      | Bsb_config_types.JsTarget _       -> Bsb_config_types.Js
-      | Bsb_config_types.NativeTarget _   -> Bsb_config_types.Native
-      | Bsb_config_types.BytecodeTarget _ -> Bsb_config_types.Bytecode
+    let b = (List.hd entries).backend in
+    begin match List.hd b with
+      | Bsb_config_types.JsTarget       -> Bsb_config_types.Js
+      | Bsb_config_types.NativeTarget   -> Bsb_config_types.Native
+      | Bsb_config_types.BytecodeTarget -> Bsb_config_types.Bytecode
     end 
 
 let get_string_backend = function
@@ -228,7 +229,6 @@ let () =
           ~bsc_dir
           ~generate_watch_metadata:true
           ~not_dev:true
-          ~backend
           cwd in
       let _did_regen =  
         Bsb_ninja_regen.regenerate_ninja 
@@ -278,7 +278,6 @@ let () =
                     ~bsc_dir
                     ~generate_watch_metadata:true
                     ~not_dev:false
-                    ~backend
                     cwd in
                 let dependency_info = if make_world then
                   Some (Bsb_world.make_world_deps cwd ~root_project_dir:cwd ~backend ~main_config)
@@ -320,7 +319,6 @@ let () =
                     ~bsc_dir
                     ~generate_watch_metadata:true
                     ~not_dev:false
-                    ~backend
                     cwd in
           (* [-make-world] should never be combined with [-package-specs] *)
           let dependency_info = if !make_world then 

@@ -115,7 +115,6 @@ let build_bs_deps cwd ~root_project_dir ~backend ~main_config:(main_config : Bsb
           ~bsc_dir
           ~generate_watch_metadata:false
           ~not_dev:true
-          ~backend
           cwd in
       let _did_regen = 
         Bsb_ninja_regen.regenerate_ninja 
@@ -130,9 +129,7 @@ let build_bs_deps cwd ~root_project_dir ~backend ~main_config:(main_config : Bsb
           cwd bsc_dir ocaml_dir in (* set true to force regenrate ninja file so we have [config_opt]*)
       all_ppxes := List.fold_left Bsb_config_types.(fun all_ppxes e -> 
         match e with
-        | JsTarget {kind = Ppx}
-        | NativeTarget {kind = Ppx}
-        | BytecodeTarget {kind = Ppx} -> 
+        | {kind = Ppx} -> 
             String_map.update config.Bsb_config_types.package_name (function
               | None -> Some [e]
               | Some l -> Some (e :: l)

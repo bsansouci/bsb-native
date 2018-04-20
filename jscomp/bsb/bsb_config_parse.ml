@@ -26,16 +26,11 @@ let config_file_bak = "bsconfig.json.bak"
 let get_list_string = Bsb_build_util.get_list_string
 let (//) = Ext_path.combine
 
-let resolve_package backend cwd  package_name = 
+let partially_resolve_package cwd  package_name = 
   let x =  Bsb_pkg.resolve_bs_package ~cwd package_name  in
-  let nested = match backend with
-    | Bsb_config_types.Js -> "js"
-    | Bsb_config_types.Bytecode -> "bytecode"
-    | Bsb_config_types.Native -> "native"
-  in
   {
     Bsb_config_types.package_name ;
-    package_install_path = (Bsb_build_util.get_build_artifacts_location x) // Bsb_config.lib_ocaml // nested
+    package_install_path = (Bsb_build_util.get_build_artifacts_location x) // Bsb_config.lib_ocaml
   }
 
 let parse_allowed_build_kinds map =
@@ -63,7 +58,7 @@ let (|?)  m (key, cb) =
 let parse_entries name (field : Ext_json_types.t array) =
   Ext_array.to_list_map (function
       | Ext_json_types.Obj {map} as entry ->
-        let backend = ref "js" in
+        let backend = ref [] in
         let main = ref None in
         let output_name = ref None in
         let kind = ref Bsb_config_types.Library in
@@ -74,7 +69,8 @@ let parse_entries name (field : Ext_json_types.t array) =
           | _ -> Bsb_exception.config_error entry "Field 'ppx' not recognized. Should be a string or an array of strings." 
         in
         let _ = map
-                |? (Bsb_build_schemas.backend, `Str (fun x -> backend := x))
+                |? (Bsb_build_schemas.backend, `Str (fun x -> backend := [x]))
+                |? (Bsb_build_schemas.backend, `Arr (fun s -> backend := Bsb_build_util.get_list_string s))
                 |? (Bsb_build_schemas.main_module, `Str (fun x -> main := Some x))
                 |? (Bsb_build_schemas.output_name, `Str (fun x -> output_name := Some x))
                   (* Only accept ppx for now, until I can figure out how we can let the user link in specific entries from their project. 
@@ -91,34 +87,37 @@ let parse_entries name (field : Ext_json_types.t array) =
                        || x = Literals.bytecode 
                        || x = Literals.js) then begin
                     Bsb_log.warn "@{<warn>Warning@} package %s: 'kind' field in 'entries' is deprecated and will be removed in the next release. Please use 'backend'.@." name;
-                    backend := x;
+                    backend := [x];
                   end else 
                     Bsb_exception.config_error entry "Field 'kind' not recognized. Please use 'backend'." 
                   ))
         in
+        
+        let backend = if !backend = [] then ["js"] else !backend in
           
         let main_module_name = begin match !main with
           (* This is technically optional when compiling to js *)
-          | None when !backend = Literals.js -> "Index"
+          | None when backend = [Literals.js] -> "Index"
           | None -> 
             Bsb_exception.config_error entry "Missing field 'main-module'. That field is required its value needs to be the main module for the target"
           | Some main_module_name -> main_module_name
         end in
         
-        if !kind = Bsb_config_types.Ppx && !backend <> Literals.bytecode then
+        if !kind = Bsb_config_types.Ppx && backend <> [Literals.bytecode] then
           Bsb_exception.config_error entry "Ppx can only be compiled to bytecode for now. Set `backend` to `bytecode`.";
-          
-        if !backend = Literals.native then
-          Some (Bsb_config_types.NativeTarget {kind = !kind; main_module_name; output_name=(!output_name); ppx})
-        else if !backend = Literals.bytecode then
-          Some (Bsb_config_types.BytecodeTarget {kind = !kind; main_module_name; output_name=(!output_name); ppx})
-        else if !backend = Literals.js then begin
-          if !kind = Ppx then
-            Bsb_exception.config_error entry "Ppx can't be compiled to JS for now. Please set the backend to be `bytecode` or `native`.";
-          
-          Some (Bsb_config_types.JsTarget {kind = !kind; main_module_name; output_name=None; ppx})
-        end else
-          Bsb_exception.config_error entry "Missing field 'backend'. That field is required and its value be 'js', 'native' or 'bytecode'"
+        
+        let backend = List.map Bsb_config_types.(function
+          | "js" -> 
+            if !kind = Ppx then
+              Bsb_exception.config_error entry "Ppx can't be compiled to JS for now. Please set the backend to be `bytecode` or `native`.";
+              
+            JsTarget
+          | "bytecode" -> BytecodeTarget
+          | "native" -> NativeTarget
+          | _ -> Bsb_exception.config_error entry "Missing field 'backend'. That field is required and its value be 'js', 'native' or 'bytecode'"
+        ) backend in
+        
+        Some {Bsb_config_types.kind = !kind; main_module_name; output_name = !output_name; ppx; backend}  
       | entry -> Bsb_exception.config_error entry "Unrecognized object inside array 'entries' field.") 
     field
 
@@ -170,7 +169,7 @@ let interpret_json
     ~override_package_specs
     ~bsc_dir 
     ~generate_watch_metadata
-    ~backend
+
     ~not_dev 
     cwd  
 
@@ -290,13 +289,13 @@ let interpret_json
         |> ignore
       end)
 
-    |? (Bsb_build_schemas.bs_dependencies, `Arr (fun s -> bs_dependencies := Bsb_build_util.get_list_string s |> Ext_list.map (resolve_package backend cwd)))
+    |? (Bsb_build_schemas.bs_dependencies, `Arr (fun s -> bs_dependencies := Bsb_build_util.get_list_string s |> Ext_list.map (partially_resolve_package cwd)))
     |? (Bsb_build_schemas.bs_dev_dependencies,
         `Arr (fun s ->
             if not  not_dev then 
               bs_dev_dependencies
               := Bsb_build_util.get_list_string s
-                 |> Ext_list.map (resolve_package backend cwd))
+                 |> Ext_list.map (partially_resolve_package cwd))
        )
 
     (* More design *)
