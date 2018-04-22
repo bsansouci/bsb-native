@@ -159,9 +159,14 @@ let merlin_file_gen ~cwd ~backend
     let bsc_string_flag = bsc_flg_to_merlin_ocamlc_flg ~backend bsc_flags in 
     Buffer.add_string buffer bsc_string_flag ;
     Buffer.add_string buffer (warning_to_merlin_flg  warning); 
+    let nested = match backend with
+      | Bsb_config_types.Js       -> "js"
+      | Bsb_config_types.Native   -> "native"
+      | Bsb_config_types.Bytecode -> "bytecode" 
+    in
     bs_dependencies 
     |> List.iter (fun package ->
-        let path = package.Bsb_config_types.package_install_path in
+        let path = package.Bsb_config_types.package_install_path // nested in
         Buffer.add_string buffer merlin_s ;
         Buffer.add_string buffer path ;
         Buffer.add_string buffer merlin_b;
@@ -169,18 +174,13 @@ let merlin_file_gen ~cwd ~backend
       );
     bs_dev_dependencies (**TODO: shall we generate .merlin for dev packages ?*)
     |> List.iter (fun package ->    
-        let path = package.Bsb_config_types.package_install_path in
+        let path = package.Bsb_config_types.package_install_path // nested in
         Buffer.add_string buffer merlin_s ;
         Buffer.add_string buffer path ;
         Buffer.add_string buffer merlin_b;
         Buffer.add_string buffer path ;
       );
     
-    let nested = match backend with
-      | Bsb_config_types.Js       -> "js"
-      | Bsb_config_types.Native   -> "native"
-      | Bsb_config_types.Bytecode -> "bytecode" 
-    in
     res_files |> List.iter (fun (x : Bsb_parse_sources.file_group) -> 
         if not (Bsb_parse_sources.is_empty x) then 
           begin
