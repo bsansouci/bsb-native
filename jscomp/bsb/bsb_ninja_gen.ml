@@ -294,7 +294,7 @@ let output_ninja_and_namespace_map
             ({Bsb_parse_sources.sources ; dir; resources; is_ppx } as x : Bsb_parse_sources.file_group) ->
             merge_module_info_map  acc  sources ,  
             (if Bsb_parse_sources.is_empty x then dirs else  dir::dirs) , 
-            ( if resources = [] || is_ppx then acc_resources
+            ( if resources = [] then acc_resources
               else Ext_list.map_append (fun x -> dir // x ) resources  acc_resources)
           ) (String_map.empty,[],[]) bs_file_groups in
       has_reason_files := Bsb_db.sanity_check bs_group || !has_reason_files;     
@@ -304,13 +304,10 @@ let output_ninja_and_namespace_map
       let source_dirs = Array.init (number_of_dev_groups + 1 ) (fun i -> []) in
       let static_resources =
         List.fold_left (fun acc_resources  ({Bsb_parse_sources.sources; dir; resources; dir_index; is_ppx})  ->
-            if not is_ppx then begin 
               let dir_index = (dir_index :> int) in 
               bs_groups.(dir_index) <- merge_module_info_map bs_groups.(dir_index) sources ;
               source_dirs.(dir_index) <- dir :: source_dirs.(dir_index);
               Ext_list.map_append (fun x -> dir//x) resources  acc_resources
-            end else 
-              acc_resources
           ) [] bs_file_groups in
       let lib = bs_groups.((Bsb_dir_index.lib_dir_index :> int)) in               
       has_reason_files := Bsb_db.sanity_check lib || !has_reason_files;
