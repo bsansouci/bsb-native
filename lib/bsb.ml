@@ -17750,39 +17750,42 @@ let pack oc comp_info ~entries ?build_library ~backend ~file_groups ~namespace (
     (* TODO(sansouci): we pack all source files of the dependency, but we could just pack the
        files that are used by the main project. *)
     let all_cmo_or_cmx_files, all_cmi_files =
-      List.fold_left (fun acc group -> 
-        String_map.fold (fun _ (v : Bsb_db.module_info) (all_cmo_or_cmx_files, all_cmi_files) -> 
-          let mlname = match v.ml with
-              | Ml_source (input, _, _) ->
-              let input = (Ext_path.chop_extension_if_any input)  in
-              begin match namespace with 
-                | None    -> Some (input)
-                | Some ns -> Some ((Ext_namespace.make ~ns input))
-              end
-              | Ml_empty -> None
-            in
-            let mliname = match v.mli with
-              | Mli_source (input, _, _) ->
-              let input = (Ext_path.chop_extension_if_any input)  in
-              begin match namespace with 
-                | None    -> Some (input)
-                | Some ns -> Some ((Ext_namespace.make ~ns input))
-              end
-              | Mli_empty -> None 
-            in
-            begin match (mlname, mliname) with
-            | None, None -> failwith "Got a source file without an ml or mli file. This should not happen."
-            | Some name, Some _ ->
-              ((name ^ suffix_cmo_or_cmx)     :: all_cmo_or_cmx_files,
-               (name ^ Literals.suffix_cmi)   :: all_cmi_files)
-            | Some name, None ->
-              ((name ^ suffix_cmo_or_cmx)     :: all_cmo_or_cmx_files,
-               (name ^ Literals.suffix_cmi)   :: all_cmi_files)
-            | None, Some name ->
-              (all_cmo_or_cmx_files,
-               (name ^ Literals.suffix_cmi)   :: all_cmi_files)
-            end    
-      ) group.Bsb_parse_sources.sources acc) 
+      List.fold_left (fun acc (group : Bsb_parse_sources.file_group) -> 
+        if not group.is_ppx then
+          String_map.fold (fun _ (v : Bsb_db.module_info) (all_cmo_or_cmx_files, all_cmi_files) -> 
+            let mlname = match v.ml with
+                | Ml_source (input, _, _) ->
+                let input = (Ext_path.chop_extension_if_any input)  in
+                begin match namespace with 
+                  | None    -> Some (input)
+                  | Some ns -> Some ((Ext_namespace.make ~ns input))
+                end
+                | Ml_empty -> None
+              in
+              let mliname = match v.mli with
+                | Mli_source (input, _, _) ->
+                let input = (Ext_path.chop_extension_if_any input)  in
+                begin match namespace with 
+                  | None    -> Some (input)
+                  | Some ns -> Some ((Ext_namespace.make ~ns input))
+                end
+                | Mli_empty -> None 
+              in
+              begin match (mlname, mliname) with
+              | None, None -> failwith "Got a source file without an ml or mli file. This should not happen."
+              | Some name, Some _ ->
+                ((name ^ suffix_cmo_or_cmx)     :: all_cmo_or_cmx_files,
+                 (name ^ Literals.suffix_cmi)   :: all_cmi_files)
+              | Some name, None ->
+                ((name ^ suffix_cmo_or_cmx)     :: all_cmo_or_cmx_files,
+                 (name ^ Literals.suffix_cmi)   :: all_cmi_files)
+              | None, Some name ->
+                (all_cmo_or_cmx_files,
+                 (name ^ Literals.suffix_cmi)   :: all_cmi_files)
+              end    
+        ) group.Bsb_parse_sources.sources acc
+      else acc
+      ) 
       ([], [])
       file_groups in
     let shadows = [] in
@@ -17874,7 +17877,6 @@ let handle_file_groups oc
         in
         loop local_ppx_deps local_ppx_module_names
       ) ([], []) local_ppx_flags in
-      
       handle_file_group oc
         ~local_ppx_deps
         ~custom_rules 
@@ -17884,7 +17886,7 @@ let handle_file_groups oc
         ~namespace
         ~bs_suffix
         ~local_ppx_flags
-        ~ocaml_dependencies
+        ~ocaml_dependencies:(if group.is_ppx then [] else ocaml_dependencies)
         ~ocaml_lib
         ~is_ppx:group.is_ppx
         ~root_project_dir
@@ -20120,14 +20122,21 @@ let build_bs_deps cwd ~root_project_dir ~backend ~main_config:(main_config : Bsb
         dependency_info.all_clibs <- (Bsb_config_types.(config.static_libraries)) @ dependency_info.all_clibs;
         dependency_info.all_ocamlfind_dependencies <- Bsb_config_types.(config.ocamlfind_dependencies) @ dependency_info.all_ocamlfind_dependencies;
         dependency_info.all_ocaml_dependencies <- List.fold_left (fun acc v -> Depend.StringSet.add v acc) dependency_info.all_ocaml_dependencies Bsb_config_types.(config.ocaml_dependencies);
-
+        
+        let has_at_least_one_lib_entry = List.exists (fun (g : Bsb_parse_sources.file_group) -> match g with
+          | {is_ppx = false; sources} -> not (String_map.is_empty sources)
+          | _ -> false) config.bs_file_groups in
         let nested = begin match backend with 
         | Bsb_config_types.Js -> "js"
         | Bsb_config_types.Bytecode -> 
-          dependency_info.all_external_deps <- (build_artifacts_dir // Bsb_config.lib_ocaml // "bytecode") :: dependency_info.all_external_deps;
+          if has_at_least_one_lib_entry then 
+            dependency_info.all_external_deps <- (build_artifacts_dir // Bsb_config.lib_ocaml // "bytecode") :: dependency_info.all_external_deps;
+            
           "bytecode"
         | Bsb_config_types.Native -> 
-          dependency_info.all_external_deps <- (build_artifacts_dir // Bsb_config.lib_ocaml // "native") :: dependency_info.all_external_deps;
+          if has_at_least_one_lib_entry then 
+            dependency_info.all_external_deps <- (build_artifacts_dir // Bsb_config.lib_ocaml // "native") :: dependency_info.all_external_deps;
+            
           "native"
         end in
         let command = 

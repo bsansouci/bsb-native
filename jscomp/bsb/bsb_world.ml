@@ -146,14 +146,21 @@ let build_bs_deps cwd ~root_project_dir ~backend ~main_config:(main_config : Bsb
         dependency_info.all_clibs <- (Bsb_config_types.(config.static_libraries)) @ dependency_info.all_clibs;
         dependency_info.all_ocamlfind_dependencies <- Bsb_config_types.(config.ocamlfind_dependencies) @ dependency_info.all_ocamlfind_dependencies;
         dependency_info.all_ocaml_dependencies <- List.fold_left (fun acc v -> Depend.StringSet.add v acc) dependency_info.all_ocaml_dependencies Bsb_config_types.(config.ocaml_dependencies);
-
+        
+        let has_at_least_one_lib_entry = List.exists (fun (g : Bsb_parse_sources.file_group) -> match g with
+          | {is_ppx = false; sources} -> not (String_map.is_empty sources)
+          | _ -> false) config.bs_file_groups in
         let nested = begin match backend with 
         | Bsb_config_types.Js -> "js"
         | Bsb_config_types.Bytecode -> 
-          dependency_info.all_external_deps <- (build_artifacts_dir // Bsb_config.lib_ocaml // "bytecode") :: dependency_info.all_external_deps;
+          if has_at_least_one_lib_entry then 
+            dependency_info.all_external_deps <- (build_artifacts_dir // Bsb_config.lib_ocaml // "bytecode") :: dependency_info.all_external_deps;
+            
           "bytecode"
         | Bsb_config_types.Native -> 
-          dependency_info.all_external_deps <- (build_artifacts_dir // Bsb_config.lib_ocaml // "native") :: dependency_info.all_external_deps;
+          if has_at_least_one_lib_entry then 
+            dependency_info.all_external_deps <- (build_artifacts_dir // Bsb_config.lib_ocaml // "native") :: dependency_info.all_external_deps;
+            
           "native"
         end in
         let command = 
