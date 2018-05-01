@@ -43,6 +43,7 @@ val handle_file_groups :
   entries:Bsb_config_types.entries_t list ->
   dependency_info:Bsb_dependency_info.t -> 
   root_project_dir:string ->
+  is_top_level:bool ->
   Bsb_parse_sources.file_group list ->
   string option ->
   info -> info

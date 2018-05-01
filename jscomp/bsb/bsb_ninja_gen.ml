@@ -361,6 +361,7 @@ let output_ninja_and_namespace_map
         ~entries
         ~dependency_info
         ~root_project_dir
+        ~is_top_level
         bs_file_groups 
         namespace
         maybe_ppx_comp_info, 

@@ -665,38 +665,49 @@ let handle_file_groups oc
     if (build_just_ppx && group.is_ppx || not build_just_ppx) then begin
       (* When building a ppx we want to compile the source code to the backend specified by the 
          entry, not the one specified from the commandline. *)
-      let (local_ppx_flags, compile_target) = (String_map.fold (fun  module_name _  (acc, compile_target) ->
-        if acc = [] then begin
-          let new_local_ppx_flags = List.fold_left Bsb_config_types.(fun acc e -> match e with 
-            | { main_module_name; ppx; } when main_module_name = module_name -> ppx
-            | _ -> acc
-            ) acc entries_that_have_ppxes in 
-          
-          let compile_target = List.fold_left (fun (compile_target: compile_target_t) { Bsb_config_types.main_module_name; } ->
-            if main_module_name = module_name then begin 
-              (* @Hack Only build PPXes to bytecode *)
-              Bytecode
-            end else 
-              compile_target
-          ) compile_target ppx_entries in
-          (new_local_ppx_flags, compile_target)
-        end else 
-          (acc, compile_target)
-      ) group.sources ([], compile_target)) in
+      let (local_ppx_flags, compile_target) = if is_top_level then 
+        (String_map.fold (fun  module_name _  (acc, compile_target) ->
+          if acc = [] then begin
+            let new_local_ppx_flags = List.fold_left Bsb_config_types.(fun acc e -> match e with 
+              | { main_module_name; ppx; } when main_module_name = module_name -> ppx
+              | _ -> acc
+              ) acc entries_that_have_ppxes in 
+            
+            let compile_target = List.fold_left (fun (compile_target: compile_target_t) { Bsb_config_types.main_module_name; } ->
+              if main_module_name = module_name then begin 
+                (* @Hack Only build PPXes to bytecode *)
+                Bytecode
+              end else 
+                compile_target
+            ) compile_target ppx_entries in
+            (new_local_ppx_flags, compile_target)
+          end else 
+            (acc, compile_target)
+        ) group.sources ([], compile_target)) 
+      else if group.is_ppx then 
+        (* @Hack always build ppxes to bytecode *)
+        ([], Bytecode) 
+      else (local_ppx_module_names, compile_target) 
+      in
       
       (*  map over the flags to find ppxes's full paths if they exist.  *)
-      let (local_ppx_flags, local_ppx_deps) = List.fold_left (fun (new_local_ppx_flags, new_local_ppx_deps) flag_exec -> 
-        (* @Hack You could potentially have a bug here where the exec_path name is the same as a module name
-          inside main-module but eeeeh that'd be weird! *)
-        let rec loop = fun local_ppx_deps local_ppx_module_names -> 
-          match (local_ppx_deps, local_ppx_module_names) with
-          | (exec_path :: local_ppx_deps, ppx_name :: local_ppx_module_names) -> 
-            if flag_exec = ppx_name then (exec_path :: new_local_ppx_flags, exec_path :: new_local_ppx_deps)
-            else loop local_ppx_deps local_ppx_module_names
-          | _ -> ((Bsb_dependency_info.check_if_dep ~root_project_dir ~backend dependency_info flag_exec) :: new_local_ppx_flags, new_local_ppx_deps)
-        in
-        loop local_ppx_deps local_ppx_module_names
-      ) ([], []) local_ppx_flags in
+      let (local_ppx_flags, local_ppx_deps) = if group.is_ppx then 
+        ([], []) 
+      else 
+        List.fold_left (fun (new_local_ppx_flags, new_local_ppx_deps) flag_exec -> 
+          (* @Hack You could potentially have a bug here where the exec_path name is the same as a module name
+            inside main-module but eeeeh that'd be weird! *)
+          let rec loop = fun local_ppx_deps local_ppx_module_names -> 
+            match (local_ppx_deps, local_ppx_module_names) with
+            | (exec_path :: local_ppx_deps, ppx_name :: local_ppx_module_names) -> 
+              if flag_exec = ppx_name then (exec_path :: new_local_ppx_flags, exec_path :: new_local_ppx_deps)
+              else loop local_ppx_deps local_ppx_module_names
+            | _ -> ((Bsb_dependency_info.check_if_dep ~root_project_dir ~backend dependency_info flag_exec) :: new_local_ppx_flags, new_local_ppx_deps)
+          in
+          loop local_ppx_deps local_ppx_module_names
+        ) ([], []) local_ppx_flags 
+      in
+
       handle_file_group oc
         ~local_ppx_deps
         ~custom_rules 

@@ -398,6 +398,7 @@ let handle_file_groups
     ~entries
     ~dependency_info
     ~root_project_dir
+    ~is_top_level
     (file_groups  :  Bsb_parse_sources.file_group list)
     namespace (st : info) : info  =
   let file_groups = List.filter (fun (group : Bsb_parse_sources.file_group) ->
@@ -408,7 +409,7 @@ let handle_file_groups
     | Bsb_config_types.Bytecode -> List.mem Bsb_parse_sources.Bytecode group.Bsb_parse_sources.backend
   ) file_groups in 
   let (entries, entries_that_have_ppxes, local_ppx_deps, local_ppx_module_names, _) = get_local_ppx_deps backend entries in
-  let (local_ppx_deps, local_ppx_module_names) = begin
+  let (local_ppx_deps, local_ppx_module_names) = if is_top_level then begin
     let rec loop_over_ppx (new_local_ppx_deps, new_local_ppx_module_names) local_ppx_deps local_ppx_module_names = 
       begin match (local_ppx_deps, local_ppx_module_names) with 
       | ([], []) -> (new_local_ppx_deps, new_local_ppx_module_names)
@@ -424,28 +425,31 @@ let handle_file_groups
         else 
           loop_over_ppx (new_local_ppx_deps, new_local_ppx_module_names) ppx_dep_rest ppx_name_rest
       | _ -> assert false
-    end in
+      end in
     loop_over_ppx ([], []) local_ppx_deps local_ppx_module_names
-  end in
+  end else (local_ppx_deps, local_ppx_module_names) in
   List.fold_left 
     (fun comp_info (group : Bsb_parse_sources.file_group) -> 
       if group.is_ppx then
         comp_info
       else begin
-        let local_ppx_flags = (String_map.fold (fun  module_name _  acc ->
-          if acc = [] then begin
-            List.fold_left Bsb_config_types.(fun acc e -> 
-              match e with 
-              | { main_module_name; ppx = _ :: _ as ppx; backend } when main_module_name = module_name -> 
-                if List.mem JsTarget backend then
-                  ppx
-                else 
-                  acc
-              | _ -> acc
-            ) acc entries_that_have_ppxes
-          end else 
-            acc
-        ) group.sources []) in
+        let local_ppx_flags = if is_top_level then 
+          (String_map.fold (fun  module_name _  acc ->
+            if acc = [] then begin
+              List.fold_left Bsb_config_types.(fun acc e -> 
+                match e with 
+                | { main_module_name; ppx = _ :: _ as ppx; backend } when main_module_name = module_name -> 
+                  if List.mem JsTarget backend then
+                    ppx
+                  else 
+                    acc
+                | _ -> acc
+              ) acc entries_that_have_ppxes
+            end else 
+              acc
+          ) group.sources []) 
+          else if group.is_ppx then [] 
+          else local_ppx_module_names in
         (*  map over the flags to find ppxes's full paths if they exist.  *)
         let (local_ppx_flags, local_ppx_deps) = List.fold_left (fun (new_local_ppx_flags, new_local_ppx_deps) flag_exec -> 
           (* @Hack You could potentially have a bug here where the exec_path name is the same as a module name
@@ -458,7 +462,8 @@ let handle_file_groups
             | _ -> ((Bsb_dependency_info.check_if_dep ~root_project_dir ~backend dependency_info flag_exec) :: new_local_ppx_flags, new_local_ppx_deps)
           in
           loop local_ppx_deps local_ppx_module_names
-        ) ([], []) local_ppx_flags in
+        ) ([], []) local_ppx_flags 
+        in
         handle_file_group 
          oc  ~bs_suffix ~package_specs ~custom_rules ~js_post_build_cmd ~local_ppx_flags ~local_ppx_deps
          files_to_install 
