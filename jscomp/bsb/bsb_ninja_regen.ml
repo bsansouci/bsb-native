@@ -166,7 +166,7 @@ let regenerate_ninja
                     | Bsb_config_types.Js ->  assert false
                     | Bsb_config_types.Bytecode 
                       when List.mem Bsb_config_types.Bytecode Bsb_config_types.(inner_config.allowed_build_kinds) -> 
-                        dependency_info.all_external_deps <- (build_artifacts_dir // Bsb_config.lib_ocaml // "bytecode") :: dependency_info.all_external_deps;
+                        dependency_info.all_external_deps <- (build_artifacts_dir // Bsb_config.lib_ocaml // Literals.bytecode) :: dependency_info.all_external_deps;
                         dependency_info.all_c_linker_flags <- Bsb_config_types.(inner_config.c_linker_flags) @ dependency_info.all_c_linker_flags;
                         dependency_info.all_clibs <- Bsb_config_types.(inner_config.static_libraries) @ dependency_info.all_clibs;
                         dependency_info.all_ocamlfind_dependencies <- Bsb_config_types.(inner_config.ocamlfind_dependencies) @ dependency_info.all_ocamlfind_dependencies;
@@ -174,7 +174,7 @@ let regenerate_ninja
                         
                     | Bsb_config_types.Native 
                       when List.mem Bsb_config_types.Native Bsb_config_types.(inner_config.allowed_build_kinds) -> 
-                        dependency_info.all_external_deps <- (build_artifacts_dir // Bsb_config.lib_ocaml // "native") :: dependency_info.all_external_deps;
+                        dependency_info.all_external_deps <- (build_artifacts_dir // Bsb_config.lib_ocaml // Literals.native) :: dependency_info.all_external_deps;
                         dependency_info.all_c_linker_flags <- Bsb_config_types.(inner_config.c_linker_flags) @ dependency_info.all_c_linker_flags;
                         dependency_info.all_clibs <- Bsb_config_types.(inner_config.static_libraries) @ dependency_info.all_clibs;
                         dependency_info.all_ocamlfind_dependencies <- Bsb_config_types.(inner_config.ocamlfind_dependencies) @ dependency_info.all_ocamlfind_dependencies;
