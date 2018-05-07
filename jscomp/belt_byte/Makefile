@@ -1,15 +1,9 @@
 include ../Makefile.shared
 
-COMPILER=../../lib/bsc.exe
+COMPILER=ocamlc
 
-MAP_FILES= node belt
-
-SOURCE_LIST= node_path node_fs node_process dict node_module js_array js_string \
-	js_re js_null_undefined node_buffer js_types js_json js_obj \
-	js_vector js_list js_option \
-	js_console\
-	js_result\
-	js_mapperRt\
+SOURCE_LIST= js\
+	js_math\
 	belt_Array\
 	belt_internalAVLset\
 	belt_internalAVLtree\
@@ -49,10 +43,6 @@ SOURCE_LIST= node_path node_fs node_process dict node_module js_array js_string 
 	belt_SetString\
 	belt_MutableStack\
 	belt_MutableQueue\
-	node_child_process \
-	js_boolean js_math\
-	js_dict js_date js_global js_cast js_promise\
-	dom dom_storage\
 	belt_HashMapInt\
 	belt_HashMapString\
 
@@ -60,24 +50,29 @@ SOURCE_LIST= node_path node_fs node_process dict node_module js_array js_string 
 # belt_BagM\
 # belt_dyn belt_dyn_lib\
 
-$(addsuffix .cmj, $(SOURCE_LIST)): $(addsuffix .cmj, $(MAP_FILES))
+RUNTIME := $(addsuffix .cmo, $(SOURCE_LIST)) $(addsuffix .cmi, $(SOURCE_LIST))
 
-RUNTIME := $(addsuffix .cmj, $(SOURCE_LIST)) $(addsuffix .cmi, $(SOURCE_LIST))
+INCLUDES=
 
-BS_COMMON_FLAGS= -no-alias-deps -bs-no-version-header -absname -bs-diagnose -bs-no-check-div-by-zero -bs-cross-module-opt -bs-noassertfalse -bs-package-name bs-platform 
+BS_FLAGS=  $(BS_COMMON_FLAGS)
+COMPFLAGS += $(BS_FLAGS)  -w +3-40-49 -warn-error A -bin-annot -ppx ../../lib/belt_bsppx.exe
 
-
-BS_FLAGS=  $(BS_COMMON_FLAGS) $(BS_PKG_FLAGS)
-COMPFLAGS += $(BS_FLAGS)  -I ../runtime -I ../stdlib -w +3-40-49 -warn-error A -bin-annot
-
-
-node.cmi : $(COMPILER)
-node.cmj : $(COMPILER)
-bs.cmi : $(COMPILER)
-bs.cmj : $(COMPILER)
-$(RUNTIME): $(COMPILER)
-	
 all: $(RUNTIME)
+	
+$(RUNTIME): ../../lib/belt_bsppx.exe
+
+OCAML_SRC_UTILS=../../vendor/ocaml/utils
+OCAML_SRC_PARSING=../../vendor/ocaml/parsing
+OCAML_SRC_TYPING=../../vendor/ocaml/typing
+OCAML_SRC_BYTECOMP=../../vendor/ocaml/bytecomp
+OCAML_SRC_DRIVER=../../vendor/ocaml/driver
+OCAML_SRC_TOOLS=../../vendor/ocaml/tools
+
+../../lib/belt_bsppx.ml:../bin/bspack.exe belt_bsppx_main.ml belt_ppx_entry.ml belt_ast_derive_projector.ml belt_ast_exp_extension.ml belt_ast_exp_apply.ml belt_ast_tdcls.ml belt_ast_derive_abstract.ml belt_ast_attributes.ml belt_ast_util.ml belt_ast_core_type_class_type.ml
+	$< -U BS_DEBUG -bs-MD  -module-alias Config=Config_whole_compiler  -I $(OCAML_SRC_UTILS) -I $(OCAML_SRC_PARSING)  -I ../stubs -I ../common -I ../ext -I ../syntax -I ../core -bs-main Belt_bsppx_main -o $@
+
+../../lib/belt_bsppx.exe:../../lib/belt_bsppx.ml
+	make -C ../../lib belt_bsppx.exe
 
 clean::
 	rm -f *.cm*
@@ -172,7 +167,7 @@ endif
 
 .mli.cmi:
 	$(COMPILER) $(INCLUDES) $(COMPFLAGS)  -c $<
-.ml.cmj:
+.ml.cmo:
 	$(COMPILER) $(INCLUDES) $(COMPFLAGS)  -c $<
 
 
@@ -182,4 +177,4 @@ ML_SOURCES=$(addsuffix .ml, $(SOURCE_LIST))
 MLI_SOURCES=$(addsuffix .mli, $(SOURCE_LIST))
 
 depend:
-	$(CAMLDEP) -native $(INCLUDES) $(ML_SOURCES) $(MLI_SOURCES) | sed -e 's/\.cmx/.cmj/g' >.depend
+	$(CAMLDEP) -native $(INCLUDES) $(ML_SOURCES) $(MLI_SOURCES) | sed -e 's/\.cmx/.cmo/g' >.depend

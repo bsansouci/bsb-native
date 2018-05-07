@@ -26,7 +26,7 @@ let getUndefined arr i =
   try
     Js.fromOpt (Some (Array.get arr i))
   with
-  | Invalid_argument -> Js.fromOpt None
+  | Invalid_argument _ -> Js.fromOpt None
 
 let get arr i =
   if i >= 0 && i < length arr then Some (getUnsafe arr i) else None
@@ -41,12 +41,17 @@ let setExn arr i v =
   setUnsafe arr i v 
 
 
+let makeUninitialized len =
+  Obj.magic (Array.make len 0)
 (* external truncateToLengthUnsafe : 'a array -> int ->  unit = "length" [@@bs.set]  
 external makeUninitialized : int -> 'a Js.undefined array = "Array" [@@bs.new]
 external makeUninitializedUnsafe : int -> 'a  array = "Array" [@@bs.new] *)
-let truncateToLengthUnsafe arr len =
-  Array.sub ar 0 len
+let truncateToLength arr len =
+  Array.sub arr 0 len
 
+let makeUninitializedUnsafeBen len =
+  Obj.magic (Array.make len 0)
+  
 let makeUninitializedUnsafe len defaulEl =
   Array.make len defaulEl
 
@@ -85,7 +90,7 @@ let reverseInPlace xs =
 
 let reverse xs =
   let len = length xs in
-  let v = if len > 0 then makeUninitializedUnsafe l (getUnsafe xs 0) else [||] in 
+  let result = if len > 0 then makeUninitializedUnsafe len (getUnsafe xs 0) else [||] in 
   for i = 0 to len - 1 do
     setUnsafe result i (getUnsafe xs (len - 1 - i))
   done;
@@ -144,7 +149,7 @@ let rangeBy start finish ~step =
 let zip xs ys = 
   let lenx, leny = length xs, length ys in 
   let len = Pervasives.min lenx leny  in 
-  let s = if len > 0 then makeUninitializedUnsafe l (getUnsafe xs 0, getUnsafe ys 0) else [||] in 
+  let s = if len > 0 then makeUninitializedUnsafe len (getUnsafe xs 0, getUnsafe ys 0) else [||] in 
   for i = 0 to len - 1 do 
     setUnsafe s i (getUnsafe xs i, getUnsafe ys i)
   done ; 
@@ -153,7 +158,7 @@ let zip xs ys =
 let zipByU xs ys f = 
   let lenx, leny = length xs, length ys in 
   let len = Pervasives.min lenx leny  in 
-  let s = if len > 0 then  makeUninitializedUnsafe l (f (getUnsafe xs 0) (getUnsafe ys 0) [@bs]) else [||] in 
+  let s = if len > 0 then  makeUninitializedUnsafe len (f (getUnsafe xs 0) (getUnsafe ys 0) [@bs]) else [||] in 
   for i = 0 to len - 1 do 
     setUnsafe s i (f (getUnsafe xs i) (getUnsafe ys i) [@bs])
   done ; 
@@ -270,7 +275,7 @@ let forEach a f = forEachU a (fun[@bs] a -> f a)
   
 let mapU a f =
   let l = length a in
-  let r = if l > 0 then makeUninitializedUnsafe l f(getUnsafe a 0) [@bs] else [||] in 
+  let r = if l > 0 then makeUninitializedUnsafe l (f(getUnsafe a 0) [@bs]) else [||] in 
   for i = 0 to l - 1 do
     setUnsafe r i (f(getUnsafe a i) [@bs])
   done;
@@ -290,14 +295,13 @@ let keepU a f =
         incr j 
       end
   done;
-  truncateToLengthUnsafe r !j;
-  r 
+  truncateToLength r !j 
 
 let keep a f = keepU a (fun [@bs] a -> f a)
     
 let keepMapU a f =
   let l = length a in
-  let r = if l > 0 then makeUninitializedUnsafe l (getUnsafe a 0) else [||] in
+  let r = ref None in 
   let j = ref 0 in 
   for i = 0 to l - 1 do
     let v = getUnsafe a i in 
@@ -305,12 +309,17 @@ let keepMapU a f =
     | None -> ()
     | Some v -> 
       begin 
+        let r = match !r with
+        | None -> makeUninitializedUnsafe l v
+        | Some r -> r in 
         setUnsafe r !j v;
         incr j 
       end
   done;
-  truncateToLengthUnsafe r !j;
-  r 
+  match !r with
+  | None -> [||]
+  | Some r -> 
+    truncateToLength r !j 
 
 let keepMap a f = keepMapU a (fun[@bs] a -> f a)
     
