@@ -29,8 +29,8 @@
     applies here, except the comparator is fixed and inlined
 *)
 
-# 32
-type element = int 
+# 34
+type element = string
 
 # 39
 val strictlySortedLength: element array -> int 

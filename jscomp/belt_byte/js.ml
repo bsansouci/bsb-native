@@ -8,6 +8,8 @@ external fromOpt : 'a option -> 'a undefined = "%identity"
 
 let undefined = None
 
+let null = None
+
 let empty = None
 
 let log a = 
@@ -19,7 +21,21 @@ module Undefined = struct
   external return : 'a -> 'a t = "%identity"
   let empty = None
   external toOpt : 'a t -> 'a option = "%identity"
+  external fromOpt : 'a option -> 'a undefined = "%identity"
 end
+
+module Null = struct
+  type 'a t = 'a null
+  
+  external toOpt : 'a t -> 'a option = "%identity"
+  external fromOpt : 'a option -> 'a t = "%identity"
+  
+  let return a = fromOpt (Some a)
+  let getUnsafe a = match toOpt a with
+  | None -> assert false
+  | Some a -> a
+end
+
 
 module Exn = struct
   let raiseError _str = assert false

@@ -33,7 +33,7 @@ type ('hash, 'eq, 'c) container =
 
 module A = Belt_Array
 let toOpt : 'a opt -> 'a option = Js.Undefined.toOpt
-external return : 'a -> 'a opt = "%identity" 
+let return = Js.Undefined.return 
 
 let emptyOpt = Js.undefined   
 let rec power_2_above x n =

@@ -15,17 +15,26 @@
 #ifdef TYPE_STRING
 type key = string
 type seed = int
-external caml_hash_mix_string : seed -> string -> seed  = "caml_hash_mix_string"
-external final_mix : seed -> seed = "caml_hash_final_mix"
+let caml_hash_mix_string = Caml_hash.caml_hash_mix_string
+(* @BenHack 
+    MMmmmmg what am I suppose to do here? 
+    Seems like hashing assumes 32bit ints
+    
+ *)
+(* external caml_hash_mix_string : seed -> string -> seed  = "caml_hash_mix_string" *)
+(* external final_mix : seed -> seed = "caml_hash_final_mix" *)
+let final_mix = Caml_hash.caml_hash_final_mix
 let hash (s : key) =   
-  final_mix  (caml_hash_mix_string 0 s )
+  Nativeint.to_int (final_mix  (caml_hash_mix_string Nativeint.zero s ))
 #elif defined TYPE_INT
 type key = int
 type seed = int
-external caml_hash_mix_int : seed -> int -> seed  = "caml_hash_mix_int"
-external final_mix : seed -> seed = "caml_hash_final_mix"
+let caml_hash_mix_int = Caml_hash.caml_hash_mix_int
+(* external caml_hash_mix_int : seed -> int -> seed  = "caml_hash_mix_int" *)
+let final_mix = Caml_hash.caml_hash_final_mix
+(* external final_mix : seed -> seed = "caml_hash_final_mix" *)
 let hash (s : key) = 
-  final_mix (caml_hash_mix_int 0 s)
+  Nativeint.to_int (final_mix (caml_hash_mix_int Nativeint.zero (Nativeint.of_int s)))
 #else 
   [%error "unknown type"]
 #endif

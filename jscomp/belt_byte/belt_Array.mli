@@ -77,7 +77,7 @@ val reverse: 'a array -> 'a array
 (* external makeUninitialized: int -> 'a Js.undefined array = "Array" [@@bs.new] *)
 val makeUninitialized: int -> 'a Js.undefined array
 
-val makeUninitializedUnsafeBen: int -> 'a Js.undefined array
+val makeUninitializedUnsafeBen: int -> 'a array
 
 val makeUninitializedUnsafe: int -> 'a -> 'a array
 (** [makeUninitializedUnsafe n v]

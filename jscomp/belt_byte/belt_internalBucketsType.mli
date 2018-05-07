@@ -32,7 +32,7 @@ type ('hash, 'eq, 'c) container =
   } [@@bs.deriving abstract]
 
 val toOpt : 'a opt -> 'a option
-external return : 'a -> 'a opt = "%identity"
+val return : 'a -> 'a opt
 
 val emptyOpt : 'a Js.undefined
 val make :

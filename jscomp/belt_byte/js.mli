@@ -8,6 +8,8 @@ val fromOpt : 'a option -> 'a undefined
 
 val undefined : 'a undefined
 
+val null : 'a null
+
 val empty : 'a null
 
 val log : 'a -> unit
@@ -18,6 +20,20 @@ module Undefined : sig
   val return : 'a -> 'a t
   
   val empty : 'a t
+  
+  val fromOpt : 'a option -> 'a t
+  
+  val toOpt : 'a t -> 'a option
+end
+
+module Null : sig
+  type 'a t = 'a null
+  
+  val return : 'a -> 'a t
+  
+  val getUnsafe : 'a t -> 'a
+  
+  val fromOpt : 'a option -> 'a t
   
   val toOpt : 'a t -> 'a option
 end

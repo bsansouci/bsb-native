@@ -1,5 +1,10 @@
 js.cmo : js.cmi
 js_math.cmo : js_math.cmi
+caml_hash.cmo :
+belt.cmo : belt_SortArray.cmo belt_Set.cmo belt_Range.cmo belt_Option.cmo \
+    belt_MutableStack.cmo belt_MutableSet.cmo belt_MutableQueue.cmo \
+    belt_MutableMap.cmo belt_Map.cmo belt_List.cmo belt_Id.cmo \
+    belt_HashSet.cmo belt_HashMap.cmo belt_Array.cmo
 belt_Array.cmo : js_math.cmo js.cmo belt_Array.cmi
 belt_internalAVLset.cmo : js.cmo belt_SortArray.cmo belt_Id.cmo \
     belt_Array.cmo belt_internalAVLset.cmi
@@ -13,10 +18,10 @@ belt_SortArrayString.cmo : belt_Array.cmo belt_SortArrayString.cmi
 belt_Range.cmo : belt_Range.cmi
 belt_internalBucketsType.cmo : js.cmo belt_Array.cmo \
     belt_internalBucketsType.cmi
-belt_internalSetBuckets.cmo : js.cmo belt_internalBucketsType.cmo \
-    belt_Array.cmo belt_internalSetBuckets.cmi
-belt_internalBuckets.cmo : js.cmo belt_internalBucketsType.cmo \
-    belt_Array.cmo belt_internalBuckets.cmi
+belt_internalSetBuckets.cmo : belt_internalBucketsType.cmo belt_Array.cmo \
+    belt_internalSetBuckets.cmi
+belt_internalBuckets.cmo : belt_internalBucketsType.cmo belt_Array.cmo \
+    belt_internalBuckets.cmi
 belt_HashMap.cmo : belt_internalBucketsType.cmo belt_internalBuckets.cmo \
     belt_Id.cmo belt_HashMapString.cmo belt_HashMapInt.cmo belt_Array.cmo \
     belt_HashMap.cmi
@@ -69,9 +74,9 @@ belt_SetString.cmo : belt_internalSetString.cmo belt_internalAVLset.cmo \
     belt_Array.cmo belt_SetString.cmi
 belt_MutableStack.cmo : js.cmo belt_MutableStack.cmi
 belt_MutableQueue.cmo : js.cmo belt_Array.cmo belt_MutableQueue.cmi
-belt_HashMapInt.cmo : belt_internalBucketsType.cmo belt_internalBuckets.cmo \
-    belt_Array.cmo belt_HashMapInt.cmi
-belt_HashMapString.cmo : belt_internalBucketsType.cmo \
+belt_HashMapInt.cmo : caml_hash.cmo belt_internalBucketsType.cmo \
+    belt_internalBuckets.cmo belt_Array.cmo belt_HashMapInt.cmi
+belt_HashMapString.cmo : caml_hash.cmo belt_internalBucketsType.cmo \
     belt_internalBuckets.cmo belt_Array.cmo belt_HashMapString.cmi
 js.cmi :
 js_math.cmi :

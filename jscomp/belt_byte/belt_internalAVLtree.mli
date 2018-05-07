@@ -35,9 +35,9 @@ and ('k,  'v) node  = private {
 } [@@bs.deriving abstract]
 
 
-external toOpt : 'a Js.null -> 'a option = "#null_to_opt"
-external return : 'a -> 'a Js.null = "%identity"
-external empty : 'a Js.null = "#null"
+val toOpt : 'a Js.null -> 'a option
+val return : 'a -> 'a Js.null
+val empty : 'a Js.null
 
 type ('k, 'id) cmp = ('k, 'id) Belt_Id.cmp
     

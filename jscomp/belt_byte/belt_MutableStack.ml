@@ -41,26 +41,26 @@ let push s x =
   rootSet s (Js.Null.return @@ cell ~head:x ~tail:(root s))
 
 let topUndefined (s : 'a t) = 
-   match Js.nullToOption (root s) with  
+   match Js.toOpt (root s) with  
    | None -> Js.undefined
    | Some x -> Js.Undefined.return (head x) 
 
 let top s = 
-  match Js.nullToOption (root s) with 
+  match Js.toOpt (root s) with 
   | None -> None 
   | Some x -> Some (head x)
 
 let isEmpty s = root s = Js.null
 
 let popUndefined s =   
-  match Js.nullToOption (root s) with 
+  match Js.toOpt (root s) with 
   | None -> Js.undefined
   | Some x -> 
     rootSet s (tail x);    
     Js.Undefined.return (head x)
 
 let pop s =     
-    match Js.nullToOption (root s) with 
+    match Js.toOpt (root s) with 
   | None -> None
   | Some x -> 
     rootSet s (tail x);
@@ -69,17 +69,17 @@ let pop s =
 
 
 let rec lengthAux (x : _ cell) acc = 
-  match Js.nullToOption (tail x ) with 
+  match Js.toOpt (tail x ) with 
   | None -> acc + 1 
   | Some x -> lengthAux x (acc + 1)
 
 let size s =   
-  match Js.nullToOption (root s) with 
+  match Js.toOpt (root s) with 
   | None -> 0 
   | Some x -> lengthAux x 0
 
 let rec iterAux (s : _ opt_cell) f =  
-  match Js.nullToOption s with 
+  match Js.toOpt s with 
   | None -> ()
   | Some x -> 
     f (head x) [@bs];

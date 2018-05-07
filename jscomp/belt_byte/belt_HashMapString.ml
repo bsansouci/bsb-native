@@ -13,15 +13,22 @@
 (***********************************************************************)
 (**  Adapted by Authors of BuckleScript 2017                           *)
 
-# 16 "hashmap.cppo.ml"
+# 16
 type key = string
 type seed = int
-external caml_hash_mix_string : seed -> string -> seed  = "caml_hash_mix_string"
-external final_mix : seed -> seed = "caml_hash_final_mix"
+let caml_hash_mix_string = Caml_hash.caml_hash_mix_string
+(* @BenHack 
+    MMmmmmg what am I suppose to do here? 
+    Seems like hashing assumes 32bit ints
+    
+ *)
+(* external caml_hash_mix_string : seed -> string -> seed  = "caml_hash_mix_string" *)
+(* external final_mix : seed -> seed = "caml_hash_final_mix" *)
+let final_mix = Caml_hash.caml_hash_final_mix
 let hash (s : key) =   
-  final_mix  (caml_hash_mix_string 0 s )
+  Nativeint.to_int (final_mix  (caml_hash_mix_string Nativeint.zero s ))
 
-# 33 "hashmap.cppo.ml"
+# 42
 module N = Belt_internalBuckets
 module C = Belt_internalBucketsType
 module A = Belt_Array

@@ -33,11 +33,11 @@
 *)
 
 
-# 36 "hashset.cppo.mli"
+# 36
 type key = string
 
 
-# 44 "hashset.cppo.mli"
+# 44
 type t
 
 val make: hintSize:int -> t 

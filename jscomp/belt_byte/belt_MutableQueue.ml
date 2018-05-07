@@ -46,7 +46,7 @@ let add q x =
   let cell = return @@ node 
       ~content:x
       ~next:null in
-  match Js.nullToOption (last q )with
+  match Js.toOpt (last q )with
   | None ->
     lengthSet  q 1;
     firstSet q cell;
@@ -59,23 +59,23 @@ let add q x =
 
   
 let peek q =
-  match Js.nullToOption (first q ) with
+  match Js.toOpt (first q ) with
   | None -> None
   | Some v -> Some (content v)
 
 let peekUndefined q =
-  match Js.nullToOption (first q ) with
+  match Js.toOpt (first q ) with
   | None -> Js.undefined
   | Some v -> Js.Undefined.return (content v)
 
 
 let peekExn q =
-  match Js.nullToOption (first q ) with
+  match Js.toOpt (first q ) with
   | None -> [%assert "Belt.Queue.Empty"]
   | Some v -> content v
 
 let pop q =
-  match Js.nullToOption (first q ) with
+  match Js.toOpt (first q ) with
   | None -> None
   | Some x  ->
     let next = next x in 
@@ -91,7 +91,7 @@ let pop q =
     end
 
 let popExn q =
-  match Js.nullToOption (first q ) with
+  match Js.toOpt (first q ) with
   | None -> [%assert "Empty"]
   | Some x  ->
     let next = next x in 
@@ -107,7 +107,7 @@ let popExn q =
     end    
 
 let popUndefined q =
-  match Js.nullToOption (first q ) with
+  match Js.toOpt (first q ) with
   | None -> Js.undefined
   | Some x  ->
     let next = next x in 
@@ -123,12 +123,12 @@ let popUndefined q =
     end
 
 let rec copyAux qRes prev cell =
-  match Js.nullToOption cell with
+  match Js.toOpt cell with
   | None -> lastSet qRes  prev; qRes
   | Some x  ->
     let content = content x in 
     let res = return @@ node ~content ~next:null in
-    begin match Js.nullToOption prev with
+    begin match Js.toOpt prev with
       | None -> firstSet qRes res
       | Some p -> nextSet p  res
     end;
@@ -140,12 +140,12 @@ let copy q =
 
       
 let rec copyMapAux qRes prev cell f =
-  match Js.nullToOption cell with
+  match Js.toOpt cell with
   | None -> lastSet qRes  prev; qRes
   | Some x  ->
     let content = f (content x) [@bs] in 
     let res = return @@ node ~content ~next:null in
-    begin match Js.nullToOption prev with (*TODO: optimize to remove such check*)
+    begin match Js.toOpt prev with (*TODO: optimize to remove such check*)
       | None -> firstSet qRes res
       | Some p -> nextSet p  res
     end;
@@ -163,7 +163,7 @@ let size q =
   length q
 
 let rec iterAux cell f =
-  match Js.nullToOption cell with
+  match Js.toOpt cell with
   | None -> ()
   | Some x  ->
     f (content x) [@bs];
@@ -175,7 +175,7 @@ let forEachU q f =
 let forEach q f = forEachU q (fun[@bs] a -> f a)
     
 let rec foldAux f accu cell =
-  match Js.nullToOption cell with
+  match Js.toOpt cell with
   | None -> accu
   | Some x  ->
     let accu = f accu (content x) [@bs] in
@@ -188,7 +188,7 @@ let reduce q accu f = reduceU q accu (fun[@bs] a b -> f a b)
     
 let transfer q1 q2 =
   if length q1 > 0 then
-    match Js.nullToOption (last q2) with
+    match Js.toOpt (last q2) with
     | None ->
       lengthSet q2 (length q1);
       firstSet q2 (first q1);
@@ -201,14 +201,14 @@ let transfer q1 q2 =
       clear q1
 
 let rec fillAux i arr cell =       
-  match Js.nullToOption cell with 
+  match Js.toOpt cell with 
   | None -> ()
   | Some x ->
     A.setUnsafe arr i (content x);
     fillAux (i + 1) arr (next x) 
 
 let toArray x =         
-  let v = A.makeUninitializedUnsafe (length x) in 
+  let v = A.makeUninitializedUnsafeBen (length x) in 
   fillAux 0 v (first x);
   v
 

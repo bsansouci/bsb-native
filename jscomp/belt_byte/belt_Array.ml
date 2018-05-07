@@ -42,7 +42,7 @@ let setExn arr i v =
 
 
 let makeUninitialized len =
-  Obj.magic (Array.make len 0)
+  Array.make len (Js.Undefined.empty)
 (* external truncateToLengthUnsafe : 'a array -> int ->  unit = "length" [@@bs.set]  
 external makeUninitialized : int -> 'a Js.undefined array = "Array" [@@bs.new]
 external makeUninitializedUnsafe : int -> 'a  array = "Array" [@@bs.new] *)

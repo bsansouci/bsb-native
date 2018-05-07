@@ -27,11 +27,12 @@ type ('k, 'id) cmp = ('k, 'id) Belt_Id.cmp
 
 module A = Belt_Array
 module S = Belt_SortArray
-external toOpt : 'a Js.null -> 'a option = "#null_to_opt"
-external return : 'a -> 'a Js.null = "%identity"
-external empty : 'a Js.null = "#null"
-external unsafeCoerce : 'a Js.null -> 'a = "%identity"
-
+let toOpt : 'a Js.null -> 'a option = Js.toOpt
+let return a =
+  Js.Null.return a
+  
+let empty : 'a Js.null = Js.empty
+let unsafeCoerce a = Js.Null.getUnsafe a
 
 
 let treeHeight (n : _ t) =

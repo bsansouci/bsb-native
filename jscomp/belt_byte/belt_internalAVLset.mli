@@ -41,7 +41,7 @@ type ('a, 'b) cmp = ('a, 'b) Belt_Id.cmp
 (* TODO: node is used in [subset] *)
 val toOpt : 'a Js.null -> 'a option
 (* external toOpt : 'a Js.null -> 'a option = "#null_to_opt" *)
-external return : 'a -> 'a Js.null = "%identity"
+val return : 'a -> 'a Js.null
 val empty : 'a Js.null
 (* external empty : 'a Js.null = "#null" *)
 

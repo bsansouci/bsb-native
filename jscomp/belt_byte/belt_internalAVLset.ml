@@ -38,10 +38,10 @@ module S = Belt_SortArray
 
 let toOpt = Js.toOpt
 (* external toOpt : 'a Js.null -> 'a option = "#null_to_opt" *)
-external return : 'a -> 'a Js.null = "%identity"
+let return : 'a -> 'a Js.null = Js.Null.return
 let empty = Js.empty
 (* external empty : 'a Js.null = "#null" *)
-external unsafeCoerce : 'a Js.null -> 'a = "%identity"
+let unsafeCoerce : 'a Js.null -> 'a = Js.Null.getUnsafe
 
 type ('a, 'b) cmp = ('a, 'b) Belt_Id.cmp
 

@@ -1,9 +1,11 @@
 include ../Makefile.shared
 
-COMPILER=ocamlc
+COMPILER=ocamlc.opt
 
 SOURCE_LIST= js\
 	js_math\
+	caml_hash\
+	belt\
 	belt_Array\
 	belt_internalAVLset\
 	belt_internalAVLtree\
@@ -44,7 +46,7 @@ SOURCE_LIST= js\
 	belt_MutableStack\
 	belt_MutableQueue\
 	belt_HashMapInt\
-	belt_HashMapString\
+	belt_HashMapString
 
 # belt_Bag\
 # belt_BagM\
@@ -55,7 +57,7 @@ RUNTIME := $(addsuffix .cmo, $(SOURCE_LIST)) $(addsuffix .cmi, $(SOURCE_LIST))
 INCLUDES=
 
 BS_FLAGS=  $(BS_COMMON_FLAGS)
-COMPFLAGS += $(BS_FLAGS)  -w +3-40-49 -warn-error A -bin-annot -ppx ../../lib/belt_bsppx.exe
+COMPFLAGS += $(BS_FLAGS)  -g -w +3-40-49 -warn-error A -bin-annot -ppx ../../lib/belt_bsppx.exe
 
 all: $(RUNTIME)
 	
@@ -68,10 +70,8 @@ OCAML_SRC_BYTECOMP=../../vendor/ocaml/bytecomp
 OCAML_SRC_DRIVER=../../vendor/ocaml/driver
 OCAML_SRC_TOOLS=../../vendor/ocaml/tools
 
-../../lib/belt_bsppx.ml:../bin/bspack.exe belt_bsppx_main.ml belt_ppx_entry.ml belt_ast_derive_projector.ml belt_ast_exp_extension.ml belt_ast_exp_apply.ml belt_ast_tdcls.ml belt_ast_derive_abstract.ml belt_ast_attributes.ml belt_ast_util.ml belt_ast_core_type_class_type.ml
-	$< -U BS_DEBUG -bs-MD  -module-alias Config=Config_whole_compiler  -I $(OCAML_SRC_UTILS) -I $(OCAML_SRC_PARSING)  -I ../stubs -I ../common -I ../ext -I ../syntax -I ../core -bs-main Belt_bsppx_main -o $@
-
-../../lib/belt_bsppx.exe:../../lib/belt_bsppx.ml
+../../lib/belt_bsppx.exe:
+	make -C belt_bsppx force-snapshotml
 	make -C ../../lib belt_bsppx.exe
 
 clean::
