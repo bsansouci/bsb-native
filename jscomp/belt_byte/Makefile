@@ -2,57 +2,58 @@ include ../Makefile.shared
 
 COMPILER=ocamlc.opt
 
-SOURCE_LIST= js\
-	js_math\
-	caml_hash\
-	belt\
-	belt_Array\
-	belt_internalAVLset\
-	belt_internalAVLtree\
-	belt_internalMutableAVL\
-	belt_List\
-	belt_SortArray\
-	belt_SortArrayInt\
-	belt_SortArrayString\
-	belt_Range\
-	belt_internalBucketsType\
-	belt_internalSetBuckets\
-	belt_internalBuckets\
-	belt_HashMap\
-	belt_HashSet\
-	belt_HashSetString\
-	belt_HashSetInt\
-	belt_Id\
-	belt_MapDict\
-	belt_SetDict\
-	belt_Map\
-	belt_internalMapInt\
-	belt_internalMapString\
+SOURCE_LIST= caml_hash \
+	js_math \
+	js \
+	belt_Option \
+	belt_Range \
+	belt_Id \
+	belt_Array \
+	belt_SortArrayInt \
+	belt_SortArrayString \
+	belt_internalBucketsType \
+	belt_internalSetBuckets \
+	belt_internalBuckets \
+	belt_HashSetString \
+	belt_HashSetInt \
+	belt_MutableStack \
+	belt_MutableQueue \
+	belt_HashMapInt \
+	belt_HashMapString \
+	belt_HashSet \
+	belt_HashMap \
+	belt_SortArray \
+	belt_List \
+	belt_internalAVLset \
+	belt_internalAVLtree \
+	belt_internalSetString \
+	belt_internalSetInt \
+	belt_MutableSetString \
+	belt_MutableSetInt \
+	belt_MutableSet \
+	belt_internalMapString \
+	belt_internalMapInt \
+	belt_SetDict \
+	belt_MapDict \
 	belt_MapString \
-	belt_MapInt\
-	belt_Option\
-	belt_internalSet\
-	belt_Set\
-	belt_MutableSet\
-	belt_MutableSetInt\
-	belt_MutableSetString\
-	belt_MutableMap\
-	belt_MutableMapInt\
-	belt_MutableMapString\
-	belt_internalSetInt\
-	belt_internalSetString\
-	belt_SetInt\
-	belt_SetString\
-	belt_MutableStack\
-	belt_MutableQueue\
-	belt_HashMapInt\
-	belt_HashMapString
+	belt_MapInt \
+	belt_MutableMapInt \
+	belt_MutableMapString \
+	belt_SetInt \
+	belt_SetString \
+	belt_Set \
+	belt_MutableMap \
+	belt_Map \
+	belt
 
+# belt_internalSet\
+# belt_internalMutableAVL\
 # belt_Bag\
 # belt_BagM\
 # belt_dyn belt_dyn_lib\
 
-RUNTIME := $(addsuffix .cmo, $(SOURCE_LIST)) $(addsuffix .cmi, $(SOURCE_LIST))
+OBJECT_FILES := $(addsuffix .cmo, $(SOURCE_LIST))
+RUNTIME := $(OBJECT_FILES) $(addsuffix .cmi, $(SOURCE_LIST))
 
 INCLUDES=
 
@@ -60,6 +61,7 @@ BS_FLAGS=  $(BS_COMMON_FLAGS)
 COMPFLAGS += $(BS_FLAGS)  -g -w +3-40-49 -warn-error A -bin-annot -ppx ../../lib/belt_bsppx.exe
 
 all: $(RUNTIME)
+	$(COMPILER) -a -o lib.cma $(OBJECT_FILES)
 	
 $(RUNTIME): ../../lib/belt_bsppx.exe
 

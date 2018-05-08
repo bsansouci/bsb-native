@@ -146,10 +146,30 @@ let output_ninja_and_namespace_map
   let refmt_flags = String.concat Ext_string.single_space refmt_flags in
   (* Exclude JS because we always add -bs-super-errors for JS... *)
   
+  (* let include_belt = ref false in
+  let bs_dependencies = List.filter (fun (x : Bsb_config_types.dependency) -> 
+    if x <> "belt" && x <> "Belt" then true
+    else begin 
+      include_belt := true;
+      false
+    end) bs_dependencies in *)
+
   let bs_package_includes = 
     Bsb_build_util.flag_concat dash_i @@ Ext_list.map 
-      (fun (x : Bsb_config_types.dependency) -> x.package_install_path // nested) bs_dependencies
+      (fun (x : Bsb_config_types.dependency) -> x.package_install_path // nested
+      ) bs_dependencies
   in
+  (* In native/bytecode, we nest the build artifacts for Belt under lib/ocaml/bytecode and lib/ocaml/native 
+     Otherwise they're at the same place as usual
+  *)
+  let bs_package_includes = if backend = Bsb_config_types.Js then 
+    bs_package_includes
+    else 
+    match built_in_dependency with
+    | None -> bs_package_includes
+    | Some built_in_dependency -> 
+      Ext_string.concat4 "-I " (built_in_dependency.Bsb_config_types.package_install_path // nested) " " bs_package_includes
+    in
   let bs_package_dev_includes = 
     Bsb_build_util.flag_concat dash_i @@ Ext_list.map 
       (fun (x : Bsb_config_types.dependency) -> x.package_install_path // nested) bs_dev_dependencies
