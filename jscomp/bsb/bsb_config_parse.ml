@@ -187,7 +187,7 @@ let interpret_json
       since it is external configuration, no {!Bsb_build_util.convert_and_resolve_path}
   *)
   let bsc_flags = ref Bsb_default.bsc_flags in  
-  let warnings = ref Bsb_default.warnings in
+  let warnings = ref Bsb_warning.default_warning in
   let ocamlfind_dependencies = ref [] in
   let ppx_flags = ref []in 
   let ocaml_flags = ref Bsb_default.ocaml_flags in

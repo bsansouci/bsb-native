@@ -7261,7 +7261,7 @@ val is_single_string : t -> (string * string option) option
 val is_single_int : t -> int option 
 
 type rtn = Not_String_Lteral | JS_Regex_Check_Failed | Correct of Parsetree.expression
-val as_string_exp : ?check_js_regex: bool -> t -> rtn
+val as_string_exp : check_js_regex: bool -> t -> rtn
 val as_core_type : Location.t -> t -> Parsetree.core_type    
 val as_empty_structure :  t -> bool 
 val as_ident : t -> Longident.t Asttypes.loc option
@@ -7356,7 +7356,8 @@ let is_single_int (x : t ) =
   | _  -> None
 
 type rtn = Not_String_Lteral | JS_Regex_Check_Failed | Correct of Parsetree.expression
-let as_string_exp ?(check_js_regex = false) (x : t ) = 
+
+let as_string_exp ~check_js_regex (x : t ) = 
   match x with  (** TODO also need detect empty phrase case *)
   | PStr [ {
       pstr_desc =  
@@ -9106,9 +9107,6 @@ val get_diagnose : unit -> bool
 val set_diagnose : bool -> unit 
 
 
-(** generate tds option *)
-val default_gen_tds : bool ref
-
 (** options for builtin ppx *)
 val no_builtin_ppx_ml : bool ref 
 val no_builtin_ppx_mli : bool ref 
@@ -9147,7 +9145,7 @@ val simple_binary_ast : bool ref
 
 
 val bs_suffix : bool ref
-
+val debug : bool ref
 end = struct
 #1 "js_config.ml"
 (* Copyright (C) 2015-2016 Bloomberg Finance L.P.
@@ -9217,7 +9215,6 @@ let (//) = Filename.concat
 
 (* let get_packages_info () = !packages_info *)
 
-let default_gen_tds = ref false
 let no_builtin_ppx_ml = ref false
 let no_builtin_ppx_mli = ref false
 
@@ -9259,6 +9256,8 @@ let binary_ast = ref false
 let simple_binary_ast = ref false
 
 let bs_suffix = ref false 
+
+let debug = ref false
 end
 module Bs_warnings : sig 
 #1 "bs_warnings.mli"
@@ -9287,8 +9286,7 @@ module Bs_warnings : sig
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
 
 
-type t = 
-  | Unsafe_ffi_bool_type
+type t =
   | Unsafe_poly_variant_type
 
 val prerr_bs_ffi_warning : Location.t -> t -> unit
@@ -9326,9 +9324,7 @@ end = struct
 
 
 
-type t = 
-  | Unsafe_ffi_bool_type
-
+type t =
   | Unsafe_poly_variant_type
   (* for users write code like this:
      {[ external f : [`a of int ] -> string = ""]}
@@ -9339,9 +9335,6 @@ type t =
 
 let to_string t =
   match t with
-  | Unsafe_ffi_bool_type
-    ->   
-    "You are passing a OCaml bool type into JS, probably you want to pass Js.boolean"
   | Unsafe_poly_variant_type 
     -> 
     "Here a OCaml polymorphic variant type passed into JS, probably you forgot annotations like `[@bs.int]` or `[@bs.string]`  "
@@ -9860,6 +9853,7 @@ val js_array_ctor : string
 val js_type_number : string
 val js_type_string : string
 val js_type_object : string
+val js_type_boolean : string
 val js_undefined : string
 val js_prop_length : string
 
@@ -9886,6 +9880,7 @@ val setter_suffix_len : int
 val debugger : string
 val raw_expr : string
 val raw_stmt : string
+val raw_function : string
 val unsafe_downgrade : string
 val fn_run : string
 val method_run : string
@@ -9999,6 +9994,7 @@ let js_array_ctor = "Array"
 let js_type_number = "number"
 let js_type_string = "string"
 let js_type_object = "object" 
+let js_type_boolean = "boolean"
 let js_undefined = "undefined"
 let js_prop_length = "length"
 
@@ -10024,6 +10020,7 @@ let setter_suffix_len = String.length setter_suffix
 let debugger = "debugger"
 let raw_expr = "raw_expr"
 let raw_stmt = "raw_stmt"
+let raw_function = "raw_function"
 let unsafe_downgrade = "unsafe_downgrade"
 let fn_run = "fn_run"
 let method_run = "method_run"
@@ -10278,8 +10275,11 @@ type derive_attr = {
   explict_nonrec : bool;
   bs_deriving : Ast_payload.action list option
 }
-val process_bs_string_int_unwrap_uncurry :
-  t -> [`Nothing | `String | `Int | `Ignore | `Unwrap | `Uncurry of int option ]  * t
+
+
+val iter_process_bs_string_int_unwrap_uncurry :
+  t -> 
+  [`Nothing | `String | `Int | `Ignore | `Unwrap | `Uncurry of int option ]
 
 
 val iter_process_bs_string_as :
@@ -10314,6 +10314,7 @@ val bs_obj : attr
 
 
 val bs_get : attr
+val bs_get_arity : attr 
 val bs_set : attr
 val bs_return_undefined : attr
 
@@ -10511,7 +10512,38 @@ let iter_process_derive_type attrs =
   !st
 
 
-let process_bs_string_int_unwrap_uncurry attrs =
+(* duplicated [bs.uncurry] [bs.string] not allowed,
+  it is worse in bs.uncurry since it will introduce
+  inconsistency in arity
+ *)  
+let iter_process_bs_string_int_unwrap_uncurry attrs =
+  let st = ref `Nothing in 
+  let assign v (({loc;_}, _ ) as attr : attr) = 
+    if !st = `Nothing then 
+    begin 
+      Bs_ast_invariant.mark_used_bs_attribute attr;
+      st := v ;
+    end  
+    else Bs_syntaxerr.err loc Conflict_attributes  in 
+  List.iter
+    (fun (({txt ; loc}, (payload : _ ) ) as attr : attr)  ->
+      match  txt with
+      | "bs.string"
+        -> assign `String attr
+      | "bs.int"
+        -> assign `Int attr
+      | "bs.ignore"
+        -> assign `Ignore attr
+      | "bs.unwrap"
+        -> assign `Unwrap attr
+      | "bs.uncurry"
+        ->
+        assign (`Uncurry (Ast_payload.is_single_int payload)) attr
+      | _ -> ()
+    ) attrs;
+    !st 
+
+(* let process_bs_string_int_unwrap_uncurry attrs =
   List.fold_left
     (fun (st,attrs)
       (({txt ; loc}, (payload : _ ) ) as attr : attr)  ->
@@ -10537,7 +10569,7 @@ let process_bs_string_int_unwrap_uncurry attrs =
         ->
         Bs_syntaxerr.err loc Conflict_attributes
       | _ , _ -> st, (attr :: attrs )
-    ) (`Nothing, []) attrs
+    ) (`Nothing, []) attrs *)
 
 
 let iter_process_bs_string_as  (attrs : t) : string option =
@@ -10647,6 +10679,20 @@ let bs_obj : attr
 
 let bs_get : attr
   =  {txt = "bs.get"; loc = locg}, Ast_payload.empty
+
+let bs_get_arity : attr
+  =  {txt = "internal.arity"; loc = locg}, 
+    PStr 
+    [{pstr_desc =
+         Pstr_eval (
+           {pexp_desc =
+              Pexp_constant
+                (Const_int 1);
+            pexp_loc = locg;
+            pexp_attributes = []
+           },[])
+      ; pstr_loc = locg}]
+  
 
 let bs_set : attr
   =  {txt = "bs.set"; loc = locg}, Ast_payload.empty
@@ -12026,6 +12072,7 @@ val range : int -> int -> int array
 
 val map2i : (int -> 'a -> 'b -> 'c ) -> 'a array -> 'b array -> 'c array
 
+val to_list_f : ('a -> 'b) -> 'a array -> 'b list 
 val to_list_map : ('a -> 'b option) -> 'a array -> 'b list 
 
 val to_list_map_acc : 
@@ -12160,6 +12207,13 @@ let map2i f a b =
   else
     Array.mapi (fun i a -> f i  a ( Array.unsafe_get b i )) a 
 
+let rec tolist_f_aux a f  i res =
+  if i < 0 then res else
+    let v = Array.unsafe_get a i in
+    tolist_f_aux a f  (i - 1)
+      (f v :: res)
+       
+let to_list_f f a = tolist_f_aux a f (Array.length a  - 1) []
 
 let rec tolist_aux a f  i res =
   if i < 0 then res else
@@ -13705,9 +13759,9 @@ end = struct
  * You should have received a copy of the GNU Lesser General Public License
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)    
-let version = "2.2.4"
+let version = "3.0.1"
 let header = 
-   "// Generated by BUCKLESCRIPT VERSION 2.2.4, PLEASE EDIT WITH CARE"  
+   "// Generated by BUCKLESCRIPT VERSION 3.0.1, PLEASE EDIT WITH CARE"  
 let package_name = "bs-platform"   
     
 end
@@ -13827,7 +13881,6 @@ type return_wrapper =
   | Return_undefined_to_opt
   | Return_null_to_opt
   | Return_null_undefined_to_opt
-  | Return_to_ocaml_bool
   | Return_replaced_with_unit
 
 type t  =
@@ -13987,7 +14040,6 @@ type return_wrapper =
   | Return_undefined_to_opt
   | Return_null_to_opt
   | Return_null_undefined_to_opt
-  | Return_to_ocaml_bool
   | Return_replaced_with_unit
 type t  =
   | Ffi_bs of External_arg_spec.t list  *
@@ -14545,10 +14597,10 @@ end = struct
 
 
 [@@@ocaml.warning "+9"]
+(* record pattern match complete checker*)
 
 
-
-let variant_can_bs_unwrap_fields row_fields =
+let variant_can_bs_unwrap_fields (row_fields : Parsetree.row_field list) : bool =
   let validity =
     List.fold_left
       begin fun st row ->
@@ -14581,7 +14633,8 @@ let variant_can_bs_unwrap_fields row_fields =
     ]}
     The result type would be [ hi:string ]
 *)
-let get_arg_type ~nolabel optional
+let get_arg_type 
+    ~nolabel optional
     (ptyp : Ast_core_type.t) :
   External_arg_spec.attr * Ast_core_type.t  =
   let ptyp =
@@ -14592,12 +14645,8 @@ let get_arg_type ~nolabel optional
     if optional then
       Bs_syntaxerr.err ptyp.ptyp_loc Invalid_underscore_type_in_external
     else begin
-      let ptyp_attrs =
-        ptyp.Parsetree.ptyp_attributes
-      in
-      let result =
-        Ast_attributes.iter_process_bs_string_or_int_as ptyp_attrs
-      in
+      let ptyp_attrs = ptyp.ptyp_attributes in
+      let result = Ast_attributes.iter_process_bs_string_or_int_as ptyp_attrs in
       (* when ppx start dropping attributes
         we should warn, there is a trade off whether
         we should warn dropped non bs attribute or not
@@ -14606,7 +14655,6 @@ let get_arg_type ~nolabel optional
       match result with
       |  None ->
         Bs_syntaxerr.err ptyp.ptyp_loc Invalid_underscore_type_in_external
-
       | Some (`Int i) ->
         Arg_cst(External_arg_spec.cst_int i), Ast_literal.type_int ~loc:ptyp.ptyp_loc ()
       | Some (`Str i)->
@@ -14618,44 +14666,34 @@ let get_arg_type ~nolabel optional
     end
   else (* ([`a|`b] [@bs.string]) *)
     let ptyp_desc = ptyp.ptyp_desc in
-    match Ast_attributes.process_bs_string_int_unwrap_uncurry ptyp.ptyp_attributes with
-    | (`String, ptyp_attributes)
-      ->
+    (match Ast_attributes.iter_process_bs_string_int_unwrap_uncurry ptyp.ptyp_attributes with
+    | `String ->
       begin match ptyp_desc with
         | Ptyp_variant ( row_fields, Closed, None)
-          ->
-          let attr =
-            Ast_polyvar.map_row_fields_into_strings ptyp.ptyp_loc row_fields in
-          attr,
-          {ptyp with
-           ptyp_attributes
-          }
+          ->          
+          Ast_polyvar.map_row_fields_into_strings ptyp.ptyp_loc row_fields
         | _ ->
           Bs_syntaxerr.err ptyp.ptyp_loc Invalid_bs_string_type
       end
-    | (`Ignore, ptyp_attributes)  ->
-      (Ignore, {ptyp with ptyp_attributes})
-    | (`Int , ptyp_attributes) ->
+    | `Ignore ->
+      Ignore
+    | `Int ->
       begin match ptyp_desc with
         | Ptyp_variant ( row_fields, Closed, None) ->
           let int_lists =
             Ast_polyvar.map_row_fields_into_ints ptyp.ptyp_loc row_fields in
-          Int int_lists ,
-          {ptyp with
-           ptyp_attributes
-          }
+          Int int_lists
         | _ -> Bs_syntaxerr.err ptyp.ptyp_loc Invalid_bs_int_type
       end
-    | (`Unwrap, ptyp_attributes) ->
-
+    | `Unwrap ->
       begin match ptyp_desc with
-        | (Ptyp_variant (row_fields, Closed, _) as ptyp_desc)
+        | Ptyp_variant (row_fields, Closed, _)
           when variant_can_bs_unwrap_fields row_fields ->
-          Unwrap, {ptyp with ptyp_desc; ptyp_attributes}
+          Unwrap
         | _ ->
           Bs_syntaxerr.err ptyp.ptyp_loc Invalid_bs_unwrap_type
       end
-    | (`Uncurry opt_arity, ptyp_attributes) ->
+    | `Uncurry opt_arity ->
       let real_arity =  Ast_core_type.get_uncurry_arity ptyp in
       (begin match opt_arity, real_arity with
          | Some arity, `Not_function ->
@@ -14668,14 +14706,9 @@ let get_arg_type ~nolabel optional
            if n <> arity then
              Bs_syntaxerr.err ptyp.ptyp_loc (Inconsistent_arity (arity,n))
            else Fn_uncurry_arity arity
-
-       end, {ptyp with ptyp_attributes})
-    | (`Nothing, ptyp_attributes) ->
+       end)
+    | `Nothing ->
       begin match ptyp_desc with
-        | Ptyp_constr ({txt = Lident "bool"; _}, [])
-          ->
-          Bs_warnings.prerr_bs_ffi_warning ptyp.ptyp_loc Unsafe_ffi_bool_type;
-          Nothing
         | Ptyp_constr ({txt = Lident "unit"; _}, [])
           -> if nolabel then Extern_unit else  Nothing
         | Ptyp_constr ({txt = Lident "array"; _}, [_])
@@ -14685,7 +14718,7 @@ let get_arg_type ~nolabel optional
           Nothing
         | _ ->
           Nothing
-      end, ptyp
+      end), ptyp
 
 
 
@@ -14886,8 +14919,6 @@ let check_return_wrapper
   | Return_unset  ->
     if Ast_core_type.is_unit result_type then
       Return_replaced_with_unit
-    else if Ast_core_type.is_user_bool result_type then
-      Return_to_ocaml_bool
     else
       wrapper
   | Return_undefined_to_opt
@@ -14898,8 +14929,7 @@ let check_return_wrapper
       wrapper
     else
       Bs_syntaxerr.err loc Expect_opt_in_bs_return_to_opt
-  | Return_replaced_with_unit
-  | Return_to_ocaml_bool  ->
+  | Return_replaced_with_unit ->
     assert false (* Not going to happen from user input*)
 
 
@@ -14917,7 +14947,7 @@ let handle_attributes
       {[ int -> int -> (int -> int -> int [@bs.uncurry])]}
       It does not make sense
   *)
-  if has_bs_uncurry type_annotation.Parsetree.ptyp_attributes then
+  if has_bs_uncurry type_annotation.ptyp_attributes then
     begin
       Location.raise_errorf
         ~loc "[@@bs.uncurry] can not be applied to the whole definition"
@@ -14927,7 +14957,8 @@ let handle_attributes
     if String.length prim_name = 0 then  `Nm_val pval_prim
     else  `Nm_external prim_name  (* need check name *)
   in
-  let result_type, arg_types_ty =
+  let result_type, arg_types_ty = 
+    (* Note this assumes external type is syntatic (no abstraction)*)
     Ast_core_type.list_of_arrow type_annotation in
   if has_bs_uncurry result_type.ptyp_attributes then
     begin
@@ -15662,7 +15693,7 @@ val handle_debugger :
   loc -> Ast_payload.t -> Parsetree.expression_desc
 
 val handle_raw : 
-  ?check_js_regex: bool -> loc -> Ast_payload.t -> Parsetree.expression
+  check_js_regex: bool -> loc -> Ast_payload.t -> Parsetree.expression
 
 val handle_external :
   loc -> string -> Parsetree.expression 
@@ -15978,7 +16009,7 @@ let handle_debugger loc payload =
   else Location.raise_errorf ~loc "bs.raw can only be applied to a string"
 
 
-let handle_raw ?(check_js_regex = false) loc payload =
+let handle_raw ~check_js_regex loc payload =
   begin match Ast_payload.as_string_exp ~check_js_regex payload with
     | Not_String_Lteral ->
       Location.raise_errorf ~loc
@@ -16033,7 +16064,7 @@ let handle_external loc x =
 
 
 let handle_raw_structure loc payload = 
-  begin match Ast_payload.as_string_exp payload with 
+  begin match Ast_payload.as_string_exp ~check_js_regex:false payload with 
     | Correct exp 
       -> 
       let pexp_desc = 
@@ -18384,6 +18415,11 @@ val handle_extension :
   Parsetree.extension ->
   Parsetree.expression
 
+
+type t = { args : string list ; block :  string }
+
+val fromString : string -> t 
+  
 end = struct
 #1 "ast_exp_extension.ml"
 (* Copyright (C) 2018 Authors of BuckleScript
@@ -18411,11 +18447,57 @@ end = struct
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
 open Ast_helper
 
+let rec unroll_function_aux 
+  (acc : string list)
+  (body : Parsetree.expression) : string list * string =
+  match body.pexp_desc with
+  | Pexp_constant(Const_string(block,_)) -> acc, block
+  | Pexp_fun("",None,{ppat_desc = Ppat_var s},cont) -> 
+    unroll_function_aux (s.txt::acc) cont
+  | _ -> 
+    Location.raise_errorf ~loc:body.pexp_loc  
+    "bs.raw can only be applied to a string or a special function form "
+
+type t = { args : string list ; block :  string }
+
+let toString (x : t) = 
+  Bs_version.version ^ Marshal.to_string x []
+
+(* exception handling*)
+let fromString (x : string) : t = 
+  if Ext_string.starts_with x Bs_version.version then 
+    Marshal.from_string x (String.length Bs_version.version)
+  else 
+     Ext_pervasives.failwithf
+        ~loc:__LOC__
+        "Compiler version mismatch. The project might have been built with one version of BuckleScript, and then with another. Please wipe the artifacts and do a clean build."
+
 let handle_extension record_as_js_object e (self : Bs_ast_mapper.mapper)
     (({txt ; loc} as lid , payload) : Parsetree.extension) = 
   begin match txt with
     | "bs.raw" | "raw" -> 
-      Ast_util.handle_raw loc payload
+      begin match payload with 
+      | PStr [{pstr_desc = Pstr_eval({pexp_desc = Pexp_fun("",None,pat,body)},_)}]
+         -> 
+         begin match pat.ppat_desc, body.pexp_desc with 
+         | Ppat_construct ({txt = Lident "()"}, None), Pexp_constant(Const_string(block,_))
+           -> 
+            Exp.apply ~loc 
+            (Exp.ident ~loc {txt = Ldot (Ast_literal.Lid.js_unsafe, Literals.raw_function);loc})
+            [ "", 
+              Exp.constant ~loc (Const_string (toString {args = [] ; block }, None))            
+            ]
+            
+         | Ppat_var ({txt;}), _ -> 
+            let acc, block = unroll_function_aux [txt] body in 
+            (Exp.apply ~loc 
+            (Exp.ident ~loc {txt = Ldot (Ast_literal.Lid.js_unsafe, Literals.raw_function);loc})
+            [ "", Exp.constant ~loc (Const_string (toString {args = List.rev acc ; block },None))]            
+            )
+         | _ -> Location.raise_errorf ~loc "bs.raw can only be applied to a string or a special function form "
+         end 
+      | _ ->   Ast_util.handle_raw ~check_js_regex:false loc payload
+      end
     | "bs.re" | "re" ->
       Exp.constraint_ ~loc
         (Ast_util.handle_raw ~check_js_regex:true loc payload)
@@ -18796,31 +18878,15 @@ let handle_config (config : Parsetree.expression option) =
     U.invalid_config config
   | None -> ()
 
-(* see #2337
-   TODO: relax it to allow (int -> int [@bs])
-*)
-let rec checkNotFunciton (ty : Parsetree.core_type) =
-  match ty.ptyp_desc with
-  | Ptyp_poly (_,ty) -> checkNotFunciton ty
-  | Ptyp_alias (ty,_) -> checkNotFunciton ty
-  | Ptyp_arrow _ ->
-    Location.raise_errorf
-      ~loc:ty.ptyp_loc
-      "syntactic function type is not allowed when working with abstract bs.deriving, create a named type as work around"
-  | Ptyp_any
-  | Ptyp_var _
-  | Ptyp_tuple _
-  | Ptyp_constr _
-  | Ptyp_object _
-  | Ptyp_class _
-  | Ptyp_variant _
-  | Ptyp_package _
-  | Ptyp_extension _ -> ()
 
 
 let get_optional_attrs =
   [Ast_attributes.bs_get; Ast_attributes.bs_return_undefined]
-let get_attrs = [ Ast_attributes.bs_get ]
+(** For this attributes, its type was wrapped as an option,
+   so we can still reuse existing frame work
+*)  
+
+let get_attrs = [ Ast_attributes.bs_get_arity]
 let set_attrs = [Ast_attributes.bs_set]
 let handleTdcl (tdcl : Parsetree.type_declaration) =
   let core_type = U.core_type_of_type_declaration tdcl in
@@ -18850,31 +18916,38 @@ let handleTdcl (tdcl : Parsetree.type_declaration) =
             pld_loc
            }:
              Parsetree.label_declaration) (acc, maker, labels) ->
-          let () = checkNotFunciton pld_type in
-          (* TODO: explain why *)
-          let prim, newLabel =
+          let prim_as_name, newLabel =
             match Ast_attributes.iter_process_bs_string_as pld_attributes with
             | None ->
-              [label_name], pld_name
+              label_name, pld_name
             | Some new_name ->
-              [new_name], {pld_name with txt = new_name}
+              new_name, {pld_name with txt = new_name}
           in
-          let is_option = Ast_attributes.has_bs_optional pld_attributes in
-          let maker, getter_type =
-            if is_option then
+          let prim = [prim_as_name] in 
+          let is_optional = Ast_attributes.has_bs_optional pld_attributes in
+          let maker, getter_declaration =
+            if is_optional then
               let optional_type = Ast_core_type.lift_option_type pld_type in
-              Ast_core_type.opt_arrow pld_loc label_name optional_type maker,
-              Typ.arrow ~loc "" core_type optional_type
+              (Ast_core_type.opt_arrow pld_loc label_name optional_type maker,
+              Val.mk ~loc:pld_loc pld_name 
+                ~attrs:get_optional_attrs ~prim
+                (Typ.arrow ~loc "" core_type optional_type)
+                )
             else
               Typ.arrow ~loc:pld_loc label_name pld_type maker,
-               Typ.arrow ~loc "" core_type pld_type
+              Val.mk ~loc:pld_loc pld_name ~attrs:get_attrs
+              ~prim:(
+                ["" ; (* Not needed actually*)
+                External_ffi_types.to_string 
+                (Ffi_bs (
+                  [{arg_type = Nothing; arg_label = External_arg_spec.empty_label}],
+                  Return_identity,
+                  Js_get {js_get_name = prim_as_name; js_get_scopes = []}
+                  ))] )
+               (Typ.arrow ~loc "" core_type pld_type)
           in
           let acc =
-            Val.mk pld_name
-              ~attrs:(
-                if is_option then get_optional_attrs
-                else get_attrs)
-              ~prim getter_type :: acc in
+           getter_declaration :: acc in
           let is_current_field_mutable = pld_mutable = Mutable in
           let acc =
             if is_current_field_mutable then
@@ -18883,7 +18956,7 @@ let handleTdcl (tdcl : Parsetree.type_declaration) =
                    (Typ.arrow ""
                       pld_type (* setter *)
                       (Ast_literal.type_unit ()))) in
-              Val.mk
+              Val.mk ~loc:pld_loc
                 {loc = label_loc; txt = label_name ^ "Set"}
                 (* setter *)
                 ~attrs:set_attrs
@@ -18892,7 +18965,7 @@ let handleTdcl (tdcl : Parsetree.type_declaration) =
             else acc in
           acc,
           maker,
-          (is_option, newLabel)::labels
+          (is_optional, newLabel)::labels
         ) label_declarations
         ([],
          (if has_optional_field then

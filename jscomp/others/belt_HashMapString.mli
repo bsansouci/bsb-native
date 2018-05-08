@@ -2,7 +2,7 @@
 type key = string
 
 
-# 10 "hashmap.cppo.mli"
+# 10
 type 'b t 
 
 

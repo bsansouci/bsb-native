@@ -1,6 +1,6 @@
 # 2 "set.cppo.ml"
 module I = Belt_internalSetInt
-# 8 "set.cppo.ml"
+# 8
 module N = Belt_internalAVLset
 module A = Belt_Array
 
@@ -49,7 +49,7 @@ let rec add  (t : t) (x : value) : t =
       else 
         let rr = add r x in 
         if rr == r then t
-        else N.bal l v (add  r x)
+        else N.bal l v rr
 
 let mergeMany h arr =   
   let len = A.length arr in 

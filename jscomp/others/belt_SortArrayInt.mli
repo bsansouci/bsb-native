@@ -29,10 +29,10 @@
     applies here, except the comparator is fixed and inlined
 *)
 
-# 32 "sort.cppo.mli"
+# 32
 type element = int 
 
-# 39 "sort.cppo.mli"
+# 39
 val strictlySortedLength: element array -> int 
 (**
   The same as {!Belt_SortArray.strictlySortedLength } except the comparator is fixed

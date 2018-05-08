@@ -65,7 +65,7 @@ let () =
   Clflags.unsafe_string := false;
   Clflags.record_event_when_debug := false
 
-let implementation prefix impl  str  : Js.Unsafe.obj =
+let implementation ~use_super_errors prefix impl str  : Js.Unsafe.obj =
   let modulename = "Test" in
   (* let env = !Toploop.toplevel_env in *)
   (* Compmisc.init_path false; *)
@@ -75,6 +75,14 @@ let implementation prefix impl  str  : Js.Unsafe.obj =
   let env = Compmisc.initial_env() in (* Question ?? *)
   let finalenv = ref Env.empty in
   let types_signature = ref [] in
+  if use_super_errors then begin
+    Misc.Color.setup Clflags.Always;
+    Super_main.setup ();
+  end;
+
+  (* copied over from Bsb_warning.default_warning_flag *)
+  Warnings.parse_options false Bsb_warning.default_warning;
+
   try
   impl (Lexing.from_string
     (if prefix then "[@@@bs.config{no_export}]\n#1 \"repl.ml\"\n"  ^ str else str ))
@@ -101,13 +109,13 @@ let implementation prefix impl  str  : Js.Unsafe.obj =
   | e ->
       begin match Location.error_of_exn  e with
       | Some error ->
-          Location.report_error Format.std_formatter  error;
+          Location.report_error Format.err_formatter  error;
           let (file,line,startchar) = Location.get_pos_info error.loc.loc_start in
           let (file,endline,endchar) = Location.get_pos_info error.loc.loc_end in
           Js.Unsafe.(obj
           [|
             "js_error_msg",
-              inject @@ Js.string (Printf.sprintf "Line %d, %d: %s"  line startchar error.msg);
+              inject @@ Js.string (Printf.sprintf "Line %d, %d:\n  %s"  line startchar error.msg);
                "row"    , inject (line - 1);
                "column" , inject startchar;
                "endRow" , inject (endline - 1);
@@ -125,14 +133,12 @@ let implementation prefix impl  str  : Js.Unsafe.obj =
       end
 
 
+let compile impl ~use_super_errors =
+    implementation ~use_super_errors false impl
 
-let compile  impl : string -> Js.Unsafe.obj =
-    implementation  false impl
 (** TODO: add `[@@bs.config{no_export}]\n# 1 "repl.ml"`*)
-let shake_compile impl : string -> Js.Unsafe.obj =
-   implementation true impl
-
-
+let shake_compile impl ~use_super_errors =
+   implementation ~use_super_errors true impl
 
 
 
@@ -157,8 +163,6 @@ let dir_directory d =
 let () =
   dir_directory "/static/cmis"
 
-
-
 let make_compiler name impl =
   export name
     (Js.Unsafe.(obj
@@ -166,12 +170,21 @@ let make_compiler name impl =
                     inject @@
                     Js.wrap_meth_callback
                       (fun _ code ->
-                         (compile impl (Js.to_string code)));
+                         (compile impl ~use_super_errors:false (Js.to_string code)));
                     "shake_compile",
                     inject @@
                     Js.wrap_meth_callback
                       (fun _ code ->
-                         (shake_compile impl (Js.to_string code)));
+                         (shake_compile impl ~use_super_errors:false (Js.to_string code)));
+                    "compile_super_errors",
+                    inject @@
+                    Js.wrap_meth_callback
+                      (fun _ code ->
+                         (compile impl ~use_super_errors:true (Js.to_string code)));
+                    "shake_compile_super_errors",
+                    inject @@
+                    Js.wrap_meth_callback
+                      (fun _ code -> (shake_compile impl ~use_super_errors:true (Js.to_string code)));
                     "version", Js.Unsafe.inject (Js.string (Bs_version.version));
                     "load_module",
                     inject @@

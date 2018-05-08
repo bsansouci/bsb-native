@@ -32,9 +32,9 @@
 *)
 
 
-# 37 "setm.cppo.mli"
+# 37
 type value = int
-# 41 "setm.cppo.mli"
+# 41
 (** The type of the set elements. *)
 
 

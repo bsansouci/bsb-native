@@ -24,15 +24,19 @@
 
 
 
-type t 
 
-val get_warning_flag : t option -> string 
+type t
+
+val get_warning_flag : t option -> string
+
+val default_warning : string
 
 val default_warning_flag : string
+(* default_warning, including the -w prefix, for command-line arguments *)
 
 val from_map : Ext_json_types.t String_map.t -> t option
 
 (** [opt_warning_to_string not_dev warning]
 *)
-val opt_warning_to_string : bool -> t option -> string 
+val opt_warning_to_string : bool -> t option -> string
 

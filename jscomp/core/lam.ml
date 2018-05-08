@@ -22,7 +22,8 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
 
-type array_kind = Lambda.array_kind
+type array_kind = Lambda.array_kind 
+  (*TODO: only [Pfloatarray] makes sense *)
 type boxed_integer = Lambda.boxed_integer
 type comparison = Lambda.comparison
 type bigarray_kind = Lambda.bigarray_kind
@@ -77,7 +78,7 @@ type primitive =
   (* Operations on heap blocks *)
   | Pmakeblock of int * tag_info * mutable_flag
   | Pfield of int * field_dbg_info
-  | Psetfield of int * bool * set_field_dbg_info
+  | Psetfield of int * set_field_dbg_info
   (* could have field info at least for record *)
   | Pfloatfield of int * field_dbg_info
   | Psetfloatfield of int * set_field_dbg_info
@@ -183,6 +184,7 @@ type primitive =
   | Pupdate_mod
   | Praw_js_code_exp of string
   | Praw_js_code_stmt of string
+  | Praw_js_function of string * string list
   | Pjs_fn_make of int
   | Pjs_fn_run of int
   | Pjs_fn_method of int
@@ -194,12 +196,8 @@ type primitive =
   | Pis_null
   | Pis_undefined
   | Pis_null_undefined
-  | Pjs_boolean_to_bool
   | Pjs_typeof
   | Pjs_function_length
-
-  | Pjs_string_of_small_array
-  (* | Pjs_is_instance_array *)
   | Pcaml_obj_length
   | Pcaml_obj_set_length
   | Pwrap_exn (* convert either JS exception or OCaml exception into OCaml format *)
@@ -1068,7 +1066,6 @@ let apply fn args loc status : t =
                                 Pnull_undefined_to_opt |
                                 Pis_null |
                                 Pis_null_undefined |
-                                Pjs_boolean_to_bool |
                                 Pjs_typeof ) as wrap;
                              args = [Lprim ({primitive; args = inner_args} as primitive_call)]
                             }
@@ -1198,10 +1195,10 @@ let stringswitch (lam : t) cases default : t =
 
 
 let true_ : t =
-  Lconst (Const_pointer ( 1, Pt_constructor "true"))
+  Lconst (Const_pointer ( 1, Pt_builtin_boolean))
 
 let false_ : t =
-  Lconst (Const_pointer( 0, Pt_constructor "false"))
+  Lconst (Const_pointer( 0, Pt_builtin_boolean))
 
 let unit : t =
   Lconst (Const_pointer( 0, Pt_constructor "()"))
@@ -1472,8 +1469,6 @@ let result_wrap loc (result_type : External_ffi_types.return_wrapper) result  =
   | Return_null_to_opt -> prim ~primitive:Pnull_to_opt ~args:[result] loc
   | Return_null_undefined_to_opt -> prim ~primitive:Pnull_undefined_to_opt ~args:[result] loc
   | Return_undefined_to_opt -> prim ~primitive:Pundefined_to_opt ~args:[result] loc
-  | Return_to_ocaml_bool ->
-    prim ~primitive:Pjs_boolean_to_bool ~args:[result] loc
   | Return_unset
   | Return_identity ->
     result
@@ -1561,7 +1556,7 @@ let lam_prim ~primitive:( p : Lambda.primitive) ~args loc : t =
     -> prim ~primitive:(Pfield (id,info)) ~args loc
 
   | Psetfield (id,b,info)
-    -> prim ~primitive:(Psetfield (id,b,info)) ~args loc
+    -> prim ~primitive:(Psetfield (id,info)) ~args loc
 
   | Pfloatfield (id,info)
     -> prim ~primitive:(Pfloatfield (id,info)) ~args loc
@@ -1819,6 +1814,14 @@ let convert exports lam : _ * _  =
             ~args:[] loc
         | _ -> assert false
       end
+    | _ when s = "#raw_function" ->   
+      begin match args with
+        | [Lconst( Const_base (Const_string(s,_)))] ->
+          let v = Ast_exp_extension.fromString s in 
+          prim ~primitive:(Praw_js_function (v.block, v.args))
+            ~args:[] loc
+        | _ -> assert false
+      end
     | _ when s = "#raw_stmt" ->
       begin match args with
         | [Lconst( Const_base (Const_string(s,_)))] ->
@@ -1831,10 +1834,6 @@ let convert exports lam : _ * _  =
       prim ~primitive:Pdebugger ~args:[] loc
     | _ when s = "#null" ->
       Lconst (Const_js_null)
-    | _ when s = "#true"  ->
-      Lconst (Const_js_true)
-    | _ when s = "#false"  ->
-      Lconst (Const_js_false)
     | _ when s = "#undefined" ->
       Lconst (Const_js_undefined)
     | _ when s = "#init_mod" ->
@@ -1867,22 +1866,14 @@ let convert exports lam : _ * _  =
         | "#makemutablelist" ->
           Pmakeblock(0,Lambda.Blk_constructor("::",1),Mutable)
         | "#setfield1" ->
-          Psetfield(1, true, Fld_set_na)
+          Psetfield(1,  Fld_set_na)
         | "#undefined_to_opt" -> Pundefined_to_opt
         | "#null_undefined_to_opt" -> Pnull_undefined_to_opt
         | "#null_to_opt" -> Pnull_to_opt
         | "#is_nil_undef" -> Pis_null_undefined
         | "#string_append" -> Pstringadd
-
-
-        | "#string_of_small_int_array" -> Pjs_string_of_small_array
-        (* {[String.fromCharCode.apply(null,x)]}
-           Note if we have better suport [@bs.splice],
-           we can get rid of it*)
         | "#obj_set_length" -> Pcaml_obj_set_length
         | "#obj_length" -> Pcaml_obj_length
-        | "#boolean_to_bool" -> Pjs_boolean_to_bool
-
         | "#function_length" -> Pjs_function_length
 
         | "#unsafe_lt" -> Pjscomp Clt
