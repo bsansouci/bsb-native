@@ -226,11 +226,6 @@ end = struct
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
 
-<<<<<<< HEAD
-=======
-val to_list_f : ('a -> 'b) -> 'a array -> 'b list 
-val to_list_map : ('a -> 'b option) -> 'a array -> 'b list 
->>>>>>> 919b378b4b2aee1c6c2c5a950a9582f54cba358b
 
 
 
@@ -366,13 +361,6 @@ val split : ?keep_empty:bool -> string -> char -> string list
 (** split by space chars for quick scripting *)
 val quick_split_by_ws : string -> string list 
 
-let rec tolist_f_aux a f  i res =
-  if i < 0 then res else
-    let v = Array.unsafe_get a i in
-    tolist_f_aux a f  (i - 1)
-      (f v :: res)
-       
-let to_list_f f a = tolist_f_aux a f (Array.length a  - 1) []
 
 
 val starts_with : string -> string -> bool
@@ -1978,6 +1966,7 @@ val js_array_ctor : string
 val js_type_number : string
 val js_type_string : string
 val js_type_object : string
+val js_type_boolean : string
 val js_undefined : string
 val js_prop_length : string
 
@@ -2004,6 +1993,7 @@ val setter_suffix_len : int
 val debugger : string
 val raw_expr : string
 val raw_stmt : string
+val raw_function : string
 val unsafe_downgrade : string
 val fn_run : string
 val method_run : string
@@ -2117,6 +2107,7 @@ let js_array_ctor = "Array"
 let js_type_number = "number"
 let js_type_string = "string"
 let js_type_object = "object" 
+let js_type_boolean = "boolean"
 let js_undefined = "undefined"
 let js_prop_length = "length"
 
@@ -2142,6 +2133,7 @@ let setter_suffix_len = String.length setter_suffix
 let debugger = "debugger"
 let raw_expr = "raw_expr"
 let raw_stmt = "raw_stmt"
+let raw_function = "raw_function"
 let unsafe_downgrade = "unsafe_downgrade"
 let fn_run = "fn_run"
 let method_run = "method_run"
@@ -2787,6 +2779,7 @@ val range : int -> int -> int array
 
 val map2i : (int -> 'a -> 'b -> 'c ) -> 'a array -> 'b array -> 'c array
 
+val to_list_f : ('a -> 'b) -> 'a array -> 'b list 
 val to_list_map : ('a -> 'b option) -> 'a array -> 'b list 
 
 val to_list_map_acc : 
@@ -2860,20 +2853,6 @@ let reverse_range a i len =
       Array.unsafe_set a (i+len-1-k) t;
     done
 
-<<<<<<< HEAD
-=======
-val js_array_ctor : string 
-val js_type_number : string
-val js_type_string : string
-val js_type_object : string
-val js_type_boolean : string
-val js_undefined : string
-val js_prop_length : string
-
-val param : string
-val partial_arg : string
-val prim : string
->>>>>>> 919b378b4b2aee1c6c2c5a950a9582f54cba358b
 
 let reverse_in_place a =
   reverse_range a 0 (Array.length a)
@@ -2924,21 +2903,9 @@ let filter_map (f : _ -> _ option) a =
         aux acc (i + 1) 
   in aux [] 0
 
-<<<<<<< HEAD
 let range from to_ =
   if from > to_ then invalid_arg "Ext_array.range"  
   else Array.init (to_ - from + 1) (fun i -> i + from)
-=======
-val debugger : string
-val raw_expr : string
-val raw_stmt : string
-val raw_function : string
-val unsafe_downgrade : string
-val fn_run : string
-val method_run : string
-val fn_method : string
-val fn_mk : string
->>>>>>> 919b378b4b2aee1c6c2c5a950a9582f54cba358b
 
 let map2i f a b = 
   let len = Array.length a in 
@@ -2947,6 +2914,13 @@ let map2i f a b =
   else
     Array.mapi (fun i a -> f i  a ( Array.unsafe_get b i )) a 
 
+let rec tolist_f_aux a f  i res =
+  if i < 0 then res else
+    let v = Array.unsafe_get a i in
+    tolist_f_aux a f  (i - 1)
+      (f v :: res)
+       
+let to_list_f f a = tolist_f_aux a f (Array.length a  - 1) []
 
 let rec tolist_aux a f  i res =
   if i < 0 then res else
@@ -3101,19 +3075,9 @@ module Map_gen
 (***********************************************************************)
 (** adapted from stdlib *)
 
-<<<<<<< HEAD
 type ('key,'a) t =
   | Empty
   | Node of ('key,'a) t * 'key * 'a * ('key,'a) t * int
-=======
-let js_array_ctor = "Array"
-let js_type_number = "number"
-let js_type_string = "string"
-let js_type_object = "object" 
-let js_type_boolean = "boolean"
-let js_undefined = "undefined"
-let js_prop_length = "length"
->>>>>>> 919b378b4b2aee1c6c2c5a950a9582f54cba358b
 
 type ('key,'a) enumeration =
   | End
@@ -3139,16 +3103,6 @@ let rec keys_aux accu = function
 
 let keys s = keys_aux [] s
 
-<<<<<<< HEAD
-=======
-let debugger = "debugger"
-let raw_expr = "raw_expr"
-let raw_stmt = "raw_stmt"
-let raw_function = "raw_function"
-let unsafe_downgrade = "unsafe_downgrade"
-let fn_run = "fn_run"
-let method_run = "method_run"
->>>>>>> 919b378b4b2aee1c6c2c5a950a9582f54cba358b
 
 
 let rec cons_enum m e =
@@ -9975,17 +9929,21 @@ module Bsb_warning : sig
 
 
 
-type t 
 
-val get_warning_flag : t option -> string 
+type t
+
+val get_warning_flag : t option -> string
+
+val default_warning : string
 
 val default_warning_flag : string
+(* default_warning, including the -w prefix, for command-line arguments *)
 
 val from_map : Ext_json_types.t String_map.t -> t option
 
 (** [opt_warning_to_string not_dev warning]
 *)
-val opt_warning_to_string : bool -> t option -> string 
+val opt_warning_to_string : bool -> t option -> string
 
 
 end = struct
@@ -10015,22 +9973,41 @@ end = struct
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
 
 
-type warning_error = 
-  | Warn_error_false 
+type warning_error =
+  | Warn_error_false
   (* default [false] to make our changes non-intrusive *)
   | Warn_error_true
-  | Warn_error_number of string 
+  | Warn_error_number of string
 
 type t = {
   number : string option;
   error : warning_error
 }
 
-let default_warning_flag =  "-w -30-40+6+7+27+32..39+44+45+101"
+(**
+  See the meanings of the warning codes here: https://caml.inria.fr/pub/docs/manual-ocaml/comp.html#sec281
 
-let get_warning_flag x = 
-  default_warning_flag ^ 
-  (match x with 
+  - 30 Two labels or constructors of the same name are defined in two mutually recursive types.
+  - 40 Constructor or label name used out of scope.
+
+  - 6 Label omitted in function application.
+  - 7 Method overridden.
+  - 9 Missing fields in a record pattern. (*Not always desired, in some cases need [@@@warning "+9"] *)
+  - 27 Innocuous unused variable: unused variable that is not bound with let nor as, and doesn’t start with an underscore (_) character.
+  - 29 Unescaped end-of-line in a string constant (non-portable code).
+  - 32 .. 39 Unused blabla
+  - 44 Open statement shadows an already defined identifier.
+  - 45 Open statement shadows an already defined label or constructor.
+  - 48 Implicit elimination of optional arguments. https://caml.inria.fr/mantis/view.php?id=6352
+  - 101 (bsb-specific) unsafe polymorphic comparison.
+*)
+let default_warning = "-30-40+6+7+27+32..39+44+45+101"
+
+let default_warning_flag = "-w " ^ default_warning
+
+let get_warning_flag x =
+  default_warning_flag ^
+  (match x with
    | Some {number =None}
    | None ->  Ext_string.empty
    | Some {number = Some x} -> Ext_string.trim x )
@@ -10038,55 +10015,55 @@ let get_warning_flag x =
 
 let warn_error = " -warn-error A"
 
-let warning_to_string not_dev 
-    warning : string = 
-  default_warning_flag  ^ 
-  (match warning.number with 
-   | None -> 
+let warning_to_string not_dev
+    warning : string =
+  default_warning_flag  ^
+  (match warning.number with
+   | None ->
      Ext_string.empty
-   | Some x -> 
+   | Some x ->
      Ext_string.trim x) ^
-  if not_dev then Ext_string.empty 
+  if not_dev then Ext_string.empty
   else
-    match warning.error with 
-    | Warn_error_true -> 
+    match warning.error with
+    | Warn_error_true ->
       warn_error
 
-    | Warn_error_number y -> 
+    | Warn_error_number y ->
       " -warn-error " ^ y
-    | Warn_error_false -> 
-      Ext_string.empty          
+    | Warn_error_false ->
+      Ext_string.empty
 
 
 
-let from_map (m : Ext_json_types.t String_map.t) = 
-  let number_opt = String_map.find_opt Bsb_build_schemas.number m  in 
-  let error_opt = String_map.find_opt Bsb_build_schemas.error m  in 
-  match number_opt, error_opt  with 
+let from_map (m : Ext_json_types.t String_map.t) =
+  let number_opt = String_map.find_opt Bsb_build_schemas.number m  in
+  let error_opt = String_map.find_opt Bsb_build_schemas.error m  in
+  match number_opt, error_opt  with
   | None, None -> None
-  | _, _ -> 
-    let error  = 
-      match error_opt with 
+  | _, _ ->
+    let error  =
+      match error_opt with
       | Some (True _) -> Warn_error_true
       | Some (False _) -> Warn_error_false
-      | Some (Str {str ; }) 
-        -> Warn_error_number str 
+      | Some (Str {str ; })
+        -> Warn_error_number str
       | Some x -> Bsb_exception.config_error x "expect true/false or string"
       | None -> Warn_error_false
-      (** To make it less intrusive : warning error has to be enabled*)  
+      (** To make it less intrusive : warning error has to be enabled*)
     in
-    let number = 
-      match number_opt with   
+    let number =
+      match number_opt with
       | Some (Str { str = number}) -> Some number
-      | None -> None 
-      | Some x -> Bsb_exception.config_error x "expect a string" 
-    in 
-    Some {number; error }      
+      | None -> None
+      | Some x -> Bsb_exception.config_error x "expect a string"
+    in
+    Some {number; error }
 
-let opt_warning_to_string not_dev warning =       
-  match warning with 
+let opt_warning_to_string not_dev warning =
+  match warning with
   | None -> default_warning_flag
-  | Some w -> warning_to_string not_dev w 
+  | Some w -> warning_to_string not_dev w
 
 
 end
@@ -10518,9 +10495,6 @@ module Bsb_default : sig
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
 
 
-
-val warnings : string 
-
 val bsc_flags : string list 
 
 val ocaml_flags : string list 
@@ -10566,33 +10540,11 @@ end = struct
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
 
 
-(**
-   - 6
-   Label omitted in function application.
-   - 7
-   Method overridden.
-   - 9
-   Missing fields in a record pattern. (*Not always desired, in some cases need [@@@warning "+9"] *)      
-   - 27
-   Innocuous unused variable: unused variable that is not bound with let nor as, and doesn’t start with an underscore (_) character.      
-   - 29
-   Unescaped end-of-line in a string constant (non-portable code).
-   - 32 .. 39 Unused  blabla
-   - 44
-   Open statement shadows an already defined identifier.
-   - 45
-   Open statement shadows an already defined label or constructor.
-   - 48
-   Implicit elimination of optional arguments.
-   https://caml.inria.fr/mantis/view.php?id=6352
-
-*)  
-let warnings = "-40+6+7+27+32..39+44+45"
-
-let bsc_flags = 
+(* for default warning flags, please see bsb_warning.ml *)
+let bsc_flags =
   [
     "-no-alias-deps";
-    "-color"; "always" 
+    "-color"; "always"
   ]
 
 let ocaml_flags = ["-no-alias-deps"]
@@ -11126,7 +11078,7 @@ let interpret_json
       since it is external configuration, no {!Bsb_build_util.convert_and_resolve_path}
   *)
   let bsc_flags = ref Bsb_default.bsc_flags in  
-  let warnings = ref Bsb_default.warnings in
+  let warnings = ref Bsb_warning.default_warning in
   let ocamlfind_dependencies = ref [] in
   let ppx_flags = ref []in 
   let ocaml_flags = ref Bsb_default.ocaml_flags in
@@ -11599,8 +11551,8 @@ let ext_asm = ".s"
 let ext_lib = ".a"
 let ext_dll = ".so"
 
-let host = "x86_64-apple-darwin17.5.0"
-let target = "x86_64-apple-darwin17.5.0"
+let host = "x86_64-apple-darwin17.6.0"
+let target = "x86_64-apple-darwin17.6.0"
 
 let default_executable_name =
   match Sys.os_type with
@@ -13222,7 +13174,6 @@ let super_print message ppf w =
 ;;
 
 
-<<<<<<< HEAD
 exception Errors of int;;
 
 let check_fatal () =
@@ -13299,16 +13250,6 @@ let descriptions =
    101,"Unused bs attributes";
   ]
 ;;
-=======
-type t
-
-val get_warning_flag : t option -> string
-
-val default_warning : string
-
-val default_warning_flag : string
-(* default_warning, including the -w prefix, for command-line arguments *)
->>>>>>> 919b378b4b2aee1c6c2c5a950a9582f54cba358b
 
 let help_warnings () =
   List.iter (fun (i, s) -> Printf.printf "%3i %s\n" i s) descriptions;
@@ -13358,10 +13299,6 @@ type t = {
      re-parse the file to get the line and character numbers.
    Else all fields are correct.
 *)
-<<<<<<< HEAD
-=======
-val opt_warning_to_string : bool -> t option -> string
->>>>>>> 919b378b4b2aee1c6c2c5a950a9582f54cba358b
 
 val none : t
 (** An arbitrary value of type [t]; describes an empty ghost range. *)
@@ -13373,16 +13310,8 @@ val init : Lexing.lexbuf -> string -> unit
 (** Set the file name and line number of the [lexbuf] to be the start
     of the named file. *)
 
-<<<<<<< HEAD
 val curr : Lexing.lexbuf -> t
 (** Get the location of the current token from the [lexbuf]. *)
-=======
-type warning_error =
-  | Warn_error_false
-  (* default [false] to make our changes non-intrusive *)
-  | Warn_error_true
-  | Warn_error_number of string
->>>>>>> 919b378b4b2aee1c6c2c5a950a9582f54cba358b
 
 val symbol_rloc: unit -> t
 val symbol_gloc: unit -> t
@@ -13417,41 +13346,11 @@ type 'a loc = {
   loc : t;
 }
 
-<<<<<<< HEAD
 val mknoloc : 'a -> 'a loc
 val mkloc : 'a -> t -> 'a loc
 
 val print: formatter -> t -> unit
 val print_filename: formatter -> string -> unit
-=======
-(**
-  See the meanings of the warning codes here: https://caml.inria.fr/pub/docs/manual-ocaml/comp.html#sec281
-
-  - 30 Two labels or constructors of the same name are defined in two mutually recursive types.
-  - 40 Constructor or label name used out of scope.
-
-  - 6 Label omitted in function application.
-  - 7 Method overridden.
-  - 9 Missing fields in a record pattern. (*Not always desired, in some cases need [@@@warning "+9"] *)
-  - 27 Innocuous unused variable: unused variable that is not bound with let nor as, and doesn’t start with an underscore (_) character.
-  - 29 Unescaped end-of-line in a string constant (non-portable code).
-  - 32 .. 39 Unused blabla
-  - 44 Open statement shadows an already defined identifier.
-  - 45 Open statement shadows an already defined label or constructor.
-  - 48 Implicit elimination of optional arguments. https://caml.inria.fr/mantis/view.php?id=6352
-  - 101 (bsb-specific) unsafe polymorphic comparison.
-*)
-let default_warning = "-30-40+6+7+27+32..39+44+45+101"
-
-let default_warning_flag = "-w " ^ default_warning
-
-let get_warning_flag x =
-  default_warning_flag ^
-  (match x with
-   | Some {number =None}
-   | None ->  Ext_string.empty
-   | Some {number = Some x} -> Ext_string.trim x )
->>>>>>> 919b378b4b2aee1c6c2c5a950a9582f54cba358b
 
 val absolute_path: string -> string
 
@@ -13459,29 +13358,8 @@ val show_filename: string -> string
     (** In -absname mode, return the absolute path for this filename.
         Otherwise, returns the filename unchanged. *)
 
-<<<<<<< HEAD
 
 val absname: bool ref
-=======
-let warning_to_string not_dev
-    warning : string =
-  default_warning_flag  ^
-  (match warning.number with
-   | None ->
-     Ext_string.empty
-   | Some x ->
-     Ext_string.trim x) ^
-  if not_dev then Ext_string.empty
-  else
-    match warning.error with
-    | Warn_error_true ->
-      warn_error
-
-    | Warn_error_number y ->
-      " -warn-error " ^ y
-    | Warn_error_false ->
-      Ext_string.empty
->>>>>>> 919b378b4b2aee1c6c2c5a950a9582f54cba358b
 
 (* Support for located errors *)
 
@@ -13493,41 +13371,10 @@ type error =
     if_highlight: string; (* alternative message if locations are highlighted *)
   }
 
-<<<<<<< HEAD
 exception Error of error
 
 val print_error_prefix: formatter -> unit -> unit
   (* print the prefix "Error:" possibly with style *)
-=======
-let from_map (m : Ext_json_types.t String_map.t) =
-  let number_opt = String_map.find_opt Bsb_build_schemas.number m  in
-  let error_opt = String_map.find_opt Bsb_build_schemas.error m  in
-  match number_opt, error_opt  with
-  | None, None -> None
-  | _, _ ->
-    let error  =
-      match error_opt with
-      | Some (True _) -> Warn_error_true
-      | Some (False _) -> Warn_error_false
-      | Some (Str {str ; })
-        -> Warn_error_number str
-      | Some x -> Bsb_exception.config_error x "expect true/false or string"
-      | None -> Warn_error_false
-      (** To make it less intrusive : warning error has to be enabled*)
-    in
-    let number =
-      match number_opt with
-      | Some (Str { str = number}) -> Some number
-      | None -> None
-      | Some x -> Bsb_exception.config_error x "expect a string"
-    in
-    Some {number; error }
-
-let opt_warning_to_string not_dev warning =
-  match warning with
-  | None -> default_warning_flag
-  | Some w -> warning_to_string not_dev w
->>>>>>> 919b378b4b2aee1c6c2c5a950a9582f54cba358b
 
 val error: ?loc:t -> ?sub:error list -> ?if_highlight:string -> string -> error
 
@@ -14089,7 +13936,6 @@ module Longident : sig
 
 (* Long identifiers, used in parsetree. *)
 
-<<<<<<< HEAD
 type t =
     Lident of string
   | Ldot of t * string
@@ -14098,14 +13944,6 @@ type t =
 val flatten: t -> string list
 val last: t -> string
 val parse: string -> t
-=======
-(* for default warning flags, please see bsb_warning.ml *)
-let bsc_flags =
-  [
-    "-no-alias-deps";
-    "-color"; "always"
-  ]
->>>>>>> 919b378b4b2aee1c6c2c5a950a9582f54cba358b
 
 end = struct
 #1 "longident.ml"
@@ -18303,10 +18141,30 @@ let output_ninja_and_namespace_map
   let refmt_flags = String.concat Ext_string.single_space refmt_flags in
   (* Exclude JS because we always add -bs-super-errors for JS... *)
   
+  (* let include_belt = ref false in
+  let bs_dependencies = List.filter (fun (x : Bsb_config_types.dependency) -> 
+    if x <> "belt" && x <> "Belt" then true
+    else begin 
+      include_belt := true;
+      false
+    end) bs_dependencies in *)
+
   let bs_package_includes = 
     Bsb_build_util.flag_concat dash_i @@ Ext_list.map 
-      (fun (x : Bsb_config_types.dependency) -> x.package_install_path // nested) bs_dependencies
+      (fun (x : Bsb_config_types.dependency) -> x.package_install_path // nested
+      ) bs_dependencies
   in
+  (* In native/bytecode, we nest the build artifacts for Belt under lib/ocaml/bytecode and lib/ocaml/native 
+     Otherwise they're at the same place as usual
+  *)
+  let bs_package_includes = if backend = Bsb_config_types.Js then 
+    bs_package_includes
+    else 
+    match built_in_dependency with
+    | None -> bs_package_includes
+    | Some built_in_dependency -> 
+      Ext_string.concat4 "-I " (built_in_dependency.Bsb_config_types.package_install_path // nested) " " bs_package_includes
+    in
   let bs_package_dev_includes = 
     Bsb_build_util.flag_concat dash_i @@ Ext_list.map 
       (fun (x : Bsb_config_types.dependency) -> x.package_install_path // nested) bs_dev_dependencies
@@ -18460,19 +18318,11 @@ let output_ninja_and_namespace_map
       let bs_groups = Array.init  (number_of_dev_groups + 1 ) (fun i -> String_map.empty) in
       let source_dirs = Array.init (number_of_dev_groups + 1 ) (fun i -> []) in
       let static_resources =
-<<<<<<< HEAD
-        List.fold_left (fun acc_resources  ({Bsb_parse_sources.sources; dir; resources; dir_index; is_ppx})  ->
-              let dir_index = (dir_index :> int) in 
-              bs_groups.(dir_index) <- merge_module_info_map bs_groups.(dir_index) sources ;
-              source_dirs.(dir_index) <- dir :: source_dirs.(dir_index);
-              Ext_list.map_append (fun x -> dir//x) resources  acc_resources
-=======
         List.fold_left (fun (acc_resources : string list)  ({Bsb_parse_sources.sources; dir; resources; dir_index})  ->
             let dir_index = (dir_index :> int) in 
             bs_groups.(dir_index) <- merge_module_info_map bs_groups.(dir_index) sources ;
             source_dirs.(dir_index) <- dir :: source_dirs.(dir_index);
             Ext_list.map_append (fun x -> dir//x) resources  acc_resources
->>>>>>> 919b378b4b2aee1c6c2c5a950a9582f54cba358b
           ) [] bs_file_groups in
       let lib = bs_groups.((Bsb_dir_index.lib_dir_index :> int)) in               
       has_reason_files := Bsb_db.sanity_check lib || !has_reason_files;
@@ -18901,7 +18751,7 @@ let regenerate_ninja
                     | Bsb_config_types.Js ->  assert false
                     | Bsb_config_types.Bytecode 
                       when List.mem Bsb_config_types.Bytecode Bsb_config_types.(inner_config.allowed_build_kinds) -> 
-                        dependency_info.all_external_deps <- (build_artifacts_dir // Bsb_config.lib_ocaml // "bytecode") :: dependency_info.all_external_deps;
+                        dependency_info.all_external_deps <- (build_artifacts_dir // Bsb_config.lib_ocaml // Literals.bytecode) :: dependency_info.all_external_deps;
                         dependency_info.all_c_linker_flags <- Bsb_config_types.(inner_config.c_linker_flags) @ dependency_info.all_c_linker_flags;
                         dependency_info.all_clibs <- Bsb_config_types.(inner_config.static_libraries) @ dependency_info.all_clibs;
                         dependency_info.all_ocamlfind_dependencies <- Bsb_config_types.(inner_config.ocamlfind_dependencies) @ dependency_info.all_ocamlfind_dependencies;
@@ -18909,7 +18759,7 @@ let regenerate_ninja
                         
                     | Bsb_config_types.Native 
                       when List.mem Bsb_config_types.Native Bsb_config_types.(inner_config.allowed_build_kinds) -> 
-                        dependency_info.all_external_deps <- (build_artifacts_dir // Bsb_config.lib_ocaml // "native") :: dependency_info.all_external_deps;
+                        dependency_info.all_external_deps <- (build_artifacts_dir // Bsb_config.lib_ocaml // Literals.native) :: dependency_info.all_external_deps;
                         dependency_info.all_c_linker_flags <- Bsb_config_types.(inner_config.c_linker_flags) @ dependency_info.all_c_linker_flags;
                         dependency_info.all_clibs <- Bsb_config_types.(inner_config.static_libraries) @ dependency_info.all_clibs;
                         dependency_info.all_ocamlfind_dependencies <- Bsb_config_types.(inner_config.ocamlfind_dependencies) @ dependency_info.all_ocamlfind_dependencies;

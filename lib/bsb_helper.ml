@@ -8315,9 +8315,9 @@ let link link_byte_or_native
   ~verbose
   cwd =
   let ocaml_dir = Bsb_build_util.get_ocaml_dir cwd in
-  let suffix_object_files, suffix_library_files, compiler, add_custom, output_file = begin match link_byte_or_native with
-  | LinkBytecode output_file -> Literals.suffix_cmo, Literals.suffix_cma , "ocamlc"  , true, output_file
-  | LinkNative output_file   -> Literals.suffix_cmx, Literals.suffix_cmxa, "ocamlopt", false, output_file
+  let suffix_object_files, suffix_library_files, compiler, add_custom, output_file, nested = begin match link_byte_or_native with
+  | LinkBytecode output_file -> Literals.suffix_cmo, Literals.suffix_cma , "ocamlc"  , true, output_file, "bytecode"
+  | LinkNative output_file   -> Literals.suffix_cmx, Literals.suffix_cmxa, "ocamlopt", false, output_file, "native"
   end in
   (* Map used to track the path to the files as the dependency_graph that we're going to read from the mlast file only contains module names *)
   let module_to_filepath = List.fold_left
@@ -8353,6 +8353,8 @@ let link link_byte_or_native
       (fun acc dir ->
         (Ext_path.combine dir (Literals.library_file ^ suffix_library_files)) :: acc)
       [] includes in
+    let artifacts_dir = Bsb_build_util.get_ocaml_lib_dir ~is_js:true cwd // nested in
+    let library_files = (artifacts_dir // (Literals.library_file ^ suffix_library_files)) :: library_files in
     (* This list will be reversed so we append the otherlibs object files at the end, and they'll end at the beginning. *)
     
     let suffix = begin match link_byte_or_native with
