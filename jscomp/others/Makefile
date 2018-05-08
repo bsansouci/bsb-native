@@ -69,6 +69,7 @@ BS_COMMON_FLAGS= -no-alias-deps -bs-no-version-header -absname -bs-diagnose -bs-
 
 
 BS_FLAGS=  $(BS_COMMON_FLAGS) $(BS_PKG_FLAGS)
+
 COMPFLAGS += $(BS_FLAGS)  -I ../runtime -I ../stdlib -w +3-40-49 -warn-error A -bin-annot
 
 
@@ -77,7 +78,7 @@ node.cmj : $(COMPILER)
 bs.cmi : $(COMPILER)
 bs.cmj : $(COMPILER)
 $(RUNTIME): $(COMPILER)
-	
+
 all: $(RUNTIME)
 
 clean::
