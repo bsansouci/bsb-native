@@ -1,0 +1,34 @@
+#!/usr/bash
+
+~/Desktop/docre/lib/bs/native/main.native --ml --bs-root ../ --dependency-directory others:../lib/js --name Belt --project-file ./others/belt.cmti:./others/belt.mli \
+--project-file ./others/belt_Array.cmti:./others/belt_Array.mli \
+--project-file ./others/belt_Map.cmti:./others/belt_Map.mli \
+--project-file ./others/belt_Set.cmti:./others/belt_Set.mli \
+--project-file ./others/belt_MutableSet.cmti:./others/belt_MutableSet.mli \
+--project-file ./others/belt_MutableMap.cmti:./others/belt_MutableMap.mli \
+--project-file ./others/belt_Option.cmti:./others/belt_Option.mli \
+--project-file ./others/belt_Id.cmti:./others/belt_Id.mli \
+--project-file ./others/belt_Range.cmti:./others/belt_Range.mli \
+--project-file ./others/belt_Debug.cmt:./others/belt_Debug.ml \
+--project-file ./others/belt_HashMap.cmti:./others/belt_HashMap.mli \
+--project-file ./others/belt_HashMapInt.cmti:./others/belt_HashMapInt.mli \
+--project-file ./others/belt_SetDict.cmti:./others/belt_SetDict.mli \
+--project-file ./others/belt_HashMapString.cmti:./others/belt_HashMapString.mli \
+--project-file ./others/belt_SetInt.cmti:./others/belt_SetInt.mli \
+--project-file ./others/belt_HashSet.cmti:./others/belt_HashSet.mli \
+--project-file ./others/belt_SetString.cmti:./others/belt_SetString.mli \
+--project-file ./others/belt_HashSetInt.cmti:./others/belt_HashSetInt.mli \
+--project-file ./others/belt_SortArray.cmti:./others/belt_SortArray.mli \
+--project-file ./others/belt_HashSetString.cmti:./others/belt_HashSetString.mli \
+--project-file ./others/belt_SortArrayInt.cmti:./others/belt_SortArrayInt.mli \
+--project-file ./others/belt_SortArrayString.cmti:./others/belt_SortArrayString.mli \
+--project-file ./others/belt_List.cmti:./others/belt_List.mli \
+--project-file ./others/belt_MapDict.cmti:./others/belt_MapDict.mli \
+--project-file ./others/belt_MapInt.cmti:./others/belt_MapInt.mli \
+--project-file ./others/belt_MapString.cmti:./others/belt_MapString.mli \
+--project-file ./others/belt_MutableMapInt.cmti:./others/belt_MutableMapInt.mli \
+--project-file ./others/belt_MutableMapString.cmti:./others/belt_MutableMapString.mli \
+--project-file ./others/belt_MutableQueue.cmti:./others/belt_MutableQueue.mli \
+--project-file ./others/belt_MutableStack.cmti:./others/belt_MutableStack.mli \
+--project-file ./others/belt_MutableSetInt.cmti:./others/belt_MutableSetInt.mli \
+--project-file ./others/belt_MutableSetString.cmti:./others/belt_MutableSetString.mli

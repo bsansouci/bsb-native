@@ -45,10 +45,9 @@
     For higher order functions, it will be suffixed {b U} if it takes uncurried
     callback.
 
-    @example mli {[
-        val forEach  : 'a t -> ('a -> unit) -> unit
-        val forEachU : 'a t -> ('a -> unit [@bs]) -> unit 
-    ]}
+    [ val forEach  : 'a t -> ('a -> unit) -> unit ]
+    
+    [ val forEachU : 'a t -> ('a -> unit [@bs]) -> unit ]
 
     In general, uncurried version will be faster, but it may be less familiar to
     people who have a background in functional programming.
@@ -91,10 +90,9 @@
     Here, the compiler would infer [mySet1] and [mySet2] having different type, so
     e.g. a `merge` operation that tries to merge these two sets will correctly fail.
 
-    @example mli {[
-        val mySet1 : ((int * int), Comparable1.identity) t
-        val mySet2 : ((int * int), Comparable2.identity) t
-    ]}
+    [ val mySet1 : ((int * int), Comparable1.identity) t ]
+    
+    [ val mySet2 : ((int * int), Comparable2.identity) t ]
 
     [Comparable1.identity] and [Comparable2.identity] are not the same using our encoding scheme.
 
@@ -103,11 +101,11 @@
     In general, we provide a generic collection module, but also create specialized
     modules for commonly used data type. Take {i Belt.Set} for example, we provide:
 
-    {[
-        Belt.Set
-        Belt.Set.Int
-        Belt.Set.String 
-    ]}
+    [ Belt.Set ]
+    
+    [ Belt.Set.Int ]
+    
+    [ Belt.Set.String ]
 
     The specialized modules {i Belt.Set.Int}, {i Belt.Set.String} are in general more
     efficient.

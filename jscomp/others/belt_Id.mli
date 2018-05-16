@@ -26,10 +26,10 @@
 
 (** {!Belt.Id}
 
-    Provide utiliites to create identified comparators or hashes for
+    Provide utilities to create identified comparators or hashes for
     data structures used below.
 
-    It create a unique identifer per module of functions so that different data structures with slightly different
+    It create a unique identifier per module of functions so that different data structures with slightly different
     comparison functions won't mix.
 *)
 
