@@ -41,7 +41,7 @@ let merge_module_info_map acc sources : Bsb_db.t =
       | None, Some v ->  Some v
     ) acc  sources 
 
-
+let belt_bsppx_exe = "belt_bsppx.exe"
 let bsc_exe = "bsc.exe"
 let bsb_helper_exe = "bsb_helper.exe"
 let dash_i = "-I"
@@ -141,7 +141,7 @@ let output_ninja_and_namespace_map
 
   let bsc = bsc_dir // bsc_exe in   (* The path to [bsc.exe] independent of config  *)
   let bsb_helper = bsc_dir // bsb_helper_exe in (* The path to [bsb_heler.exe] *)
-  let ppx_flags = Bsb_build_util.flag_concat dash_ppx ppx_flags in
+  let ppx_flags = Bsb_build_util.flag_concat dash_ppx ((bsc_dir // belt_bsppx_exe) :: ppx_flags) in
   let bsc_flags =  String.concat Ext_string.single_space bsc_flags in
   let refmt_flags = String.concat Ext_string.single_space refmt_flags in
   (* Exclude JS because we always add -bs-super-errors for JS... *)
