@@ -65,9 +65,12 @@ all: $(RUNTIME)
 	$(COMPILER) -a -o lib.cmxa $(OBJECT_FILES)
 
 files:
-	cp ../belt_byte/*.ml ../belt_byte/*.mli ./
-	
-$(RUNTIME): ../../lib/belt_bsppx.exe
+	cp ../belt_byte/*.ml ../belt_byte/*.mli ../belt_byte/*.c ./
+
+stubs.o: stubs.c
+	$(COMPILER) -c $^
+
+$(RUNTIME): ../../lib/belt_bsppx.exe stubs.o
 
 OCAML_SRC_UTILS=../../vendor/ocaml/utils
 OCAML_SRC_PARSING=../../vendor/ocaml/parsing

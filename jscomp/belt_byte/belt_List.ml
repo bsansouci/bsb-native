@@ -64,21 +64,22 @@ type 'a t = 'a list
 module A = Belt_Array
 
 external mutableCell : 
-  'a -> 'a t ->  'a t = "#makemutablelist"
+  'a -> 'a t ->  'a t = "belt_makemutablelist"
 (* 
     [mutableCell x []] == [x]
     but tell the compiler that is a mutable cell, so it wont
     be mis-inlined in the future
      dont inline a binding to mutable cell, it is mutable
 *)
-external unsafeMutateTail : 
-  'a t -> 'a t -> unit = "#setfield1"    
+let unsafeMutateTail a b =
+  Obj.set_field (Obj.repr a) 1 (Obj.repr b)
+ 
 (*
    - the cell is not empty   
    - it is mutated
 *)  
-external unsafeTail :   
-  'a t -> 'a t = "%field1"
+let unsafeTail a = Obj.obj (Obj.field (Obj.repr a) 1)
+
 (*
    - the cell is not empty   
 *)

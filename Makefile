@@ -47,8 +47,8 @@ install:
 	$(STDLIB)/*.cm* $(STDLIB)/*.ml $(STDLIB)/*.mli \
 	$(OTHERS)/*.ml $(OTHERS)/*.mli  $(OTHERS)/*.cm* $(DEST)
 	mkdir -p $(DEST)/bytecode $(DEST)/native
-	cp $(BELT_BYTE)/*.ml $(BELT_BYTE)/*mli $(BELT_BYTE)/*.cm* $(DEST)/bytecode
-	cp $(BELT_NATIVE)/*.ml $(BELT_NATIVE)/*mli $(BELT_NATIVE)/*.cm* $(BELT_NATIVE)/*.a $(DEST)/native
+	cp $(BELT_BYTE)/*.ml $(BELT_BYTE)/*mli $(BELT_BYTE)/*.o $(BELT_BYTE)/*.cm* $(DEST)/bytecode
+	cp $(BELT_NATIVE)/*.ml $(BELT_NATIVE)/*mli $(BELT_NATIVE)/*.o $(BELT_NATIVE)/*.cm* $(BELT_NATIVE)/*.a $(DEST)/native
 	cp -r $(OCAML)/lib/ocaml/caml $(DEST)
 	
 

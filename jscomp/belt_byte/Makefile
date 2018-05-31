@@ -63,7 +63,10 @@ COMPFLAGS += $(BS_FLAGS)  -g -w +3-40-49 -warn-error A -bin-annot -ppx ../../lib
 all: $(RUNTIME)
 	$(COMPILER) -a -o lib.cma $(OBJECT_FILES)
 	
-$(RUNTIME): ../../lib/belt_bsppx.exe
+stubs.o: stubs.c
+	$(COMPILER) -c $^
+
+$(RUNTIME): ../../lib/belt_bsppx.exe stubs.o
 
 OCAML_SRC_UTILS=../../vendor/ocaml/utils
 OCAML_SRC_PARSING=../../vendor/ocaml/parsing

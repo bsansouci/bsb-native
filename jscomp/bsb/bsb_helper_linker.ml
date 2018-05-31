@@ -78,8 +78,11 @@ let link link_byte_or_native
       (fun acc dir ->
         (Ext_path.combine dir (Literals.library_file ^ suffix_library_files)) :: acc)
       [] includes in
+      (* We pass is_js:true here because that'll lead us to `bs-platform/lib/ocaml` which contains the JS artifacts, 
+         and for belt the artifacts are under `native` or `byte` there.  *)
     let artifacts_dir = Bsb_build_util.get_ocaml_lib_dir ~is_js:true cwd // nested in
     let library_files = (artifacts_dir // (Literals.library_file ^ suffix_library_files)) :: library_files in
+    let clibs = artifacts_dir // "stubs.o" :: clibs in
     (* This list will be reversed so we append the otherlibs object files at the end, and they'll end at the beginning. *)
     
     let suffix = begin match link_byte_or_native with
