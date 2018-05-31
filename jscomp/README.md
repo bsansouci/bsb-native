@@ -20,7 +20,7 @@ which js_of_ocaml # symlink this into your $PATH, maybe /usr/local/bin or someth
 opam switch 4.02.3+buckle-master
 eval `opam config env`
 opam install camlp4 ocp-ocamlres
-(cd vendor/ocaml && make world)
+(cd vendor/ocaml && make world && make install)
 (cd jscomp && BS_RELEASE_BUILD=true BS_PLAYGROUND=../../bucklescript-playground node repl.js)
 ```
 

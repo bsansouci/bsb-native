@@ -80,7 +80,7 @@ OCAML_SRC_TOOLS=../../vendor/ocaml/tools
 	make -C ../../lib belt_bsppx.exe
 
 clean::
-	rm -f *.cm*
+	rm -f *.cm* *.o
 	rm -f *~
 	rm -f  *.annot
 	rm -f *.rawlambda *.lam *.lambda *.map

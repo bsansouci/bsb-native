@@ -181,6 +181,5 @@ Platform specific files (like `MyModule_Native`) should be added to a folder tha
   }]
 }]
 ```
-
 **Note**: BuckleScript's conditional compilation doesn't work with Reason yet, so any usage of conditional compilation will have to be implemented in OCaml `.ml` files.
 
