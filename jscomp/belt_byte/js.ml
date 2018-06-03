@@ -2,7 +2,11 @@ type 'a null = 'a option
 
 type 'a undefined = 'a option
 
+(* Fucking stupid API *)
+
 external toOpt : 'a null -> 'a option = "%identity"
+
+external nullToOption : 'a null -> 'a option = "%identity"
 
 external fromOpt : 'a option -> 'a undefined = "%identity"
 
@@ -27,6 +31,7 @@ end
 module Null = struct
   type 'a t = 'a null
   
+  external toOption : 'a t -> 'a option = "%identity"
   external toOpt : 'a t -> 'a option = "%identity"
   external fromOpt : 'a option -> 'a t = "%identity"
   

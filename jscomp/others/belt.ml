@@ -251,8 +251,12 @@ module Option = Belt_Option
 
 module Result = Belt_Result
 
+#if COMPILE_TO_NATIVE = false then
+
 (** {!Belt.Debug}
 
     Utilities for set up debugging
 *)
 module Debug = Belt_Debug
+
+#end

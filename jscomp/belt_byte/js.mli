@@ -4,6 +4,8 @@ type 'a undefined
 
 val toOpt : 'a null -> 'a option
 
+val nullToOption : 'a null -> 'a option
+
 val fromOpt : 'a option -> 'a undefined
 
 val undefined : 'a undefined
@@ -36,6 +38,8 @@ module Null : sig
   val fromOpt : 'a option -> 'a t
   
   val toOpt : 'a t -> 'a option
+  
+  val toOption : 'a t -> 'a option
 end
 
 module Exn : sig
