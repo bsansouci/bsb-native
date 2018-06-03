@@ -153,11 +153,11 @@ let handleTdcl (tdcl : Parsetree.type_declaration) =
     (if is_private then
        setter_accessor
      else
-       let myPrims =
+       (* let myPrims =
         External_process.pval_prim_of_option_labels
           labels
           has_optional_field
-        in
+        in *)
        let myMaker =
          (* Val.mk  ~loc
            {loc; txt = type_name}
@@ -297,23 +297,43 @@ let handleTdclSig (tdcl : Parsetree.type_declaration) =
     tdcl, []
 
 let handleTdclsInStr tdcls =
-  let tdcls, code =
-    List.fold_right (fun tdcl (tdcls, sts)  ->
+  let tdcls, tdcls_sig, code, code_sig =
+    List.fold_right (fun tdcl (tdcls, tdcls_sig, sts, code_sig)  ->
         match handleTdcl tdcl with
-          _ntdcl, value_descriptions ->
-          tdcl::tdcls,
-          Ext_list.map_append (fun x -> x) value_descriptions sts
-
-      ) tdcls ([],[])  in
-  Str.type_ tdcls :: code
+        (* Don't use the new type declaration `_ntdcl` here because that's an abstract type, which is hiding the implementation
+           and we can't hide the implementation because the constructor, getters and setters need to know the implementation.
+           We'll hide all of that with a type signature on the whole module being included.
+           
+                    Ben - June 1st 2018
+            *)
+          ntdcl, value_descriptions ->
+          let open Parsetree in
+          (
+            tdcl::tdcls,
+            ntdcl::tdcls_sig,
+            Ext_list.map_append (fun x -> x) value_descriptions sts,
+            Ext_list.map_append (function
+              | {pstr_loc; pstr_desc = 
+                  Pstr_value (_, (({
+                    pvb_pat = {ppat_desc = Ppat_var name}; 
+                    pvb_expr = {pexp_desc = Pexp_constraint (_, typ)}
+                  } as _makerVb) :: []))
+                } -> 
+                Sig.value (Val.mk ~loc:pstr_loc name typ)
+              | _ -> Sig.type_ []
+              ) value_descriptions code_sig
+          )
+      ) tdcls ([],[], [], [])  in
+  
+  (Str.type_ tdcls :: code, Sig.type_ tdcls_sig :: code_sig)
 (* still need perform transformation for non-abstract type*)
 
 let handleTdclsInSig tdcls =
   let tdcls, code =
     List.fold_right (fun tdcl (tdcls, sts)  ->
         match handleTdclSig tdcl with
-          _ntdcl, value_descriptions ->
-          tdcl::tdcls,
+          ntdcl, value_descriptions ->
+          ntdcl::tdcls,
           Ext_list.map_append (fun x -> Sig.value x) value_descriptions sts
 
       ) tdcls ([],[])  in

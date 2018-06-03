@@ -61,7 +61,7 @@ let handleTdclsInSigi
       let  codes = Belt_ast_derive_abstract.handleTdclsInSig originalTdclsNewAttrs in
       Ast_signature.fuseAll ~loc
         (
-          (* Sig.include_ ~loc
+          Sig.include_ ~loc
             (Incl.mk ~loc
                (Mty.typeof_ ~loc
                   (Mod.constraint_ ~loc
@@ -71,7 +71,7 @@ let handleTdclsInSigi
                              Pstr_type newTdclsNewAttrs
                          }] )
                      (Mty.signature ~loc [])) ) )
-          ::  *)
+          :: 
           (* include module type of struct [processed_code for checking like invariance ]end *)
           self.signature self  codes
         )
@@ -105,14 +105,11 @@ let handleTdclsInStru
         pstr_loc = loc}
     in
     if Ast_payload.isAbstract actions then
-      let codes = Belt_ast_derive_abstract.handleTdclsInStr originalTdclsNewAttrs in
-      (* use [tdcls2] avoid nonterminating *)
-      Ast_structure.fuseAll ~loc
-        (
-          (* Ast_structure.constraint_ ~loc [newStr] [] *)
-          (* [include struct end : sig end] for error checking *)
-          self.structure self codes
-        )
+      let (codes, codes_sig) = Belt_ast_derive_abstract.handleTdclsInStr originalTdclsNewAttrs in
+      (* the codes_sig will hide the implementation of the type that is a record. *)
+      Ast_structure.constraint_ ~loc
+        (self.structure self codes)
+        (self.signature self codes_sig)
     else
       Ast_structure.fuseAll ~loc
         (newStr ::
