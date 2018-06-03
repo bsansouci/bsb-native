@@ -4,7 +4,7 @@ belt_Range.cmo : belt_Range.cmi
 belt_Id.cmo : belt_Id.cmi
 belt_Array.cmo : js_math.cmo js.cmo belt_Array.cmi
 belt_SortArrayInt.cmo : belt_Array.cmo belt_SortArrayInt.cmi
-belt_SortArrayString.cmo : belt_Array.cmo belt_SortArrayString.cmi
+belt_SortArrayString.cmo : belt_Array.cmo
 belt_internalBucketsType.cmo : js.cmo belt_Array.cmo \
     belt_internalBucketsType.cmi
 belt_internalSetBuckets.cmo : belt_internalBucketsType.cmo belt_Array.cmo \
@@ -84,7 +84,6 @@ belt_Range.cmi :
 belt_Id.cmi :
 belt_Array.cmi : js.cmi
 belt_SortArrayInt.cmi :
-belt_SortArrayString.cmi :
 belt_internalBucketsType.cmi : js.cmi
 belt_internalSetBuckets.cmi : belt_internalBucketsType.cmi
 belt_internalBuckets.cmi : belt_internalBucketsType.cmi
@@ -96,7 +95,7 @@ belt_HashMapInt.cmi :
 belt_HashMapString.cmi :
 belt_HashSet.cmi : belt_Id.cmi belt_HashSetString.cmi belt_HashSetInt.cmi
 belt_HashMap.cmi : belt_Id.cmi belt_HashMapString.cmi belt_HashMapInt.cmi
-belt_SortArray.cmi : belt_SortArrayString.cmi belt_SortArrayInt.cmi
+belt_SortArray.cmi : belt_SortArrayString.cmo belt_SortArrayInt.cmi
 belt_List.cmi :
 belt_internalAVLset.cmi : js.cmi belt_Id.cmi
 belt_internalAVLtree.cmi : js.cmi belt_Id.cmi

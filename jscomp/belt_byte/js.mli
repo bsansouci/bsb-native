@@ -6,6 +6,8 @@ val toOpt : 'a null -> 'a option
 
 val nullToOption : 'a null -> 'a option
 
+val undefinedToOption : 'a undefined -> 'a option
+
 val fromOpt : 'a option -> 'a undefined
 
 val undefined : 'a undefined

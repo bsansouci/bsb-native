@@ -8,6 +8,26 @@ LOCAL_SOURCE_LIST= \
 	caml_hash \
 	js
 
+GENERATED_SOURCE_LIST= \
+	belt_HashSetString \
+	belt_HashSetInt \
+	belt_HashMapString \
+	belt_HashMapInt \
+	belt_MapString \
+	belt_MapInt \
+	belt_MutableMapString \
+	belt_MutableMapInt \
+	belt_internalMapInt \
+	belt_internalMapString \
+	belt_internalSetInt \
+	belt_internalSetString \
+	belt_SetInt \
+	belt_SetString \
+	belt_MutableSetInt \
+	belt_MutableSetString \
+	belt_SortArrayInt \
+	belt_SortArrayString
+
 SOURCE_LIST= \
 	js_math \
 	belt_Option \
@@ -58,8 +78,8 @@ SOURCE_LIST= \
 # belt_BagM\
 # belt_dyn belt_dyn_lib\
 
-OBJECT_FILES := $(addsuffix .cmo, $(SOURCE_LIST)) $(addsuffix .cmo, $(LOCAL_SOURCE_LIST))
-RUNTIME := $(OBJECT_FILES) $(addsuffix .cmi, $(SOURCE_LIST)) $(addsuffix .cmi, $(LOCAL_SOURCE_LIST))
+OBJECT_FILES := $(addsuffix .cmo, $(LOCAL_SOURCE_LIST)) $(addsuffix .cmo, $(SOURCE_LIST))
+RUNTIME := $(addsuffix .cmi, $(SOURCE_LIST)) $(addsuffix .cmi, $(LOCAL_SOURCE_LIST)) $(OBJECT_FILES)
 
 INCLUDES=
 
@@ -69,8 +89,8 @@ COMPFLAGS += $(BS_FLAGS) -g -w +3-40-49 -warn-error A -bin-annot -ppx $(BELT_BSP
 all: $(RUNTIME)
 	$(COMPILER) -a -o lib.cma $(OBJECT_FILES)
 
-files: $(addprefix ../others/, $(addsuffix .ml, $(SOURCE_LIST))) $(addprefix ../others/, $(addsuffix .mli, $(filter-out js_math belt belt_internalSetString belt_internalSetInt belt_internalMapString belt_internalMapInt,$(SOURCE_LIST))))
-	cp $^ ./
+files: $(addprefix ../others/, $(addsuffix .ml, $(filter-out $(GENERATED_SOURCE_LIST), $(SOURCE_LIST)))) $(addprefix ../others/, $(addsuffix .mli, $(filter-out js_math belt $(GENERATED_SOURCE_LIST), $(SOURCE_LIST))))
+	cp -f $^ ./
 
 stubs.o: stubs.c
 	$(COMPILER) -c $^
@@ -87,6 +107,10 @@ OCAML_SRC_TOOLS=../../vendor/ocaml/tools
 ../../lib/belt_bsppx.exe:
 	make -C belt_bsppx force-snapshotml
 	make -C ../../lib belt_bsppx.exe
+
+test: all
+	$(COMPILER) $(INCLUDES) -ppx $(BELT_BSPPX) -custom stubs.o -g -w +3-40-49 -warn-error A -bin-annot lib.cma -o test.byte test.ml
+	./test.byte
 
 clean::
 	rm -f *.cm* *.o *.mlast* *.mliast* belt*.ml* js_math.ml

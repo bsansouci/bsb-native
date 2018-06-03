@@ -8,6 +8,8 @@ external toOpt : 'a null -> 'a option = "%identity"
 
 external nullToOption : 'a null -> 'a option = "%identity"
 
+external undefinedToOption : 'a null -> 'a option = "%identity"
+
 external fromOpt : 'a option -> 'a undefined = "%identity"
 
 let undefined = None
@@ -25,7 +27,7 @@ module Undefined = struct
   external return : 'a -> 'a t = "%identity"
   let empty = None
   external toOpt : 'a t -> 'a option = "%identity"
-  external fromOpt : 'a option -> 'a undefined = "%identity"
+  external fromOpt : 'a option -> 'a t = "%identity"
 end
 
 module Null = struct
