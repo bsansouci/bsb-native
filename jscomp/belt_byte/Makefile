@@ -105,7 +105,6 @@ OCAML_SRC_DRIVER=../../vendor/ocaml/driver
 OCAML_SRC_TOOLS=../../vendor/ocaml/tools
 
 ../../lib/belt_bsppx.exe:
-	make -C belt_bsppx all
 	make -C ../../lib belt_bsppx.exe
 
 test: all
