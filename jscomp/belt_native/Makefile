@@ -91,7 +91,7 @@ all: $(RUNTIME)
 
 files: $(addprefix ../others/, $(addsuffix .ml, $(filter-out $(GENERATED_SOURCE_LIST), $(SOURCE_LIST)))) $(addprefix ../others/, $(addsuffix .mli, $(filter-out js_math belt $(GENERATED_SOURCE_LIST), $(SOURCE_LIST))))
 	cp $^ ./
-	cp ../belt_byte/js.ml ../belt_byte/js.mli ./
+	cp ../belt_byte/js.ml ../belt_byte/js.mli ../belt_byte/test.ml ./
 
 stubs.o: stubs.c
 	$(COMPILER) -c $^
@@ -110,7 +110,7 @@ OCAML_SRC_TOOLS=../../vendor/ocaml/tools
 	make -C ../../lib belt_bsppx.exe
 
 test: all
-	$(COMPILER) $(INCLUDES) -ppx $(BELT_BSPPX) stubs.o -g -w +3-40-49 -warn-error A -bin-annot lib.cma -o test.byte test.ml
+	$(COMPILER) $(INCLUDES) -ppx $(BELT_BSPPX) stubs.o -g -w +3-40-49 -warn-error A -bin-annot lib.cmxa -o test.byte test.ml
 	./test.byte
 
 clean::
