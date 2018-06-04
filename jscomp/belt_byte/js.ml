@@ -2,8 +2,6 @@ type 'a null = 'a option
 
 type 'a undefined = 'a option
 
-(* Fucking stupid API *)
-
 external toOpt : 'a null -> 'a option = "%identity"
 
 external nullToOption : 'a null -> 'a option = "%identity"
