@@ -135,6 +135,7 @@ end
 let tony = Example.foo ~name:"Tony" ~age:27
 let _ = print_endline (Example.name tony)
 let aa: int Js.undefined array = Belt.Array.makeUninitialized 1
+let _ = print_endline @@ "size: " ^ (string_of_int (Belt.Array.length aa))
 let _ =
   Belt.Array.forEachU aa
     ((fun x  ->

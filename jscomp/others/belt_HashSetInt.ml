@@ -3,7 +3,7 @@ type key = int
 type seed = int
 
 
-# 41 "hashset.cppo.ml"
+# 39 "hashset.cppo.ml"
 external caml_hash_mix_int : seed -> int -> seed  = "caml_hash_mix_int"
 external final_mix : seed -> seed = "caml_hash_final_mix"
 let hash (s : key) = 
@@ -11,7 +11,7 @@ let hash (s : key) =
 
 
 
-# 52 "hashset.cppo.ml"
+# 50 "hashset.cppo.ml"
 module N = Belt_internalSetBuckets
 module C = Belt_internalBucketsType
 module A = Belt_Array

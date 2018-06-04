@@ -30,9 +30,7 @@ type seed = int
 #ifdef COMPILE_TO_NATIVE
 
 let caml_hash_mix_int = Caml_hash.caml_hash_mix_int
-(* external caml_hash_mix_int : seed -> int -> seed  = "caml_hash_mix_int" *)
 let final_mix = Caml_hash.caml_hash_final_mix
-(* external final_mix : seed -> seed = "caml_hash_final_mix" *)
 let hash (s : key) = 
   Nativeint.to_int (final_mix (caml_hash_mix_int Nativeint.zero (Nativeint.of_int s)))
 
