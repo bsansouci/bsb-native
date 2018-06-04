@@ -174,32 +174,32 @@ belt_internalSetString.ml: ../others/internal_set.cppo.ml
 	cppo -D COMPILE_TO_NATIVE -D TYPE_STRING $^ > $@
 
 belt_SetInt.ml: ../others/set.cppo.ml
-	cppo -D TYPE_INT $^ > $@
+	cppo -D COMPILE_TO_NATIVE -D TYPE_INT $^ > $@
 belt_SetString.ml: ../others/set.cppo.ml
-	cppo -D TYPE_STRING $^ > $@
+	cppo -D COMPILE_TO_NATIVE -D TYPE_STRING $^ > $@
 
 belt_SetInt.mli: ../others/set.cppo.mli
-	cppo -D TYPE_INT $^ > $@
+	cppo -D COMPILE_TO_NATIVE -D TYPE_INT $^ > $@
 belt_SetString.mli: ../others/set.cppo.mli
-	cppo -D TYPE_STRING $^ > $@
+	cppo -D COMPILE_TO_NATIVE -D TYPE_STRING $^ > $@
 
 belt_MutableSetInt.ml: ../others/setm.cppo.ml
-	cppo -D TYPE_INT $^ > $@
+	cppo -D COMPILE_TO_NATIVE -D TYPE_INT $^ > $@
 belt_MutableSetString.ml: ../others/setm.cppo.ml
-	cppo -D TYPE_STRING $^ > $@
+	cppo -D COMPILE_TO_NATIVE -D TYPE_STRING $^ > $@
 belt_MutableSetInt.mli: ../others/setm.cppo.mli
-	cppo -D TYPE_INT $^ > $@
+	cppo -D COMPILE_TO_NATIVE -D TYPE_INT $^ > $@
 belt_MutableSetString.mli: ../others/setm.cppo.mli
-	cppo -D TYPE_STRING $^ > $@
+	cppo -D COMPILE_TO_NATIVE -D TYPE_STRING $^ > $@
 
 belt_SortArrayInt.ml : ../others/sort.cppo.ml
-	cppo -D TYPE_INT $^ >$@
+	cppo -D COMPILE_TO_NATIVE -D TYPE_INT $^ >$@
 belt_SortArrayString.ml : ../others/sort.cppo.ml
-	cppo -D TYPE_STRING $^ >$@
+	cppo -D COMPILE_TO_NATIVE -D TYPE_STRING $^ >$@
 belt_SortArrayInt.mli : ../others/sort.cppo.mli
-	cppo -D TYPE_INT $^ > $@
+	cppo -D COMPILE_TO_NATIVE -D TYPE_INT $^ > $@
 belt_gSortArrayString.mli : ../others/sort.cppo.mli
-	cppo -D TYPE_STRING $^ > $@
+	cppo -D COMPILE_TO_NATIVE -D TYPE_STRING $^ > $@
 endif	
 
 .mli.cmi:
@@ -207,13 +207,6 @@ endif
 .ml.cmo:
 	COMPILE_TO_NATIVE=true $(COMPILER) $(INCLUDES) -pp $(BSPP) $(COMPFLAGS) -o $@ -c $<
 
-
-# %.cmi: %.mli
-# 	$(eval INPUT := $(word 1,$^))
-# 	$(COMPILER) $(INCLUDES) $(COMPFLAGS) -pp '../../lib/bspp.exe -bs-D COMPILE_TO_NATIVE=true' -o $@ -c "$(INPUT)"
-# %.cmo: %.ml
-# 	$(eval INPUT := $(word 1,$^))
-# 	$(COMPILER) $(INCLUDES) $(COMPFLAGS) -pp '../../lib/bspp.exe -bs-D COMPILE_TO_NATIVE=true' -o $@ -c "$(INPUT)"
 
 
 -include .depend
