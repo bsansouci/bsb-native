@@ -143,3 +143,6 @@ let _ =
         | None  -> print_endline "YUP"
         | ((Some (x))[@explicit_arity ]) -> assert false)[@bs ])
 let aa = Belt.Array.mapWithIndex aa (fun i  -> fun _  -> i)
+
+let aaa = Belt.List.concat [1.0; 2.0] [3.0; 4.0]
+let _ = Belt.List.forEach aaa (fun x -> print_endline @@ "Number: " ^ (string_of_float x))
