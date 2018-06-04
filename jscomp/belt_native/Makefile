@@ -1,10 +1,35 @@
 include ../Makefile.shared
 
 COMPILER=ocamlopt.opt
+BSPP=../../lib/bspp.exe
+BELT_BSPPX=../../lib/belt_bsppx.exe
 
-SOURCE_LIST= caml_hash \
+LOCAL_SOURCE_LIST= \
+	caml_hash \
+	js
+
+GENERATED_SOURCE_LIST= \
+	belt_HashSetString \
+	belt_HashSetInt \
+	belt_HashMapString \
+	belt_HashMapInt \
+	belt_MapString \
+	belt_MapInt \
+	belt_MutableMapString \
+	belt_MutableMapInt \
+	belt_internalMapInt \
+	belt_internalMapString \
+	belt_internalSetInt \
+	belt_internalSetString \
+	belt_SetInt \
+	belt_SetString \
+	belt_MutableSetInt \
+	belt_MutableSetString \
+	belt_SortArrayInt \
+	belt_SortArrayString
+
+SOURCE_LIST= \
 	js_math \
-	js \
 	belt_Option \
 	belt_Range \
 	belt_Id \
@@ -37,6 +62,7 @@ SOURCE_LIST= caml_hash \
 	belt_MapDict \
 	belt_MapString \
 	belt_MapInt \
+	belt_Result \
 	belt_MutableMapInt \
 	belt_MutableMapString \
 	belt_SetInt \
@@ -46,26 +72,26 @@ SOURCE_LIST= caml_hash \
 	belt_Map \
 	belt
 
-
-	# belt_internalSet\
-	# belt_internalMutableAVL\
+# belt_internalSet\
+# belt_internalMutableAVL\
 # belt_Bag\
 # belt_BagM\
 # belt_dyn belt_dyn_lib\
 
-OBJECT_FILES := $(addsuffix .cmx, $(SOURCE_LIST))
-RUNTIME := $(OBJECT_FILES) $(addsuffix .cmi, $(SOURCE_LIST))
+OBJECT_FILES := $(addsuffix .cmx, $(LOCAL_SOURCE_LIST)) $(addsuffix .cmx, $(SOURCE_LIST))
+RUNTIME := $(addsuffix .cmi, $(SOURCE_LIST)) $(addsuffix .cmi, $(LOCAL_SOURCE_LIST)) $(OBJECT_FILES)
 
 INCLUDES=
 
 BS_FLAGS=  $(BS_COMMON_FLAGS)
-COMPFLAGS += $(BS_FLAGS)  -g -w +3-40-49 -warn-error A -bin-annot -ppx ../../lib/belt_bsppx.exe
+COMPFLAGS += $(BS_FLAGS) -g -w +3-40-49 -warn-error A -bin-annot -ppx $(BELT_BSPPX)
 
 all: $(RUNTIME)
 	$(COMPILER) -a -o lib.cmxa $(OBJECT_FILES)
 
-files:
-	cp ../belt_byte/*.ml ../belt_byte/*.mli ../belt_byte/*.c ./
+files: $(addprefix ../others/, $(addsuffix .ml, $(filter-out $(GENERATED_SOURCE_LIST), $(SOURCE_LIST)))) $(addprefix ../others/, $(addsuffix .mli, $(filter-out js_math belt $(GENERATED_SOURCE_LIST), $(SOURCE_LIST))))
+	cp $^ ./
+	cp ../belt_byte/js.ml ../belt_byte/js.mli ./
 
 stubs.o: stubs.c
 	$(COMPILER) -c $^
@@ -83,12 +109,16 @@ OCAML_SRC_TOOLS=../../vendor/ocaml/tools
 	make -C belt_bsppx force-snapshotml
 	make -C ../../lib belt_bsppx.exe
 
+test: all
+	$(COMPILER) $(INCLUDES) -ppx $(BELT_BSPPX) stubs.o -g -w +3-40-49 -warn-error A -bin-annot lib.cma -o test.byte test.ml
+	./test.byte
+
 clean::
-	rm -f *.cm* *.o
+	rm -f *.cm* *.o *.mlast* *.mliast* belt*.ml* js_math.ml *.cppo.ml* *.a
 	rm -f *~
 	rm -f  *.annot
 	rm -f *.rawlambda *.lam *.lambda *.map
-	rm -rf belt_HashSetString.ml belt_HashSetString.mli belt_HashSetInt.ml  belt_HashSetInt.mli \
+	rm -rf js.ml js.mli belt_HashSetString.ml belt_HashSetString.mli belt_HashSetInt.ml  belt_HashSetInt.mli \
 	belt_HashMapInt.ml belt_HashMapInt.mli  belt_HashMapString.ml belt_HashMapString.mli \
 	belt_MapInt.ml belt_MapInt.mli  belt_MapString.ml belt_MapString.mli \
 	belt_internalSetInt.ml belt_internalSetString.ml \
@@ -103,87 +133,87 @@ clean::
 	belt_MutableMapInt.mli belt_MutableMapInt.ml
 
 ifndef BS_RELEASE_BUILD
-belt_HashSetString.ml: hashset.cppo.ml
-	cppo -D TYPE_STRING $^ > $@
-belt_HashSetInt.ml: hashset.cppo.ml
-	cppo -D TYPE_INT $^ > $@
-belt_HashSetString.mli: hashset.cppo.mli
-	cppo -D TYPE_STRING $^ > $@
-belt_HashSetInt.mli: hashset.cppo.mli
-	cppo -D TYPE_INT $^ > $@
-belt_HashMapString.ml: hashmap.cppo.ml
-	cppo -D TYPE_STRING $^ > $@
-belt_HashMapInt.ml: hashmap.cppo.ml
-	cppo -D TYPE_INT $^ > $@
-belt_HashMapString.mli: hashmap.cppo.mli
-	cppo -D TYPE_STRING $^ > $@
-belt_HashMapInt.mli: hashmap.cppo.mli
-	cppo -D TYPE_INT $^ > $@
-belt_MapString.ml: map.cppo.ml
-	cppo -D TYPE_STRING $^ > $@
-belt_MapInt.ml: map.cppo.ml
-	cppo -D TYPE_INT $^ > $@
-belt_MapString.mli: map.cppo.mli
-	cppo -D TYPE_STRING $^ > $@
-belt_MapInt.mli: map.cppo.mli
-	cppo -D TYPE_INT $^ > $@
-belt_MutableMapString.mli: mapm.cppo.mli
-	cppo -D TYPE_STRING $^ > $@
-belt_MutableMapInt.mli: mapm.cppo.mli
-	cppo -D TYPE_INT $^ > $@
-belt_MutableMapString.ml: mapm.cppo.ml
-	cppo -D TYPE_STRING $^ > $@
-belt_MutableMapInt.ml: mapm.cppo.ml
-	cppo -D TYPE_INT $^ > $@
-belt_internalMapInt.ml : internal_map.cppo.ml
-	cppo -D TYPE_INT $^ > $@
-belt_internalMapString.ml : internal_map.cppo.ml
-	cppo -D TYPE_STRING $^ > $@
-belt_internalSetInt.ml: internal_set.cppo.ml
-	cppo -D TYPE_INT $^ > $@
-belt_internalSetString.ml: internal_set.cppo.ml
-	cppo -D TYPE_STRING $^ > $@
+belt_HashSetString.ml: ../others/hashset.cppo.ml
+	cppo -D COMPILE_TO_NATIVE -D TYPE_STRING $^ > $@
+belt_HashSetInt.ml: ../others/hashset.cppo.ml
+	cppo -D COMPILE_TO_NATIVE -D TYPE_INT $^ > $@
+belt_HashSetString.mli: ../others/hashset.cppo.mli
+	cppo -D COMPILE_TO_NATIVE -D TYPE_STRING $^ > $@
+belt_HashSetInt.mli: ../others/hashset.cppo.mli
+	cppo -D COMPILE_TO_NATIVE -D TYPE_INT $^ > $@
+belt_HashMapString.ml: ../others/hashmap.cppo.ml
+	cppo -D COMPILE_TO_NATIVE -D TYPE_STRING $^ > $@
+belt_HashMapInt.ml: ../others/hashmap.cppo.ml
+	cppo -D COMPILE_TO_NATIVE -D TYPE_INT $^ > $@
+belt_HashMapString.mli: ../others/hashmap.cppo.mli
+	cppo -D COMPILE_TO_NATIVE -D TYPE_STRING $^ > $@
+belt_HashMapInt.mli: ../others/hashmap.cppo.mli
+	cppo -D COMPILE_TO_NATIVE -D TYPE_INT $^ > $@
+belt_MapString.ml: ../others/map.cppo.ml
+	cppo -D COMPILE_TO_NATIVE -D TYPE_STRING $^ > $@
+belt_MapInt.ml: ../others/map.cppo.ml
+	cppo -D COMPILE_TO_NATIVE -D TYPE_INT $^ > $@
+belt_MapString.mli: ../others/map.cppo.mli
+	cppo -D COMPILE_TO_NATIVE -D TYPE_STRING $^ > $@
+belt_MapInt.mli: ../others/map.cppo.mli
+	cppo -D COMPILE_TO_NATIVE -D TYPE_INT $^ > $@
+belt_MutableMapString.mli: ../others/mapm.cppo.mli
+	cppo -D COMPILE_TO_NATIVE -D TYPE_STRING $^ > $@
+belt_MutableMapInt.mli: ../others/mapm.cppo.mli
+	cppo -D COMPILE_TO_NATIVE -D TYPE_INT $^ > $@
+belt_MutableMapString.ml: ../others/mapm.cppo.ml
+	cppo -D COMPILE_TO_NATIVE -D TYPE_STRING $^ > $@
+belt_MutableMapInt.ml: ../others/mapm.cppo.ml
+	cppo -D COMPILE_TO_NATIVE -D TYPE_INT $^ > $@
+belt_internalMapInt.ml : ../others/internal_map.cppo.ml
+	cppo -D COMPILE_TO_NATIVE -D TYPE_INT $^ > $@
+belt_internalMapString.ml : ../others/internal_map.cppo.ml
+	cppo -D COMPILE_TO_NATIVE -D TYPE_STRING $^ > $@
+belt_internalSetInt.ml: ../others/internal_set.cppo.ml
+	cppo -D COMPILE_TO_NATIVE -D TYPE_INT $^ > $@
+belt_internalSetString.ml: ../others/internal_set.cppo.ml
+	cppo -D COMPILE_TO_NATIVE -D TYPE_STRING $^ > $@
 
-belt_SetInt.ml: set.cppo.ml
-	cppo -D TYPE_INT $^ > $@
-belt_SetString.ml: set.cppo.ml
-	cppo -D TYPE_STRING $^ > $@
+belt_SetInt.ml: ../others/set.cppo.ml
+	cppo -D COMPILE_TO_NATIVE -D TYPE_INT $^ > $@
+belt_SetString.ml: ../others/set.cppo.ml
+	cppo -D COMPILE_TO_NATIVE -D TYPE_STRING $^ > $@
 
-belt_SetInt.mli: set.cppo.mli
-	cppo -D TYPE_INT $^ > $@
-belt_SetString.mli: set.cppo.mli
-	cppo -D TYPE_STRING $^ > $@
+belt_SetInt.mli: ../others/set.cppo.mli
+	cppo -D COMPILE_TO_NATIVE -D TYPE_INT $^ > $@
+belt_SetString.mli: ../others/set.cppo.mli
+	cppo -D COMPILE_TO_NATIVE -D TYPE_STRING $^ > $@
 
-belt_MutableSetInt.ml: setm.cppo.ml
-	cppo -D TYPE_INT $^ > $@
-belt_MutableSetString.ml: setm.cppo.ml
-	cppo -D TYPE_STRING $^ > $@
-belt_MutableSetInt.mli: setm.cppo.mli
-	cppo -D TYPE_INT $^ > $@
-belt_MutableSetString.mli: setm.cppo.mli
-	cppo -D TYPE_STRING $^ > $@
+belt_MutableSetInt.ml: ../others/setm.cppo.ml
+	cppo -D COMPILE_TO_NATIVE -D TYPE_INT $^ > $@
+belt_MutableSetString.ml: ../others/setm.cppo.ml
+	cppo -D COMPILE_TO_NATIVE -D TYPE_STRING $^ > $@
+belt_MutableSetInt.mli: ../others/setm.cppo.mli
+	cppo -D COMPILE_TO_NATIVE -D TYPE_INT $^ > $@
+belt_MutableSetString.mli: ../others/setm.cppo.mli
+	cppo -D COMPILE_TO_NATIVE -D TYPE_STRING $^ > $@
 
-belt_SortArrayInt.ml : sort.cppo.ml
-	cppo -D TYPE_INT $^ >$@
-belt_SortArrayString.ml : sort.cppo.ml
-	cppo -D TYPE_STRING $^ >$@
-belt_SortArrayInt.mli : sort.cppo.mli
-	cppo -D TYPE_INT $^ > $@
-belt_gSortArrayString.mli : sort.cppo.mli
-	cppo -D TYPE_STRING $^ > $@
+belt_SortArrayInt.ml : ../others/sort.cppo.ml
+	cppo -D COMPILE_TO_NATIVE -D TYPE_INT $^ >$@
+belt_SortArrayString.ml : ../others/sort.cppo.ml
+	cppo -D COMPILE_TO_NATIVE -D TYPE_STRING $^ >$@
+belt_SortArrayInt.mli : ../others/sort.cppo.mli
+	cppo -D COMPILE_TO_NATIVE -D TYPE_INT $^ > $@
+belt_gSortArrayString.mli : ../others/sort.cppo.mli
+	cppo -D COMPILE_TO_NATIVE -D TYPE_STRING $^ > $@
 endif	
 
-
 .mli.cmi:
-	$(COMPILER) $(INCLUDES) $(COMPFLAGS)  -c $<
+	COMPILE_TO_NATIVE=true $(COMPILER) $(INCLUDES) -pp $(BSPP) $(COMPFLAGS) -o $@ -c $<
 .ml.cmx:
-	$(COMPILER) $(INCLUDES) $(COMPFLAGS)  -c $<
+	COMPILE_TO_NATIVE=true $(COMPILER) $(INCLUDES) -pp $(BSPP) $(COMPFLAGS) -o $@ -c $<
+
 
 
 -include .depend
 
-ML_SOURCES=$(addsuffix .ml, $(SOURCE_LIST))
-MLI_SOURCES=$(addsuffix .mli, $(SOURCE_LIST))
+ML_SOURCES=$(addsuffix .ml, $(SOURCE_LIST)) $(addsuffix .ml, $(LOCAL_SOURCE_LIST)) 
+MLI_SOURCES=$(addsuffix .mli, $(SOURCE_LIST)) $(addsuffix .mli, $(LOCAL_SOURCE_LIST)) 
 
 depend:
-	$(CAMLDEP) -native $(INCLUDES) $(ML_SOURCES) $(MLI_SOURCES) >.depend
+	COMPILE_TO_NATIVE=true $(CAMLDEP) -pp $(BSPP) -ppx $(BELT_BSPPX) -native $(INCLUDES) $(ML_SOURCES) $(MLI_SOURCES) > .depend
