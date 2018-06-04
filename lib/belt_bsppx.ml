@@ -18525,13 +18525,9 @@ let handleTdclsInStru
     in
     if Ast_payload.isAbstract actions then
       let (codes, codes_sig) = Belt_ast_derive_abstract.handleTdclsInStr originalTdclsNewAttrs in
-      (* use [tdcls2] avoid nonterminating *)
+      (* the codes_sig will hide the implementation of the type that is a record. *)
       Ast_structure.constraint_ ~loc
-        (
-          (* Ast_structure.constraint_ ~loc [newStr] []
-          :: (* [include struct end : sig end] for error checking *) *)
-          self.structure self codes
-        )
+        (self.structure self codes)
         (self.signature self codes_sig)
     else
       Ast_structure.fuseAll ~loc
