@@ -27,7 +27,7 @@ module Undefined : sig
   
   val fromOpt : 'a option -> 'a t
   
-  val toOpt : 'a t -> 'a option
+  val toOption : 'a t -> 'a option
 end
 
 module Null : sig
@@ -38,8 +38,6 @@ module Null : sig
   val getUnsafe : 'a t -> 'a
   
   val fromOpt : 'a option -> 'a t
-  
-  val toOpt : 'a t -> 'a option
   
   val toOption : 'a t -> 'a option
 end
