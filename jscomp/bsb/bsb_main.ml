@@ -217,26 +217,28 @@ let () =
   | [| _; "-backend"; _ |] 
   | [| _ |] ->  (* specialize this path [bsb.exe] which is used in watcher *)
     begin
-      (* Quickly parse the backend argument to make sure we're building to the right target. *)
-      Arg.parse bsb_main_flags handle_anonymous_arg usage;
-
-      let backend = get_backend () in
-
+      let backend = if Array.length Sys.argv = 3 then begin match Array.get Sys.argv 2 with
+        | "js"       -> Bsb_config_types.Js
+        | "native"   -> Bsb_config_types.Native
+        | "bytecode" -> Bsb_config_types.Bytecode
+        | _ -> failwith "-backend should be one of: 'js', 'bytecode' or 'native'."
+      end else Bsb_config_types.Js in
+      
       (* print_endline __LOC__; *)
       let main_config = 
         Bsb_config_parse.interpret_json 
           ~override_package_specs:None
           ~bsc_dir
           ~generate_watch_metadata:true
-          ~not_dev:true
+          ~not_dev:false
           cwd in
       let _did_regen =  
         Bsb_ninja_regen.regenerate_ninja 
           ~is_top_level:true
           ~not_dev:false 
           ~root_project_dir:cwd
-          ~forced:true
-          ~build_library:!build_library
+          ~forced:false
+          ~build_library:None
           ~backend
           ~main_config
           cwd bsc_dir ocaml_dir
