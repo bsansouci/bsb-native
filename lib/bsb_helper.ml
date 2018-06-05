@@ -5103,6 +5103,7 @@ let build_script = "build-script"
 let allowed_build_kinds = "allowed-build-kinds"
 let ocamlfind_dependencies = "ocamlfind-dependencies"
 let ocaml_flags = "ocaml-flags"
+let ocaml_linker_flags = "ocaml-linker-flags"
 let ocaml_dependencies = "ocaml-dependencies"
 let output_name = "output-name"
 let ppx = "ppx"
@@ -8260,6 +8261,7 @@ val link : link_t ->
   main_module:string -> 
   batch_files:string list -> 
   clibs:string list -> 
+  flags:string list -> 
   includes:string list -> 
   ocamlfind_packages:string list -> 
   bs_super_errors:bool -> 
@@ -8305,6 +8307,7 @@ let link link_byte_or_native
   ~main_module
   ~batch_files
   ~clibs
+  ~flags
   ~includes
   ~ocamlfind_packages
   ~bs_super_errors
@@ -8430,6 +8433,7 @@ let link link_byte_or_native
       let list_of_args = (compiler :: "-g"
         :: (if bs_super_errors then ["-bs-super-errors"] else [])) 
         @ warning_command
+        @ flags
         (* We filter out -thread because that'll lead to a linker warning like 
           "ld: warning: directory not found for option '-L/path/of/machine/where/artifacts/where/compiled" 
         *)
@@ -8448,6 +8452,7 @@ let link link_byte_or_native
         :: (if bs_super_errors then ["-passopt"; "-bs-super-errors"] else []) 
         @ ("-linkpkg" :: ocamlfind_packages)
         @ warning_command
+        @ flags
         @ ("-g" :: "-o" :: output_file :: all_object_files) in
       
       if verbose then
@@ -8493,6 +8498,7 @@ val pack : pack_t ->
   main_module:string option ->
   batch_files:string list -> 
   includes:string list -> 
+  flags:string list -> 
   ocamlfind_packages:string list -> 
   bs_super_errors:bool -> 
   namespace:string option ->
@@ -8546,6 +8552,7 @@ let pack pack_byte_or_native
   ~main_module
   ~batch_files
   ~includes
+  ~flags
   ~ocamlfind_packages
   ~bs_super_errors
   ~namespace
@@ -8645,6 +8652,7 @@ let pack pack_byte_or_native
       let list_of_args = (compiler :: "-a" :: "-g" 
         :: (if bs_super_errors then ["-bs-super-errors"] else []) )
         @ warning_command
+        @ flags
         @ "-o" :: (Literals.library_file ^ suffix_library_files) :: includes 
         @ all_object_files in
       
@@ -8660,6 +8668,7 @@ let pack pack_byte_or_native
       let list_of_args = ("ocamlfind" :: compiler :: "-a" :: "-g" :: ocamlfind_packages) 
       @ ((if bs_super_errors then ["-passopt"; "-bs-super-errors"] else []))
       @ warning_command
+      @ flags
       @  ("-o" :: (Literals.library_file ^ suffix_library_files) :: includes @ all_object_files) in
       
       if verbose then
@@ -8764,6 +8773,9 @@ let add_include =
 let clibs = ref []
 let add_clib file = clibs := file :: !clibs 
 
+let flags = ref []
+let add_flag flag = flags := flag :: !flags 
+
 let batch_files = ref []
 let collect_file name =
   batch_files := name :: !batch_files
@@ -8794,6 +8806,7 @@ let link link_byte_or_native =
       ~includes:!includes
       ~batch_files:!batch_files
       ~clibs:(List.rev !clibs)
+      ~flags:(List.rev !flags)
       ~ocamlfind_packages:!ocamlfind_packages
       ~bs_super_errors:!bs_super_errors
       ~namespace:!namespace
@@ -8810,6 +8823,7 @@ let pack link_byte_or_native =
     ~main_module:!main_module
     ~includes:!includes
     ~batch_files:!batch_files
+    ~flags:(List.rev !flags)
     ~ocamlfind_packages:!ocamlfind_packages
     ~bs_super_errors:!bs_super_errors
     ~namespace:!namespace
@@ -8907,6 +8921,9 @@ let () =
     
     "-add-clib", (Arg.String add_clib),
     " adds a .a library file to be linked into the final executable";
+    
+    "-add-flag", (Arg.String add_flag),
+    " passes flag to underlaying ocaml compiler for packing/linking phase.";
     
     "-add-ocaml-dependency", (Arg.String add_ocaml_dependencies),
     " Add a dependency on otherlibs or compiler-libs.";

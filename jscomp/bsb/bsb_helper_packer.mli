@@ -28,6 +28,7 @@ val pack : pack_t ->
   main_module:string option ->
   batch_files:string list -> 
   includes:string list -> 
+  flags:string list -> 
   ocamlfind_packages:string list -> 
   bs_super_errors:bool -> 
   namespace:string option ->

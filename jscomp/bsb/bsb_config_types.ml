@@ -97,5 +97,6 @@ type t =
     allowed_build_kinds: compilation_kind_t list;
     ocamlfind_dependencies: string list;
     ocaml_flags: string list;
+    ocaml_linker_flags: string list;
     ocaml_dependencies: string list;
   }

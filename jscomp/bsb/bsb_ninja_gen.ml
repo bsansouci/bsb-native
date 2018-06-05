@@ -88,6 +88,7 @@ let output_ninja_and_namespace_map
       allowed_build_kinds;
       ocamlfind_dependencies;
       ocaml_flags;
+      ocaml_linker_flags;
       ocaml_dependencies;
     } as config : Bsb_config_types.t)
   =
@@ -130,7 +131,7 @@ let output_ninja_and_namespace_map
     | "threads" -> "-thread " ^ acc
     | _ -> acc
   ) ocaml_flags ocaml_dependencies) in
-
+  let ocaml_linker_flags = Bsb_build_util.flag_concat "-add-flag" ocaml_linker_flags in
   let bs_super_errors = if main_bs_super_errors && not use_ocamlfind then "-bs-super-errors" else "" in
   let build_artifacts_dir = Bsb_build_util.get_build_artifacts_location cwd in
   let oc = open_out_bin (build_artifacts_dir // Bsb_config.lib_bs // nested // Literals.build_ninja) in
@@ -246,6 +247,7 @@ let output_ninja_and_namespace_map
           Bsb_ninja_global_vars.build_artifacts_dir, build_artifacts_dir;
           
           Bsb_ninja_global_vars.ocaml_flags, ocaml_flags;
+          Bsb_ninja_global_vars.ocaml_linker_flags, ocaml_linker_flags;
           Bsb_ninja_global_vars.bs_super_errors_ocamlfind, 
           (* Jumping through hoops. When ocamlfind is used we need to pass the argument 
              to the underlying compiler and not ocamlfind, so we use -passopt. Otherwise we don't.

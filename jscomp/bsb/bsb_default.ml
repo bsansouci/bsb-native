@@ -32,6 +32,8 @@ let bsc_flags =
 
 let ocaml_flags = ["-no-alias-deps"]
 
+let ocaml_linker_flags = []
+
 let refmt_flags = ["--print"; "binary"]
 
 let refmt_v3 = "refmt.exe"

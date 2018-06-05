@@ -30,6 +30,7 @@ let link link_byte_or_native
   ~main_module
   ~batch_files
   ~clibs
+  ~flags
   ~includes
   ~ocamlfind_packages
   ~bs_super_errors
@@ -155,6 +156,7 @@ let link link_byte_or_native
       let list_of_args = (compiler :: "-g"
         :: (if bs_super_errors then ["-bs-super-errors"] else [])) 
         @ warning_command
+        @ flags
         (* We filter out -thread because that'll lead to a linker warning like 
           "ld: warning: directory not found for option '-L/path/of/machine/where/artifacts/where/compiled" 
         *)
@@ -173,6 +175,7 @@ let link link_byte_or_native
         :: (if bs_super_errors then ["-passopt"; "-bs-super-errors"] else []) 
         @ ("-linkpkg" :: ocamlfind_packages)
         @ warning_command
+        @ flags
         @ ("-g" :: "-o" :: output_file :: all_object_files) in
       
       if verbose then

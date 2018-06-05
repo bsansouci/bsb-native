@@ -248,27 +248,27 @@ let build_cmi_native =
 
 let linking_bytecode =
   define
-    ~command:"${bsb_helper} ${bsb_helper_verbose} ${ocaml_dependencies} ${warnings} ${namespace} -bs-main ${main_module} ${bs_super_errors} ${static_libraries} \
+    ~command:"${bsb_helper} ${bsb_helper_verbose} ${ocaml_dependencies} ${ocaml_linker_flags} ${warnings} ${namespace} -bs-main ${main_module} ${bs_super_errors} ${static_libraries} \
               ${ocamlfind_dependencies} ${external_deps_for_linking} ${in} -link-bytecode ${out}"
     "linking_bytecode"
 
 let linking_native =
   define
-    ~command:"${bsb_helper} ${bsb_helper_verbose} ${ocaml_dependencies} ${warnings} ${namespace} -bs-main ${main_module} ${bs_super_errors} ${static_libraries} \
+    ~command:"${bsb_helper} ${bsb_helper_verbose} ${ocaml_dependencies} ${ocaml_linker_flags} ${warnings} ${namespace} -bs-main ${main_module} ${bs_super_errors} ${static_libraries} \
               ${ocamlfind_dependencies} ${external_deps_for_linking} ${in} -link-native ${out}"
     "linking_native"
 
 
 let build_cma_library =
   define
-    ~command:"${bsb_helper} ${bsb_helper_verbose} ${build_library} ${ocaml_dependencies} ${warnings} ${namespace} ${bs_super_errors} ${static_libraries} ${ocamlfind_dependencies} \
+    ~command:"${bsb_helper} ${bsb_helper_verbose} ${build_library} ${ocaml_dependencies} ${ocaml_linker_flags} ${warnings} ${namespace} ${bs_super_errors} ${static_libraries} ${ocamlfind_dependencies} \
               ${bs_package_includes} ${ocaml_lib_includes} ${bsc_extra_includes} \
               ${in} -pack-bytecode-library"
     "build_cma_library"
 
 let build_cmxa_library =
   define
-    ~command:"${bsb_helper} ${bsb_helper_verbose} ${build_library} ${ocaml_dependencies} ${warnings} ${namespace} ${bs_super_errors} ${static_libraries} ${ocamlfind_dependencies} \
+    ~command:"${bsb_helper} ${bsb_helper_verbose} ${build_library} ${ocaml_dependencies} ${ocaml_linker_flags} ${warnings} ${namespace} ${bs_super_errors} ${static_libraries} ${ocamlfind_dependencies} \
               ${bs_package_includes} ${ocaml_lib_includes} ${bsc_extra_includes} \
               ${in} -pack-native-library"
     "build_cmxa_library"

@@ -39,6 +39,7 @@ let pack pack_byte_or_native
   ~main_module
   ~batch_files
   ~includes
+  ~flags
   ~ocamlfind_packages
   ~bs_super_errors
   ~namespace
@@ -138,6 +139,7 @@ let pack pack_byte_or_native
       let list_of_args = (compiler :: "-a" :: "-g" 
         :: (if bs_super_errors then ["-bs-super-errors"] else []) )
         @ warning_command
+        @ flags
         @ "-o" :: (Literals.library_file ^ suffix_library_files) :: includes 
         @ all_object_files in
       
@@ -153,6 +155,7 @@ let pack pack_byte_or_native
       let list_of_args = ("ocamlfind" :: compiler :: "-a" :: "-g" :: ocamlfind_packages) 
       @ ((if bs_super_errors then ["-passopt"; "-bs-super-errors"] else []))
       @ warning_command
+      @ flags
       @  ("-o" :: (Literals.library_file ^ suffix_library_files) :: includes @ all_object_files) in
       
       if verbose then

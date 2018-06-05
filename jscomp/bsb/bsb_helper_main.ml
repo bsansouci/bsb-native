@@ -49,6 +49,9 @@ let add_include =
 let clibs = ref []
 let add_clib file = clibs := file :: !clibs 
 
+let flags = ref []
+let add_flag flag = flags := flag :: !flags 
+
 let batch_files = ref []
 let collect_file name =
   batch_files := name :: !batch_files
@@ -79,6 +82,7 @@ let link link_byte_or_native =
       ~includes:!includes
       ~batch_files:!batch_files
       ~clibs:(List.rev !clibs)
+      ~flags:(List.rev !flags)
       ~ocamlfind_packages:!ocamlfind_packages
       ~bs_super_errors:!bs_super_errors
       ~namespace:!namespace
@@ -95,6 +99,7 @@ let pack link_byte_or_native =
     ~main_module:!main_module
     ~includes:!includes
     ~batch_files:!batch_files
+    ~flags:(List.rev !flags)
     ~ocamlfind_packages:!ocamlfind_packages
     ~bs_super_errors:!bs_super_errors
     ~namespace:!namespace
@@ -192,6 +197,9 @@ let () =
     
     "-add-clib", (Arg.String add_clib),
     " adds a .a library file to be linked into the final executable";
+    
+    "-add-flag", (Arg.String add_flag),
+    " passes flag to underlaying ocaml compiler for packing/linking phase.";
     
     "-add-ocaml-dependency", (Arg.String add_ocaml_dependencies),
     " Add a dependency on otherlibs or compiler-libs.";

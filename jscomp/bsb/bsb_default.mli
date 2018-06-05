@@ -27,6 +27,8 @@ val bsc_flags : string list
 
 val ocaml_flags : string list 
 
+val ocaml_linker_flags : string list 
+
 val refmt_flags : string list  
 
 val refmt_v3 : string

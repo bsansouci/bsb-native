@@ -28,6 +28,7 @@ val link : link_t ->
   main_module:string -> 
   batch_files:string list -> 
   clibs:string list -> 
+  flags:string list -> 
   includes:string list -> 
   ocamlfind_packages:string list -> 
   bs_super_errors:bool -> 

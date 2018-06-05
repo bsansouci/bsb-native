@@ -191,6 +191,7 @@ let interpret_json
   let ocamlfind_dependencies = ref [] in
   let ppx_flags = ref []in 
   let ocaml_flags = ref Bsb_default.ocaml_flags in
+  let ocaml_linker_flags = ref Bsb_default.ocaml_linker_flags in
   let ocaml_dependencies= ref Bsb_default.ocaml_dependencies in 
 
   let js_post_build_cmd = ref None in 
@@ -329,6 +330,7 @@ let interpret_json
     |? (Bsb_build_schemas.ocamlfind_dependencies, `Arr (fun s -> ocamlfind_dependencies := get_list_string s))
     |? (Bsb_build_schemas.bs_super_errors, `Bool (fun b -> bs_super_errors := b))
     |? (Bsb_build_schemas.ocaml_flags, `Arr (fun s -> ocaml_flags := !ocaml_flags @ (get_list_string s)))
+    |? (Bsb_build_schemas.ocaml_linker_flags, `Arr (fun s -> ocaml_linker_flags := !ocaml_linker_flags @ (get_list_string s)))
     |? (Bsb_build_schemas.ocaml_dependencies, `Arr (fun s -> ocaml_dependencies := (get_list_string s)))
     |> ignore ;
     begin match String_map.find_opt Bsb_build_schemas.sources map with 
@@ -431,6 +433,7 @@ let interpret_json
           allowed_build_kinds = allowed_build_kinds;
           ocamlfind_dependencies = !ocamlfind_dependencies;
           ocaml_flags = !ocaml_flags;
+          ocaml_linker_flags = !ocaml_linker_flags;
           ocaml_dependencies = !ocaml_dependencies;
         }
       | None -> failwith "no sources specified, please checkout the schema for more details"

@@ -156,6 +156,7 @@ let build_script = "build-script"
 let allowed_build_kinds = "allowed-build-kinds"
 let ocamlfind_dependencies = "ocamlfind-dependencies"
 let ocaml_flags = "ocaml-flags"
+let ocaml_linker_flags = "ocaml-linker-flags"
 let ocaml_dependencies = "ocaml-dependencies"
 let output_name = "output-name"
 let ppx = "ppx"
@@ -10464,6 +10465,7 @@ type t =
     allowed_build_kinds: compilation_kind_t list;
     ocamlfind_dependencies: string list;
     ocaml_flags: string list;
+    ocaml_linker_flags: string list;
     ocaml_dependencies: string list;
   }
 
@@ -10498,6 +10500,8 @@ module Bsb_default : sig
 val bsc_flags : string list 
 
 val ocaml_flags : string list 
+
+val ocaml_linker_flags : string list 
 
 val refmt_flags : string list  
 
@@ -10548,6 +10552,8 @@ let bsc_flags =
   ]
 
 let ocaml_flags = ["-no-alias-deps"]
+
+let ocaml_linker_flags = []
 
 let refmt_flags = ["--print"; "binary"]
 
@@ -11082,6 +11088,7 @@ let interpret_json
   let ocamlfind_dependencies = ref [] in
   let ppx_flags = ref []in 
   let ocaml_flags = ref Bsb_default.ocaml_flags in
+  let ocaml_linker_flags = ref Bsb_default.ocaml_linker_flags in
   let ocaml_dependencies= ref Bsb_default.ocaml_dependencies in 
 
   let js_post_build_cmd = ref None in 
@@ -11220,6 +11227,7 @@ let interpret_json
     |? (Bsb_build_schemas.ocamlfind_dependencies, `Arr (fun s -> ocamlfind_dependencies := get_list_string s))
     |? (Bsb_build_schemas.bs_super_errors, `Bool (fun b -> bs_super_errors := b))
     |? (Bsb_build_schemas.ocaml_flags, `Arr (fun s -> ocaml_flags := !ocaml_flags @ (get_list_string s)))
+    |? (Bsb_build_schemas.ocaml_linker_flags, `Arr (fun s -> ocaml_linker_flags := !ocaml_linker_flags @ (get_list_string s)))
     |? (Bsb_build_schemas.ocaml_dependencies, `Arr (fun s -> ocaml_dependencies := (get_list_string s)))
     |> ignore ;
     begin match String_map.find_opt Bsb_build_schemas.sources map with 
@@ -11322,6 +11330,7 @@ let interpret_json
           allowed_build_kinds = allowed_build_kinds;
           ocamlfind_dependencies = !ocamlfind_dependencies;
           ocaml_flags = !ocaml_flags;
+          ocaml_linker_flags = !ocaml_linker_flags;
           ocaml_dependencies = !ocaml_dependencies;
         }
       | None -> failwith "no sources specified, please checkout the schema for more details"
@@ -15724,7 +15733,7 @@ let record ~cwd ~file  file_or_dirs cmdline_build_kind cmdline_build_library =
 let check ~cwd ~forced ~file cmdline_build_kind cmdline_build_library : check_result =
   read file  begin  function  {
     file_stamps = xs; 
-    source_directory; 
+    source_directory;
     bsb_version = old_version; 
     cmdline_build_kind = old_cmdline_build_kind; 
     cmdline_build_library = old_cmdline_build_library;
@@ -15960,6 +15969,7 @@ let ocamlfind_dependencies = "ocamlfind_dependencies"
 let external_deps_for_linking = "external_deps_for_linking"
 let open_flag = "open_flag"
 let ocaml_flags = "ocaml_flags"
+let ocaml_linker_flags = "ocaml_linker_flags"
 let berror = "berror"
 let ocaml_dependencies = "ocaml_dependencies"
 let bsb_helper_warnings = "bsb_helper_warnings"
@@ -16302,27 +16312,27 @@ let build_cmi_native =
 
 let linking_bytecode =
   define
-    ~command:"${bsb_helper} ${bsb_helper_verbose} ${ocaml_dependencies} ${warnings} ${namespace} -bs-main ${main_module} ${bs_super_errors} ${static_libraries} \
+    ~command:"${bsb_helper} ${bsb_helper_verbose} ${ocaml_dependencies} ${ocaml_linker_flags} ${warnings} ${namespace} -bs-main ${main_module} ${bs_super_errors} ${static_libraries} \
               ${ocamlfind_dependencies} ${external_deps_for_linking} ${in} -link-bytecode ${out}"
     "linking_bytecode"
 
 let linking_native =
   define
-    ~command:"${bsb_helper} ${bsb_helper_verbose} ${ocaml_dependencies} ${warnings} ${namespace} -bs-main ${main_module} ${bs_super_errors} ${static_libraries} \
+    ~command:"${bsb_helper} ${bsb_helper_verbose} ${ocaml_dependencies} ${ocaml_linker_flags} ${warnings} ${namespace} -bs-main ${main_module} ${bs_super_errors} ${static_libraries} \
               ${ocamlfind_dependencies} ${external_deps_for_linking} ${in} -link-native ${out}"
     "linking_native"
 
 
 let build_cma_library =
   define
-    ~command:"${bsb_helper} ${bsb_helper_verbose} ${build_library} ${ocaml_dependencies} ${warnings} ${namespace} ${bs_super_errors} ${static_libraries} ${ocamlfind_dependencies} \
+    ~command:"${bsb_helper} ${bsb_helper_verbose} ${build_library} ${ocaml_dependencies} ${ocaml_linker_flags} ${warnings} ${namespace} ${bs_super_errors} ${static_libraries} ${ocamlfind_dependencies} \
               ${bs_package_includes} ${ocaml_lib_includes} ${bsc_extra_includes} \
               ${in} -pack-bytecode-library"
     "build_cma_library"
 
 let build_cmxa_library =
   define
-    ~command:"${bsb_helper} ${bsb_helper_verbose} ${build_library} ${ocaml_dependencies} ${warnings} ${namespace} ${bs_super_errors} ${static_libraries} ${ocamlfind_dependencies} \
+    ~command:"${bsb_helper} ${bsb_helper_verbose} ${build_library} ${ocaml_dependencies} ${ocaml_linker_flags} ${warnings} ${namespace} ${bs_super_errors} ${static_libraries} ${ocamlfind_dependencies} \
               ${bs_package_includes} ${ocaml_lib_includes} ${bsc_extra_includes} \
               ${in} -pack-native-library"
     "build_cmxa_library"
@@ -18083,6 +18093,7 @@ let output_ninja_and_namespace_map
       allowed_build_kinds;
       ocamlfind_dependencies;
       ocaml_flags;
+      ocaml_linker_flags;
       ocaml_dependencies;
     } as config : Bsb_config_types.t)
   =
@@ -18125,7 +18136,7 @@ let output_ninja_and_namespace_map
     | "threads" -> "-thread " ^ acc
     | _ -> acc
   ) ocaml_flags ocaml_dependencies) in
-
+  let ocaml_linker_flags = Bsb_build_util.flag_concat "-add-flag" ocaml_linker_flags in
   let bs_super_errors = if main_bs_super_errors && not use_ocamlfind then "-bs-super-errors" else "" in
   let build_artifacts_dir = Bsb_build_util.get_build_artifacts_location cwd in
   let oc = open_out_bin (build_artifacts_dir // Bsb_config.lib_bs // nested // Literals.build_ninja) in
@@ -18241,6 +18252,7 @@ let output_ninja_and_namespace_map
           Bsb_ninja_global_vars.build_artifacts_dir, build_artifacts_dir;
           
           Bsb_ninja_global_vars.ocaml_flags, ocaml_flags;
+          Bsb_ninja_global_vars.ocaml_linker_flags, ocaml_linker_flags;
           Bsb_ninja_global_vars.bs_super_errors_ocamlfind, 
           (* Jumping through hoops. When ocamlfind is used we need to pass the argument 
              to the underlying compiler and not ocamlfind, so we use -passopt. Otherwise we don't.
