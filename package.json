@@ -25,24 +25,24 @@
     "test": "go build -o test.exe scripts/test.go && ./test.exe",
     "test-theme": "go run scripts/test.go -no-install-global -no-ounit -no-mocha -no-bsb",
     "test-bsb": "go run scripts/test.go -no-install-global -no-ounit -no-mocha -no-theme",
-    "test-ocaml": "go run scripts/test.go -no-install-global  -no-mocha -no-theme -no-bsb",
-    "cover": "istanbul cover --report html ./node_modules/.bin/_mocha --   ./jscomp/test/**/*test.js && open coverage/index.html",
-    "coverage": "istanbul cover ./node_modules/.bin/_mocha --report lcovonly --  './jscomp/test/*test.js'",
-    "coveralls": "npm run-script coverage && node ./node_modules/.bin/coveralls < coverage/lcov.info"
+    "test-ocaml":
+      "go run scripts/test.go -no-install-global  -no-mocha -no-theme -no-bsb",
+    "cover":
+      "istanbul cover --report html ./node_modules/.bin/_mocha --   ./jscomp/test/**/*test.js && open coverage/index.html",
+    "coverage":
+      "istanbul cover ./node_modules/.bin/_mocha --report lcovonly --  './jscomp/test/*test.js'",
+    "coveralls":
+      "npm run-script coverage && node ./node_modules/.bin/coveralls < coverage/lcov.info"
   },
   "name": "bs-platform",
   "version": "2.1.1",
-  "description": "bucklescript compiler, ocaml standard libary by bucklescript and its required runtime support",
+  "description":
+    "bucklescript compiler, ocaml standard libary by bucklescript and its required runtime support",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/bucklescript/bucklescript.git"
   },
-  "keywords": [
-    "ocaml",
-    "bucklescript",
-    "stdlib",
-    "functional programming"
-  ],
+  "keywords": ["ocaml", "bucklescript", "stdlib", "functional programming"],
   "author": {
     "name": "Hongbo Zhang"
   },
@@ -57,28 +57,6 @@
     "url": "https://github.com/bucklescript/bucklescript/issues"
   },
   "homepage": "https://github.com/bucklescript/bucklescript#readme",
-  "esy": {
-    "build": [
-      [ "node", "scripts/install.js" ],
-      [ "cp", "-r", "-f", "#{self.target_dir / 'lib' }", "#{self.install}" ],
-      [ "cp", "-r", "-f", "#{self.target_dir / 'vendor' }", "#{self.install}" ]
-    ],
-    "buildsInSource": true,
-    "exportedEnv": {
-      "bs_custom_resolution": {
-        "val": "true",
-        "scope": "global"
-      },
-      "bs_platform__install": {
-        "val": "#{self.install}",
-        "scope": "global"
-      },
-      "PATH": {
-        "val": "#{bs-platform.lib : $PATH}",
-        "scope": "global"
-      }
-    }
-  },
   "opam": {
     "type": "binary",
     "installPath": "bin",
@@ -99,11 +77,5 @@
     "binaries": {
       "./bin/bsb.exe": "bsb"
     }
-  },
-  "dependencies": {
-    "ocaml": "~4.6.1"
-  },
-  "peerDependencies": {
-    "ocaml": "~4.6.1"
   }
 }
