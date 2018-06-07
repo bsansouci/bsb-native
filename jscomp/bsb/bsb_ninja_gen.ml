@@ -199,11 +199,14 @@ let output_ninja_and_namespace_map
   in 
   let bsc_flags =
     Printf.sprintf
-      "-bs-D BSB_BACKEND=\"%s\" %s"
+      "-bs-D BSB_BACKEND=\"%s\" -bs-D OS_TYPE=\"%s\" %s"
       (match backend with
       | Bsb_config_types.Js -> "js"
       | Bsb_config_types.Bytecode -> "bytecode"
       | Bsb_config_types.Native -> "native")
+      (match Bsb_stubs.uname () with
+      | None -> ""
+      | Some os -> os)
       bsc_flags in
 
   let warnings = Bsb_warning.opt_warning_to_string not_dev warning in

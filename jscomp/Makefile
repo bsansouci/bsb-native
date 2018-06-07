@@ -107,6 +107,15 @@ STUBS_OBJS=stubs/ext_basic_hash_stubs.o
 dllbs_hash.so libbs_hash.a: $(STUBS_OBJS)
 	ocamlmklib $(STUBS_OBJS) -o bs_hash
 
+dllbsb_c_stubs.so libbsb_c_stubs.a: stubs/bsb_c_stubs.o
+	ocamlmklib stubs/bsb_c_stubs.o -o bsb_c_stubs
+
+bsb_stubs.cmxa:stubs/bsb_stubs.ml libbsb_c_stubs.a
+	$(NATIVE) -a $< -o $@ -cclib libbsb_c_stubs.a
+
+bsb_stubs.cma:stubs/bsb_stubs.ml dllbsb_c_stubs.so
+	$(BYTE) -a $< -o $@ -dllib dllbsb_c_stubs.so
+
 bs_hash.cmxa:stubs/bs_hash_stubs.ml libbs_hash.a
 	$(NATIVE) -a $< -o $@ -cclib libbs_hash.a
 
@@ -432,10 +441,10 @@ outcome_printer.cma:$(REASON_OUTCOME_PRINTER_CMOS)
 
 check: $(EXT_CMXS) $(COMMON_CMXS) $(SYNTAX_CMXS) $(DEPENDS_CMXS) $(CORE_CMXS) $(BSB_CMXS) $(OTHER_CORE_CMXS) $(MAIN_CMXS) $(SUPER_ERRORS_CMXS) $(REASON_OUTCOME_PRINTER_CMXS) $(OUNIT_CMXS) $(OUNIT_TESTS_CMXS)
 
-../lib/bsb.exe: bs_hash.cmxa ext.cmxa common.cmxa  bsb.cmxa bsb/bsb_main.cmx
+../lib/bsb.exe: bs_hash.cmxa bsb_stubs.cmxa ext.cmxa common.cmxa  bsb.cmxa bsb/bsb_main.cmx
 	$(NATIVE) -I +compiler-libs -g  ocamlcommon.cmxa unix.cmxa str.cmxa $^ -o $@
 
-../lib/bsb_helper.exe: bs_hash.cmxa ext.cmxa common.cmxa  bsb.cmxa bsb_helper.cmxa bsb/bsb_helper_main.cmx
+../lib/bsb_helper.exe: bs_hash.cmxa bsb_stubs.cmxa ext.cmxa common.cmxa  bsb.cmxa bsb_helper.cmxa bsb/bsb_helper_main.cmx
 	$(NATIVE) -I +compiler-libs -g  ocamlcommon.cmxa unix.cmxa str.cmxa $^ -o $@
 
 # bin/bsc:  ext.cmxa common.cmxa  depends.cmxa syntax.cmxa core.cmxa
@@ -443,23 +452,23 @@ check: $(EXT_CMXS) $(COMMON_CMXS) $(SYNTAX_CMXS) $(DEPENDS_CMXS) $(CORE_CMXS) $(
 
 
 # $(BIN_PATH)/bsc.exe would not trigger rebuild..
-../lib/bsc.exe: bs_hash.cmxa ext.cmxa common.cmxa syntax.cmxa depends.cmxa core.cmxa super.cmxa outcome_printer.cmxa core/js_main.cmx
+../lib/bsc.exe: bs_hash.cmxa bsb_stubs.cmxa ext.cmxa common.cmxa syntax.cmxa depends.cmxa core.cmxa super.cmxa outcome_printer.cmxa core/js_main.cmx
 	@echo "Linking"
 	$(NATIVE) -g -linkall -I +compiler-libs ocamlcommon.cmxa $^ -o $@
 
-bin/cmjdump.exe: bs_hash.cmxa ext.cmxa common.cmxa syntax.cmxa depends.cmxa core.cmxa core/cmjdump_main.cmx
+bin/cmjdump.exe: bs_hash.cmxa bsb_stubs.cmxa ext.cmxa common.cmxa syntax.cmxa depends.cmxa core.cmxa core/cmjdump_main.cmx
 	@echo "Linking"
 	$(NATIVE) -g -linkall -I +compiler-libs ocamlcommon.cmxa $^ -o $@
 
-bin/astdump.exe: bs_hash.cmxa ext.cmxa common.cmxa syntax.cmxa depends.cmxa bsb.cmxa core/astdump_main.cmx
+bin/astdump.exe: bs_hash.cmxa bsb_stubs.cmxa ext.cmxa common.cmxa syntax.cmxa depends.cmxa bsb.cmxa core/astdump_main.cmx
 	@echo "Linking"
 	$(NATIVE) -g -linkall -I +compiler-libs ocamlcommon.cmxa unix.cmxa str.cmxa  $^ -o $@
 
-bin/jscmj.exe:bs_hash.cmxa ext.cmxa common.cmxa syntax.cmxa depends.cmxa core.cmxa  jscmj_main.cmx
+bin/jscmj.exe:bs_hash.cmxa bsb_stubs.cmxa ext.cmxa common.cmxa syntax.cmxa depends.cmxa core.cmxa  jscmj_main.cmx
 	@echo "Linking js_pack.exe"
 	$(NATIVE) -g -linkall -I +compiler-libs ocamlcommon.cmxa $^ -o $@
 
-bin/jsgen.exe:bs_hash.cmxa ext.cmxa jsgen_main.cmx
+bin/jsgen.exe:bs_hash.cmxa bsb_stubs.cmxa ext.cmxa jsgen_main.cmx
 	$(NATIVE) -g -linkall -I +compiler-libs ocamlcommon.cmxa $^ -o $@
 
 .PHONY: check
@@ -694,7 +703,7 @@ docs: ../odoc_gen/generator.cmxs
 	node ../scripts/doc_gen.js
 
 
-top: bs_hash.cma ext.cma bsb.cma
+top: bs_hash.cma bsb_stubs.cma ext.cma bsb.cma
 repl: top
 	rlwrap ocaml
 .PHONY: release   releasebuild libs snapshotml force-snapshotml toplevel

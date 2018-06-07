@@ -1,7 +1,7 @@
 BYTE=ocamlc.opt$(EXE)
 NATIVE=ocamlopt.opt$(EXE)
 
-OCAMLOPT_FLAGS= -g -w -40-30 ../jscomp/stubs/ext_basic_hash_stubs.c
+OCAMLOPT_FLAGS= -g -w -40-30 ../jscomp/stubs/bsb_c_stubs.c ../jscomp/stubs/ext_basic_hash_stubs.c
 # -inline 1000 makes size too large
 # TODO: make sure it can be bootstrapped, at least is a very good
 # test case of our optimizations

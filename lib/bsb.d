@@ -58,6 +58,7 @@
 ../lib/bsb.ml : ./ext/string_map.mli
 ../lib/bsb.ml : ./ext/string_set.mli
 ../lib/bsb.ml : ./ext/string_vec.mli
+../lib/bsb.ml : ./stubs/bsb_stubs.ml
 ../lib/bsb.ml : ./bsb/bsb_default.mli
 ../lib/bsb.ml : ./bsb/bsb_warning.mli
 ../lib/bsb.ml : ./ext/ext_file_pp.mli

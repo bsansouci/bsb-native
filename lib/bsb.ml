@@ -15733,7 +15733,7 @@ let record ~cwd ~file  file_or_dirs cmdline_build_kind cmdline_build_library =
 let check ~cwd ~forced ~file cmdline_build_kind cmdline_build_library : check_result =
   read file  begin  function  {
     file_stamps = xs; 
-    source_directory;
+    source_directory; 
     bsb_version = old_version; 
     cmdline_build_kind = old_cmdline_build_kind; 
     cmdline_build_library = old_cmdline_build_library;
@@ -17959,6 +17959,12 @@ let handle_file_groups oc
     pack oc comp_info ~entries ~build_library ~backend ~file_groups ~namespace ()
 
 end
+module Bsb_stubs
+= struct
+#1 "bsb_stubs.ml"
+external uname : unit -> string option = "bsb_uname"
+
+end
 module Bsb_ninja_gen : sig 
 #1 "bsb_ninja_gen.mli"
 (* Copyright (C) 2015-2016 Bloomberg Finance L.P.
@@ -18204,11 +18210,14 @@ let output_ninja_and_namespace_map
   in 
   let bsc_flags =
     Printf.sprintf
-      "-bs-D BSB_BACKEND=\"%s\" %s"
+      "-bs-D BSB_BACKEND=\"%s\" -bs-D OS_TYPE=\"%s\" %s"
       (match backend with
       | Bsb_config_types.Js -> "js"
       | Bsb_config_types.Bytecode -> "bytecode"
       | Bsb_config_types.Native -> "native")
+      (match Bsb_stubs.uname () with
+      | None -> ""
+      | Some os -> os)
       bsc_flags in
 
   let warnings = Bsb_warning.opt_warning_to_string not_dev warning in
