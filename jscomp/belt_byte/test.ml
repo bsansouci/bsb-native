@@ -139,10 +139,61 @@ let _ = print_endline @@ "size: " ^ (string_of_int (Belt.Array.length aa))
 let _ =
   Belt.Array.forEachU aa
     ((fun x  ->
-        match Js.Undefined.toOpt x with
+        match Js.Undefined.toOption x with
         | None  -> print_endline "YUP"
         | ((Some (x))[@explicit_arity ]) -> assert false)[@bs ])
 let aa = Belt.Array.mapWithIndex aa (fun i  -> fun _  -> i)
 
 let aaa = Belt.List.concat [1.0; 2.0] [3.0; 4.0]
 let _ = Belt.List.forEach aaa (fun x -> print_endline @@ "Number: " ^ (string_of_float x))
+
+module TestingMore = struct
+  type t = {
+    name2: string [@bs.optional];
+    age2: int;
+  } [@@bs.deriving abstract]
+end
+
+(* module TestingMore =
+  struct
+    include
+      (struct
+         type t = {
+           name2: string option;
+           age2: int;}
+         let t: ?name2:string -> age2:int -> unit -> t =
+           fun ?name2  -> fun ~age2  -> fun () -> { name2; age2 }
+         let name2: t -> string option = fun o  -> o.name2
+         let age2: t -> int = fun o  -> o.age2
+       end :
+        sig
+          type t
+          val t : ?name2:string -> age2:int -> unit -> t
+          val name2 : t -> string option
+          val age2 : t -> int
+        end)
+  end *)
+
+
+(* module TestingMore =
+  struct
+    include
+      (struct
+         type t = {
+           name2: string option[@bs.optional ];
+           age2: int;}
+         let t: ?name2:string -> age2:int -> unit -> t =
+           fun ?name2  -> fun ~age2  -> fun ()  -> { name2; age2 }
+         let name2: t -> string option = fun o  -> o.name2
+         let age2: t -> int = fun o  -> o.age2
+       end :
+        sig
+          type t
+          val t : ?name2:string -> age2:int -> unit -> t
+          val name2 : t -> string option
+          val age2 : t -> int
+        end)
+  end *)
+  
+  
+let aaaaa = TestingMore.t ~age2:10 () 

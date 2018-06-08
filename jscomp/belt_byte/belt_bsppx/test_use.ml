@@ -3,4 +3,6 @@ let b = match Js.Null.toOption n with
 | None -> assert false
 | Some n -> n
 
-let _ = print_endline (Test.key b)
+let _ = print_endline (match (Test.key b) with 
+| None -> assert false
+| Some key -> key)

@@ -636,7 +636,7 @@ and check_pat (pat : Parsetree.pattern) =
     check_pat l; check_pat r 
   | _ ->  Location.raise_errorf ~loc:pat.ppat_loc "Unsupported pattern in `bs.open`" 
 
-let convertBsErrorFunction loc  (self : Bs_ast_mapper.mapper) attrs (cases : Parsetree.case list ) =
+(* let convertBsErrorFunction loc  (self : Bs_ast_mapper.mapper) attrs (cases : Parsetree.case list ) =
   let txt  = "match" in 
   let txt_expr = Exp.ident ~loc {txt = Lident txt; loc} in 
   let none = Exp.constraint_ ~loc 
@@ -671,3 +671,4 @@ let convertBsErrorFunction loc  (self : Bs_ast_mapper.mapper) attrs (cases : Par
     (Some none))
     
                        
+ *)
