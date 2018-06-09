@@ -319,9 +319,14 @@ let link_bytecode ppf tolink exec_name standalone =
       with Not_found | Sys_error _ -> ()
     end;
     Bytesections.init_record outchan;
+    let ( // ) = Filename.concat in
     (* The path to the bytecode interpreter (in use_runtime mode) *)
     if String.length !Clflags.use_runtime > 0 then begin
       output_string outchan ((make_absolute !Clflags.use_runtime));
+      output_char outchan '\n';
+      Bytesections.record outchan "RNTM"
+    end else begin
+      output_string outchan (make_absolute ((Filename.dirname Sys.executable_name) // "bin" // "ocamlrun.exe"));
       output_char outchan '\n';
       Bytesections.record outchan "RNTM"
     end;
@@ -346,7 +351,6 @@ let link_bytecode ppf tolink exec_name standalone =
     output_byte outchan Opcodes.opSTOP;
     output_byte outchan 0; output_byte outchan 0; output_byte outchan 0;
     Bytesections.record outchan "CODE";
-    let ( // ) = Filename.concat in
     (* DLL stuff *)
     if standalone then begin
       (* The extra search path for DLLs *)
