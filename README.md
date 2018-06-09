@@ -211,4 +211,6 @@ tl;dr
 2) add entry built to bytecode with `"type": "ppx"`
 3) add ppx field to entries that use that ppx `"ppx": ["Myppx"]`
 
+Also bsb-native comes with [ppx_tools](https://github.com/ocaml-ppx/ppx_tools) available by default, no config!. Here are some ["docs"](https://github.com/ocaml-ppx/ppx_tools/blob/55825c58535e3600f5c70a0672806a5c3d45eea4/ppx_metaquot.ml#L5).
+
 You can't build ppxes to native or js for now. You also can't have a ppx depend on another ppx. You can't put the ppx code alongside your app code. The ppx will always be built even if you never reference it.

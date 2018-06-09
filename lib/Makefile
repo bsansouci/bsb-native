@@ -34,7 +34,7 @@ bsb_internals.cmo: bsb_internals.ml
 	$(BYTE) -c -w -40-30 -no-alias-deps  $^
 
 bs_ppx_tools.exe: bs_ppx_tools.ml
-	$(BYTE) -w -17-40-30 -no-alias-deps  $^ -o $@
+	$(NATIVE) -w -17-40-30 -no-alias-deps  $^ -o $@
 
 bsc.exe: whole_compiler.mli whole_compiler.ml
 	$(NATIVE) $(OCAMLOPT_FLAGS) $^  -o $@
