@@ -35,7 +35,7 @@
     "postinstall": "node postinstall.js"
   },
   "name": "bs-platform",
-  "version": "2.1.1",
+  "version": "3.2.0",
   "description": "bucklescript compiler, ocaml standard libary by bucklescript and its required runtime support",
   "repository": {
     "type": "git",
