@@ -1,3 +1,20 @@
+# 3.2.0
+### bsb-native
+Features:
+- All of belt
+- bs.deriving abstract
+- bs.optional (in conjunction with bs.deriving abtract)
+- in-project ppx support (see bottom of `README.md`)
+- #42 allow passing ocaml linker flags (with `ocaml-linker-flags`, in contrast with maybe a future `linker-flags` that bsb could add)
+- #38 allow naming executables
+- allow an array for the `"backend"` field in `"entries"`
+- automatically link artifacts generated from `build_script.re` (when you call `gcc` only), so no need to use `"c-static-library`
+
+Fixes:
+- #47 broken incremental build
+- .merlin generation fix
+- #44 match the new refmt
+
 # 3.1.4
 
 Fixes:

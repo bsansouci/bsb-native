@@ -50,6 +50,8 @@ The `-backend [js|bytecode|native]` flag tells `bsb-native` to build all entries
 
 The build artifacts are put into the folder `lib/bs`. The bytecode executable would be at `lib/bs/bytecode/index.byte` and the native one at `lib/bs/native/index.native` for example.
 
+The `-build-library` flag takes a module name and will pack everything in the current project that depends on it into a library file. Cool trick: you can use this to implement hot reloading for any sort of app, simply call bsb-native with this flag and use the built-in module `Dynlink` to load the file bsb-native generates.
+
 ## Opam package support
 Yes `bsb-native` supports opam packages (see [ocamlfind example](https://github.com/bsansouci/bsb-native-example/tree/opam-example)).
 **BUT** you need to be on the switch `4.02.3+buckle-master` (which you can get to by running `opam switch 4.02.3+buckle-master`).
@@ -72,14 +74,20 @@ Yes `bsb-native` supports opam packages (see [ocamlfind example](https://github.
     // See the bucklescript schema:
     // https://bucklescript.github.io/bucklescript/docson/#build-schema.json
     // Below are just the bsb-native specific features.
-
+    
+    // Contains only the added fields, the rest is the same as bsb.
+    "sources": [{
+      "type": "ppx" // Extra field added to tell bsb-native that a fold contains source for a ppx.
+      }]
+  
     // Entries is an array of targets to be built.
     // When running `bsb -backend bytecode`, bsb will filter this array for
     // all the entries compiling to bytecode and compile _all_ of those.
     "entries": [{
-      "backend": "bytecode", // can be "bytecode" (ocamlc), "js" (bsc) or "native" (ocamlopt),
+      "backend": "bytecode", // Can be an array of string or a string: "bytecode" (ocamlc), "js" (bsc) or "native" (ocamlopt)
       "main-module": "MainModule", // This has to be capitalized
       "output-name": "snake.exe", // Custom executable name.
+      "ppx": ["Myppx", "theirPpx/theirPpx.exe"] // Array of ppx to run on files used by this entry. If it's a relative path, it's relative to `node_modules`, if it's a module name it's a local ppx.
     }],
 
     // Array of opam dependencies.
@@ -96,6 +104,9 @@ Yes `bsb-native` supports opam packages (see [ocamlfind example](https://github.
     // Array of flags to pass the OCaml compiler. This shouldn't be needed for
     // most things.
     "ocaml-flags": ["-bin-annot"],
+    
+    // Array of flags passed to ocaml only at the linking phase
+    "ocaml-linker-flags": ["-output-obj"],
 
     // This allows you to write JS specific packages (for example) and depend
     // on them without bsb choking on them when building to another platform.
@@ -165,10 +176,17 @@ If you would like to have all your code in the same package, you can use BuckleS
 #else
   include MyModule_Js
 #end
+
+(* We support Darwin, Linux, Windows compile time checks *)
+#if OS_TYPE = "Darwin" then 
+  external fabs : float -> float = "fabs"
+#end
 ```
 inside a file called `MyModule` (for example). When you build to JavaScript (`BSB_BACKEND = "js"`), that module will use the `MyModule_Js` implementation (see [example](https://github.com/Schmavery/reprocessing/blob/2ff7221789dcefff2ae927b8305c938845361d59/src/Reprocessing_Hotreload.ml)). Same for `BSB_BACKEND = "native"` and `BSB_BACKEND = "bytecode"`.
 
 `BSB_BACKEND` value will be filled automatically by `bsb-native`, so you just need to use it at will with the language-level static `if` compilation.
+
+Same for `OS_TYPE`.
 
 Platform specific files (like `MyModule_Native`) should be added to a folder that is only built for that specific backend (`native`, in the `MyModule_Native` case). You can do that by adding this to your `bsconfig.json` file:
 
@@ -183,3 +201,14 @@ Platform specific files (like `MyModule_Native`) should be added to a folder tha
 ```
 **Note**: BuckleScript's conditional compilation doesn't work with Reason yet, so any usage of conditional compilation will have to be implemented in OCaml `.ml` files.
 
+### PPX support
+We support running ppxes on the whole codebase, like bucklescript, but also per entry. You can add `ppx: ["my_ppx/my_ppx.exe"]` to any entry to run that ppx on the files used by the entry.
+
+You can also make your own ppx inside you project. To keep things contained, you have to put the code in its own folder which you'll list under `"sources"` with the extra key `"type": "ppx"`. Then add an entry like you would for building a binary, to bytecode specifically, and similarly add to the entry `"type": "ppx"`. Finally add to the entries where you'd like to run that ppx `"ppx": ["Myppx"]` (notice it's just a module name, that tells bsb-native it's a local ppx).
+
+tl;dr
+1) add folder to `sources` with `"type": "ppx"`
+2) add entry built to bytecode with `"type": "ppx"`
+3) add ppx field to entries that use that ppx `"ppx": ["Myppx"]`
+
+You can't build ppxes to native or js for now. You also can't have a ppx depend on another ppx. You can't put the ppx code alongside your app code. The ppx will always be built even if you never reference it.
