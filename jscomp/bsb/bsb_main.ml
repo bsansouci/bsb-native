@@ -222,7 +222,7 @@ let () =
         | "native"   -> Bsb_config_types.Native
         | "bytecode" -> Bsb_config_types.Bytecode
         | _ -> failwith "-backend should be one of: 'js', 'bytecode' or 'native'."
-      end else Bsb_config_types.Js in
+      end else get_backend () in
       
       (* print_endline __LOC__; *)
       let main_config = 
