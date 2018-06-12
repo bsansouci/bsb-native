@@ -476,6 +476,7 @@ and parsing_single_source package_name ({not_dev; dir_index ; cwd} as cxt ) (x :
       | Some (Str {str="ppx"}) -> (dir_index, true)
       | Some _ -> Bsb_exception.config_error x {|type field expect "dev" or "ppx" literal |}
       | None -> (dir_index, false) in 
+      | None -> (dir_index, cxt.is_ppx) in 
     if not_dev && not (Bsb_dir_index.is_lib_dir current_dir_index) then empty 
     else 
       let dir = 
