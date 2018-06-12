@@ -42,7 +42,6 @@ type entries_t = {
     main_module_name: string;
     output_name: string option;
     kind: kind_t;
-    ppx: string list;
     backend: backend_t list
 }
 

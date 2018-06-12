@@ -62,12 +62,7 @@ let parse_entries name (field : Ext_json_types.t array) =
         let main = ref None in
         let output_name = ref None in
         let kind = ref Bsb_config_types.Library in
-        let ppx = match String_map.find_opt Bsb_build_schemas.ppx map with 
-          | Some (Arr {loc_start; content = s }) -> Bsb_build_util.get_list_string s
-          | Some (Str {str} )                    -> [ str ]
-          | None                                 -> []
-          | _ -> Bsb_exception.config_error entry "Field 'ppx' not recognized. Should be a string or an array of strings." 
-        in
+        
         let _ = map
                 |? (Bsb_build_schemas.backend, `Str (fun x -> backend := [x]))
                 |? (Bsb_build_schemas.backend, `Arr (fun s -> backend := Bsb_build_util.get_list_string s))
@@ -103,13 +98,13 @@ let parse_entries name (field : Ext_json_types.t array) =
           | Some main_module_name -> main_module_name
         end in
         
-        if !kind = Bsb_config_types.Ppx && backend <> [Literals.bytecode] then
-          Bsb_exception.config_error entry "Ppx can only be compiled to bytecode for now. Set `backend` to `bytecode`.";
+        if !kind = Bsb_config_types.Ppx && backend <> [Literals.native] then
+          Bsb_exception.config_error entry "Ppx can only be compiled to native for now. Set `backend` to `native`.";
         
         let backend = List.map Bsb_config_types.(function
           | "js" -> 
             if !kind = Ppx then
-              Bsb_exception.config_error entry "Ppx can't be compiled to JS for now. Please set the backend to be `bytecode` or `native`.";
+              Bsb_exception.config_error entry "Ppx can't be compiled to JS for now. Please set the backend to `native`.";
               
             JsTarget
           | "bytecode" -> BytecodeTarget
@@ -117,7 +112,7 @@ let parse_entries name (field : Ext_json_types.t array) =
           | _ -> Bsb_exception.config_error entry "Missing field 'backend'. That field is required and its value be 'js', 'native' or 'bytecode'"
         ) backend in
         
-        Some {Bsb_config_types.kind = !kind; main_module_name; output_name = !output_name; ppx; backend}  
+        Some {Bsb_config_types.kind = !kind; main_module_name; output_name = !output_name; backend}  
       | entry -> Bsb_exception.config_error entry "Unrecognized object inside array 'entries' field.") 
     field
 
@@ -346,6 +341,7 @@ let interpret_json
              traverse = false;
              backend = [Bsb_parse_sources.Js; Bsb_parse_sources.Native; Bsb_parse_sources.Bytecode];
              is_ppx = false;
+             ppx = [];
              namespace; 
             }  x in 
         if generate_watch_metadata then

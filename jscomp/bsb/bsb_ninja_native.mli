@@ -36,6 +36,7 @@ val handle_file_groups : out_channel ->
   ocaml_lib:string ->
   root_project_dir:string ->
   config:Bsb_config_types.t ->
+  ppx_flags_internal:string list ->
   ?build_just_ppx: bool ->
   Bsb_parse_sources.file_group list ->
   string option ->

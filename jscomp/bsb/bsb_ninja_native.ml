@@ -130,10 +130,14 @@ let emit_impl_build
   in
   let output_js =
     Bsb_package_specs.get_list_of_output_js package_specs bs_suffix output_filename_sans_extension in 
+  let bsb_backend = begin match compile_target with
+  | Bytecode -> "bytecode"
+  | Native   -> "native"
+  end in
   let shadows = List.map (fun f -> 
     Bsb_ninja_util.{
      key = "ppx_flags"; 
-     op = AppendList ["-ppx"; f]
+     op = AppendList ["-ppx"; "\"" ^ f ^ " -bsb-backend " ^ bsb_backend  ^ "\""]
    }) local_ppx_flags in
   let shadows = if is_ppx then 
     {
@@ -229,10 +233,14 @@ let emit_intf_build
       Ext_namespace.make ~ns filename_sans_extension
   in 
   let output_cmi = output_filename_sans_extension ^ Literals.suffix_cmi in  
+  let bsb_backend = begin match compile_target with
+  | Bytecode -> "bytecode"
+  | Native   -> "native"
+  end in
   let shadows = List.map (fun f -> 
     Bsb_ninja_util.{
      key = "ppx_flags"; 
-     op = AppendList ["-ppx"; f]
+     op = AppendList ["-ppx"; "\"" ^ f ^ " -bsb-backend " ^ bsb_backend  ^ "\""]
    }) local_ppx_flags in
   let shadows = if is_ppx then 
     {
@@ -627,7 +635,6 @@ let pack oc comp_info ~entries ?build_library ~backend ~file_groups ~namespace (
         ~rule:rule_name;
     end;
     comp_info
-  (* ) comp_info entries *)
 
 let handle_file_groups oc
   ~custom_rules
@@ -647,7 +654,9 @@ let handle_file_groups oc
     js_post_build_cmd;
     files_to_install;
     ocaml_dependencies;
+    ppx_flags;
   }
+  ~ppx_flags_internal
   ?build_just_ppx:(build_just_ppx=false)
   (file_groups  :  Bsb_parse_sources.file_group list) namespace comp_info =
   let file_groups = List.filter (fun (group : Bsb_parse_sources.file_group) ->
@@ -656,57 +665,25 @@ let handle_file_groups oc
     | Bsb_config_types.Native   -> List.mem Bsb_parse_sources.Native group.Bsb_parse_sources.backend
     | Bsb_config_types.Bytecode -> List.mem Bsb_parse_sources.Bytecode group.Bsb_parse_sources.backend
   ) file_groups in 
-  let (entries, entries_that_have_ppxes, local_ppx_deps, local_ppx_module_names, ppx_entries) = Bsb_ninja_file_groups.get_local_ppx_deps backend entries in
-  (* @Speed The work to figure out in which group an entry is in could be done while parsing the 
-     bsconfig, which would probably be faster. 
-  *)
-  let comp_info = List.fold_left (fun comp_info (group : Bsb_parse_sources.file_group) ->
+  let (entries, ppx_entries) = Bsb_ninja_file_groups.separate_ppx_entries entries backend in
+  (* should_build_ppx is set to true if there is any file group that requires a ppx or if there's
+     a ppx_flag used. *)
+  let should_build_ppx = List.length (List.filter (fun ppx_flag ->
+      try
+        let _found_it = List.find (fun {Bsb_config_types.main_module_name} -> main_module_name = ppx_flag) ppx_entries in
+        true
+      with
+      | Not_found -> false
+    ) ppx_flags) > 0 in
+  let (comp_info, should_build_ppx) = List.fold_left (fun (comp_info, should_build_ppx) (group : Bsb_parse_sources.file_group) ->
     (* We always build ppxes, because it's easier than to try to determine whether the ppx is used or not. *)
     if (build_just_ppx && group.is_ppx || not build_just_ppx) then begin
-      (* When building a ppx we want to compile the source code to the backend specified by the 
-         entry, not the one specified from the commandline. *)
-      let (local_ppx_flags, compile_target) = if is_top_level then 
-        (String_map.fold (fun  module_name _  (acc, compile_target) ->
-          if acc = [] then begin
-            let new_local_ppx_flags = List.fold_left Bsb_config_types.(fun acc e -> match e with 
-              | { main_module_name; ppx; } when main_module_name = module_name -> ppx
-              | _ -> acc
-              ) acc entries_that_have_ppxes in 
-            
-            let compile_target = List.fold_left (fun (compile_target: compile_target_t) { Bsb_config_types.main_module_name; } ->
-              if main_module_name = module_name then begin 
-                (* @Hack Only build PPXes to bytecode *)
-                Bytecode
-              end else 
-                compile_target
-            ) compile_target ppx_entries in
-            (new_local_ppx_flags, compile_target)
-          end else 
-            (acc, compile_target)
-        ) group.sources ([], compile_target)) 
-      else if group.is_ppx then 
-        (* @Hack always build ppxes to bytecode *)
-        ([], Bytecode) 
-      else (local_ppx_module_names, compile_target) 
-      in
-      
-      (*  map over the flags to find ppxes's full paths if they exist.  *)
+      (* Always compile ppxes to native *)
+      let compile_target = if group.is_ppx then Native else compile_target in
       let (local_ppx_flags, local_ppx_deps) = if group.is_ppx then 
-        ([], []) 
+        ([], [])
       else 
-        List.fold_left (fun (new_local_ppx_flags, new_local_ppx_deps) flag_exec -> 
-          (* @Hack You could potentially have a bug here where the exec_path name is the same as a module name
-            inside main-module but eeeeh that'd be weird! *)
-          let rec loop = fun local_ppx_deps local_ppx_module_names -> 
-            match (local_ppx_deps, local_ppx_module_names) with
-            | (exec_path :: local_ppx_deps, ppx_name :: local_ppx_module_names) -> 
-              if flag_exec = ppx_name then (exec_path :: new_local_ppx_flags, exec_path :: new_local_ppx_deps)
-              else loop local_ppx_deps local_ppx_module_names
-            | _ -> ((Bsb_dependency_info.check_if_dep ~root_project_dir ~backend dependency_info flag_exec) :: new_local_ppx_flags, new_local_ppx_deps)
-          in
-          loop local_ppx_deps local_ppx_module_names
-        ) ([], []) local_ppx_flags 
-      in
+        Bsb_ninja_file_groups.get_local_ppx_deps ~ppx_list:(group.ppx @ ppx_flags_internal) ~root_project_dir ~backend ~dependency_info ~ppx_entries in
 
       handle_file_group oc
         ~local_ppx_deps
@@ -723,20 +700,23 @@ let handle_file_groups oc
         ~root_project_dir
         files_to_install
         comp_info
-        group
-    end else comp_info
-  ) comp_info file_groups in
-  let comp_info = link oc comp_info 
+        group,
+      should_build_ppx || List.length group.ppx > 0
+    end else 
+      (comp_info, should_build_ppx || List.length group.ppx > 0)
+  ) (comp_info, should_build_ppx) file_groups in
+  let comp_info = if should_build_ppx then link oc comp_info 
       ~entries:ppx_entries
-      (* @Hack Only build ppxes to bytecode for now *)
-      ~backend:Bytecode
+      (* @Hack Only build ppxes to native for now *)
+      ~backend:Native
       ~file_groups
       ~static_libraries
       ~c_linker_flags
       ~ocaml_dependencies
       ~namespace
       ~dependency_info
-      ~ocaml_lib in
+      ~ocaml_lib
+    else comp_info in
   let static_libraries = dependency_info.all_clibs @ static_libraries in
   let c_linker_flags = dependency_info.all_c_linker_flags @ c_linker_flags in
   match build_library with
@@ -744,9 +724,9 @@ let handle_file_groups oc
     if build_just_ppx then
       comp_info
     else begin
-      if is_top_level then
+      if is_top_level then begin
         link oc comp_info ~entries ~backend ~file_groups ~static_libraries ~c_linker_flags ~ocaml_dependencies ~namespace ~dependency_info ~ocaml_lib
-      else
+      end else
         pack oc comp_info ~entries ~backend ~file_groups ~namespace ()
     end
   | Some build_library -> 

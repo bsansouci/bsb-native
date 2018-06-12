@@ -142,9 +142,16 @@ let output_ninja_and_namespace_map
 
   let bsc = bsc_dir // bsc_exe in   (* The path to [bsc.exe] independent of config  *)
   let bsb_helper = bsc_dir // bsb_helper_exe in (* The path to [bsb_heler.exe] *)
+  let (ppx_flags_external, ppx_flags_internal) = List.fold_left (fun (ppx_flags_external, ppx_flags_internal) ppx_flag -> 
+    try
+      let _ppx_entry = List.find (fun {Bsb_config_types.main_module_name} -> main_module_name = ppx_flag) entries in
+      (ppx_flags_external, ppx_flag :: ppx_flags_internal)
+    with
+    | Not_found -> (ppx_flag :: ppx_flags_external, ppx_flags_internal)
+  ) ([], []) ppx_flags in
   let ppx_flags = if backend = Bsb_config_types.Js then 
-    Bsb_build_util.flag_concat dash_ppx ppx_flags
-    else Bsb_build_util.flag_concat dash_ppx ((bsc_dir // belt_bsppx_exe) :: ppx_flags) in
+    Bsb_build_util.flag_concat dash_ppx ppx_flags_external
+    else Bsb_build_util.flag_concat dash_ppx ((bsc_dir // belt_bsppx_exe) :: ppx_flags_external) in
   let bsc_flags =  String.concat Ext_string.single_space bsc_flags in
   let refmt_flags = String.concat Ext_string.single_space refmt_flags in
   (* Exclude JS because we always add -bs-super-errors for JS... *)
@@ -375,6 +382,7 @@ let output_ninja_and_namespace_map
         ~root_project_dir
         ~config
         ~build_just_ppx:true
+        ~ppx_flags_internal
         bs_file_groups
         namespace
         Bsb_ninja_file_groups.zero in
@@ -389,6 +397,7 @@ let output_ninja_and_namespace_map
         ~dependency_info
         ~root_project_dir
         ~is_top_level
+        ~ppx_flags_internal
         bs_file_groups 
         namespace
         maybe_ppx_comp_info, 
@@ -406,6 +415,7 @@ let output_ninja_and_namespace_map
         ~ocaml_lib:native_ocaml_lib
         ~root_project_dir
         ~config
+        ~ppx_flags_internal
         bs_file_groups
         namespace
         Bsb_ninja_file_groups.zero,
@@ -423,6 +433,7 @@ let output_ninja_and_namespace_map
         ~ocaml_lib:native_ocaml_lib
         ~root_project_dir
         ~config
+        ~ppx_flags_internal
         bs_file_groups
         namespace
         Bsb_ninja_file_groups.zero,

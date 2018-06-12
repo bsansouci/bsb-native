@@ -47,6 +47,7 @@ type  file_group =
     generators : build_generator list;
     backend: compilation_kind_t list;
     is_ppx: bool;
+    ppx: string list;
   } 
 
 (** when [is_empty file_group]
@@ -76,6 +77,7 @@ type cxt = {
   namespace : string option;
   backend: compilation_kind_t list;
   is_ppx: bool;
+  ppx: string list;
 }
 
 

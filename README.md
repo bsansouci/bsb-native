@@ -78,6 +78,7 @@ Yes `bsb-native` supports opam packages (see [ocamlfind example](https://github.
     // Contains only the added fields, the rest is the same as bsb.
     "sources": [{
       "type": "ppx" // Extra field added to tell bsb-native that a fold contains source for a ppx.
+      "ppx": ["Myppx", "theirPpx/theirPpx.exe"] // Array of ppx to run on all files in this directory. If it's a relative path, it's relative to `node_modules`, if it's a module name it's a local ppx.
       }]
   
     // Entries is an array of targets to be built.
@@ -87,7 +88,6 @@ Yes `bsb-native` supports opam packages (see [ocamlfind example](https://github.
       "backend": "bytecode", // Can be an array of string or a string: "bytecode" (ocamlc), "js" (bsc) or "native" (ocamlopt)
       "main-module": "MainModule", // This has to be capitalized
       "output-name": "snake.exe", // Custom executable name.
-      "ppx": ["Myppx", "theirPpx/theirPpx.exe"] // Array of ppx to run on files used by this entry. If it's a relative path, it's relative to `node_modules`, if it's a module name it's a local ppx.
     }],
 
     // Array of opam dependencies.
@@ -202,15 +202,16 @@ Platform specific files (like `MyModule_Native`) should be added to a folder tha
 **Note**: BuckleScript's conditional compilation doesn't work with Reason yet, so any usage of conditional compilation will have to be implemented in OCaml `.ml` files.
 
 ### PPX support
-We support running ppxes on the whole codebase, like bucklescript, but also per entry. You can add `ppx: ["my_ppx/my_ppx.exe"]` to any entry to run that ppx on the files used by the entry.
+We support running ppxes on the whole codebase, like bucklescript with `"ppx-flags"`, but also per `"source"` directory. You can add `ppx: ["my_ppx/my_ppx.exe"]` to any `"source"` directory to run that ppx on the files inside that directory. 
 
-You can also make your own ppx inside you project. To keep things contained, you have to put the code in its own folder which you'll list under `"sources"` with the extra key `"type": "ppx"`. Then add an entry like you would for building a binary, to bytecode specifically, and similarly add to the entry `"type": "ppx"`. Finally add to the entries where you'd like to run that ppx `"ppx": ["Myppx"]` (notice it's just a module name, that tells bsb-native it's a local ppx).
+You can also make your own ppx inside you project. To keep things contained, you have to put the code in its own folder which you'll list under `"sources"` with the extra key `"type": "ppx"`. Then add an entry like you would for building a binary, to bytecode specifically, and similarly add to the entry `"type": "ppx"`. Finally add to the `"sources"` that contain the files on which to run that ppx `"ppx": ["Myppx"]` (notice it's just a module name, that tells bsb-native it's a local ppx).
 
 tl;dr
-1) add folder to `sources` with `"type": "ppx"`
+1) add folder to `"sources"` with `"type": "ppx"`
 2) add entry built to bytecode with `"type": "ppx"`
-3) add ppx field to entries that use that ppx `"ppx": ["Myppx"]`
+3) add `"ppx"` field to right `"sources"` object for files that use that ppx `"ppx": ["Myppx"]`
+4) (optional)  bsb-native passes to the ppx a command line argument called `-bsb-backend` followed by the current backend, which is either `"bytecode"`, `"native"` or `"js"`.
 
 Also bsb-native comes with [ppx_tools](https://github.com/ocaml-ppx/ppx_tools) available by default, no config!. Here are some ["docs"](https://github.com/ocaml-ppx/ppx_tools/blob/55825c58535e3600f5c70a0672806a5c3d45eea4/ppx_metaquot.ml#L5).
 
-You can't build ppxes to native or js for now. You also can't have a ppx depend on another ppx. You can't put the ppx code alongside your app code. The ppx will always be built even if you never reference it.
+You can't build ppxes to bytecode or js for now. You also can't have a ppx depend on another ppx. You can't put the ppx code alongside your app code. The ppx will always be built even if you never reference it.

@@ -132,7 +132,7 @@ let emit_impl_build
   let shadows = List.map (fun f -> 
     Bsb_ninja_util.{
      key = "ppx_flags"; 
-     op = AppendList ["-ppx"; f]
+     op = AppendList ["-ppx"; "\"" ^ f ^ " -bsb-backend js\""]
    }) local_ppx_flags in
   begin
     Bsb_ninja_util.output_build oc
@@ -205,7 +205,7 @@ let emit_intf_build
   let shadows = List.map (fun f -> 
     Bsb_ninja_util.{
      key = "ppx_flags"; 
-     op = AppendList ["-ppx"; f]
+     op = AppendList ["-ppx"; "\"" ^ f ^ " -bsb-backend js\""]
    }) local_ppx_flags in
   Bsb_ninja_util.output_build oc
     ~output:output_mliast
@@ -336,57 +336,46 @@ let handle_file_group
       ) @  acc
     ) group.sources  acc 
 
-(* Divide the entries into 3 groups:
-  - entries: all the non-ppx entries that we'd like to pack or link
-  - entries_that_have_ppxes: subset of `entries` which have dependencies on local ppxes
-  - ppx_entries: entries that are ppxes, a disjoint set from `entries`
+let separate_ppx_entries entries backend =
+  (* Separate entries into two set, the ppx ones and the non-ppx ones *)
+  List.fold_left Bsb_config_types.(fun acc ({kind; } as project_entry) -> 
+  let dry (entries, ppx_entries) entry_backend =
+    let entries = if backend = entry_backend && kind <> Ppx then 
+      project_entry :: entries
+    else entries in
+    let ppx_entries = if kind = Ppx then project_entry :: ppx_entries else ppx_entries in
+    (entries, ppx_entries)
+  in
   
-  Also returns a list of ppx module names and ppx executable paths.
- *)
-let get_local_ppx_deps backend entries =
-  List.fold_left Bsb_config_types.(
-    fun acc 
-        ({ ppx; kind; main_module_name; output_name; } as project_entry) ->
-    let dry (entries, entries_that_have_ppxes, local_ppx_deps, module_names, ppx_entries) entry_backend =
-        let (entries, entries_that_have_ppxes) = if backend = entry_backend && kind <> Ppx then 
-          if ppx <> [] then
-            (project_entry :: entries, project_entry :: entries_that_have_ppxes)
-          else
-            (project_entry :: entries, entries_that_have_ppxes)
-        else 
-          (entries, entries_that_have_ppxes) in
-        let (local_ppx_deps, module_names, ppx_entries) = if kind = Ppx then 
-          let (output, module_name) =
-          begin match entry_backend with
-          | Js       -> assert false
-          | Bytecode -> 
-            (match output_name with 
-              | None -> 
-                let extension = if Ext_sys.is_windows_or_cygwin then ".exe" else "" in
-                (String.lowercase main_module_name) ^ ".byte" ^ extension
-              | Some name -> name
-            ), main_module_name
-          | Native   -> 
-            (match output_name with 
-              | None -> 
-                let extension = if Ext_sys.is_windows_or_cygwin then ".exe" else "" in
-                (String.lowercase main_module_name) ^ ".native" ^ extension
-              | Some name -> name
-            ), main_module_name
-          end in
-        let output = if Ext_sys.is_windows_or_cygwin then output else "./" ^ output in
-        (output :: local_ppx_deps, module_name :: module_names, project_entry :: ppx_entries)
-        else
-          (local_ppx_deps, module_names, ppx_entries ) in
-        (entries, entries_that_have_ppxes, local_ppx_deps, module_names, ppx_entries)
-      in
-      List.fold_left (fun acc b -> 
-        match b with 
-        | JsTarget -> dry acc Js
-        | NativeTarget -> dry acc Native
-        | BytecodeTarget -> dry acc Bytecode
-      ) acc project_entry.backend;
-  ) ([], [], [], [], []) entries
+  List.fold_left (fun acc b -> 
+      match b with 
+      | JsTarget -> dry acc Js
+      | NativeTarget -> dry acc Native
+      | BytecodeTarget -> dry acc Bytecode
+    ) acc project_entry.backend;
+) ([], []) entries
+
+(* If we're building a normal project or library (not a ppx), we need to find the right 
+   executable path for each ppx that the `sources` depends on.
+   To do that we iterate over each ppx name, then find it in the array of ppx_entries,
+   then either use its `output_name` if any or use the default name.
+   If we can't find it in the local array of ppxes we look at the dependencies, to see if
+   they expose anything. *)
+let get_local_ppx_deps ~ppx_list ~root_project_dir ~backend ~dependency_info ~ppx_entries =
+  List.fold_left (fun (local_ppx_flags, local_ppx_deps) ppx -> 
+    try
+      let ppx_entry = List.find (fun {Bsb_config_types.main_module_name;} -> main_module_name = ppx) ppx_entries in
+      let output = begin match ppx_entry.output_name with 
+        | None -> 
+          let extension = if Ext_sys.is_windows_or_cygwin then ".exe" else "" in
+          (String.lowercase ppx_entry.main_module_name) ^ ".native" ^ extension
+        | Some name -> name
+      end in
+      let output = if Ext_sys.is_windows_or_cygwin then output else "./" ^ output in
+      (output :: local_ppx_flags, output :: local_ppx_deps)
+    with
+    | Not_found -> ((Bsb_dependency_info.check_if_dep ~root_project_dir ~backend dependency_info ppx) :: local_ppx_flags, local_ppx_deps)
+  ) ([], []) ppx_list
 
 let handle_file_groups
     oc ~package_specs 
@@ -399,6 +388,7 @@ let handle_file_groups
     ~dependency_info
     ~root_project_dir
     ~is_top_level
+    ~ppx_flags_internal
     (file_groups  :  Bsb_parse_sources.file_group list)
     namespace (st : info) : info  =
   let file_groups = List.filter (fun (group : Bsb_parse_sources.file_group) ->
@@ -408,62 +398,14 @@ let handle_file_groups
     | Bsb_config_types.Native   -> List.mem Bsb_parse_sources.Native group.Bsb_parse_sources.backend
     | Bsb_config_types.Bytecode -> List.mem Bsb_parse_sources.Bytecode group.Bsb_parse_sources.backend
   ) file_groups in 
-  let (entries, entries_that_have_ppxes, local_ppx_deps, local_ppx_module_names, _) = get_local_ppx_deps backend entries in
-  let (local_ppx_deps, local_ppx_module_names) = if is_top_level then begin
-    let rec loop_over_ppx (new_local_ppx_deps, new_local_ppx_module_names) local_ppx_deps local_ppx_module_names = 
-      begin match (local_ppx_deps, local_ppx_module_names) with 
-      | ([], []) -> (new_local_ppx_deps, new_local_ppx_module_names)
-      | (ppx_dep :: ppx_dep_rest, ppx_name :: ppx_name_rest) ->
-        let rec is_ppx_used entries = begin match entries with 
-          | [] -> false
-          | { Bsb_config_types.ppx; } :: rest ->
-            if List.mem ppx_name ppx then true
-            else is_ppx_used rest 
-        end in
-        if is_ppx_used entries then 
-          loop_over_ppx (ppx_dep :: new_local_ppx_deps, ppx_name :: new_local_ppx_module_names) ppx_dep_rest ppx_name_rest
-        else 
-          loop_over_ppx (new_local_ppx_deps, new_local_ppx_module_names) ppx_dep_rest ppx_name_rest
-      | _ -> assert false
-      end in
-    loop_over_ppx ([], []) local_ppx_deps local_ppx_module_names
-  end else (local_ppx_deps, local_ppx_module_names) in
+  (* Separate entries into two set, the ppx ones and the non-ppx ones *)
+  let (entries, ppx_entries) = separate_ppx_entries entries backend in
   List.fold_left 
     (fun comp_info (group : Bsb_parse_sources.file_group) -> 
       if group.is_ppx then
         comp_info
       else begin
-        let local_ppx_flags = if is_top_level then 
-          (String_map.fold (fun  module_name _  acc ->
-            if acc = [] then begin
-              List.fold_left Bsb_config_types.(fun acc e -> 
-                match e with 
-                | { main_module_name; ppx = _ :: _ as ppx; backend } when main_module_name = module_name -> 
-                  if List.mem JsTarget backend then
-                    ppx
-                  else 
-                    acc
-                | _ -> acc
-              ) acc entries_that_have_ppxes
-            end else 
-              acc
-          ) group.sources []) 
-          else if group.is_ppx then [] 
-          else local_ppx_module_names in
-        (*  map over the flags to find ppxes's full paths if they exist.  *)
-        let (local_ppx_flags, local_ppx_deps) = List.fold_left (fun (new_local_ppx_flags, new_local_ppx_deps) flag_exec -> 
-          (* @Hack You could potentially have a bug here where the exec_path name is the same as a module name
-            inside main-module but eeeeh that'd be weird! *)
-          let rec loop = fun local_ppx_deps local_ppx_module_names -> 
-            match (local_ppx_deps, local_ppx_module_names) with
-            | (exec_path :: local_ppx_deps, ppx_name :: local_ppx_module_names) -> 
-              if flag_exec = ppx_name then (exec_path :: new_local_ppx_flags, exec_path :: new_local_ppx_deps)
-              else loop local_ppx_deps local_ppx_module_names
-            | _ -> ((Bsb_dependency_info.check_if_dep ~root_project_dir ~backend dependency_info flag_exec) :: new_local_ppx_flags, new_local_ppx_deps)
-          in
-          loop local_ppx_deps local_ppx_module_names
-        ) ([], []) local_ppx_flags 
-        in
+        let (local_ppx_flags, local_ppx_deps) = get_local_ppx_deps ~ppx_list:(group.ppx @ ppx_flags_internal) ~root_project_dir ~backend ~dependency_info ~ppx_entries in
         handle_file_group 
          oc  ~bs_suffix ~package_specs ~custom_rules ~js_post_build_cmd ~local_ppx_flags ~local_ppx_deps
          files_to_install 

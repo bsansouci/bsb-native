@@ -27,10 +27,24 @@ type info =  string list
 
 val zero : info
 
-val get_local_ppx_deps : 
+(* val get_local_ppx_deps : 
   Bsb_config_types.compilation_kind_t -> 
   Bsb_config_types.entries_t list -> 
-  (Bsb_config_types.entries_t list * Bsb_config_types.entries_t list * string list * string list * Bsb_config_types.entries_t list)
+  (Bsb_config_types.entries_t list * string list * string list * Bsb_config_types.entries_t list)
+ *)
+ 
+val separate_ppx_entries :
+  Bsb_config_types.entries_t list ->
+  Bsb_config_types.compilation_kind_t ->
+  (Bsb_config_types.entries_t list * Bsb_config_types.entries_t list)
+
+val get_local_ppx_deps : 
+  ppx_list:string list -> 
+  root_project_dir:string -> 
+  backend:Bsb_config_types.compilation_kind_t -> 
+  dependency_info:Bsb_dependency_info.t -> 
+  ppx_entries:Bsb_config_types.entries_t list -> 
+  (string list * string list)
 
 val handle_file_groups :
   out_channel ->
@@ -44,6 +58,7 @@ val handle_file_groups :
   dependency_info:Bsb_dependency_info.t -> 
   root_project_dir:string ->
   is_top_level:bool ->
+  ppx_flags_internal:string list ->
   Bsb_parse_sources.file_group list ->
   string option ->
   info -> info
