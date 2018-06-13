@@ -9,6 +9,7 @@ Features:
 - #38 allow naming executables
 - allow an array for the `"backend"` field in `"entries"`
 - automatically link artifacts generated from `build_script.re` (when you call `gcc` only), so no need to use `"c-static-library`
+- conditional compilation per os with `#if OS_TYPE = "Darwin"` (see bottom of `README.md`)
 
 Fixes:
 - #47 broken incremental build
