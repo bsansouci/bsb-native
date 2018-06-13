@@ -8,6 +8,7 @@
  */
 
 var child_process = require('child_process')
+var os = require('os');
 
 var bsconfig = 'bsconfig.json'
 var bsb_exe = __filename + ".exe"
@@ -16,22 +17,33 @@ var bsb_exe = __filename + ".exe"
 
 var watch_mode = false
 var verbose = false
+var postBuild = undefined
 /**
  * @type {string[]}
  */
 var delegate_args = []
 var backend_arg = []
+var build_library_args = []
 var process_argv = process.argv
 for (var i = 2; i < process_argv.length; ++i) {
     var current = process_argv[i]
-    delegate_args.push(current)
-    if (current === '-w') {
-        watch_mode = true
-    } else if (current === "-verbose"){
-        verbose = true
-    } else if (current === "-backend" && i + 1 < process_argv.length) {
-        backend_arg.push(current);
-        backend_arg.push(process_argv[i + 1]);
+    if (current === '-build-success') {
+        // TODO boundary safety check
+        // Not really needed
+        postBuild = process_argv[++i]
+    } else {
+        delegate_args.push(current)
+        if (current === '-w') {
+            watch_mode = true
+        } else if (current === "-verbose"){
+            verbose = true
+        } else if (current === "-backend" && i + 1 < process_argv.length) {
+            backend_arg.push(current);
+            backend_arg.push(process_argv[i + 1]);
+        } else if (current === "-build-library" && i + 1 < process_argv.length) {
+            build_library_args.push(current);
+            build_library_args.push(process_argv[i + 1]);
+        }
     }
 }
 
@@ -100,9 +112,12 @@ if (watch_mode) {
             process.on('SIGTERM', onExit)
             process.on('SIGHUP', onExit)
             process.on('uncaughtException', onExit)
-            // close when stdin stops
             process.stdin.on('close', onExit)
-            // process.stdin.resume()
+            // close when stdin stops
+            if (os.platform() !== "win32") {
+                process.stdin.on('end', onExit)
+                process.stdin.resume()
+            }
 
             return true
         } catch (exn) {
@@ -185,12 +200,20 @@ if (watch_mode) {
     function logFinish(code) {
         if (std_is_tty) {
             if (code === 0) {
+                if (postBuild) {
+                    console.log("running postbuild command", postBuild)
+                    child_process.exec(postBuild, { shell: true })
+                }
                 console.log("\x1b[36m>>>> Finish compiling\x1b[0m")
             } else {
                 console.log("\x1b[1;31m>>>> Finish compiling(exit: " + code + ")\x1b[0m")
             }
         } else {
             if (code === 0) {
+                if (postBuild) {
+                    console.log("running postbuild command", postBuild)
+                    child_process.exec(postBuild, { shell: true })
+                }
                 console.log(">>>> Finish compiling")
             } else {
                 console.log(">>>> Finish compiling(exit: " + code + ")")
@@ -244,13 +267,13 @@ if (watch_mode) {
         if (acquireBuild()) {
             logStart()
             if (reasons_to_rebuild.length === 0) {
-                console.log("Rebuilding since just get started")
+                console.log("Rebuilding since just got started")
             } else {
                 console.log("Rebuilding since", reasons_to_rebuild)
             }
             reasons_to_rebuild = [];
             var p = child_process
-                .spawn(bsb_exe, backend_arg, sub_config);
+                .spawn(bsb_exe, backend_arg.concat(build_library_args), sub_config);
             p.on('exit', build_finished_callback)
             p.stderr
                 .setEncoding('utf8')
