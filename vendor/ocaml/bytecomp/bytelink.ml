@@ -306,16 +306,12 @@ let link_bytecode ppf tolink exec_name standalone =
     if standalone then begin
       (* Copy the header *)
       try
-        if String.length !Clflags.use_runtime > 0 then
-          let header = "camlheader_ur" in
-            (* then  else "camlheader" ^ !Clflags.runtime_variant in *)
-          let inchan = open_in_bin (find_in_path !load_path header) in
-          copy_file inchan outchan;
-          close_in inchan
-        else begin
-          output_string outchan ("#!" ^ (make_absolute standard_runtime));
-          output_char outchan '\n';
-        end
+        let header =
+          if String.length !Clflags.use_runtime > 0
+          then "camlheader_ur" else "camlheader" ^ !Clflags.runtime_variant in
+        let inchan = open_in_bin (find_in_path !load_path header) in
+        copy_file inchan outchan;
+        close_in inchan
       with Not_found | Sys_error _ -> ()
     end;
     Bytesections.init_record outchan;
