@@ -11040,7 +11040,15 @@ let entries_from_bsconfig () =
     | _ -> assert false
   end
 
-
+let replace_sep_if_necessary path =
+  if Ext_sys.is_windows_or_cygwin then
+    let cp = Bytes.of_string path in
+    for i = 0 to (Bytes.length cp - 1) do
+      if Bytes.get cp i = '/' then
+        Bytes.set cp i '\\';
+    done;
+    Bytes.to_string cp
+  else path
 
 (*TODO: it is a little mess that [cwd] and [project dir] are shared*)
 
@@ -11228,7 +11236,7 @@ let interpret_json
                 end
               | _ -> acc ) String_map.empty  s  ))
     |? (Bsb_build_schemas.refmt_flags, `Arr (fun s -> refmt_flags := get_list_string s))
-    |? (Bsb_build_schemas.static_libraries, `Arr (fun s -> static_libraries := (List.map (fun v -> cwd // v) (get_list_string s))))
+    |? (Bsb_build_schemas.static_libraries, `Arr (fun s -> static_libraries := (List.map (fun v -> cwd // (replace_sep_if_necessary v)) (get_list_string s))))
     |? (Bsb_build_schemas.c_linker_flags, `Arr (fun s -> c_linker_flags := (List.fold_left (fun acc v -> "-ccopt" :: v :: acc) [] (List.rev (get_list_string s))) @ !c_linker_flags))
     |? (Bsb_build_schemas.build_script, `Str (fun s -> build_script := Some s))
     |? (Bsb_build_schemas.ocamlfind_dependencies, `Arr (fun s -> ocamlfind_dependencies := get_list_string s))
@@ -17708,7 +17716,7 @@ let link oc comp_info
         op = Bsb_ninja_util.Overwrite main_module_name
       }; {
         key = "static_libraries";
-        op = Bsb_ninja_util.Overwrite (Bsb_build_util.flag_concat "-add-clib" (c_linker_flags @ static_libraries))
+        op = Bsb_ninja_util.Overwrite (Bsb_build_util.flag_concat "-add-clib" (c_linker_flags @ (List.map Ext_bytes.ninja_escaped static_libraries)))
       }] in
       let shadows = if is_ppx && not (List.mem "compiler-libs" ocaml_dependencies) then 
         {
@@ -17732,7 +17740,7 @@ let link oc comp_info
         ~output
         ~input:""
         ~inputs:all_mlast_files
-        ~implicit_deps:(external_deps_lib @ (List.map (fun path -> Ext_bytes.ninja_escaped path) (all_cmi_files @ all_cmo_or_cmx_files @ static_libraries)))
+        ~implicit_deps:(external_deps_lib @ (List.map Ext_bytes.ninja_escaped (all_cmi_files @ all_cmo_or_cmx_files @ static_libraries)))
         ~shadows
         ~rule:rule_name;
         comp_info
@@ -18766,10 +18774,11 @@ let regenerate_ninja
                         let ic = open_in_bin filename in
                         (try
                            while true do
-                             artifacts_installed := (input_line ic) :: !artifacts_installed
+                             artifacts_installed := (String.trim (input_line ic)) :: !artifacts_installed
                            done
                          with End_of_file -> ());
                          close_in ic;
+                        
                         (* This is just for the 3.0 release, so it goes a bit smoother. Once all of our packages 
                            are fixed we don't need to dedupe. 
                                     April 17th 2018
@@ -20191,7 +20200,7 @@ let build_bs_deps cwd ~root_project_dir ~backend ~main_config:(main_config : Bsb
             let ic = open_in_bin filename in
             (try
               while true do
-                artifacts_installed := (input_line ic) :: !artifacts_installed
+                artifacts_installed := (String.trim (input_line ic)) :: !artifacts_installed
               done
             with End_of_file -> ());
             close_in ic;

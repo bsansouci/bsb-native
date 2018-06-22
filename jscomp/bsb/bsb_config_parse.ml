@@ -131,7 +131,15 @@ let entries_from_bsconfig () =
     | _ -> assert false
   end
 
-
+let replace_sep_if_necessary path =
+  if Ext_sys.is_windows_or_cygwin then
+    let cp = Bytes.of_string path in
+    for i = 0 to (Bytes.length cp - 1) do
+      if Bytes.get cp i = '/' then
+        Bytes.set cp i '\\';
+    done;
+    Bytes.to_string cp
+  else path
 
 (*TODO: it is a little mess that [cwd] and [project dir] are shared*)
 
@@ -319,7 +327,7 @@ let interpret_json
                 end
               | _ -> acc ) String_map.empty  s  ))
     |? (Bsb_build_schemas.refmt_flags, `Arr (fun s -> refmt_flags := get_list_string s))
-    |? (Bsb_build_schemas.static_libraries, `Arr (fun s -> static_libraries := (List.map (fun v -> cwd // v) (get_list_string s))))
+    |? (Bsb_build_schemas.static_libraries, `Arr (fun s -> static_libraries := (List.map (fun v -> cwd // (replace_sep_if_necessary v)) (get_list_string s))))
     |? (Bsb_build_schemas.c_linker_flags, `Arr (fun s -> c_linker_flags := (List.fold_left (fun acc v -> "-ccopt" :: v :: acc) [] (List.rev (get_list_string s))) @ !c_linker_flags))
     |? (Bsb_build_schemas.build_script, `Str (fun s -> build_script := Some s))
     |? (Bsb_build_schemas.ocamlfind_dependencies, `Arr (fun s -> ocamlfind_dependencies := get_list_string s))
