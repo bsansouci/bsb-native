@@ -1,8 +1,8 @@
 include ../Makefile.shared
 
 COMPILER=ocamlc.opt
-BSPP=../../lib/bspp.exe
-BELT_BSPPX=../../lib/belt_bsppx.exe
+BSPP=bspp.exe
+BELT_BSPPX=belt_bsppx.exe
 
 LOCAL_SOURCE_LIST= \
 	caml_hash \
@@ -202,9 +202,9 @@ belt_gSortArrayString.mli : ../others/sort.cppo.mli
 endif	
 
 .mli.cmi:
-	COMPILE_TO_NATIVE=true $(COMPILER) $(INCLUDES) -pp $(BSPP) $(COMPFLAGS) -o $@ -c $<
+	PATH=~/bsb-native2/lib:$$PATH COMPILE_TO_NATIVE=true $(COMPILER) $(INCLUDES) -pp $(BSPP) $(COMPFLAGS) -o $@ -c $<
 .ml.cmo:
-	COMPILE_TO_NATIVE=true $(COMPILER) $(INCLUDES) -pp $(BSPP) $(COMPFLAGS) -o $@ -c $<
+	PATH=~/bsb-native2/lib:$$PATH COMPILE_TO_NATIVE=true $(COMPILER) $(INCLUDES) -pp $(BSPP) $(COMPFLAGS) -o $@ -c $<
 
 
 
@@ -214,4 +214,4 @@ ML_SOURCES=$(addsuffix .ml, $(SOURCE_LIST)) $(addsuffix .ml, $(LOCAL_SOURCE_LIST
 MLI_SOURCES=$(addsuffix .mli, $(SOURCE_LIST)) $(addsuffix .mli, $(LOCAL_SOURCE_LIST)) 
 
 depend:
-	COMPILE_TO_NATIVE=true $(CAMLDEP) -pp $(BSPP) -ppx $(BELT_BSPPX) -native $(INCLUDES) $(ML_SOURCES) $(MLI_SOURCES) | sed -e 's/\.cmx/.cmo/g' >.depend
+	PATH=~/bsb-native2/lib:$$PATH COMPILE_TO_NATIVE=true $(CAMLDEP) -pp $(BSPP) -ppx $(BELT_BSPPX) -native $(INCLUDES) $(ML_SOURCES) $(MLI_SOURCES) | sed -e 's/\.cmx/.cmo/g' >.depend

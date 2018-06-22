@@ -528,7 +528,7 @@ let link oc comp_info
         op = Bsb_ninja_util.Overwrite main_module_name
       }; {
         key = "static_libraries";
-        op = Bsb_ninja_util.Overwrite (Bsb_build_util.flag_concat "-add-clib" (c_linker_flags @ static_libraries))
+        op = Bsb_ninja_util.Overwrite (Bsb_build_util.flag_concat "-add-clib" (c_linker_flags @ (List.map Ext_bytes.ninja_escaped static_libraries)))
       }] in
       let shadows = if is_ppx && not (List.mem "compiler-libs" ocaml_dependencies) then 
         {

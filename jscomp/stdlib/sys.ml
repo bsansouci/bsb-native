@@ -34,9 +34,9 @@ let unix = unix ()
 let win32 = win32 ()
 let cygwin = cygwin ()
 #if BS then
-let max_array_length = 2147483647 (* 2^ 31 - 1 *)
-let max_string_length = 2147483647
-#else    
+let max_array_length = 1073741823 (* 2^ 31 - 1 *)
+let max_string_length = 1073741823
+#else
 let max_array_length = (1 lsl (word_size - 10)) - 1;;
 let max_string_length = word_size / 8 * max_array_length - 1;;
 #end

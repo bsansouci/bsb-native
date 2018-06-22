@@ -1,0 +1,113 @@
+/**
+ * This file has no copyright assigned and is placed in the Public Domain.
+ * This file is part of the mingw-w64 runtime package.
+ * No warranty is given; refer to the file DISCLAIMER.PD within this package.
+ */
+
+import "mfobjects.idl";
+
+cpp_quote("EXTERN_GUID(MF_SOURCE_READER_ASYNC_CALLBACK, 0x1e3dbeac,0xbb43,0x4c35,0xb5,0x07,0xcd,0x64,0x44,0x64,0xc9,0x65);")
+cpp_quote("EXTERN_GUID(MF_SOURCE_READER_D3D_MANAGER, 0xec822da2,0xe1e9,0x4b29,0xa0,0xd8,0x56,0x3c,0x71,0x9f,0x52,0x69);")
+cpp_quote("EXTERN_GUID(MF_SOURCE_READER_DISABLE_DXVA, 0xaa456cfd,0x3943,0x4a1e,0xa7,0x7d,0x18,0x38,0xc0,0xea,0x2e,0x35);")
+cpp_quote("EXTERN_GUID(MF_SOURCE_READER_MEDIASOURCE_CONFIG, 0x9085abeb,0x0354,0x48f9,0xab,0xb5,0x20,0x0d,0xf8,0x38,0xc6,0x8e);")
+cpp_quote("EXTERN_GUID(MF_SOURCE_READER_MEDIASOURCE_CHARACTERISTICS, 0x6d23f5c8,0xc5d7,0x4a9b,0x99,0x71,0x5d,0x11,0xf8,0xbc,0xa8,0x80);")
+cpp_quote("EXTERN_GUID(MF_SOURCE_READER_ENABLE_VIDEO_PROCESSING, 0xfb394f3d,0xccf1,0x42ee,0xbb,0xb3,0xf9,0xb8,0x45,0xd5,0x68,0x1d);" )
+cpp_quote("EXTERN_GUID(MF_SOURCE_READER_DISCONNECT_MEDIASOURCE_ON_SHUTDOWN, 0x56b67165,0x219e,0x456d,0xa2,0x2e,0x2d,0x30,0x04,0xc7,0xfe,0x56);" )
+
+typedef [v1_enum] enum MF_SOURCE_READER_FLAG {
+    MF_SOURCE_READERF_ERROR                     = 0x00000001,
+    MF_SOURCE_READERF_ENDOFSTREAM               = 0x00000002,
+    MF_SOURCE_READERF_NEWSTREAM                 = 0x00000004,
+    MF_SOURCE_READERF_NATIVEMEDIATYPECHANGED    = 0x00000010,
+    MF_SOURCE_READERF_CURRENTMEDIATYPECHANGED   = 0x00000020,
+    MF_SOURCE_READERF_STREAMTICK                = 0x00000100
+} MF_SOURCE_READER_FLAG;
+
+typedef struct _MF_SINK_WRITER_STATISTICS {
+    DWORD    cb;
+    LONGLONG llLastTimestampReceived;
+    LONGLONG llLastTimestampEncoded;
+    LONGLONG llLastTimestampProcessed;
+    LONGLONG llLastStreamTickReceived;
+    LONGLONG llLastSinkSampleRequest;
+    QWORD    qwNumSamplesReceived;
+    QWORD    qwNumSamplesEncoded;
+    QWORD    qwNumSamplesProcessed;
+    QWORD    qwNumStreamTicksReceived;
+    DWORD    dwByteCountQueued;
+    QWORD    qwByteCountProcessed;
+    DWORD    dwNumOutstandingSinkSampleRequests;
+    DWORD    dwAverageSampleRateReceived;
+    DWORD    dwAverageSampleRateEncoded;
+    DWORD    dwAverageSampleRateProcessed;
+} MF_SINK_WRITER_STATISTICS;
+
+enum {
+    MF_SOURCE_READER_INVALID_STREAM_INDEX = 0xffffffff,
+    MF_SOURCE_READER_ALL_STREAMS          = 0xfffffffe,
+    MF_SOURCE_READER_ANY_STREAM           = 0xfffffffe,
+    MF_SOURCE_READER_FIRST_AUDIO_STREAM   = 0xfffffffd,
+    MF_SOURCE_READER_FIRST_VIDEO_STREAM   = 0xfffffffc,
+    MF_SOURCE_READER_MEDIASOURCE          = 0xffffffff,
+};
+
+[
+    object,
+    uuid(70ae66f2-c809-4e4f-8915-bdcb406b7993),
+    local
+]
+interface IMFSourceReader : IUnknown
+{
+    HRESULT GetStreamSelection([in] DWORD dwStreamIndex, [out] BOOL *pfSelected);
+    HRESULT SetStreamSelection([in] DWORD dwStreamIndex, [in] BOOL fSelected);
+    HRESULT GetNativeMediaType([in] DWORD dwStreamIndex, [in] DWORD dwMediaTypeIndex, [out] IMFMediaType **ppMediaType);
+    HRESULT GetCurrentMediaType([in] DWORD dwStreamIndex, [out] IMFMediaType **ppMediaType);
+    HRESULT SetCurrentMediaType([in] DWORD dwStreamIndex, [in, out] DWORD *pdwReserved, [in] IMFMediaType *pMediaType);
+    HRESULT SetCurrentPosition([in] REFGUID guidTimeFormat, [in] REFPROPVARIANT varPosition);
+    HRESULT ReadSample([in] DWORD dwStreamIndex, [in] DWORD dwControlFlags, [out] DWORD *pdwActualStreamIndex,
+            [out] DWORD *pdwStreamFlags, [out] LONGLONG *pllTimestamp, [out] IMFSample **ppSample);
+    HRESULT Flush([in] DWORD dwStreamIndex);
+    HRESULT GetServiceForStream([in] DWORD dwStreamIndex, [in] REFGUID guidService, [in] REFIID riid, [out] LPVOID *ppvObject);
+    HRESULT GetPresentationAttribute([in] DWORD dwStreamIndex, [in] REFGUID guidAttribute, [out] PROPVARIANT *pvarAttribute);
+}
+
+[
+    object,
+    uuid(3137f1cd-fe5e-4805-a5d8-fb477448cb3d),
+    local
+]
+interface IMFSinkWriter : IUnknown
+{
+    HRESULT AddStream([in] IMFMediaType *pTargetMediaType, [out] DWORD *pdwStreamIndex);
+    HRESULT SetInputMediaType([in] DWORD dwStreamIndex, [in] IMFMediaType *pInputMediaType,
+            [in] IMFAttributes *pEncodingParameters );
+    HRESULT BeginWriting();
+    HRESULT WriteSample([in] DWORD dwStreamIndex, [in] IMFSample *pSample);
+    HRESULT SendStreamTick([in] DWORD dwStreamIndex, [in] LONGLONG llTimestamp);
+    HRESULT PlaceMarker([in] DWORD dwStreamIndex, [in] LPVOID pvContext);
+    HRESULT NotifyEndOfSegment([in] DWORD dwStreamIndex);
+    HRESULT Flush([in] DWORD dwStreamIndex);
+    HRESULT Finalize();
+    HRESULT GetServiceForStream([in] DWORD dwStreamIndex, [in] REFGUID guidService,
+            [in] REFIID riid, [out] LPVOID *ppvObject);
+    HRESULT GetStatistics([in] DWORD dwStreamIndex, [out] MF_SINK_WRITER_STATISTICS *pStats);
+}
+
+[
+    object,
+    uuid(deec8d99-fa1d-4d82-84c2-2c8969944867),
+    local
+]
+interface IMFSourceReaderCallback : IUnknown
+{
+    HRESULT OnReadSample([in] HRESULT hrStatus, [in] DWORD dwStreamIndex, [in] DWORD dwStreamFlags,
+            [in] LONGLONG llTimestamp, [in] IMFSample *pSample);
+    HRESULT OnFlush([in] DWORD dwStreamIndex);
+    HRESULT OnEvent([in] DWORD dwStreamIndex, [in] IMFMediaEvent *pEvent);
+}
+
+cpp_quote("HRESULT WINAPI MFCreateSinkWriterFromMediaSink(IMFMediaSink *pMediaSink,IMFAttributes *pAttributes,IMFSinkWriter **ppSinkWriter);")
+cpp_quote("HRESULT WINAPI MFCreateSinkWriterFromURL(LPCWSTR pwszOutputURL,IMFByteStream *pByteStream,IMFAttributes *pAttributes,IMFSinkWriter **ppSinkWriter);")
+cpp_quote("HRESULT WINAPI MFCreateSourceReaderFromByteStream(IMFByteStream *pByteStream,IMFAttributes *pAttributes,IMFSourceReader **ppSourceReader);")
+cpp_quote("HRESULT WINAPI MFCreateSourceReaderFromMediaSource(IMFMediaSource *pMediaSource,IMFAttributes *pAttributes,IMFSourceReader **ppSourceReader);")
+cpp_quote("HRESULT WINAPI MFCreateSourceReaderFromURL(LPCWSTR pwszURL,IMFAttributes *pAttributes,IMFSourceReader **ppSourceReader);")

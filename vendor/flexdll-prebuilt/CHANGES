@@ -1,0 +1,203 @@
+Version 0.37
+- Bug fix: the IMAGE_SCN_LNK_NRELOC_OVFL section flag was not propertly reset when
+  the number of relocations was reduced enough to fit in the 16-bit field,
+  causing https://caml.inria.fr/mantis/view.php?id=7603
+- Support for passing argument through external files (-arg/-arg0)
+  (Bernhard Schommer)
+- Fix encoding of high surrogate for U+10000-U+10FFFF in UTF-16 response files (David Allsopp)
+
+Version 0.36
+- Add Unicode support (patch by Nicolás Ojeda Bär)
+- Workaround apparent bug in VS 2017.3 link (patch by David Allsopp)
+- Additional heuristic for -lfoo on MSVC: try libfoo.lib but then try foo.lib (David Allsopp)
+
+Version 0.35
+- Fixes for clang (patch by Roven Gabriel)
+- Improve autodetection of WinSDK paths (patch by David Allsopp)
+- Add MSVC_DETECT Makefile variable which overrides all C Compiler detection logic when 0.
+- Add checkenv script which determines if the environment is sound specifying MSVC_DETECT=0
+- Improve performance of -builtin
+- Better support for @response files, which can contain options in
+  addition to filenames (patch by Bernhard Schommer)
+- Ignore "-g" (passed by OCaml when building ocamlrund) (patch by whitequark)
+- Uses gcc -print-search-dirs instead of gcc -print-sysroot when figuring out the default
+  library search paths (patch by whitequark)
+- Modernize code for OCaml 4.03 (patch for compatibility layers for earlier versions by David Allsopp)
+- Better support for long command line when calling the toolchain linker
+- Do not perform relocation from the DLL entry point when the DLL is loaded in "not for
+  execution mode" (http://caml.inria.fr/mantis/view.php?id=7268)
+- Fix -stack for Cygwin (when the resulting executable is called XXX.exe, not XXX)
+
+Version 0.34
+- New option -norelrelocs to check that no relative flexdll relocations are created (this ensures that the generated DLLs can be loaded at any address),
+- New option -base to specify the image base address (msvc64 only).
+- Always generate a table for used __flimp_XXX symbols (even when X is defined in the generated image).
+- Fix bug with empty sections in "-builtin" mode
+- -builtin: Generate proper ADDR64 instead of HIGHLOW (32-bit) relocations in the dll
+
+Version 0.33
+- Turn 'too far' messages into proper errors, avoid terminating the process
+
+Version 0.31
+- Support for "@respfiles" arguments (for long command lines).
+  Used to be implemented by OCaml runtime system.
+- Fix bug when relocation counter > 0xffff
+- Fix bug with REL32 relocations on non-zero base in DLLs
+- Fix bug with empty .a files
+
+Version 0.30
+- Allow the internal linker to create large DLLs (>= 16Mb)
+
+Version 0.29
+- use "cygpath -S", not "cygpath -v" which no longer exists
+
+Version 0.28
+- new option '-stack' to set the stack reserve
+- new option '-patch' (to be used in conjunction with -stack and -o to
+  patch the an existing image)
+
+Version 0.27
+- support for mingw64; the mingw toolcgain now relies on the 32-bit version of mingw64;
+  the old "gcc -mno-cygwin" is no longer supporte.
+  Patch from Antointe Mine:
+  http://caml.inria.fr/mantis/view.php?id=5179
+- fix directive parsing bug (http://caml.inria.fr/mantis/view.php?id=5339)
+- support for new file layout for cygwin's version of mingw
+- support for objects with more than 65536 relocations
+
+Version 0.26
+- fix for Win64 (use a PE32+ optional header, and a lower base address)
+- use _putenv_s instead of putenv for FLEXDLL_RELOCATE (thanks to Yasutaka Atarashi)
+- use /dev/null instead of NUL for Cygwin (thanks to Yasutaka Atarashi)
+
+Version 0.25
+- fix a bug with archive member names that contain a slash
+
+Version 0.24
+- add new toolchain msvc64; replace the old combination "-chain msvc -x64" (-x64 has been removed)
+- change build system to create a single binary version of flexdll that includes both the 32-bit and 64-bit
+  version for MSVC's support objects
+- switch to Visual Studio 2008 (to compile the binary distribution and for the default manifests)
+
+Version 0.23
+- ignore -D and -U flags (OCaml PR #4979)
+- change limit before using a response file (OCaml PR #4645)
+
+Version 0.22
+- fix a bug when emitting IMAGE_COMDAT_SELECT_ASSOCIATIVE symbols
+
+Version 0.21
+- always use bash to call external commands under Cygwin (to make it work
+  when gcc is a symlink)
+
+Version 0.20
+- (build) Avoid the use of the rc tool
+- (dist) add version.rc to the source release
+- Allow "/link XXX" as an equivalent to "-link XXX" (or "/linkXXX")
+- Use an explicit .def file under MinGW and Cygwin to force the two symbols reloctbl and symtbl to be exported
+- Fixes for x64
+- Allow to write sections with more than 0xffff relocations
+- Create a Win32 installer
+
+Version 0.19
+- fix bug introduced in version 0.17 about virtual addresses for the builtin
+  linker mode
+
+Version 0.18
+- support for .sxdata section
+
+Version 0.17
+- patch from Lars Nilsson to ease compilation of flexdll.h with C++
+- prefer using XXX.dll.a (import lib) over XXX.a (static lib)
+- fix bug introduced in commit 136 about virtual addresses
+
+Version 0.16
+- New -noexport command line option to force an empty symbol table
+
+Version 0.15, released on 2009-02-25
+- protects calls to cygpath with long command lines (patch from
+  Matthieu Dubuget)
+- always pass msvcrt.lib to link.exe
+
+Version 0.14, released on 2008-28-01
+- mingw port: put /lib/mingw before /lib
+- support for a built-in linker
+
+Version 0.13, released on 2008-11-20
+- another technique to work around the lack of response file for gcc:
+  put the command line in an external bash script and apply bash to it
+  (relies on the fact that Cygwin programs can call Cygwin programs
+  with long command lines); this idea is from Xavier Leroy
+- the -subsystem switch is now supported for the mingw toolchain
+
+Version 0.12, released on 2008-11-17
+- gcc 3 does not support response files; to support longer command lines, we use a
+  custom replacement for cmd.exe (which restricts the length of the command line
+  to 8kB whereas Windows supports 32kB)
+- patch for Richard Jones: do not find directories when looking for a file
+
+Version 0.11, released on 2008-11-10
+- compiled with mingw port so as to depend on msvcrt.dll, not msvcr80.dll
+- experimental support for directly calling "ld" instead of "gcc"
+- by default, reexport symbols imported from an import library
+- quote the response file argument
+- use slashes instead of backslashed in response file (needed for mingw's ld)
+- by default, use the real manifest
+
+Version 0.10, released on 2008-10-21
+- use "gcc -mno-cygwin -print-libgcc-file-name" to get the standard
+  library directory for mingw
+- lower the length threshold to use a diversion file when calling the
+  linker with many arguments
+
+Version 0.9, released on 2008-09-18
+ - fix bug with COFF symbols for sections (with more than 1 auxilliary block)
+ - ignore debug relocations on x86 (of kind 0x000a, 0x000b)
+
+Version 0.8, released on 2008-03-10
+ - new -no-merge-manifest
+
+Version 0.7, released on 2008-03-09
+ - allow .dll.a as automatic extension for libraries
+ - minor bug fixes
+
+Version 0.6, released on 2008-02-11
+ - support COMDAT section symbols
+ - support mixed libraries (import library + regular objects)
+ - optimizations (do not rewrite library objects when not needed,
+   pass the lib to the linker)
+ - new -real-manifest, replace -default-manifest
+ - new -implib option
+ - new -outdef option
+ - new zlib/libpng license
+
+Version 0.5, released on 2008-01-11
+ - new -default-manifest option (always on, currently)
+ - use a temp file name for getting the output of commands (allow
+   several instances of flexlink to run in parallel)
+
+Version 0.4, released on 2008-01-02
+ - Code cleanup
+ - FLEXLINKFLAGS env var to pass extra arguments
+
+Version 0.3, released on 2007-11-20
+ - Make it work under x86_64
+ - New -subsystem option (currently for MSVC chain only)
+ - New -explain option
+ - New -link option
+
+Version 0.2, released on 2007-11-06
+ - New -maindll option (to build a DLL that contains the "main program"
+   from FlexDLL's point of view)
+ - Can now explicitly enable/disable the use of cygpath (on by default
+   only for Cygwin)
+ - New -L xxx (or -Lxxx) option
+ - New -where option
+ - FLEXDIR environment variable (where to look for FlexDLL's .obj files)
+
+Version 0.1, released on 2007-06-14
+ - Initial release
+
+<!-- Local Variables:  -->
+<!-- coding: utf-8     -->
+<!-- End:              -->

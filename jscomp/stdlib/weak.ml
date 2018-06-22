@@ -38,9 +38,9 @@ let fill ar ofs len x =
     done
   end
 ;;
-#if BS then 
+#if BS then
 module Sys = struct
-  let max_array_length = 2147483647 (* 2**31 - 1*)
+  let max_array_length = 1073741823 (* 2**31 - 1*)
 end
 #end
 (** Weak hash tables *)

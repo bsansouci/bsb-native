@@ -43,18 +43,28 @@ let standard_library =
 
 let extension = if Sys.win32 || Sys.cygwin then ".exe" else ""
 let standard_runtime = (Filename.dirname Sys.executable_name) // "bin" // "ocamlrun" ^ extension
+let mingw_path e =
+  ((Filename.dirname (Filename.dirname Sys.executable_name)) // "mingw32") // e
 let ccomp_type = "%%CCOMPTYPE%%"
-let bytecomp_c_compiler = "%%BYTECC%%"
+let bytecomp_c_compiler = mingw_path "%%BYTECC%%"
 let bytecomp_c_libraries = "%%BYTECCLIBS%%"
-let native_c_compiler = "%%NATIVECC%%"
+let native_c_compiler = mingw_path "%%NATIVECC%%"
 let native_c_libraries = "%%NATIVECCLIBS%%"
-let native_pack_linker = "%%PACKLD%%"
-let ranlib = "%%RANLIBCMD%%"
-let ar = "%%ARCMD%%"
+let native_pack_linker = mingw_path "%%PACKLD%%"
+let ranlib = mingw_path "%%RANLIBCMD%%"
+let ar = mingw_path "%%ARCMD%%"
 let cc_profile = "%%CC_PROFILE%%"
-let mkdll = "%%MKDLL%%"
-let mkexe = "%%MKEXE%%"
-let mkmaindll = "%%MKMAINDLL%%"
+
+let flexdll_path e =
+  let vendor = Filename.dirname (Filename.dirname Sys.executable_name) in
+  (vendor // "flexdll" // e)
+  ^ " -L" ^ (vendor // "lib")
+  ^ " -L" ^ (vendor // "mingw32")
+  ^ " -L" ^ (vendor // "lib" // "gcc" // "i686-w64-mingw32" // "7.2.0")
+
+let mkdll = flexdll_path "%%MKDLL%%"
+let mkexe = flexdll_path "%%MKEXE%%"
+let mkmaindll = flexdll_path "%%MKMAINDLL%%"
 
 let exec_magic_number = "Caml1999X011"
 and cmi_magic_number = "Caml1999I017"
@@ -84,7 +94,7 @@ let architecture = "%%ARCH%%"
 let model = "%%MODEL%%"
 let system = "%%SYSTEM%%"
 
-let asm = "%%ASM%%"
+let asm = mingw_path "%%ASM%%"
 let asm_cfi_supported = %%ASM_CFI_SUPPORTED%%
 let with_frame_pointers = %%WITH_FRAME_POINTERS%%
 
