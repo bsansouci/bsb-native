@@ -1,6 +1,6 @@
 install:
   - appveyor DownloadFile http://repo.msys2.org/distrib/msys2-i686-latest.exe
-  - msys2-i686-latest.exe --platform minimal --script auto-install.js -v
+  - msys2-i686-latest.exe --platform minimal --script install_msys2_32.js -v
   - PATH C:\msys32\MINGW32\bin;C:\msys32\usr\bin;%PATH%
   - bash -lc "pacman --noconfirm --sync --refresh --refresh pacman"
   - bash -lc "pacman --noconfirm --sync --refresh --refresh --sysupgrade --sysupgrade"
