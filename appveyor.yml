@@ -29,6 +29,6 @@ build_script:
   - bash -lc "ls -lh /c/projects/bsb-native"
   - bash -lc "ls -lh /c"
   - bash -lc "ls -lh /c/msys64"
-  - bash -lc "mingw32 --help"
-  - mingw32 "ls"
+  - mingw32.exe "ls -lh /c"
+  - bash -lc "mingw32.exe --help"
   - bash -lc "FLEXLINKFLAGS='-L/msys64/MINGW32/i686-w64-mingw32/lib -L/msys64/MINGW32/lib -L/msys64/MINGW32/lib/gcc/i686-w64-mingw32/7.2.0' PATH=/c/projects/bsb-native/flexdll-bin:$PATH make -C /c/projects/bsb-native/vendor/ocaml -f Makefile.nt world.opt"
