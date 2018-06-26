@@ -15,14 +15,14 @@ install:
 build_script:
   - dir %APPVEYOR_BUILD_FOLDER%
   - mkdir vendor\mingw32
-  - xcopy /s C:\msys64\MINGW32\bin vendor\mingw32
+  - xcopy /sq C:\msys64\MINGW32\bin vendor\mingw32
   - mkdir vendor\lib
-  - xcopy /s C:\msys64\MINGW32\bin vendor\lib
+  - xcopy /sq C:\msys64\MINGW32\bin vendor\lib
   - mkdir vendor\lib\gcc\i686-w64-mingw32\7.2.0
   - copy C:\msys64\MINGW32\bin\libwinpthread-1.dll vendor\lib\gcc\i686-w64-mingw32\7.2.0
   - copy C:\msys64\MINGW32\bin\libgcc_s_dw2-1.dll vendor\lib\gcc\i686-w64-mingw32\7.2.0
   - copy C:\msys64\MINGW32\bin\zlib1.dll vendor\lib\gcc\i686-w64-mingw32\7.2.0
   - mkdir vendor\include
-  - xcopy /s C:\msys64\MINGW32\i686-w64-mingw32\include vendor\include
-  - bash -xlc "ls"
-  - bash -xlc "FLEXLINKFLAGS='-L/mingw32/i686-w64-mingw32/lib -L/mingw32/lib -L/mingw32/lib/gcc/i686-w64-mingw32/7.2.0' PATH=$APPVEYOR_BUILD_FOLDER/flexdll-bin:$PATH make -f $APPVEYOR_BUILD_FOLDER/vendor/ocaml/Makefile.nt world.opt"
+  - xcopy /sq C:\msys64\MINGW32\i686-w64-mingw32\include vendor\include
+  - bash -lc "ls; env; pwd"
+  - bash -lc "FLEXLINKFLAGS='-L/mingw32/i686-w64-mingw32/lib -L/mingw32/lib -L/mingw32/lib/gcc/i686-w64-mingw32/7.2.0' PATH=$APPVEYOR_BUILD_FOLDER/flexdll-bin:$PATH make -f $APPVEYOR_BUILD_FOLDER/vendor/ocaml/Makefile.nt world.opt"
