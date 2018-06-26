@@ -36,3 +36,4 @@ bash 'pacman --sync --noconfirm msys2-devel'
 bash 'pacman --sync --noconfirm mingw-w64-{x86_64,i686}-toolchain'
 
 Write-Host "MSYS2 32-bit installed" -ForegroundColor Green
+Exit 0
