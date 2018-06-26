@@ -552,7 +552,7 @@ let link oc comp_info
         ~output
         ~input:""
         ~inputs:all_mlast_files
-        ~implicit_deps:(external_deps_lib @ (List.map (fun path -> Ext_bytes.ninja_escaped path) (all_cmi_files @ all_cmo_or_cmx_files @ static_libraries)))
+        ~implicit_deps:(external_deps_lib @ (List.map Ext_bytes.ninja_escaped (all_cmi_files @ all_cmo_or_cmx_files @ static_libraries)))
         ~shadows
         ~rule:rule_name;
         comp_info

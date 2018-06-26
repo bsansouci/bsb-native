@@ -184,7 +184,7 @@ let build_bs_deps cwd ~root_project_dir ~backend ~main_config:(main_config : Bsb
             let ic = open_in_bin filename in
             (try
               while true do
-                artifacts_installed := (input_line ic) :: !artifacts_installed
+                artifacts_installed := (String.trim (input_line ic)) :: !artifacts_installed
               done
             with End_of_file -> ());
             close_in ic;

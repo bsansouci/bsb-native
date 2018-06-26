@@ -1,8 +1,15 @@
 include ../Makefile.shared
 
+ifdef SYSTEMROOT
+    PATHSEP2=\\
+else
+    PATHSEP2=/
+endif
+PATHSEP=$(strip $(PATHSEP2))
+
 COMPILER=ocamlc.opt
-BSPP=bspp.exe
-BELT_BSPPX=belt_bsppx.exe
+BSPP=..$(PATHSEP)..$(PATHSEP)lib$(PATHSEP)bspp.exe
+BELT_BSPPX=..$(PATHSEP)..$(PATHSEP)lib$(PATHSEP)belt_bsppx.exe
 
 LOCAL_SOURCE_LIST= \
 	caml_hash \

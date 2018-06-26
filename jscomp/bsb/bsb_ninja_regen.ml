@@ -193,10 +193,11 @@ let regenerate_ninja
                         let ic = open_in_bin filename in
                         (try
                            while true do
-                             artifacts_installed := (input_line ic) :: !artifacts_installed
+                             artifacts_installed := (String.trim (input_line ic)) :: !artifacts_installed
                            done
                          with End_of_file -> ());
                          close_in ic;
+                        
                         (* This is just for the 3.0 release, so it goes a bit smoother. Once all of our packages 
                            are fixed we don't need to dedupe. 
                                     April 17th 2018
