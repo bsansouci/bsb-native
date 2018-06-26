@@ -9,5 +9,5 @@ install:
   - bash -xlc "pacman --noconfirm -S --needed base-devel mingw-w64-%MSYS2_ARCH%-toolchain"
   - bash -xlc "wget https://github.com/alainfrisch/flexdll/releases/download/0.37/flexdll-bin-0.37.zip | unzip"
   
-build:
+build_script:
   - dir %APPVEYOR_BUILD_FOLDER%
