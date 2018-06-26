@@ -1,15 +1,26 @@
-environment:
-  MSYS2_ARCH: i686
-  MSYSTEM: MINGW32
-
 install:
   - PATH C:\msys64\MINGW32\bin;C:\msys64\usr\bin;%PATH%
   - bash -lc "pacman --noconfirm --sync --refresh --refresh pacman"
   - bash -lc "pacman --noconfirm --sync --refresh --refresh --sysupgrade --sysupgrade"
   - bash -xlc "pacman --noconfirm -S --needed base-devel mingw-w64-i686-toolchain"
   - appveyor DownloadFile https://github.com/alainfrisch/flexdll/releases/download/0.37/flexdll-bin-0.37.zip
-  - dir
-  - 7z.exe e flexdll-bin-0.37.zip -oflexdll -y
+  - 7z.exe e flexdll-bin-0.37.zip -oflexdll-bin -y
+  - copy vendor\ocaml\config\m-nt.h vendor\ocaml\byterun\caml\m.h
+  - copy vendor\ocaml\config\s-nt.h vendor\ocaml\byterun\caml\s.h
+  - copy vendor\ocaml\config\Makefile.mingw vendor\ocaml\config\Makefile
+  - copy vendor\ocaml\config\m-nt.h vendor\ocaml\config\m.h
+  - copy vendor\ocaml\config\s-nt.h vendor\ocaml\config\s.h
+  
   
 build_script:
   - dir %APPVEYOR_BUILD_FOLDER%
+  - mkdir vendor\mingw32
+  - xcopy /s C:\msys64\MINGW32\bin vendor\mingw32
+  - mkdir vendor\lib
+  - xcopy /s C:\msys64\MINGW32\bin vendor\lib
+  - mkdir vendor\lib\gcc\i686-w64-mingw32\7.2.0
+  - copy C:\msys64\MINGW32\bin\libwinpthread-1.dll vendor\lib\gcc\i686-w64-mingw32\7.2.0
+  - copy C:\msys64\MINGW32\bin\libgcc_s_dw2-1.dll vendor\lib\gcc\i686-w64-mingw32\7.2.0
+  - copy C:\msys64\MINGW32\bin\zlib1.dll vendor\lib\gcc\i686-w64-mingw32\7.2.0
+  - mkdir vendor\include
+  - xcopy /s C:\msys64\MINGW32\i686-w64-mingw32/include vendor\include
