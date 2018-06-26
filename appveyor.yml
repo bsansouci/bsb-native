@@ -1,7 +1,7 @@
 install:
-  - appveyor DownloadFile http://repo.msys2.org/distrib/msys2-i686-latest.exe
-  - msys2-i686-latest.exe --platform minimal --script install_msys2_32.js -v
-  - PATH C:\msys32\MINGW32\bin;C:\msys32\usr\bin;%PATH%
+  #- appveyor DownloadFile http://repo.msys2.org/distrib/msys2-i686-latest.exe
+  #- msys2-i686-latest.exe --platform minimal --script install_msys2_32.js -v
+  - PATH C:\msys64\MINGW32\bin;C:\msys64\usr\bin;%PATH%
   - bash -lc "pacman --noconfirm --sync --refresh --refresh pacman"
   - bash -lc "pacman --noconfirm --sync --refresh --refresh --sysupgrade --sysupgrade"
   - bash -xlc "pacman --noconfirm -S --needed base-devel mingw-w64-{x86_64,i686}-toolchain"
@@ -30,4 +30,4 @@ build_script:
   - bash -lc "ls -lh /c"
   - bash -lc "ls -lh /c/msys64"
   - bash -lc "ls -lh /c/msys32"
-  - bash -lc "FLEXLINKFLAGS='-L/mingw32/i686-w64-mingw32/lib -L/mingw32/lib -L/mingw32/lib/gcc/i686-w64-mingw32/7.2.0' PATH=/c/projects/bsb-native/flexdll-bin:$PATH make -C /c/projects/bsb-native/vendor/ocaml -f Makefile.nt world.opt"
+  - bash -lc "FLEXLINKFLAGS='-L/msys64/MINGW32/i686-w64-mingw32/lib -L/msys64/MINGW32/lib -L/msys64/MINGW32/lib/gcc/i686-w64-mingw32/7.2.0' PATH=/c/projects/bsb-native/flexdll-bin:$PATH make -C /c/projects/bsb-native/vendor/ocaml -f Makefile.nt world.opt"
