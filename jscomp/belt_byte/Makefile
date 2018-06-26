@@ -1,6 +1,6 @@
 include ../Makefile.shared
 
-ifdef ComSpec
+ifdef SYSTEMROOT
     PATHSEP2=\\
 else
     PATHSEP2=/
