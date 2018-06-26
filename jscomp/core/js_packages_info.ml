@@ -157,13 +157,13 @@ let add_npm_package_path s (packages_info : t)  : t =
   else   
     let env, path =
       match Ext_string.split ~keep_empty:false s ':' with
-      | [ module_system; path]  ->
+      | [path] ->
+        NodeJS, path
+      | module_system :: path  ->
         (match module_system_of_string module_system with
          | Some x -> x
          | None ->
-           Ext_pervasives.bad_argf "invalid module system %s" module_system), path
-      | [path] ->
-        NodeJS, path
+           Ext_pervasives.bad_argf "invalid module system %s" module_system), (String.concat ":" path)
       | _ ->
         Ext_pervasives.bad_argf "invalid npm package path: %s" s
     in
