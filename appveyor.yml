@@ -25,5 +25,4 @@ build_script:
   - mkdir vendor\include
   - xcopy /sq C:\msys64\MINGW32\i686-w64-mingw32\include vendor\include
   - bash -lc "ls -lh /c/projects/bsb-native"
-  - bash -lc "FLEXLINKFLAGS='-L/mingw32/i686-w64-mingw32/lib -L/mingw32/lib -L/mingw32/lib/gcc/i686-w64-mingw32/7.2.0' PATH=/c/projects/bsb-native/flexdll-bin:$PATH make -f /c/projects/bsb-native/vendor/ocaml/Makefile.nt depend"
-  - bash -lc "FLEXLINKFLAGS='-L/mingw32/i686-w64-mingw32/lib -L/mingw32/lib -L/mingw32/lib/gcc/i686-w64-mingw32/7.2.0' PATH=/c/projects/bsb-native/flexdll-bin:$PATH make -f /c/projects/bsb-native/vendor/ocaml/Makefile.nt world.opt"
+  - bash -lc "FLEXLINKFLAGS='-L/mingw32/i686-w64-mingw32/lib -L/mingw32/lib -L/mingw32/lib/gcc/i686-w64-mingw32/7.2.0' PATH=/c/projects/bsb-native/flexdll-bin:$PATH make -C /c/projects/bsb-native/vendor/ocaml -f Makefile.nt world.opt"
