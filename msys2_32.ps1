@@ -1,5 +1,4 @@
-Write-Output "Installing MSYS2 32-bit..." -ForegroundColor Cyan
-
+Write-Output "Installing MSYS2 32-bit..."
 # download installer
 $zipPath = "$($env:USERPROFILE)\msys2-i686-latest.tar.xz"
 $tarPath = "$($env:USERPROFILE)\msys2-i686-latest.tar"
@@ -15,9 +14,9 @@ del $zipPath
 del $tarPath
 
 function bash($command) {
-    Write-Output $command -NoNewline
+    Write-Output $command
     cmd /c start /wait C:\msys32\usr\bin\sh.exe --login -c $command
-    Write-Output " - OK" -ForegroundColor Green
+    Write-Output "Done"
 }
 
 [Environment]::SetEnvironmentVariable("MSYS2_PATH_TYPE", "inherit", "Machine")
@@ -34,4 +33,5 @@ bash 'pacman --sync --noconfirm base-devel'
 bash 'pacman --sync --noconfirm msys2-devel'
 bash 'pacman --sync --noconfirm mingw-w64-{x86_64,i686}-toolchain'
 
-Write-Output "MSYS2 32-bit installed" -ForegroundColor Green
+Write-Output "MSYS2 32-bit installed"
+[Environment]::Exit(0)
