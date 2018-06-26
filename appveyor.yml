@@ -1,8 +1,9 @@
 install:
-  - PATH C:\msys64\MINGW32\bin;C:\msys64\usr\bin;%PATH%
-  - bash -lc "pacman --noconfirm --sync --refresh --refresh pacman"
-  - bash -lc "pacman --noconfirm --sync --refresh --refresh --sysupgrade --sysupgrade"
-  - bash -xlc "pacman --noconfirm -S --needed base-devel mingw-w64-i686-toolchain"
+#  - PATH C:\msys64\MINGW32\bin;C:\msys64\usr\bin;%PATH%
+#  - bash -lc "pacman --noconfirm --sync --refresh --refresh pacman"
+#  - bash -lc "pacman --noconfirm --sync --refresh --refresh --sysupgrade --sysupgrade"
+#  - bash -xlc "pacman --noconfirm -S --needed base-devel mingw-w64-i686-toolchain"
+  - .\msys2_32.ps1
   - appveyor DownloadFile https://github.com/alainfrisch/flexdll/releases/download/0.37/flexdll-bin-0.37.zip
   - 7z.exe e flexdll-bin-0.37.zip -oflexdll-bin -y
   - copy vendor\ocaml\config\m-nt.h vendor\ocaml\byterun\caml\m.h
