@@ -1,8 +1,7 @@
 install:
   #- appveyor DownloadFile http://repo.msys2.org/distrib/msys2-i686-latest.exe
   #- msys2-i686-latest.exe --platform minimal --script install_msys2_32.js -v
-  - PATH C:\msys64\mingw32\bin;%PATH%
-  #C:\msys64\usr\bin;%PATH%
+  - PATH C:\msys64\mingw32\bin;%PATH%;C:\msys64\usr\bin;%PATH%
   - bash -lc "pacman --noconfirm --sync --refresh --refresh --quiet pacman"
   - bash -lc "pacman --noconfirm --sync --refresh --refresh --quiet --sysupgrade --sysupgrade"
   - bash -xlc "pacman --noconfirm -S --quiet --needed base-devel mingw-w64-{x86_64,i686}-toolchain"
@@ -17,7 +16,7 @@ install:
   
   
 build_script:
-  - dir %APPVEYOR_BUILD_FOLDER%
+  - dir C:\msys64\usr\bin
   - mkdir vendor\mingw32
   - xcopy /sq C:\msys64\MINGW32\bin vendor\mingw32
   - mkdir vendor\lib
