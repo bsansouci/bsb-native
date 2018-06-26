@@ -2,7 +2,12 @@ environment:
   MSYS2_ARCH: i686
   MSYSTEM: MINGW32
 
-build_script:
-  - dir
+install:
   - PATH C:\msys64\%MSYSTEM%\bin;C:\msys64\usr\bin;%PATH%
   - bash -lc "pacman --noconfirm --sync --refresh --refresh pacman"
+  - bash -lc "pacman --noconfirm --sync --refresh --refresh --sysupgrade --sysupgrade"
+  - bash -xlc "pacman --noconfirm -S --needed base-devel mingw-w64-%MSYS2_ARCH%-toolchain"
+  - bash -xlc "wget https://github.com/alainfrisch/flexdll/releases/download/0.37/flexdll-bin-0.37.zip | unzip"
+  
+build:
+  - dir %APPVEYOR_BUILD_FOLDER%
