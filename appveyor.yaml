@@ -3,7 +3,7 @@ environment:
   MSYS2_ARCH: i686
   MSYSTEM: MINGW32
 
-install:
+build_script:
   - dir
   - PATH C:\msys64\%MSYSTEM%\bin;C:\msys64\usr\bin;%PATH%
   - bash -lc "pacman --noconfirm --sync --refresh --refresh pacman"
