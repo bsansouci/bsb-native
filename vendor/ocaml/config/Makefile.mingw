@@ -15,22 +15,22 @@
 
 ######### General configuration
 
-PREFIX=C:/ocamlmgw
+PREFIX=C:/projects/bsb-native/vendor/ocaml
 
 ### Remove this to disable compiling ocamldebug
 WITH_DEBUGGER=ocamldebugger
 
 ### Remove this to disable compiling ocamlbuild
-WITH_OCAMLBUILD=ocamlbuild
+# WITH_OCAMLBUILD=ocamlbuild
 
 ### Remove this to disable compiling ocamldoc
-WITH_OCAMLDOC=ocamldoc
+# WITH_OCAMLDOC=ocamldoc
 
 ### Where to install the binaries
 BINDIR=$(PREFIX)/bin
 
 ### Where to install the standard library
-LIBDIR=$(PREFIX)/lib
+LIBDIR=$(PREFIX)/lib/ocaml
 
 ### Where to install the stub DLLs
 STUBLIBDIR=$(LIBDIR)/stublibs
@@ -49,7 +49,7 @@ TOOLCHAIN=mingw
 TARGET=i686-w64-mingw32
 HOST=i686-w64-mingw32
 
-TOOLPREF=$(TARGET)-
+TOOLPREF=
 
 CCOMPTYPE=cc
 O=o
