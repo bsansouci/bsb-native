@@ -28,6 +28,6 @@ build_script:
   - copy C:\msys64\MINGW32\bin\zlib1.dll vendor\lib\gcc\i686-w64-mingw32\7.2.0
   - mkdir vendor\include
   - xcopy /sq C:\msys64\MINGW32\i686-w64-mingw32\include vendor\include
-  #- bash -lc "ls -lh /c/msys64/MINGW32/i686-w64-mingw32/lib/"
-  #- bash -lc "find /c/msys64/MINGW32 -name 'libgcc.a'"
   - bash -lc "FLEXLINKFLAGS='-L/c/msys64/MINGW32/i686-w64-mingw32/lib -L/c/msys64/MINGW32/lib -L/c/msys64/MINGW32/lib/gcc/i686-w64-mingw32/7.3.0' PATH=/c/projects/bsb-native/flexdll-bin:$PATH make -C /c/projects/bsb-native/vendor/ocaml -f Makefile.nt world.opt"
+  - bash -lc "FLEXLINKFLAGS='-L/c/msys64/MINGW32/i686-w64-mingw32/lib -L/c/msys64/MINGW32/lib -L/c/msys64/MINGW32/lib/gcc/i686-w64-mingw32/7.3.0' PATH=/c/projects/bsb-native/flexdll-bin:$PATH make -C /c/projects/bsb-native/vendor/ocaml -f Makefile.nt otherlibrariesopt"
+  - bash -lc "FLEXLINKFLAGS='-L/c/msys64/MINGW32/i686-w64-mingw32/lib -L/c/msys64/MINGW32/lib -L/c/msys64/MINGW32/lib/gcc/i686-w64-mingw32/7.3.0' PATH=/c/projects/bsb-native/flexdll-bin:$PATH make -C /c/projects/bsb-native/vendor/ocaml -f Makefile.nt install"
