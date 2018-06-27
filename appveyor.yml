@@ -1,3 +1,7 @@
+environment:
+  MSYS2_ARCH: i686
+  MSYSTEM: MINGW32
+
 install:
   #- appveyor DownloadFile http://repo.msys2.org/distrib/msys2-i686-latest.exe
   #- msys2-i686-latest.exe --platform minimal --script install_msys2_32.js -v
@@ -31,7 +35,5 @@ build_script:
   - bash -lc "ls -lh /c"
   - bash -lc "ls -lh /c/msys64"
   - bash -lc "ls -lh /c/msys64/mingw32"
-  - C:\msys64\mingw32.exe --help
-  - C:\msys64\mingw32.exe "ls -lh /c"
   - bash -lc "/c/msys64/mingw32.exe --help"
   - bash -lc "FLEXLINKFLAGS='-L/msys64/MINGW32/i686-w64-mingw32/lib -L/msys64/MINGW32/lib -L/msys64/MINGW32/lib/gcc/i686-w64-mingw32/7.2.0' PATH=/c/projects/bsb-native/flexdll-bin:$PATH make -C /c/projects/bsb-native/vendor/ocaml -f Makefile.nt world.opt"
