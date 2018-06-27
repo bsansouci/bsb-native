@@ -14,7 +14,7 @@ install:
   - copy vendor\ocaml\config\Makefile.mingw vendor\ocaml\config\Makefile
   - copy vendor\ocaml\config\m-nt.h vendor\ocaml\config\m.h
   - copy vendor\ocaml\config\s-nt.h vendor\ocaml\config\s.h
-  
+  - copy vendor\ocaml\utils\config-nt.mlp vendor\ocaml\utils\config.mlp
   
 build_script:
   - dir C:\msys64\usr\bin
