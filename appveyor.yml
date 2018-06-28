@@ -16,7 +16,7 @@ build_script:
   - copy vendor\ocaml\config\Makefile.mingw vendor\ocaml\config\Makefile
   - copy vendor\ocaml\config\m-nt.h vendor\ocaml\config\m.h
   - copy vendor\ocaml\config\s-nt.h vendor\ocaml\config\s.h
-  #- copy vendor\ocaml\utils\config-nt.mlp vendor\ocaml\utils\config.mlp
+  - copy /Y vendor\ocaml\utils\config-nt.mlp vendor\ocaml\utils\config.mlp
   - mkdir vendor\mingw32
   - xcopy /sq C:\msys64\MINGW32\bin vendor\mingw32
   - mkdir vendor\lib
