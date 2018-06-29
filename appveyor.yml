@@ -13,7 +13,7 @@ install:
   # download forked flexdll src
   - git clone https://github.com/bsansouci/flexdll C:\projects\bsb-native\vendor\flexdll-build
   # download forked cppo src
-  - git clone https://github.com/bsansouci/cppo C:\projects\bsb-native\cppo
+  - git clone --single-branch -b windows https://github.com/bsansouci/cppo C:\projects\bsb-native\cppo
   
 build_script:
   # set up windows build Makefiles + values
