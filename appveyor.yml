@@ -9,6 +9,7 @@ install:
   - bash -xlc "pacman --noconfirm -S --quiet --needed base-devel mingw-w64-{x86_64,i686}-toolchain"
   - appveyor DownloadFile https://github.com/alainfrisch/flexdll/releases/download/0.37/flexdll-bin-0.37.zip
   - 7z.exe e flexdll-bin-0.37.zip -o"C:\projects\bsb-native\vendor\flexdll" -y
+  - git clone https://github.com/bsansouci/flexdll C:\projects\bsb-native\vendor\flexdll-build
   
 build_script:
   - copy vendor\ocaml\config\m-nt.h vendor\ocaml\byterun\caml\m.h
@@ -30,3 +31,10 @@ build_script:
   - bash -lc "FLEXLINKFLAGS='-L/c/msys64/MINGW32/i686-w64-mingw32/lib -L/c/msys64/MINGW32/lib -L/c/msys64/MINGW32/lib/gcc/i686-w64-mingw32/7.3.0' PATH=/c/projects/bsb-native/vendor/flexdll:$PATH make -C /c/projects/bsb-native/vendor/ocaml -f Makefile.nt world.opt"
   - bash -lc "FLEXLINKFLAGS='-L/c/msys64/MINGW32/i686-w64-mingw32/lib -L/c/msys64/MINGW32/lib -L/c/msys64/MINGW32/lib/gcc/i686-w64-mingw32/7.3.0' PATH=/c/projects/bsb-native/vendor/flexdll:$PATH make -C /c/projects/bsb-native/vendor/ocaml -f Makefile.nt otherlibrariesopt"
   - bash -lc "FLEXLINKFLAGS='-L/c/msys64/MINGW32/i686-w64-mingw32/lib -L/c/msys64/MINGW32/lib -L/c/msys64/MINGW32/lib/gcc/i686-w64-mingw32/7.3.0' PATH=/c/projects/bsb-native/vendor/flexdll:$PATH make -C /c/projects/bsb-native/vendor/ocaml -f Makefile.nt install"
+  - bash -lc "INCLUDE_FLAGS='-ccopt -L/c/msys64/MINGW32/i686-w64-mingw32/lib -ccopt -L/c/msys64/MINGW32/lib/gcc/i686-w64-mingw32/7.3.0' PATH=/c/projects/bsb-native/vendor/ocaml:/c/projects/bsb-native/vendor/ocaml:/c/projects/bsb-native/vendor/flexdll:$PATH make -C /c/projects/bsb-native/vendor/flexdll-build"
+  - rmdir /sq C:\projects\bsb-native\vendor\flexdll
+  - mkdir C:\projects\bsb-native\vendor\flexdll
+  - xcopy /sq C:\projects\bsb-native\vendor\flexdll-build C:\projects\bsb-native\vendor\flexdll
+  #- bash -lc "FLEXLINKFLAGS='-L/c/msys64/MINGW32/i686-w64-mingw32/lib -L/c/msys64/MINGW32/lib -L/c/msys64/MINGW32/lib/gcc/i686-w64-mingw32/7.3.0' PATH=/c/projects/bsb-native/vendor/flexdll:$PATH make -C /c/projects/bsb-native/vendor/ocaml -f Makefile.nt world.opt"
+  #- bash -lc "FLEXLINKFLAGS='-L/c/msys64/MINGW32/i686-w64-mingw32/lib -L/c/msys64/MINGW32/lib -L/c/msys64/MINGW32/lib/gcc/i686-w64-mingw32/7.3.0' PATH=/c/projects/bsb-native/vendor/flexdll:$PATH make -C /c/projects/bsb-native/vendor/ocaml -f Makefile.nt otherlibrariesopt"
+  #- bash -lc "FLEXLINKFLAGS='-L/c/msys64/MINGW32/i686-w64-mingw32/lib -L/c/msys64/MINGW32/lib -L/c/msys64/MINGW32/lib/gcc/i686-w64-mingw32/7.3.0' PATH=/c/projects/bsb-native/vendor/flexdll:$PATH make -C /c/projects/bsb-native/vendor/ocaml -f Makefile.nt install"
