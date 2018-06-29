@@ -41,9 +41,7 @@ build_script:
   # Build forked src of flexdll
   - bash -lc "INCLUDE_FLAGS='-ccopt -L/c/msys64/MINGW32/i686-w64-mingw32/lib -ccopt -L/c/msys64/MINGW32/lib -ccopt -L/c/msys64/MINGW32/lib/gcc/i686-w64-mingw32/7.3.0' PATH=/c/projects/bsb-native/vendor/ocaml:/c/projects/bsb-native/vendor/ocaml/bin:/c/projects/bsb-native/vendor/flexdll:$PATH make -C /c/projects/bsb-native/vendor/flexdll-build"
   # Move newly-built flexdll into position
-  - rmdir /s /q C:\projects\bsb-native\vendor\flexdll
-  - mkdir C:\projects\bsb-native\vendor\flexdll
-  - xcopy /sq C:\projects\bsb-native\vendor\flexdll-build C:\projects\bsb-native\vendor\flexdll
+  - bash -lc "rsync -av --delete /c/projects/bsb-native/vendor/flexdll-build /c/projects/bsb-native/vendor/flexdll"
   # Rebuild ocaml using our flexdll
   - bash -lc "FLEXLINKFLAGS='-L/c/msys64/MINGW32/i686-w64-mingw32/lib -L/c/msys64/MINGW32/lib -L/c/msys64/MINGW32/lib/gcc/i686-w64-mingw32/7.3.0' PATH=/c/projects/bsb-native/vendor/flexdll:$PATH make -C /c/projects/bsb-native/vendor/ocaml -f Makefile.nt world.opt"
   - bash -lc "FLEXLINKFLAGS='-L/c/msys64/MINGW32/i686-w64-mingw32/lib -L/c/msys64/MINGW32/lib -L/c/msys64/MINGW32/lib/gcc/i686-w64-mingw32/7.3.0' PATH=/c/projects/bsb-native/vendor/flexdll:$PATH make -C /c/projects/bsb-native/vendor/ocaml -f Makefile.nt otherlibrariesopt"
