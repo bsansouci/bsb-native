@@ -6,18 +6,24 @@ install:
   - PATH C:\msys64\mingw32\bin;C:\msys64\usr\bin;%PATH%
   - bash -lc "pacman --noconfirm --sync --refresh --refresh --quiet pacman"
   - bash -lc "pacman --noconfirm --sync --refresh --refresh --quiet --sysupgrade --sysupgrade"
-  - bash -xlc "pacman --noconfirm -S --quiet --needed base-devel mingw-w64-{x86_64,i686}-toolchain"
+  - bash -xlc "pacman --noconfirm -S --quiet --needed base-devel mingw-w64-{x86_64,i686}-toolchain zip"
+  # download prebuilt flexdll
   - appveyor DownloadFile https://github.com/alainfrisch/flexdll/releases/download/0.37/flexdll-bin-0.37.zip
   - 7z.exe e flexdll-bin-0.37.zip -o"C:\projects\bsb-native\vendor\flexdll" -y
+  # download forked flexdll src
   - git clone https://github.com/bsansouci/flexdll C:\projects\bsb-native\vendor\flexdll-build
+  # download forked cppo src
+  - git clone https://github.com/bsansouci/cppo C:\projects\bsb-native\cppo
   
 build_script:
+  # set up windows build Makefiles + values
   - copy vendor\ocaml\config\m-nt.h vendor\ocaml\byterun\caml\m.h
   - copy vendor\ocaml\config\s-nt.h vendor\ocaml\byterun\caml\s.h
   - copy vendor\ocaml\config\Makefile.mingw vendor\ocaml\config\Makefile
   - copy vendor\ocaml\config\m-nt.h vendor\ocaml\config\m.h
   - copy vendor\ocaml\config\s-nt.h vendor\ocaml\config\s.h
   - copy /Y vendor\ocaml\utils\config-nt.mlp vendor\ocaml\utils\config.mlp
+  # Copy important mingw stuff into vendor
   - mkdir vendor\mingw32
   - xcopy /sq C:\msys64\MINGW32\bin vendor\mingw32
   - mkdir vendor\lib
@@ -28,13 +34,25 @@ build_script:
   - copy C:\msys64\MINGW32\bin\zlib1.dll vendor\lib\gcc\i686-w64-mingw32\7.3.0
   - mkdir vendor\include
   - xcopy /sq C:\msys64\MINGW32\i686-w64-mingw32\include vendor\include
+  # Build ocaml using prebuild flexdll
   - bash -lc "FLEXLINKFLAGS='-L/c/msys64/MINGW32/i686-w64-mingw32/lib -L/c/msys64/MINGW32/lib -L/c/msys64/MINGW32/lib/gcc/i686-w64-mingw32/7.3.0' PATH=/c/projects/bsb-native/vendor/flexdll:$PATH make -C /c/projects/bsb-native/vendor/ocaml -f Makefile.nt world.opt"
   - bash -lc "FLEXLINKFLAGS='-L/c/msys64/MINGW32/i686-w64-mingw32/lib -L/c/msys64/MINGW32/lib -L/c/msys64/MINGW32/lib/gcc/i686-w64-mingw32/7.3.0' PATH=/c/projects/bsb-native/vendor/flexdll:$PATH make -C /c/projects/bsb-native/vendor/ocaml -f Makefile.nt otherlibrariesopt"
   - bash -lc "FLEXLINKFLAGS='-L/c/msys64/MINGW32/i686-w64-mingw32/lib -L/c/msys64/MINGW32/lib -L/c/msys64/MINGW32/lib/gcc/i686-w64-mingw32/7.3.0' PATH=/c/projects/bsb-native/vendor/flexdll:$PATH make -C /c/projects/bsb-native/vendor/ocaml -f Makefile.nt install"
+  # Build forked src of flexdll
   - bash -lc "INCLUDE_FLAGS='-ccopt -L/c/msys64/MINGW32/i686-w64-mingw32/lib -ccopt -L/c/msys64/MINGW32/lib/gcc/i686-w64-mingw32/7.3.0' PATH=/c/projects/bsb-native/vendor/ocaml:/c/projects/bsb-native/vendor/ocaml/bin:/c/projects/bsb-native/vendor/flexdll:$PATH make -C /c/projects/bsb-native/vendor/flexdll-build"
+  # Move newly-built flexdll into position
   - rmdir /s /q C:\projects\bsb-native\vendor\flexdll
   - mkdir C:\projects\bsb-native\vendor\flexdll
   - xcopy /sq C:\projects\bsb-native\vendor\flexdll-build C:\projects\bsb-native\vendor\flexdll
+  # Rebuild ocaml using our flexdll
   - bash -lc "FLEXLINKFLAGS='-L/c/msys64/MINGW32/i686-w64-mingw32/lib -L/c/msys64/MINGW32/lib -L/c/msys64/MINGW32/lib/gcc/i686-w64-mingw32/7.3.0' PATH=/c/projects/bsb-native/vendor/flexdll:$PATH make -C /c/projects/bsb-native/vendor/ocaml -f Makefile.nt world.opt"
   - bash -lc "FLEXLINKFLAGS='-L/c/msys64/MINGW32/i686-w64-mingw32/lib -L/c/msys64/MINGW32/lib -L/c/msys64/MINGW32/lib/gcc/i686-w64-mingw32/7.3.0' PATH=/c/projects/bsb-native/vendor/flexdll:$PATH make -C /c/projects/bsb-native/vendor/ocaml -f Makefile.nt otherlibrariesopt"
   - bash -lc "FLEXLINKFLAGS='-L/c/msys64/MINGW32/i686-w64-mingw32/lib -L/c/msys64/MINGW32/lib -L/c/msys64/MINGW32/lib/gcc/i686-w64-mingw32/7.3.0' PATH=/c/projects/bsb-native/vendor/flexdll:$PATH make -C /c/projects/bsb-native/vendor/ocaml -f Makefile.nt install"
+  # Build cppo fork
+  - bash -lc "make -C /c/projects/bsb-native/cppo"
+  # Build bsb-native
+  - bash -lc "PATH=/c/projects/bsb-native/vendor/ocaml:/c/projects/bsb-native/cppo/src:$PATH make && make install"
+  # Copy over correct ninja
+  - bash -lc "cp /c/projects/bsb-native/vendor/ninja-build/ninja.win /c/projects/bsb-native/lib/ninja.exe"
+  # Create the zip
+  - bash -lc "cd /c/projects/bsb-native/ && zip -r bsb-native-win-3.2.0.zip lib vendor/ocaml/bin/ocamlrun.exe vendor/ocaml/ocamlc.opt.exe vendor/ocaml/ocamlopt.opt.exe vendor/ocaml/lib/ocaml vendor/flexdll vendor/mingw32/ vendor/lib vendor/include -x lib/bsb -x lib/bsc -x lib/bsrefmt"
