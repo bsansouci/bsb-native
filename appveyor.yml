@@ -49,6 +49,7 @@ build_script:
   # Move newly-built flexdll into position
   - bash -lc "rm -rf /c/projects/bsb-native/vendor/flexdll; mv /c/projects/bsb-native/vendor/flexdll-build /c/projects/bsb-native/vendor/flexdll"
   # Rebuild ocaml using our flexdll
+  - bash -lc "PATH=/c/projects/bsb-native/vendor/flexdll:$PATH make -C /c/projects/bsb-native/vendor/ocaml -f Makefile.nt clean"
   - bash -lc "PATH=/c/projects/bsb-native/vendor/flexdll:$PATH make -C /c/projects/bsb-native/vendor/ocaml -f Makefile.nt world.opt"
   - bash -lc "PATH=/c/projects/bsb-native/vendor/flexdll:$PATH make -C /c/projects/bsb-native/vendor/ocaml -f Makefile.nt otherlibrariesopt"
   - bash -lc "PATH=/c/projects/bsb-native/vendor/flexdll:$PATH make -C /c/projects/bsb-native/vendor/ocaml -f Makefile.nt install"
