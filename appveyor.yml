@@ -6,7 +6,7 @@ install:
   - PATH C:\msys64\mingw32\bin;C:\msys64\usr\bin;%PATH%
   - bash -lc "pacman --noconfirm --sync --refresh --refresh --quiet pacman"
   - bash -lc "pacman --noconfirm --sync --refresh --refresh --quiet --sysupgrade --sysupgrade"
-  - bash -xlc "pacman --noconfirm -S --quiet --needed base-devel mingw-w64-{x86_64,i686}-toolchain zip"
+  - bash -xlc "pacman --noconfirm -S --quiet --needed base-devel mingw-w64-i686-toolchain zip"
   # download prebuilt flexdll
   - appveyor DownloadFile https://github.com/alainfrisch/flexdll/releases/download/0.37/flexdll-bin-0.37.zip
   - 7z.exe e flexdll-bin-0.37.zip -o"C:\projects\bsb-native\vendor\flexdll" -y
@@ -35,6 +35,9 @@ build_script:
   - copy C:\msys64\MINGW32\bin\zlib1.dll vendor\lib\gcc\i686-w64-mingw32\7.3.0
   - mkdir vendor\include
   - xcopy /sq C:\msys64\MINGW32\i686-w64-mingw32\include vendor\include
+  # Delete some unnecessary stuff
+  - bash -lc "rm -rf /c/projects/bsb-native/vendor/lib/gcc/i686-w64-mingw32/7.3.0/adainclude"
+  - bash -lc "rm -rf /c/projects/bsb-native/vendor/lib/gcc/i686-w64-mingw32/7.3.0/adalib"
   # Build ocaml using prebuild flexdll
   - bash -lc "find /c/projects/bsb-native/vendor -name 'libws2_32.a; exit 0'
   - bash -lc "FLEXLINKFLAGS='-L/c/msys64/MINGW32/i686-w64-mingw32/lib -L/c/msys64/MINGW32/lib -L/c/msys64/MINGW32/lib/gcc/i686-w64-mingw32/7.3.0' PATH=/c/projects/bsb-native/vendor/flexdll:$PATH make -C /c/projects/bsb-native/vendor/ocaml -f Makefile.nt world.opt"
