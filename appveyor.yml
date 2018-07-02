@@ -1,6 +1,8 @@
 environment:
   MSYS2_ARCH: i686
   MSYSTEM: MINGW32
+  
+platform: x64
 
 install:
   - PATH C:\msys64\mingw32\bin;C:\msys64\usr\bin;%PATH%
@@ -69,4 +71,3 @@ test_script:
   - bash -lc "find /c/projects/bsb-native/reprocessing-example/node_modules/bs-platform -type f -not -name 'bsb' -not -name 'bsc' -not -name 'bsrefmt' -delete"
   - bash -lc "unzip cd /c/projects/bsb-native/bsb-native-win-3.2.0.zip -d /c/projects/bsb-native/reprocessing-example/node_modules/bs-platform"
   - bash -lc "cd /c/projects/bsb-native/reprocessing-example; ./node_modules/bs-platform/lib/bsb.exe -make-world"
-  - bash -lc ""
