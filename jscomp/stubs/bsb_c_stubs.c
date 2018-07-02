@@ -2,7 +2,7 @@
 #include "caml/mlvalues.h"
 #include "caml/memory.h"
 
-#ifdef _MINGW32_
+#ifdef __MINGW32__
 
 CAMLprim value bsb_uname() {
   CAMLparam0();
