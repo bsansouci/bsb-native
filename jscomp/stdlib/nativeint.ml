@@ -40,8 +40,8 @@ let pred n = sub n 1n
 let abs n = if n >= 0n then n else neg n
 #if BS then
 let size = 54 (* 54 is not a multiple of 8 *)
-let min_int = -9007199254740991n
-let max_int = 9007199254740991n
+let min_int = [%bs.raw "-9007199254740991"]
+let max_int = [%bs.raw "9007199254740991"]
 #else
 let size = Sys.word_size
 let min_int = shift_left 1n (size - 1)
