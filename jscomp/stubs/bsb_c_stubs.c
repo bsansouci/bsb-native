@@ -2,6 +2,15 @@
 #include "caml/mlvalues.h"
 #include "caml/memory.h"
 
+#ifdef _MINGW32_
+
+CAMLprim value bsb_uname() {
+  CAMLparam0();
+  CAMLreturn(caml_copy_string("Windows"));
+}
+
+#else
+
 #include <sys/utsname.h>
 
 CAMLprim value bsb_uname() {
@@ -19,3 +28,6 @@ CAMLprim value bsb_uname() {
   Field(ret, 0) = caml_copy_string(unameData.sysname);
   CAMLreturn(ret);
 }
+
+
+#endif
