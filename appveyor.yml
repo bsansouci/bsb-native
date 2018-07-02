@@ -51,7 +51,7 @@ build_script:
   # Build cppo fork
   - bash -lc "PATH=/c/projects/bsb-native/vendor/ocaml:/c/projects/bsb-native/vendor/ocaml/bin:/c/projects/bsb-native/vendor/flexdll:$PATH make -C /c/projects/bsb-native/cppo"
   # Build bsb-native
-  - bash -lc "PATH=/c/projects/bsb-native/vendor/ocaml:/c/projects/bsb-native/vendor/ocaml/bin:/c/projects/bsb-native/cppo/src:$PATH make && make install"
+  - bash -lc "PATH=/c/projects/bsb-native/vendor/ocaml:/c/projects/bsb-native/vendor/ocaml/bin:/c/projects/bsb-native/cppo/src:$PATH make -C /c/projects/bsb-native && make -C /c/projects/bsb-native install"
   # Copy over correct ninja
   - bash -lc "cp /c/projects/bsb-native/vendor/ninja-build/ninja.win /c/projects/bsb-native/lib/ninja.exe"
   # Create the zip
