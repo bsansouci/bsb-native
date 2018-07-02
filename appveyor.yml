@@ -60,5 +60,4 @@ build_script:
   - bash -lc "cd /c/projects/bsb-native/ && zip -r bsb-native-win-3.2.0.zip lib vendor/ocaml/bin/ocamlrun.exe vendor/ocaml/ocamlc.opt.exe vendor/ocaml/ocamlopt.opt.exe vendor/ocaml/lib/ocaml vendor/flexdll vendor/mingw32/ vendor/lib vendor/include -x lib/bsb -x lib/bsc -x lib/bsrefmt"
 
 artifacts:
-  - path: C:\projects\bsb-native\bsb-native-win-3.2.0.zip
-    name: bsb-native-win-3.2.0.zip
+  - path: bsb-native-win-3.2.0.zip
