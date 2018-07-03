@@ -8,7 +8,7 @@ install:
   - PATH C:\msys64\mingw32\bin;C:\msys64\usr\bin;%PATH%
   - bash -lc "pacman --noconfirm --sync --refresh --refresh --quiet pacman"
   - bash -lc "pacman --noconfirm --sync --refresh --refresh --quiet --sysupgrade --sysupgrade"
-  - bash -xlc "pacman --noconfirm -S --quiet --needed base-devel mingw-w64-i686-toolchain zip"
+  - bash -xlc "pacman --noconfirm -S --quiet --needed base-devel mingw-w64-i686-toolchain zip unzip"
   # download prebuilt flexdll
   - appveyor DownloadFile https://github.com/alainfrisch/flexdll/releases/download/0.37/flexdll-bin-0.37.zip
   - 7z.exe e flexdll-bin-0.37.zip -o"C:\projects\bsb-native\vendor\flexdll" -y
