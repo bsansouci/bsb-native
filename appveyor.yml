@@ -49,10 +49,10 @@ build_script:
   # Move newly-built flexdll into position
   - bash -lc "rm -rf /c/projects/bsb-native/vendor/flexdll; mv /c/projects/bsb-native/vendor/flexdll-build /c/projects/bsb-native/vendor/flexdll"
   # Rebuild ocaml using our flexdll
-  - bash -lc "PATH=/c/projects/bsb-native/vendor/flexdll:$PATH make -C /c/projects/bsb-native/vendor/ocaml -f Makefile.nt clean"
-  - bash -lc "PATH=/c/projects/bsb-native/vendor/flexdll:$PATH make -C /c/projects/bsb-native/vendor/ocaml -f Makefile.nt world.opt"
-  - bash -lc "PATH=/c/projects/bsb-native/vendor/flexdll:$PATH make -C /c/projects/bsb-native/vendor/ocaml -f Makefile.nt otherlibrariesopt"
-  - bash -lc "PATH=/c/projects/bsb-native/vendor/flexdll:$PATH make -C /c/projects/bsb-native/vendor/ocaml -f Makefile.nt install"
+  - bash -lc "FLEXLINKFLAGS='-L/c/msys64/MINGW32/i686-w64-mingw32/lib -L/c/msys64/MINGW32/lib -L/c/msys64/MINGW32/lib/gcc/i686-w64-mingw32/7.3.0' PATH=/c/projects/bsb-native/vendor/flexdll:$PATH make -C /c/projects/bsb-native/vendor/ocaml -f Makefile.nt clean"
+  - bash -lc "FLEXLINKFLAGS='-L/c/msys64/MINGW32/i686-w64-mingw32/lib -L/c/msys64/MINGW32/lib -L/c/msys64/MINGW32/lib/gcc/i686-w64-mingw32/7.3.0' PATH=/c/projects/bsb-native/vendor/flexdll:$PATH make -C /c/projects/bsb-native/vendor/ocaml -f Makefile.nt world.opt"
+  - bash -lc "FLEXLINKFLAGS='-L/c/msys64/MINGW32/i686-w64-mingw32/lib -L/c/msys64/MINGW32/lib -L/c/msys64/MINGW32/lib/gcc/i686-w64-mingw32/7.3.0' PATH=/c/projects/bsb-native/vendor/flexdll:$PATH make -C /c/projects/bsb-native/vendor/ocaml -f Makefile.nt otherlibrariesopt"
+  - bash -lc "FLEXLINKFLAGS='-L/c/msys64/MINGW32/i686-w64-mingw32/lib -L/c/msys64/MINGW32/lib -L/c/msys64/MINGW32/lib/gcc/i686-w64-mingw32/7.3.0' PATH=/c/projects/bsb-native/vendor/flexdll:$PATH make -C /c/projects/bsb-native/vendor/ocaml -f Makefile.nt install"
   # Build cppo fork
   - bash -lc "PATH=/c/projects/bsb-native/vendor/ocaml:/c/projects/bsb-native/vendor/ocaml/bin:/c/projects/bsb-native/vendor/flexdll:$PATH make -C /c/projects/bsb-native/cppo"
   # Build bsb-native
