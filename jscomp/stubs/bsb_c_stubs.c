@@ -6,7 +6,10 @@
 
 CAMLprim value bsb_uname() {
   CAMLparam0();
-  CAMLreturn(caml_copy_string("Windows"));
+  CAMLlocal1(ret);
+  ret = caml_alloc_small(1, 0);
+  Field(ret, 0) = caml_copy_string("Windows");
+  CAMLreturn(ret);
 }
 
 #else
