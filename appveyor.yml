@@ -40,6 +40,15 @@ build_script:
   # Delete some unnecessary stuff
   - bash -lc "rm -rf /c/projects/bsb-native/vendor/lib/gcc/i686-w64-mingw32/7.3.0/adainclude"
   - bash -lc "rm -rf /c/projects/bsb-native/vendor/lib/gcc/i686-w64-mingw32/7.3.0/adalib"
+  - bash -lc "rm -rf /c/projects/bsb-native/vendor/lib/gcc/i686-w64-mingw32/7.3.0/cc1objplus.exe"
+  # - bash -lc "rm -rf /c/projects/bsb-native/vendor/lib/gcc/i686-w64-mingw32/7.3.0/cc1plus.exe"
+  - bash -lc "rm -rf /c/projects/bsb-native/vendor/lib/gcc/i686-w64-mingw32/7.3.0/f951.exe"
+  - bash -lc "rm -rf /c/projects/bsb-native/vendor/lib/gcc/i686-w64-mingw32/7.3.0/cc1obj.exe"
+  - bash -lc "rm -rf /c/projects/bsb-native/vendor/mingw32/gdb.exe"
+  - bash -lc "rm -rf /c/projects/bsb-native/vendor/mingw32/gnat*"
+  - bash -lc "find /c/projects/bsb-native/vendor -type f -name '*fortran*' -delete"
+  - bash -lc "find /c/projects/bsb-native/vendor \( -name "libgnat*" -o -name 'gnat*' \) -delete"
+  - bash -lc "find /c/projects/bsb-native/vendor -name '*python*' -delete"
   # Build ocaml using prebuild flexdll
   - bash -lc "FLEXLINKFLAGS='-L/c/msys64/MINGW32/i686-w64-mingw32/lib -L/c/msys64/MINGW32/lib -L/c/msys64/MINGW32/lib/gcc/i686-w64-mingw32/7.3.0' PATH=/c/projects/bsb-native/vendor/flexdll:$PATH make -C /c/projects/bsb-native/vendor/ocaml -f Makefile.nt world.opt"
   - bash -lc "FLEXLINKFLAGS='-L/c/msys64/MINGW32/i686-w64-mingw32/lib -L/c/msys64/MINGW32/lib -L/c/msys64/MINGW32/lib/gcc/i686-w64-mingw32/7.3.0' PATH=/c/projects/bsb-native/vendor/flexdll:$PATH make -C /c/projects/bsb-native/vendor/ocaml -f Makefile.nt otherlibrariesopt"
