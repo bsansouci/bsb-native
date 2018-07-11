@@ -6,14 +6,20 @@ set -ex
 ################################################################
 
 # install zip in order to create the zip package later
-yum install -y zip
+yum install -y zip unzip 
 
 # activate the Holy Build Box environment.
 source /hbb/activate
 
+# get cppo
+mkdir /cppo
+curl https://github.com/bsansouci/cppo/archive/windows.zip -o /cppo/cppo.zip
+unzip /cppo/cppo.zip -d /cppo
+make -C /cppo
+
 # build ocaml
 cd /io/vendor/ocaml
-DIRNAME=`pwd` /io/vendor/ocaml/configure -prefix `pwd`  -no-ocamldoc -no-ocamlbuild -no-curses -no-graph -no-debugger
+DIRNAME=`pwd` /io/vendor/ocaml/configure -prefix `pwd` -cc "gcc -fPIC" -aspp "gcc -c -fPIC" -no-ocamldoc -no-ocamlbuild -no-curses -no-graph -no-debugger
 make -j9 world.opt
 make install
 mkdir -p $DIRNAME/lib/ocaml/caml
@@ -25,8 +31,11 @@ cp /io/vendor/ninja-build/ninja.linux64 /io/lib/ninja.exe
 
 # build bsc/bsb
 cd /io
-PATH=/io/vendor/ocaml:$PATH make
-PATH=/io/vendor/ocaml:$PATH make install
+PATH=/io/vendor/ocaml:/cppo:$PATH make
+PATH=/io/vendor/ocaml:/cppo:$PATH make install
+
+# copy refmt3 for now
+cp /lib/refmt.exe /lib/refmt3.exe
 
 # create zip package
 rm -f bsb-native-linux-2.1.1.zip
