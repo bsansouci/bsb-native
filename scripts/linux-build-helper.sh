@@ -6,7 +6,7 @@ set -ex
 ################################################################
 
 # install zip in order to create the zip package later
-yum install -y zip unzip 
+yum install -y zip unzip wget
 
 # activate the Holy Build Box environment.
 source /hbb/activate
