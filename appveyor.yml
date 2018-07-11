@@ -72,8 +72,9 @@ build_script:
   - bash -lc "PATH=/c/projects/bsb-native/vendor/ocaml:/c/projects/bsb-native/vendor/ocaml/bin:/c/projects/bsb-native/vendor/flexdll:$PATH make -C /c/projects/bsb-native/cppo"
   # Build bsb-native
   - bash -lc "PATH=/c/projects/bsb-native/vendor/ocaml:/c/projects/bsb-native/vendor/ocaml/bin:/c/projects/bsb-native/cppo/src:$PATH make -C /c/projects/bsb-native && make -C /c/projects/bsb-native install"
-  # Copy over correct ninja
-  - bash -lc "cp /c/projects/bsb-native/vendor/ninja-build/ninja.win /c/projects/bsb-native/lib/ninja.exe"
+  # Build ninja with color support
+  - bash -lc "cd /c/projects/bsb-native/vendor/ninja; python configure.py --platform=mingw; /c/projects/bsb-native/vendor/ninja-build/ninja.win"
+  - bash -lc "cp /c/projects/bsb-native/vendor/ninja/ninja.exe /c/projects/bsb-native/lib/ninja.exe"
   # Create the zip
   - bash -lc "cd /c/projects/bsb-native/ && zip -r bsb-native-win-3.2.0.zip lib vendor/ocaml/bin/ocamlrun.exe vendor/ocaml/ocamlc.opt.exe vendor/ocaml/ocamlopt.opt.exe vendor/ocaml/lib/ocaml vendor/flexdll vendor/mingw32/ vendor/lib vendor/include -x lib/bsb -x lib/bsc -x lib/bsrefmt"
 
