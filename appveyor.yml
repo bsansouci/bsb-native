@@ -49,6 +49,12 @@ build_script:
   - bash -lc "find /c/projects/bsb-native/vendor -type f -name '*fortran*' -delete"
   - bash -lc "find /c/projects/bsb-native/vendor \( -name "libgnat*" -o -name 'gnat*' \) -delete"
   - bash -lc "find /c/projects/bsb-native/vendor -name '*python*' -delete"
+  - bash -lc "find /c/projects/bsb-native/vendor -name 'py*' -delete"
+  - bash -lc "find /c/projects/bsb-native/vendor -name 'tcl*' -delete"
+  - bash -lc "find /c/projects/bsb-native/vendor -name 'wish*' -delete"
+  - bash -lc "find /c/projects/bsb-native/vendor -name '*zip*' -delete"
+  - bash -lc "find /c/projects/bsb-native/vendor -name '*xz*' -delete"
+  - bash -lc "find /c/projects/bsb-native/vendor -name '*lzma*' -delete"
   # Build ocaml using prebuild flexdll
   - bash -lc "FLEXLINKFLAGS='-L/c/msys64/MINGW32/i686-w64-mingw32/lib -L/c/msys64/MINGW32/lib -L/c/msys64/MINGW32/lib/gcc/i686-w64-mingw32/7.3.0' PATH=/c/projects/bsb-native/vendor/flexdll:$PATH make -C /c/projects/bsb-native/vendor/ocaml -f Makefile.nt world.opt"
   - bash -lc "FLEXLINKFLAGS='-L/c/msys64/MINGW32/i686-w64-mingw32/lib -L/c/msys64/MINGW32/lib -L/c/msys64/MINGW32/lib/gcc/i686-w64-mingw32/7.3.0' PATH=/c/projects/bsb-native/vendor/flexdll:$PATH make -C /c/projects/bsb-native/vendor/ocaml -f Makefile.nt otherlibrariesopt"
