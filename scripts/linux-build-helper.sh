@@ -12,10 +12,9 @@ yum install -y zip unzip
 source /hbb/activate
 
 # get cppo
-mkdir /cppo
-curl https://github.com/bsansouci/cppo/archive/windows.zip -o /cppo.zip
-ls /
-unzip /cppo.zip -d /cppo
+wget https://github.com/bsansouci/cppo/archive/windows.zip
+unzip /windows.zip -d /
+mv /cppo-windows /cppo
 make -C /cppo
 
 # build ocaml
