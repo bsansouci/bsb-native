@@ -13,8 +13,9 @@ source /hbb/activate
 
 # get cppo
 mkdir /cppo
-curl https://github.com/bsansouci/cppo/archive/windows.zip -o /cppo/cppo.zip
-unzip /cppo/cppo.zip -d /cppo
+curl https://github.com/bsansouci/cppo/archive/windows.zip -o /cppo.zip
+ls /
+unzip /cppo.zip -d /cppo
 make -C /cppo
 
 # build ocaml
