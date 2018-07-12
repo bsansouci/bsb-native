@@ -77,7 +77,12 @@ void LinePrinter::Print(string to_print, LineType type) {
       char_data[i].Char.AsciiChar = i < to_print.size() ? to_print[i] : ' ';
       char_data[i].Attributes = csbi.wAttributes;
     }
-    WriteConsoleOutput(console_, &char_data[0], buf_size, zero_zero, &target);
+    // WriteConsoleOutput(console_, &char_data[0], buf_size, zero_zero, &target);
+    // For some reason we're not getting colors to work with the above approach and
+    // the below one seems to work fine...
+    printf("%s", to_print.c_str());
+    printf("\x1B[K");  // Clear to end of line.
+    fflush(stdout);
 #else
     // Limit output to width of the terminal if provided so we don't cause
     // line-wrapping.

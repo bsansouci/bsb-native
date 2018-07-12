@@ -76,7 +76,8 @@ INSTALL_LIBDIR=$(DESTDIR)$(LIBDIR)
 INSTALL_STUBLIBDIR=$(DESTDIR)$(STUBLIBDIR)
 
 install:
-	cp dllthreads.dll $(INSTALL_STUBLIBDIR)/dllthreads.dll
+	# cp dllthreads.dll $(INSTALL_STUBLIBDIR)/dllthreads.dll
+	if test -f dll$(LIBNAME)$(EXT_DLL); then cp dll$(LIBNAME)$(EXT_DLL) $(INSTALL_STUBLIBDIR)/; fi
 	cp libthreads.$(A) $(INSTALL_LIBDIR)/libthreads.$(A)
 	mkdir -p $(INSTALL_LIBDIR)/threads
 	cp $(CMIFILES) threads.cma $(INSTALL_LIBDIR)/threads
