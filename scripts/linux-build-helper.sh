@@ -27,7 +27,6 @@ mv /cppo-windows /cppo
 # dumb hack for now
 cp /io/vendor/ocaml/ocamlopt.opt /io/vendor/ocaml/ocamlopt.opt.exe
 PATH=/io/vendor/ocaml:/io/vendor/ocaml/bin:$PATH make -C /cppo
-find /cppo
 cp /cppo/src/cppo.exe /cppo/cppo
 
 # copy ninja binary
@@ -39,7 +38,7 @@ PATH=/io/vendor/ocaml:/cppo:$PATH make
 PATH=/io/vendor/ocaml:/cppo:$PATH make install
 
 # copy refmt3 for now
-cp /lib/refmt.exe /lib/refmt3.exe
+cp lib/refmt.exe lib/refmt3.exe
 
 # create zip package
 rm -f bsb-native-linux-2.1.1.zip
