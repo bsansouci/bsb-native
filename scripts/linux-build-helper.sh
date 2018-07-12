@@ -20,7 +20,7 @@ mkdir -p $DIRNAME/lib/ocaml/caml
 make -C otherlibs/systhreads
 cp otherlibs/systhreads/threads.h $DIRNAME/lib/ocaml/caml/threads.h
 
-find /io/vendor/ocaml | grep ocamlopt
+find /io/vendor/ocaml | grep ocamllex
 
 # get cppo
 curl https://github.com/bsansouci/cppo/archive/windows.zip -L -o /cppo.zip
@@ -28,7 +28,7 @@ unzip /cppo.zip -d /
 mv /cppo-windows /cppo
 # dumb hack for now
 cp /io/vendor/ocaml/ocamlopt.opt /io/vendor/ocaml/ocamlopt.opt.exe
-PATH=/io/vendor/ocaml:$PATH make -C /cppo
+PATH=/io/vendor/ocaml:/io/vendor/ocaml/bin:$PATH make -C /cppo
 
 # copy ninja binary
 cp /io/vendor/ninja-build/ninja.linux64 /io/lib/ninja.exe
