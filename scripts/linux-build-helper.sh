@@ -21,7 +21,7 @@ make -C otherlibs/systhreads
 cp otherlibs/systhreads/threads.h $DIRNAME/lib/ocaml/caml/threads.h
 
 # get cppo
-curl https://github.com/bsansouci/cppo/archive/windows.zip -L -o cppo.zip
+curl https://github.com/bsansouci/cppo/archive/windows.zip -L -o /cppo.zip
 unzip /cppo.zip -d /
 mv /cppo-windows /cppo
 PATH=/io/vendor/ocaml:$PATH make -C /cppo
