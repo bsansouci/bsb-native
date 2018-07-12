@@ -6,14 +6,14 @@ set -ex
 ################################################################
 
 # install zip in order to create the zip package later
-yum install -y zip unzip wget
+yum install -y zip unzip
 
 # activate the Holy Build Box environment.
 source /hbb/activate
 
 # get cppo
-wget https://github.com/bsansouci/cppo/archive/windows.zip
-unzip /windows.zip -d /
+curl https://github.com/bsansouci/cppo/archive/windows.zip -L -o cppo.zip
+unzip /cppo.zip -d /
 mv /cppo-windows /cppo
 make -C /cppo
 
