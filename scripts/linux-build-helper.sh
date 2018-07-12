@@ -27,7 +27,8 @@ mv /cppo-windows /cppo
 # dumb hack for now
 cp /io/vendor/ocaml/ocamlopt.opt /io/vendor/ocaml/ocamlopt.opt.exe
 PATH=/io/vendor/ocaml:/io/vendor/ocaml/bin:$PATH make -C /cppo
-cp /cppo/cppo.exe /cppo/cppo
+find /cppo
+cp /cppo/src/cppo.exe /cppo/cppo
 
 # copy ninja binary
 cp /io/vendor/ninja-build/ninja.linux64 /io/lib/ninja.exe
