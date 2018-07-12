@@ -24,7 +24,7 @@ cp otherlibs/systhreads/threads.h $DIRNAME/lib/ocaml/caml/threads.h
 curl https://github.com/bsansouci/cppo/archive/windows.zip -L -o /cppo.zip
 unzip /cppo.zip -d /
 mv /cppo-windows /cppo
-PATH=/io/vendor/ocaml:$PATH make -C /cppo
+PATH=/io/vendor/ocaml:/io/vendor/ocaml/bin:$PATH make -C /cppo
 
 # copy ninja binary
 cp /io/vendor/ninja-build/ninja.linux64 /io/lib/ninja.exe
