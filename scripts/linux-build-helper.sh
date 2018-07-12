@@ -20,6 +20,8 @@ mkdir -p $DIRNAME/lib/ocaml/caml
 make -C otherlibs/systhreads
 cp otherlibs/systhreads/threads.h $DIRNAME/lib/ocaml/caml/threads.h
 
+find /io/vendor/ocaml | grep ocamlopt
+
 # get cppo
 curl https://github.com/bsansouci/cppo/archive/windows.zip -L -o /cppo.zip
 unzip /cppo.zip -d /
