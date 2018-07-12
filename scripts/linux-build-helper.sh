@@ -11,12 +11,6 @@ yum install -y zip unzip
 # activate the Holy Build Box environment.
 source /hbb/activate
 
-# get cppo
-curl https://github.com/bsansouci/cppo/archive/windows.zip -L -o cppo.zip
-unzip /cppo.zip -d /
-mv /cppo-windows /cppo
-make -C /cppo
-
 # build ocaml
 cd /io/vendor/ocaml
 DIRNAME=`pwd` /io/vendor/ocaml/configure -prefix `pwd` -cc "gcc -fPIC" -aspp "gcc -c -fPIC" -no-ocamldoc -no-ocamlbuild -no-curses -no-graph -no-debugger
@@ -25,6 +19,12 @@ make install
 mkdir -p $DIRNAME/lib/ocaml/caml
 make -C otherlibs/systhreads
 cp otherlibs/systhreads/threads.h $DIRNAME/lib/ocaml/caml/threads.h
+
+# get cppo
+curl https://github.com/bsansouci/cppo/archive/windows.zip -L -o cppo.zip
+unzip /cppo.zip -d /
+mv /cppo-windows /cppo
+PATH=/io/vendor/ocaml:$PATH make -C /cppo
 
 # copy ninja binary
 cp /io/vendor/ninja-build/ninja.linux64 /io/lib/ninja.exe
