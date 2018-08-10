@@ -92,3 +92,13 @@ type package_context = {
 }
 
 val walk_all_deps : string -> (package_context -> unit) -> unit
+
+#if BS_NATIVE then
+val get_ocaml_dir: string -> string
+
+val get_ocaml_lib_dir : is_js:bool -> string -> string
+
+val build_artifacts_dir : (string option) ref
+
+val get_build_artifacts_location : string -> string
+#end

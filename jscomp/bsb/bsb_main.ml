@@ -55,12 +55,21 @@ let bsb_main_flags : (string * Arg.spec * string) list=
     "-verbose", Arg.Unit Bsb_log.verbose,
     " Set the output(from bsb) to be verbose";
     "-w", Arg.Set watch_mode,
+#if BS_NATIVE then
+    " Watch mode" ;     
+    "-clean-world", Arg.Unit (fun _ -> 
+        Bsb_clean.clean_bs_deps ~is_cmdline_build_kind_set:true ~nested:"" bsc_dir cwd),
+    " Clean all bs dependencies";
+    "-clean", Arg.Unit (fun _ -> 
+        Bsb_clean.clean_self ~is_cmdline_build_kind_set:true ~nested:"" bsc_dir cwd),
+#else
     " Watch mode" ;     
     "-clean-world", Arg.Unit (fun _ -> 
         Bsb_clean.clean_bs_deps bsc_dir cwd),
     " Clean all bs dependencies";
     "-clean", Arg.Unit (fun _ -> 
         Bsb_clean.clean_self bsc_dir cwd),
+#end
     " Clean only current project";
     "-make-world", Arg.Unit set_make_world,
     " Build all dependencies and itself ";

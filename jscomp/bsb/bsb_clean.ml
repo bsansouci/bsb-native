@@ -26,10 +26,18 @@
 let (//) = Ext_path.combine
 
 
+#if BS_NATIVE then
+let ninja_clean ~nested bsc_dir proj_dir =
+#else
 let ninja_clean bsc_dir proj_dir =
+#end
   try
     let cmd = bsc_dir // "ninja.exe" in
+#if BS_NATIVE then
+    let cwd = proj_dir // nested // Bsb_config.lib_bs in
+#else
     let cwd = proj_dir // Bsb_config.lib_bs in
+#end
     if Sys.file_exists cwd then
       let eid =
         Bsb_unix.run_command_execv {cmd ; args = [|cmd; "-t"; "clean"|] ; cwd} in
@@ -38,7 +46,11 @@ let ninja_clean bsc_dir proj_dir =
   with  e ->
     Bsb_log.warn "@{<warning>ninja clean failed@} : %s @." (Printexc.to_string e)
 
+#if BS_NATIVE then
+let clean_bs_garbage ~nested bsc_dir proj_dir =
+#else
 let clean_bs_garbage bsc_dir proj_dir =
+#end
   Bsb_log.info "@{<info>Cleaning:@} in %s@." proj_dir ;
   let try_remove x =
     let x = proj_dir // x in
@@ -46,17 +58,51 @@ let clean_bs_garbage bsc_dir proj_dir =
       Bsb_unix.remove_dir_recursive x  in
   try
     Bsb_parse_sources.clean_re_js proj_dir; (* clean re.js files*)
+#if BS_NATIVE then
+    ninja_clean ~nested bsc_dir proj_dir ;
+#else
     ninja_clean bsc_dir proj_dir ;
+#end
     List.iter try_remove Bsb_config.all_lib_artifacts;
   with
     e ->
     Bsb_log.warn "@{<warning>Failed@} to clean due to %s" (Printexc.to_string e)
 
 
+#if BS_NATIVE then
+let clean_bs_deps ~is_cmdline_build_kind_set ~nested bsc_dir proj_dir =
+  if is_cmdline_build_kind_set then
+    Bsb_build_util.walk_all_deps  proj_dir  (fun pkg_cxt ->
+        (* whether top or not always do the cleaning *)
+        clean_bs_garbage ~nested bsc_dir (Bsb_build_util.get_build_artifacts_location pkg_cxt.cwd)
+      )
+  else begin
+   Bsb_build_util.walk_all_deps  proj_dir  (fun { cwd} ->
+      let build_artifacts_cwd = Bsb_build_util.get_build_artifacts_location cwd in
+      (* whether top or not always do the cleaning *)
+      clean_bs_garbage ~nested:"js" bsc_dir build_artifacts_cwd;
+      clean_bs_garbage ~nested:"bytecode" bsc_dir build_artifacts_cwd;
+      clean_bs_garbage ~nested:"native" bsc_dir build_artifacts_cwd;
+    )
+end
+#else
 let clean_bs_deps bsc_dir proj_dir =
   Bsb_build_util.walk_all_deps  proj_dir  (fun pkg_cxt ->
       (* whether top or not always do the cleaning *)
       clean_bs_garbage bsc_dir pkg_cxt.cwd
     )
+#end
 
+#if BS_NATIVE then
+let clean_self ~is_cmdline_build_kind_set ~nested bsc_dir proj_dir =
+  let build_artifacts_cwd = Bsb_build_util.get_build_artifacts_location proj_dir in
+  if is_cmdline_build_kind_set then
+    clean_bs_garbage ~nested bsc_dir build_artifacts_cwd
+  else begin
+    clean_bs_garbage ~nested:"js" bsc_dir build_artifacts_cwd;
+    clean_bs_garbage ~nested:"bytecode" bsc_dir build_artifacts_cwd;
+    clean_bs_garbage ~nested:"native" bsc_dir build_artifacts_cwd;
+  end
+#else
 let clean_self bsc_dir proj_dir = clean_bs_garbage bsc_dir proj_dir
+#end

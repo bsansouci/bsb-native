@@ -56,7 +56,11 @@ let regenerate_ninja
     | Other _ -> 
       if check_result = Bsb_bsc_version_mismatch then begin 
         Bsb_log.info "@{<info>Different compiler version@}: clean current repo";
+#if BS_NATIVE then
+        Bsb_clean.clean_self ~is_cmdline_build_kind_set:true ~nested:"" bsc_dir cwd; 
+#else
         Bsb_clean.clean_self bsc_dir cwd; 
+#end
       end ; 
       Bsb_build_util.mkp (cwd // Bsb_config.lib_bs); 
       let config = 

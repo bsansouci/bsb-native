@@ -31,6 +31,15 @@ INCLUDES= -I +compiler-libs -I stubs -I ext -I common -I syntax -I depends -I co
 .mll.ml:
 	$(OCAMLLEX) $< -o $@ || (rm $@ && exit 2)
 
+all: 
+	make ../lib/bsb.exe 
+	make ../lib/bsb_helper.exe 
+	make ../lib/bsc.exe 
+	make libs
+
+install:
+	make -C ../ install
+
 ext/string_hash_set.ml: ext/hash_set.cppo.ml
 	cppo -D TYPE_STRING $< -o $@
 ext/int_hash_set.ml: ext/hash_set.cppo.ml
