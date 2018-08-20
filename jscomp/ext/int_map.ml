@@ -4,11 +4,11 @@
 
 
   
-# 13
+# 13 "ext/map.cppo.ml"
   type key = int
   let compare_key = Ext_int.compare
 
-# 22
+# 22 "ext/map.cppo.ml"
 type 'a t = (key,'a) Map_gen.t
 exception Duplicate_key of key 
 
@@ -101,6 +101,13 @@ let rec remove x (tree : _ Map_gen.t as 'a) : 'a = match tree with
     else
       bal l v d (remove x r)
 
+let update k fn (tree : _ Map_gen.t as 'a) : 'a =
+  let cur = find_opt k tree in
+  match (cur, fn cur) with
+  | None, None -> tree
+  | None, Some v -> add k v tree
+  | Some v, None -> remove k tree
+  | Some v1, Some v2 -> adjust k (fun () -> assert false) (fun _ -> v2) tree
 
 let rec split x (tree : _ Map_gen.t as 'a) : 'a * _ option * 'a  = match tree with 
   | Empty ->

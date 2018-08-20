@@ -22,6 +22,8 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
 
+#if BS_NATIVE then
+
 (* File following almost the same logic as bsb_ninja but slightly modified for 
    native / bytecode compilation. *)
 type compile_target_t = Native | Bytecode
@@ -38,8 +40,9 @@ val handle_file_groups : out_channel ->
   config:Bsb_config_types.t ->
   ppx_flags_internal:string list ->
   ?build_just_ppx: bool ->
-  Bsb_parse_sources.file_group list ->
+  Bsb_file_groups.file_group list ->
   string option ->
   Bsb_ninja_file_groups.info -> 
   Bsb_ninja_file_groups.info
   
+#end

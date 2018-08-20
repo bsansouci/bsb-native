@@ -1,3 +1,4 @@
+#if BS_NATIVE then
 type path = string
 
 type t = {
@@ -14,3 +15,4 @@ type t = {
    If yes, it'll change the path to be an absolute path to the PPX.
  *)
 val check_if_dep : root_project_dir:string -> backend:Bsb_config_types.compilation_kind_t -> t -> string -> string
+#end

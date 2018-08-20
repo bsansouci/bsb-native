@@ -1,3 +1,4 @@
+#if BS_NATIVE then
 type path = string
 
 type t = {
@@ -36,3 +37,4 @@ let check_if_dep ~root_project_dir ~backend (dependency_info : t) flag_exec =
       end
     end
   | _ -> flag_exec
+#end

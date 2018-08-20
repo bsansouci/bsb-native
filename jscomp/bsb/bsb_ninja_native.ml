@@ -22,7 +22,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
 
-
+#if BS_NATIVE then
 module Rules = Bsb_rule 
 
 type compile_target_t = Native | Bytecode
@@ -665,7 +665,7 @@ let handle_file_groups oc
     | Bsb_config_types.Native   -> List.mem Bsb_file_groups.Native group.Bsb_file_groups.backend
     | Bsb_config_types.Bytecode -> List.mem Bsb_file_groups.Bytecode group.Bsb_file_groups.backend
   ) file_groups in 
-  let (entries, ppx_entries) = Bsb_ninja_file_groups.separate_ppx_entries entries backend in
+  let (entries, ppx_entries) = Bsb_ninja_file_groups.separate_ppx_entries_and_filter entries backend in
   (* should_build_ppx is set to true if there is any file group that requires a ppx or if there's
      a ppx_flag used. *)
   let should_build_ppx = List.length (List.filter (fun ppx_flag ->
@@ -731,3 +731,5 @@ let handle_file_groups oc
     end
   | Some build_library -> 
     pack oc comp_info ~entries ~build_library ~backend ~file_groups ~namespace ()
+
+#end
