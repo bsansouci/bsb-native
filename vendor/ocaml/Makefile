@@ -82,7 +82,7 @@ COMP=bytecomp/lambda.cmo bytecomp/printlambda.cmo \
 # We probably should fix the makefile up to point to some rules which allow
 # building super_errors in a better way.
 #        Ben - August 11th 2017
-super_packed.cmo: $(UTILS) $(PARSING) $(TYPING)
+super_packed.cmo: $(UTILS) $(PARSING) $(TYPING) super_packed.ml
 	$(CAMLC) $(COMPFLAGS) -c super_packed.ml
 
 COMMON=$(UTILS) $(PARSING) $(TYPING) super_packed.cmo $(COMP)

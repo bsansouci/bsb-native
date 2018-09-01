@@ -206,16 +206,16 @@ end
 module Super_location
 = struct
 #1 "super_location.ml"
-open Misc
+(* open Misc
 open Asttypes
 open Parsetree
 open Types
 open Typedtree
 open Btype
-open Ctype
+open Ctype *)
 
 open Format
-open Printtyp
+(* open Printtyp *)
 
 open Location
 
@@ -948,7 +948,7 @@ let non_overlap_count ~sub s =
 let rfind ~sub s =
   let n = String.length sub in
   let i = ref (String.length s - n) in
-  let module M = struct exception Exit end in 
+  (* let module M = struct exception Exit end in  *)
   try
     while !i >= 0 do
       if unsafe_is_sub ~sub 0 s !i ~len:n then 
@@ -1608,11 +1608,11 @@ end
 module Super_typecore
 = struct
 #1 "super_typecore.ml"
-open Misc
-open Asttypes
-open Parsetree
+(* open Misc *)
+(* open Asttypes *)
+(* open Parsetree *)
 open Types
-open Typedtree
+(* open Typedtree *)
 open Btype
 open Ctype
 
@@ -2192,13 +2192,13 @@ end
 module Super_typetexp
 = struct
 #1 "super_typetexp.ml"
-open Misc
-open Asttypes
-open Parsetree
+(* open Misc *)
+(* open Asttypes *)
+(* open Parsetree *)
 open Types
-open Typedtree
-open Btype
-open Ctype
+(* open Typedtree *)
+(* open Btype *)
+(* open Ctype *)
 
 open Format
 open Printtyp
