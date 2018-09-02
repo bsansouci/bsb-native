@@ -1,4 +1,5 @@
-NATIVE=ocamlopt.opt
+BYTE=ocamlc.opt$(EXE)
+NATIVE=ocamlopt.opt$(EXE)
 
 OCAMLOPT_FLAGS= -g -w -40-30 ../jscomp/stubs/bsb_c_stubs.c ../jscomp/stubs/ext_basic_hash_stubs.c
 # -inline 1000 makes size too large
@@ -6,6 +7,9 @@ OCAMLOPT_FLAGS= -g -w -40-30 ../jscomp/stubs/bsb_c_stubs.c ../jscomp/stubs/ext_b
 # test case of our optimizations
 bsppx.exe: bsppx.mli bsppx.ml
 	$(NATIVE) $(OCAMLOPT_FLAGS) $^ -o $@
+
+belt_bsppx.exe: belt_bsppx.ml
+	$(NATIVE) $(OCAMLOPT_FLAGS)  $^ -o $@
 
 bspp.exe:   bspp.mli bspp.ml
 	$(NATIVE) $(OCAMLOPT_FLAGS) $^ -o $@
@@ -36,7 +40,7 @@ bsc.exe: whole_compiler.mli whole_compiler.ml
 
 
 
-all: bsc.exe bsb.exe bsppx.exe bsb_helper.exe  refmt.exe reactjs_jsx_ppx_2.exe
+all: bsc.exe bsb.exe bsppx.exe bsb_helper.exe  refmt.exe reactjs_jsx_ppx_2.exe bsb_internals.cmo bs_ppx_tools.exe bspp.exe
 #  bspp.exe bsdep.exe
 # bspack.exe
 # bsppx.exe is needed for merlin
