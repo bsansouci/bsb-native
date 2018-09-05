@@ -1181,12 +1181,12 @@ and skip_sharp_bang = parse
               | END -> 
                   begin
                     update_if_then_else Dir_out;
-                    cont lexbuf
+                    cont lexbuf false
                   end
               | ELSE -> 
                   begin
                     update_if_then_else Dir_if_false;
-                    cont lexbuf
+                    cont lexbuf true
                   end
               | IF ->
                   raise (Error (Unexpected_directive, Location.curr lexbuf))
@@ -1195,7 +1195,7 @@ and skip_sharp_bang = parse
                      directive_parse token_with_comments lexbuf then
                     begin
                       update_if_then_else Dir_if_true;
-                      cont lexbuf
+                      cont lexbuf true
                     end
                   else skip_from_if_false ()                               
             end
@@ -1203,7 +1203,7 @@ and skip_sharp_bang = parse
         if directive_parse token_with_comments lexbuf then
           begin 
             update_if_then_else Dir_if_true (* Next state: ELSE *);
-            cont lexbuf
+            cont lexbuf true
           end
         else
           skip_from_if_false ()
@@ -1225,7 +1225,7 @@ and skip_sharp_bang = parse
               | END -> 
                   begin
                     update_if_then_else Dir_out;
-                    cont lexbuf
+                    cont lexbuf false
                   end  
               | IF ->  
                   raise (Error (Unexpected_directive, Location.curr lexbuf)) 
@@ -1247,7 +1247,7 @@ and skip_sharp_bang = parse
         raise (Error(Unexpected_directive, Location.curr lexbuf))
     | END, (Dir_if_false | Dir_if_true ) -> 
         update_if_then_else  Dir_out;
-        cont lexbuf
+        cont lexbuf false
     | END,  Dir_out  -> 
         raise (Error(Unexpected_directive, Location.curr lexbuf))
     | token, (Dir_if_true | Dir_if_false | Dir_out) ->
@@ -1304,7 +1304,7 @@ and skip_sharp_bang = parse
           loop lines' docs lexbuf
       | SHARP when at_bol lexbuf -> 
           interpret_directive lexbuf 
-            (fun lexbuf -> loop lines docs lexbuf)
+            (fun lexbuf _ -> loop lines docs lexbuf)
             (fun token -> sharp_look_ahead := Some token; SHARP)
 #if undefined BS_MIN_LEX_DEPS then
       | DOCSTRING doc ->
@@ -1345,21 +1345,21 @@ and skip_sharp_bang = parse
     | None -> ()
     | Some (init, _preprocess) -> init ()
 
-  let rec filter_directive pos   acc lexbuf : (int * int ) list =
+  let rec filter_directive pos   acc lexbuf : (int * int * int) list =
     match token_with_comments lexbuf with
     | SHARP when at_bol lexbuf ->
         (* ^[start_pos]#if ... #then^[end_pos] *)
         let start_pos = Lexing.lexeme_start lexbuf in 
         interpret_directive lexbuf 
-          (fun lexbuf -> 
+          (fun lexbuf start -> 
              filter_directive 
                (Lexing.lexeme_end lexbuf)
-               ((pos, start_pos) :: acc)
+               ((pos, start_pos, if start then (Lexing.lexeme_start_p lexbuf).pos_lnum else (Lexing.lexeme_end_p lexbuf).pos_lnum) :: acc)
                lexbuf
           
           )
           (fun _token -> filter_directive pos acc lexbuf  )
-    | EOF -> (pos, Lexing.lexeme_end lexbuf) :: acc
+    | EOF -> (pos, Lexing.lexeme_end lexbuf, (Lexing.lexeme_end_p lexbuf).pos_lnum) :: acc
     | _ -> filter_directive pos  acc lexbuf
 
   let filter_directive_from_lexbuf lexbuf = 
