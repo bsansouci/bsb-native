@@ -13,6 +13,9 @@
 
 (* Array operations *)
 
+
+
+
 external length: 'a array -> int = "%array_length"
 external size: 'a array -> int = "%array_length"
 external getUnsafe: 'a array -> int -> 'a = "%array_unsafe_get"
@@ -442,7 +445,7 @@ let keepWithIndexU a f =
   let l = length a in
 #if BS_NATIVE then
   let r = if l > 0 then 
-    makeUninitializedUnsafe l (getUnsafe a i) else [||] in
+    makeUninitializedUnsafe l (getUnsafe a 0) else [||] in
 #else
   let r = makeUninitializedUnsafe l in
 #end
@@ -455,8 +458,12 @@ let keepWithIndexU a f =
         incr j
       end
   done;
+#if BS_NATIVE then
+  truncateToLengthUnsafe r !j
+#else
   truncateToLengthUnsafe r !j;
   r
+#end
 
 let keepWithIndex a f = keepWithIndexU a (fun [@bs] a i -> f a i)
 

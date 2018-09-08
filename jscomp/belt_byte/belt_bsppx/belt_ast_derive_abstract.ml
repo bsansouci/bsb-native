@@ -145,7 +145,7 @@ let handleTdcl (tdcl : Parsetree.type_declaration) =
           let getter = 
               Str.value Nonrecursive [
                 Vb.mk 
-                  (Pat.var pld_name) 
+                  (Pat.var {pld_name with txt = label_name ^ "Get"}) 
                   (Exp.constraint_ (Exp.fun_ "" None 
                       (Pat.var {Location.txt = "o"; loc = !default_loc})
                       (Exp.field (Exp.ident {Location.txt = Longident.Lident "o"; loc = !default_loc}) {txt = Longident.Lident pld_name.Location.txt; loc = !default_loc})) getter_type)]
@@ -280,7 +280,7 @@ let handleTdclSig (tdcl : Parsetree.type_declaration) =
                Typ.arrow ~loc "" core_type pld_type
           in
           let getter = 
-            Val.mk pld_name
+            Val.mk {pld_name with txt = label_name ^ "Get"}
               ~attrs:[]
               ~prim:[] getter_type 
             in

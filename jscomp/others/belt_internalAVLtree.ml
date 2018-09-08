@@ -477,7 +477,11 @@ let toArray n =
   | None -> [||]
   | Some n ->
     let size = lengthNode n in
+#if BS_NATIVE then
+    let v = A.makeUninitializedUnsafe size (n |. keyGet, n |. valueGet) in
+#else
     let v = A.makeUninitializedUnsafe size in
+#end
     ignore (fillArray n 0 v : int);  (* may add assertion *)
     v
 
@@ -486,7 +490,11 @@ let keysToArray n =
   | None -> [||]
   | Some n ->
     let size = lengthNode n in
+#if BS_NATIVE then
+    let v = A.makeUninitializedUnsafe size (n |. keyGet) in
+#else
     let v = A.makeUninitializedUnsafe size in
+#end
     ignore (fillArrayKey n 0 v : int);  (* may add assertion *)
     v
 
@@ -495,7 +503,11 @@ let valuesToArray n =
   | None -> [||]
   | Some n ->
     let size = lengthNode n in
+#if BS_NATIVE then
+    let v = A.makeUninitializedUnsafe size (n |. valueGet) in
+#else
     let v = A.makeUninitializedUnsafe size in
+#end
     ignore (fillArrayValue n 0 v : int);  (* may add assertion *)
     v
 
