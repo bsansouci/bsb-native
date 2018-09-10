@@ -3020,7 +3020,7 @@ and __ocaml_lex_skip_sharp_bang_rec lexbuf __ocaml_lex_state =
           
           )
           (fun _token -> filter_directive pos acc lexbuf  )
-    | EOF -> (pos, Lexing.lexeme_end lexbuf, -1) :: acc
+    | EOF -> (pos, Lexing.lexeme_end lexbuf, (Lexing.lexeme_end_p lexbuf).pos_lnum) :: acc
     | _ -> filter_directive pos  acc lexbuf
 
   let filter_directive_from_lexbuf lexbuf = 

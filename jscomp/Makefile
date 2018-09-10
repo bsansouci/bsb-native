@@ -38,12 +38,12 @@ all:
 	make libs
 
 native:
-	BS_NATIVE=true make ../lib/bsb.exe 
-	BS_NATIVE=true make ../lib/bsb_helper.exe 
-	BS_NATIVE=true make ../lib/bsc.exe 
+	make BS_NATIVE=true ../lib/bsb.exe 
+	make BS_NATIVE=true ../lib/bsb_helper.exe 
+	make BS_NATIVE=true ../lib/bsc.exe 
 	make libs
-	BS_NATIVE=true make -C belt_byte
-	BS_NATIVE=true make -C belt_native
+	make BS_NATIVE=true -C belt_byte
+	make BS_NATIVE=true -C belt_native
 
 install:
 	make -C ../ install
@@ -570,9 +570,10 @@ themes:
 snapshotml:./bin/bspack.exe
 	$(MAKE) -j9 $(SNAPSHOT_SRCS)
 
-force-snapshotml-native: BS_NATIVE=true
+BS_NATIVE=false
+
 force-snapshotml-native:
-	$(MAKE) force-snapshotml
+	$(MAKE) BS_NATIVE=true force-snapshotml
 	
 force-snapshotml:
 	rm -f $(SNAPSHOT_DEPS) $(SNAPSHOT_SRCS)
