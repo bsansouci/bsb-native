@@ -503,7 +503,7 @@ let output_ninja_and_namespace_map
     all_info
    | Some ns -> 
      let namespace_dir =     
-       cwd // Bsb_config.lib_bs  in
+       build_artifacts_dir // Bsb_config.lib_bs // nested in
      Bsb_namespace_map_gen.output 
        ~dir:namespace_dir ns
        bs_file_groups
@@ -572,13 +572,13 @@ let output_ninja_and_namespace_map
         op = Bsb_ninja_util.Overwrite impl 
       }]
       ~rule;
-    let command = output ^ " " 
-      ^ (Ext_bytes.ninja_escaped (Filename.dirname ocaml_dir)) ^ " " 
-      ^ (Ext_bytes.ninja_escaped ocaml_lib) ^ " " 
-      ^ (Ext_bytes.ninja_escaped cwd) ^ " " 
-      ^ (Ext_bytes.ninja_escaped root_project_dir) ^ " "
-      ^ (Ext_bytes.ninja_escaped build_artifacts_dir) 
-      ^ (if !Bsb_log.log_level = Bsb_log.Debug then " -verbose" else "") in
+    let command = Printf.sprintf "%s %s %s %s %s %s %s" output
+      (Ext_bytes.ninja_escaped (Filename.dirname ocaml_dir))
+      (Ext_bytes.ninja_escaped ocaml_lib)
+      (Ext_bytes.ninja_escaped cwd)
+      (Ext_bytes.ninja_escaped root_project_dir)
+      (Ext_bytes.ninja_escaped build_artifacts_dir) 
+      (if !Bsb_log.log_level = Bsb_log.Debug then " -verbose" else "") in
     let rule = Bsb_rule.define ~command "run_build_script" ~description:"\027[32mRunning\027[39m \027[2m${out}\027[22m" (* blue, dim *) in
     Bsb_ninja_util.output_build oc
       ~order_only_deps:[ output ]
@@ -590,7 +590,7 @@ let output_ninja_and_namespace_map
       ~output:Literals.build_ninja ;
   | Some (build_script, false) when should_build ->
     if Ext_sys.is_windows_or_cygwin then 
-      Bsb_log.error "`build-script` field not supported on windows yet. Coming soon (poke bsansouci on discord so he prioritize it)."
+      Bsb_log.error "Old style build-script isn't supported on windows, please upgrade to the new style of build-script in Reason."
     else begin 
       let build_script = Ext_bytes.ninja_escaped build_script in
       

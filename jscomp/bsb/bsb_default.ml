@@ -26,7 +26,8 @@
 (* for default warning flags, please see bsb_warning.ml *)
 let bsc_flags =
   [
-    "-color"; "always"
+    "-color"; "always";
+    "-no-alias-deps"
   ] 
 
 
@@ -38,7 +39,9 @@ let refmt_none = "refmt.exe"
 let main_entries = [{ Bsb_config_types.kind = Library; main_module_name="Index"; output_name=None; backend = [JsTarget]}]
 
 #if BS_NATIVE then
-let ocaml_flags = ["-no-alias-deps"; "-bin-annot";]
+let ocaml_flags = ["-no-alias-deps"; 
+(* "-bin-annot"; *)
+]
 
 let ocaml_linker_flags = []
 

@@ -135,7 +135,7 @@ let exec_command_then_exit  command =
 (* Execute the underlying ninja build call, then exit (as opposed to keep watching) *)
 #if BS_NATIVE then
 let ninja_command_exit cwd vendor_ninja ninja_args nested =
-  let build_ninja_path = cwd // Bsb_config.lib_bs // nested in
+  let build_ninja_path = (Bsb_build_util.get_build_artifacts_location cwd) // Bsb_config.lib_bs // nested in
 #else
 let ninja_command_exit  vendor_ninja ninja_args  =
   let build_ninja_path = Bsb_config.lib_bs in
