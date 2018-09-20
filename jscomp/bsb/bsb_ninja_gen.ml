@@ -579,13 +579,13 @@ let output_ninja_and_namespace_map
       (Ext_bytes.ninja_escaped root_project_dir)
       (Ext_bytes.ninja_escaped build_artifacts_dir) 
       (if !Bsb_log.log_level = Bsb_log.Debug then " -verbose" else "") in
-    let rule = Bsb_rule.define ~command "run_build_script" ~description:"\027[32mRunning\027[39m \027[2m${out}\027[22m" (* blue, dim *) in
+    let rule = Bsb_rule.define ~command "run_build_script" ~description:"\027[32mRunning\027[39m \027[2mbuild_script\027[22m" (* blue, dim *) in
     Bsb_ninja_util.output_build oc
       ~order_only_deps:[ output ]
       ~input:""
-      ~output:"run_build_script"
+      ~output:(build_artifacts_dir // ".static_libraries")
       ~rule;
-    Bsb_ninja_util.phony oc ~order_only_deps:("run_build_script" :: static_resources @ all_info)
+    Bsb_ninja_util.phony oc ~order_only_deps:((build_artifacts_dir // ".static_libraries") :: static_resources @ all_info)
       ~inputs:[]
       ~output:Literals.build_ninja ;
   | Some (build_script, false) when should_build ->
