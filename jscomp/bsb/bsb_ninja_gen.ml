@@ -555,7 +555,7 @@ let output_ninja_and_namespace_map
     else ("", "") in
     let rule = Bsb_rule.define ~command:("${ocamlc} unix.cma ${linked_internals} ${refmt} -open Bsb_internals -o ${out} ${impl} ${in}") "build_script" in
     let output = destdir // "build_script.exe" in
-    let p = Ext_bytes.ninja_escaped root_project_dir // Literals.node_modules // "bs-platform" in
+    let p = Ext_bytes.ninja_escaped root_project_dir // Literals.node_modules // Bs_version.package_name in
     Bsb_ninja_util.output_build oc
       ~order_only_deps:(static_resources @ all_info)
       ~input:""

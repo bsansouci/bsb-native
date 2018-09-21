@@ -18,6 +18,6 @@
     "reason-react": ">=0.4.0"
   },
   "devDependencies": {
-    "bs-platform": "^${bsb:bs-version}"
+    "bsb-native": "^${bsb:bs-version}"
   }
 }

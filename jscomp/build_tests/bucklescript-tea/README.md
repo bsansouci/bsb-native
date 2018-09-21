@@ -33,7 +33,7 @@ With the above any PR's are welcome to clean up code, flesh out functionality, a
 
 ### NPM
 
-First verify you have `bs-platform` installed, whether globally or just in your project.
+First verify you have `bsb-native` installed, whether globally or just in your project.
 
 Then install via npm by:
 

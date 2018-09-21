@@ -67,18 +67,18 @@ let run_npm_link cwd dirname  =
     if get_bs_platform_version_if_exists bs_platform_dir = Bs_version.version then 
       begin 
         Format.fprintf Format.std_formatter 
-          "bs-platform already exists(version match), no need symlink@."
+          "bsb-native already exists(version match), no need symlink@."
       end 
     else   
       begin 
         Format.fprintf Format.err_formatter 
-        "bs-platform already exists, but version mismatch with running bsb@.";
+        "bsb-native already exists, but version mismatch with running bsb@.";
         exit 2
       end 
   else 
   if Ext_sys.is_windows_or_cygwin then
     begin
-      let npm_link = "npm link bs-platform" in
+      let npm_link = "npm link bsb-native" in
       let exit_code = Sys.command npm_link in
       if exit_code <> 0 then
         begin
@@ -88,10 +88,10 @@ let run_npm_link cwd dirname  =
     end
   else
     begin
-      (* symlink bs-platform and bsb,bsc,bsrefmt to .bin directory
-        we did not run npm link bs-platform for efficiency reasons
+      (* symlink bsb-native and bsb,bsc,bsrefmt to .bin directory
+        we did not run npm link bsb-native for efficiency reasons
       *)
-      Format.fprintf Format.std_formatter "Symlink bs-platform in %s @."  (cwd//dirname);
+      Format.fprintf Format.std_formatter "Symlink bsb-native in %s @."  (cwd//dirname);
       let (//) = Filename.concat in
       let node_bin =  "node_modules" // ".bin" in
       Bsb_build_util.mkp node_bin;

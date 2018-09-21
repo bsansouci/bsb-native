@@ -298,7 +298,7 @@ let interpret_json
               if str <> Bs_version.version then 
               (
                 Format.fprintf Format.err_formatter
-                "@{<error>bs-platform version mismatch@} Running bsb @{<info>%s@} (%s) vs vendored @{<info>%s@} (%s)@."
+                "@{<error>bsb-native version mismatch@} Running bsb @{<info>%s@} (%s) vs vendored @{<info>%s@} (%s)@."
                     Bs_version.version
                     (Filename.dirname (Filename.dirname Sys.executable_name))
                     str

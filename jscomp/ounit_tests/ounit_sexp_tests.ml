@@ -42,7 +42,7 @@ let suites =
  bs-external-includes
  '( "../runtime" "../stdlib"  "./others")
  bs-package-name
- "bs-platform")
+ "bsb-native")
 
 (setq 
  bsc-flags '("-w" "-40" "-bs-no-version-header " "-bs-diagnose" "-bs-cross-module-opt"))
