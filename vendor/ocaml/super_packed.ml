@@ -89,7 +89,8 @@ ppf
   let print_separator ppf () = 
     (* these are unicode chars. They're not of length 1. Careful; we need to
       explicitly tell Format to treat them as length 1 *)
-    if columns_to_cut = 0 then fprintf ppf " @{<dim>@<1>│@} "
+    if (Sys.win32 || Sys.cygwin) then fprintf ppf " @{<dim>@<1>|@} "
+    else if columns_to_cut = 0 then fprintf ppf " @{<dim>@<1>│@} "
     else fprintf ppf " @{<dim>@<1>┆@} "
   in
 
