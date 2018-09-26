@@ -26,10 +26,13 @@ var make = config.make
 var is_windows = config.is_windows
 var sys_extension = config.sys_extension
 
+var isNative = process.argv.length > 2 && process.argv[2] === "native";
+
 process.env.BS_RELEASE_BUILD = 'true'
 // Add vendor bin path
 // So that second try will work
 process.env.PATH =
+    (isNative ? path.join(__dirname, '..', 'vendor', 'ocaml') : '') +
     path.join(__dirname, '..', 'vendor', 'ocaml', 'bin') +
     path.delimiter +
     process.env.PATH
@@ -163,7 +166,7 @@ function non_windows_npm_release() {
                 console.log("jscomp/Makefile is missing")
             }            
         }
-        child_process.execSync(make + " world && " + make + " install", root_dir_config)
+        child_process.execSync(make + (isNative ? " world-native && " : " world && ") + make + " install", root_dir_config)
     }
 }
 
