@@ -114,109 +114,13 @@ let handle_exp_apply
           Location.raise_errorf ~loc
             "invalid |. syntax "
       end
-
-    (* | Pexp_ident  {txt = Lident "##" ; loc}
-      ->
-      begin match args with
-        | [
-#if OCAML_VERSION =~ ">4.03.0" then 
-           (Nolabel, obj) ;
-           (Nolabel, {pexp_desc = Pexp_apply(
-                {pexp_desc = Pexp_ident {txt = Lident name;_ } ; _},
-                args
-              ); pexp_attributes = attrs }
-           (* we should warn when we discard attributes *)
-           )
-#else
-           ("", obj) ;
-           ("", {pexp_desc = Pexp_apply(
-                {pexp_desc = Pexp_ident {txt = Lident name;_ } ; _},
-                args
-              ); pexp_attributes = attrs }
-           (* we should warn when we discard attributes *)
-           )
-#end           
-          ] -> (* f##(paint 1 2 ) *)
-          (* gpr#1063 foo##(bar##baz) we should rewrite (bar##baz)
-             first  before pattern match.
-             currently the pattern match is written in a top down style.
-             Another corner case: f##(g a b [@bs])
-          *)
-          Bs_ast_invariant.warn_unused_attributes attrs ;
-          {e with pexp_desc = Ast_util.method_apply loc self obj name args}
-        | [
-#if OCAML_VERSION =~ ">4.03.0" then           
-          (Nolabel, obj) ;
-          (Nolabel,
-            {pexp_desc = Pexp_ident {txt = Lident name;_ } ; _}
-           )  (* f##paint  *)
-#else
-          ("", obj) ;
-           ("",
-            {pexp_desc = Pexp_ident {txt = Lident name;_ } ; _}
-           )  (* f##paint  *)
-#end           
-          ] ->
-          { e with pexp_desc =
-                     Ast_util.js_property loc (self.expr self obj) name
-          }
-
-        | _ ->
-          Location.raise_errorf ~loc
-            "Js object ## expect syntax like obj##(paint (a,b)) "
-      end
-    (* we can not use [:=] for precedece cases
-       like {[i @@ x##length := 3 ]}
-       is parsed as {[ (i @@ x##length) := 3]}
-       since we allow user to create Js objects in OCaml, it can be of
-       ref type
-       {[
-         let u = object (self)
-           val x = ref 3
-           method setX x = self##x := 32
-           method getX () = !self##x
-         end
-       ]}
-    *)
-    | Pexp_ident {txt = Lident "#=" } ->
-      begin match args with
-        | [
-#if OCAML_VERSION =~ ">4.03.0" then           
-          Nolabel,
-           {pexp_desc =
-              Pexp_apply ({pexp_desc = Pexp_ident {txt = Lident "##"}},
-                          [Nolabel, obj;
-                           Nolabel, {pexp_desc = Pexp_ident {txt = Lident name}}
-                          ]
-                         )};
-           Nolabel, arg
-#else
-          "",
-           {pexp_desc =
-              Pexp_apply ({pexp_desc = Pexp_ident {txt = Lident "##"}},
-                          ["", obj;
-                           "", {pexp_desc = Pexp_ident {txt = Lident name}}
-                          ]
-                         )};
-           "", arg
-#end           
-          ] ->
-          Exp.constraint_ ~loc
-            { e with
-              pexp_desc =
-                Ast_util.method_apply loc self obj
-                  (name ^ Literals.setter_suffix) [Ast_compatible.no_label, arg ]  }
-            (Ast_literal.type_unit ~loc ())
-        | _ -> Bs_ast_mapper.default_mapper.expr self e
-      end *)
     | _ ->
       begin match
           Ext_list.exclude_with_val
             e.pexp_attributes 
-            Ast_attributes.is_bs with
+            Belt_ast_attributes.is_bs with
       | false, _ -> Bs_ast_mapper.default_mapper.expr self e
       | true, pexp_attributes ->
-        {e with pexp_desc = Ast_util.uncurry_fn_apply loc self fn args ;
-                pexp_attributes }
+        {e with pexp_attributes }
       end
   end

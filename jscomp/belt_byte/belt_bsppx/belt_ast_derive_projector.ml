@@ -1,5 +1,15 @@
 open Ast_helper
 
+(* @BenHack Copy pasted from Ast_comb to avoid dep on it. *)
+let single_non_rec_value  name exp = 
+  Str.value Nonrecursive 
+    [Vb.mk (Pat.var name) exp]
+
+let single_non_rec_val name ty = 
+  Sig.value 
+    (Val.mk name ty)
+
+
 let invalid_config (config : Parsetree.expression) = 
   Location.raise_errorf ~loc:config.pexp_loc "such configuration is not supported"
 
@@ -34,7 +44,7 @@ let init () =
                 Ext_list.map label_declarations (
                   fun ({pld_name = {loc; txt = pld_label} as pld_name} : Parsetree.label_declaration) -> 
                     let txt = "param" in
-                    Ast_comb.single_non_rec_value pld_name
+                    single_non_rec_value pld_name
                       (Ast_compatible.fun_
                          (Pat.constraint_ (Pat.var {txt ; loc}) core_type )
                          (Exp.field (Exp.ident {txt = Lident txt ; loc}) 
@@ -55,7 +65,7 @@ let init () =
 #end                        
                       let little_con_name = Ext_string.uncapitalize_ascii con_name  in
                       let arity = List.length pcd_args in 
-                      Ast_comb.single_non_rec_value {loc ; txt = little_con_name}
+                      single_non_rec_value {loc ; txt = little_con_name}
                         (
                           if arity = 0 then (*TODO: add a prefix, better inter-op with FFI *)
                             (Exp.constraint_
@@ -106,7 +116,7 @@ let init () =
                       pld_type
                      } : 
                        Parsetree.label_declaration) -> 
-                    Ast_comb.single_non_rec_val pld_name (Ast_compatible.arrow core_type pld_type )
+                    single_non_rec_val pld_name (Ast_compatible.arrow core_type pld_type )
                   )
               | Ptype_variant constructor_declarations 
                 ->                 
@@ -120,7 +130,7 @@ let init () =
                         | Pcstr_tuple pcd_args -> pcd_args 
                         | Pcstr_record _ -> assert false in 
 #end                        
-                      Ast_comb.single_non_rec_val {loc ; txt = (Ext_string.uncapitalize_ascii con_name)}
+                      single_non_rec_val {loc ; txt = (Ext_string.uncapitalize_ascii con_name)}
                         (Ext_list.fold_right pcd_args core_type
                            (fun x acc -> Ast_compatible.arrow x acc)
                            ))
