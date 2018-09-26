@@ -33,20 +33,20 @@ libs:
 
 world-native:
 	@echo "Making compiler"
-	BS_NATIVE=true $(MAKE) -B -C lib -j $(NPROCS) all
+	$(MAKE) BS_NATIVE=true CXXFLAGS="-mmacosx-version-min=10.10" -B -C lib -j $(NPROCS) all
 	$(MAKE) libs-native
 
 libs-native:
 	@echo "Making compiler finished"
-	$(MAKE) -C jscomp/stdlib -j $(NPROCS) allcmis
-	$(MAKE) -C jscomp/runtime -j $(NPROCS) all
-	$(MAKE) -C jscomp/others -j $(NPROCS) all
-	$(MAKE) -C jscomp/stdlib -j $(NPROCS) all
+	$(MAKE) CXXFLAGS="-mmacosx-version-min=10.10" -C jscomp/stdlib -j $(NPROCS) allcmis
+	$(MAKE) CXXFLAGS="-mmacosx-version-min=10.10" -C jscomp/runtime -j $(NPROCS) all
+	$(MAKE) CXXFLAGS="-mmacosx-version-min=10.10" -C jscomp/others -j $(NPROCS) all
+	$(MAKE) CXXFLAGS="-mmacosx-version-min=10.10" -C jscomp/stdlib -j $(NPROCS) all
 	
-	BS_NATIVE=true $(MAKE) -C jscomp/belt_byte -j $(NPROCS) files
-	BS_NATIVE=true $(MAKE) -C jscomp/belt_byte -j $(NPROCS)
-	BS_NATIVE=true $(MAKE) -C jscomp/belt_native -j $(NPROCS) files
-	BS_NATIVE=true $(MAKE) -C jscomp/belt_native -j $(NPROCS)
+	$(MAKE) BS_NATIVE=true CXXFLAGS="-mmacosx-version-min=10.10"  -C jscomp/belt_byte -j $(NPROCS) files
+	$(MAKE) BS_NATIVE=true CXXFLAGS="-mmacosx-version-min=10.10"  -C jscomp/belt_byte -j $(NPROCS)
+	$(MAKE) BS_NATIVE=true CXXFLAGS="-mmacosx-version-min=10.10"  -C jscomp/belt_native -j $(NPROCS) files
+	$(MAKE) BS_NATIVE=true CXXFLAGS="-mmacosx-version-min=10.10"  -C jscomp/belt_native -j $(NPROCS)
 
 
 # TODO: sync up with
