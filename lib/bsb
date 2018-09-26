@@ -346,7 +346,7 @@ if (watch_mode) {
             }
             reasons_to_rebuild = [];
             var p = child_process
-                .spawn(bsb_exe, [], sub_config);
+                .spawn(bsb_exe, delegate_args.filter(arg => arg !== "-make-world" && arg !== "-w"), sub_config);
             p.on('exit', build_finished_callback)
             p.stderr
                 .setEncoding('utf8')
