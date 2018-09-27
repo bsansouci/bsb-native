@@ -79,7 +79,7 @@ build_script:
   - bash -lc "cd /c/projects/bucklescript/ && zip -r bucklescript-win-3.2.0.zip lib vendor/ocaml/bin/ocamlrun.exe vendor/ocaml/ocamlc.opt.exe vendor/ocaml/ocamlopt.opt.exe vendor/ocaml/lib/ocaml vendor/flexdll vendor/mingw32/ vendor/lib vendor/include -x lib/bsb -x lib/bsc -x lib/bsrefmt"
 
 artifacts:
-  - path: bucklescript-win-3.2.0.zip
+  - path: bsb-native-win-4.0.6.zip
 
 test_script:
   - bash -xlc "pacman --noconfirm -S --quiet --needed mingw-w64-i686-nodejs"
