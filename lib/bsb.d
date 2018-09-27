@@ -1,3 +1,21 @@
+../lib/bsb.ml : ../vendor/ocaml/parsing/asttypes.mli
+../lib/bsb.ml : ../vendor/ocaml/parsing/depend.ml
+../lib/bsb.ml : ../vendor/ocaml/parsing/depend.mli
+../lib/bsb.ml : ../vendor/ocaml/parsing/location.ml
+../lib/bsb.ml : ../vendor/ocaml/parsing/location.mli
+../lib/bsb.ml : ../vendor/ocaml/parsing/longident.ml
+../lib/bsb.ml : ../vendor/ocaml/parsing/longident.mli
+../lib/bsb.ml : ../vendor/ocaml/parsing/parsetree.mli
+../lib/bsb.ml : ../vendor/ocaml/utils/clflags.ml
+../lib/bsb.ml : ../vendor/ocaml/utils/clflags.mli
+../lib/bsb.ml : ../vendor/ocaml/utils/config.ml
+../lib/bsb.ml : ../vendor/ocaml/utils/config.mli
+../lib/bsb.ml : ../vendor/ocaml/utils/misc.ml
+../lib/bsb.ml : ../vendor/ocaml/utils/misc.mli
+../lib/bsb.ml : ../vendor/ocaml/utils/terminfo.ml
+../lib/bsb.ml : ../vendor/ocaml/utils/terminfo.mli
+../lib/bsb.ml : ../vendor/ocaml/utils/warnings.ml
+../lib/bsb.ml : ../vendor/ocaml/utils/warnings.mli
 ../lib/bsb.ml : ./bsb/bsb_build_schemas.ml
 ../lib/bsb.ml : ./bsb/bsb_build_util.ml
 ../lib/bsb.ml : ./bsb/bsb_build_util.mli
@@ -12,6 +30,8 @@
 ../lib/bsb.ml : ./bsb/bsb_db.mli
 ../lib/bsb.ml : ./bsb/bsb_default.ml
 ../lib/bsb.ml : ./bsb/bsb_default.mli
+../lib/bsb.ml : ./bsb/bsb_dependency_info.ml
+../lib/bsb.ml : ./bsb/bsb_dependency_info.mli
 ../lib/bsb.ml : ./bsb/bsb_dir_index.ml
 ../lib/bsb.ml : ./bsb/bsb_dir_index.mli
 ../lib/bsb.ml : ./bsb/bsb_exception.ml
@@ -34,6 +54,8 @@
 ../lib/bsb.ml : ./bsb/bsb_ninja_gen.ml
 ../lib/bsb.ml : ./bsb/bsb_ninja_gen.mli
 ../lib/bsb.ml : ./bsb/bsb_ninja_global_vars.ml
+../lib/bsb.ml : ./bsb/bsb_ninja_native.ml
+../lib/bsb.ml : ./bsb/bsb_ninja_native.mli
 ../lib/bsb.ml : ./bsb/bsb_ninja_regen.ml
 ../lib/bsb.ml : ./bsb/bsb_ninja_regen.mli
 ../lib/bsb.ml : ./bsb/bsb_ninja_util.ml
@@ -124,3 +146,4 @@
 ../lib/bsb.ml : ./ext/string_vec.mli
 ../lib/bsb.ml : ./ext/vec_gen.ml
 ../lib/bsb.ml : ./stubs/bs_hash_stubs.ml
+../lib/bsb.ml : ./stubs/bsb_stubs.ml

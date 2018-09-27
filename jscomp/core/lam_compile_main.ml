@@ -337,9 +337,6 @@ let lambda_as_module
   
 #end
 
-      end
-    end 
-  end
 (* We can use {!Env.current_unit = "Pervasives"} to tell if it is some specific module, 
     We need handle some definitions in standard libraries in a special way, most are io specific, 
     includes {!Pervasives.stdin, Pervasives.stdout, Pervasives.stderr}

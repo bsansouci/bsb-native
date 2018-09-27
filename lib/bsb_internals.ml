@@ -30,6 +30,10 @@ module Ext_sys : sig
 
 
 val is_windows_or_cygwin : bool 
+
+val getenv_opt : 
+  string -> 
+  string option 
 end = struct
 #1 "ext_sys.ml"
 (* Copyright (C) 2015-2016 Bloomberg Finance L.P.
@@ -62,6 +66,11 @@ let is_directory_no_exn f =
 
 
 let is_windows_or_cygwin = Sys.win32 || Sys.cygwin
+
+
+let getenv_opt s = 
+  try Some (Sys.getenv s) with Not_found -> None
+
 end
 module Bsb_internals
 = struct

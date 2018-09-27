@@ -1637,6 +1637,10 @@ module Ext_bytes : sig
 
 val escaped : bytes -> bytes
 
+
+val ninja_escaped : bytes -> bytes
+
+
 end = struct
 #1 "ext_bytes.ml"
 (* Copyright (C) 2015-2016 Bloomberg Finance L.P.
@@ -1712,6 +1716,42 @@ let escaped s =
     done;
     s'
   end
+
+
+let ninja_escaped s =
+  let n = Pervasives.ref 0 in
+  for i = 0 to Bytes.length s - 1 do
+    n := !n +
+      (match Bytes.unsafe_get s i with
+       | '$' | ':' -> 2
+       | ' ' .. '~' -> 1
+       | _ -> 4)
+  done;
+  if !n = Bytes.length s then Bytes.copy s else begin
+    let s' = Bytes.create !n in
+    n := 0;
+    for i = 0 to Bytes.length s - 1 do
+      begin match Bytes.unsafe_get s i with
+      | '$' ->
+          Bytes.unsafe_set s' !n '$'; incr n; Bytes.unsafe_set s' !n '$'
+      | ':' ->
+          Bytes.unsafe_set s' !n '$'; incr n; Bytes.unsafe_set s' !n ':'
+      | (' ' .. '~') as c -> Bytes.unsafe_set s' !n c
+      | c ->
+          let a = char_code c in
+          Bytes.unsafe_set s' !n '\\';
+          incr n;
+          Bytes.unsafe_set s' !n (char_chr (48 + a / 100));
+          incr n;
+          Bytes.unsafe_set s' !n (char_chr (48 + (a / 10) mod 10));
+          incr n;
+          Bytes.unsafe_set s' !n (char_chr (48 + a mod 10));
+      end;
+      incr n
+    done;
+    s'
+  end
+
 
 end
 module Ext_char : sig 
@@ -2240,7 +2280,7 @@ let non_overlap_count ~sub s =
 let rfind ~sub s =
   let n = String.length sub in
   let i = ref (String.length s - n) in
-  let module M = struct exception Exit end in 
+  (* let module M = struct exception Exit end in  *)
   try
     while !i >= 0 do
       if unsafe_is_sub ~sub 0 s !i ~len:n then 
@@ -3571,7 +3611,7 @@ let suites =
   ],
   "license": "MIT",
   "devDependencies": {
-    "bs-platform": "${bsb:bs-version}"
+    "bsb-native": "${bsb:bs-version}"
   }
 }
 |} {|
@@ -3590,7 +3630,7 @@ let suites =
   ],
   "license": "MIT",
   "devDependencies": {
-    "bs-platform": "bs-version"
+    "bsb-native": "bs-version"
   }
 }
 |}
@@ -3675,6 +3715,7 @@ let suites =
 |}
     end
     ]
+
 end
 module Literals : sig 
 #1 "literals.mli"
@@ -3806,6 +3847,13 @@ val unescaped_js_delimiter : string
 val native : string
 val bytecode : string
 val js : string
+
+val ppx : string
+
+
+val library : string
+val dot_static_libraries : string
+
 
 val node_sep : string 
 val node_parent : string 
@@ -3940,6 +3988,11 @@ let native = "native"
 let bytecode = "bytecode"
 let js = "js"
 
+let ppx = "ppx"
+
+
+let library = "library"
+let dot_static_libraries = ".static_libraries"
 
 
 (** Used when produce node compatible paths *)
@@ -4060,7 +4113,7 @@ let perform_bsc args =
   perform bsc_exe 
     (Array.append 
        [|bsc_exe ; 
-         "-bs-package-name" ; "bs-platform"; 
+         "-bs-package-name" ; "bsb-native"; 
          "-bs-no-version-header"; 
          "-bs-cross-module-opt";
          "-w";
@@ -9280,7 +9333,7 @@ module type S =
     val of_list : (key * 'a) list -> 'a t 
     val of_array : (key * 'a ) array -> 'a t 
     val add_list : (key * 'b) list -> 'b t -> 'b t
-
+    val update : key -> ('a option -> 'a option) -> 'a t -> 'a t
   end
 
 end
@@ -9321,11 +9374,11 @@ end = struct
 
 
   
-# 10
+# 10 "ext/map.cppo.ml"
   type key = string 
   let compare_key = Ext_string.compare
 
-# 22
+# 22 "ext/map.cppo.ml"
 type 'a t = (key,'a) Map_gen.t
 exception Duplicate_key of key 
 
@@ -9418,6 +9471,13 @@ let rec remove x (tree : _ Map_gen.t as 'a) : 'a = match tree with
     else
       bal l v d (remove x r)
 
+let update k fn (tree : _ Map_gen.t as 'a) : 'a =
+  let cur = find_opt k tree in
+  match (cur, fn cur) with
+  | None, None -> tree
+  | None, Some v -> add k v tree
+  | Some v, None -> remove k tree
+  | Some v1, Some v2 -> adjust k (fun () -> assert false) (fun _ -> v2) tree
 
 let rec split x (tree : _ Map_gen.t as 'a) : 'a * _ option * 'a  = match tree with 
   | Empty ->
@@ -11364,11 +11424,11 @@ end = struct
 
 
   
-# 13
+# 13 "ext/map.cppo.ml"
   type key = int
   let compare_key = Ext_int.compare
 
-# 22
+# 22 "ext/map.cppo.ml"
 type 'a t = (key,'a) Map_gen.t
 exception Duplicate_key of key 
 
@@ -11461,6 +11521,13 @@ let rec remove x (tree : _ Map_gen.t as 'a) : 'a = match tree with
     else
       bal l v d (remove x r)
 
+let update k fn (tree : _ Map_gen.t as 'a) : 'a =
+  let cur = find_opt k tree in
+  match (cur, fn cur) with
+  | None, None -> tree
+  | None, Some v -> add k v tree
+  | Some v, None -> remove k tree
+  | Some v1, Some v2 -> adjust k (fun () -> assert false) (fun _ -> v2) tree
 
 let rec split x (tree : _ Map_gen.t as 'a) : 'a * _ option * 'a  = match tree with 
   | Empty ->
@@ -11724,6 +11791,9 @@ type t
 
 
 
+val sep_char : char
+
+
 (**
    [combine path1 path2]
    1. add some simplifications when concatenating
@@ -11788,6 +11858,7 @@ val concat : string -> string -> string
 
 val check_suffix_case : 
   string -> string -> bool
+
 end = struct
 #1 "ext_path.ml"
 (* Copyright (C) 2017 Authors of BuckleScript
@@ -12096,6 +12167,7 @@ let concat dirname filename =
 
 let check_suffix_case =
   Ext_string.ends_with
+
 end
 module Ounit_path_tests
 = struct

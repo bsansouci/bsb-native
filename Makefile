@@ -38,10 +38,9 @@ world-native:
 
 libs-native:
 	@echo "Making compiler finished"
-	$(MAKE) -C jscomp/stdlib -j $(NPROCS) allcmis
 	$(MAKE) -C jscomp/runtime -j $(NPROCS) all
 	$(MAKE) -C jscomp/others -j $(NPROCS) all
-	$(MAKE) -C jscomp/stdlib -j $(NPROCS) all
+	$(MAKE) -C $(STDLIB) -j $(NPROCS) all
 	
 	$(MAKE) BS_NATIVE=true  -C jscomp/belt_byte -j $(NPROCS) files
 	$(MAKE) BS_NATIVE=true  -C jscomp/belt_byte -j $(NPROCS)
