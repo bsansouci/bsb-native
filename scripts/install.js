@@ -166,7 +166,10 @@ function non_windows_npm_release() {
                 console.log("jscomp/Makefile is missing")
             }            
         }
-        child_process.execSync(make + (isNative ? " world-native && " : " world && ") + make + " install", root_dir_config)
+        child_process.execSync(make + 
+            (isNative 
+                ? " CXXFLAGS=\"-mmacosx-version-min=10.10\" world-native && " 
+                : " world && ") + make + " install", root_dir_config)
     }
 }
 
