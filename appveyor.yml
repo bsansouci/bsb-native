@@ -74,7 +74,7 @@ build_script:
   # Build bucklescript
   - bash -lc "PATH=/c/projects/bucklescript/vendor/ocaml:/c/projects/bucklescript/vendor/ocaml/bin:/c/projects/bucklescript/cppo/src:$PATH make -C /c/projects/bucklescript world-native && make -C /c/projects/bucklescript install"
   # Build ninja with color support
-  - bash -lc "cd /c/projects/bucklescript/vendor/ninja; python configure.py --platform=mingw; /c/projects/bucklescript/vendor/ninja-build/ninja.win"
+  - bash -lc "cd /c/projects/bucklescript/vendor/ninja; python configure.py --platform=mingw; /c/projects/bucklescript/vendor/ninja/snapshot/ninja.win32"
   - bash -lc "cp /c/projects/bucklescript/vendor/ninja/ninja.exe /c/projects/bucklescript/lib/ninja.exe"
   # Create the zip
   - bash -lc "cd /c/projects/bucklescript/ && zip -r bucklescript-win-3.2.0.zip lib vendor/ocaml/bin/ocamlrun.exe vendor/ocaml/ocamlc.opt.exe vendor/ocaml/ocamlopt.opt.exe vendor/ocaml/lib/ocaml vendor/flexdll vendor/mingw32/ vendor/lib vendor/include -x lib/bsb -x lib/bsc -x lib/bsrefmt"
