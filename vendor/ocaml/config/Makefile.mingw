@@ -15,7 +15,7 @@
 
 ######### General configuration
 
-PREFIX=C:/projects/bsb-native/vendor/ocaml
+PREFIX=C:/projects/bucklescript/vendor/ocaml
 
 ### Remove this to disable compiling ocamldebug
 WITH_DEBUGGER=ocamldebugger
