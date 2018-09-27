@@ -72,7 +72,7 @@ build_script:
   # Build cppo fork
   - bash -lc "PATH=/c/projects/bucklescript/vendor/ocaml:/c/projects/bucklescript/vendor/ocaml/bin:/c/projects/bucklescript/vendor/flexdll:$PATH make -C /c/projects/bucklescript/cppo"
   # Build bucklescript
-  - bash -lc "PATH=/c/projects/bucklescript/vendor/ocaml:/c/projects/bucklescript/vendor/ocaml/bin:/c/projects/bucklescript/cppo/src:$PATH make -C /c/projects/bucklescript && make -C /c/projects/bucklescript install"
+  - bash -lc "PATH=/c/projects/bucklescript/vendor/ocaml:/c/projects/bucklescript/vendor/ocaml/bin:/c/projects/bucklescript/cppo/src:$PATH make -C /c/projects/bucklescript world-native && make -C /c/projects/bucklescript install"
   # Build ninja with color support
   - bash -lc "cd /c/projects/bucklescript/vendor/ninja; python configure.py --platform=mingw; /c/projects/bucklescript/vendor/ninja-build/ninja.win"
   - bash -lc "cp /c/projects/bucklescript/vendor/ninja/ninja.exe /c/projects/bucklescript/lib/ninja.exe"
