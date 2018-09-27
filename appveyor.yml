@@ -60,6 +60,7 @@ build_script:
   - bash -lc "FLEXLINKFLAGS='-L/c/msys64/MINGW32/i686-w64-mingw32/lib -L/c/msys64/MINGW32/lib -L/c/msys64/MINGW32/lib/gcc/i686-w64-mingw32/7.3.0' PATH=/c/projects/bucklescript/vendor/flexdll:$PATH make -C /c/projects/bucklescript/vendor/ocaml -f Makefile.nt otherlibrariesopt"
   - bash -lc "FLEXLINKFLAGS='-L/c/msys64/MINGW32/i686-w64-mingw32/lib -L/c/msys64/MINGW32/lib -L/c/msys64/MINGW32/lib/gcc/i686-w64-mingw32/7.3.0' PATH=/c/projects/bucklescript/vendor/flexdll:$PATH make -C /c/projects/bucklescript/vendor/ocaml -f Makefile.nt install"
   # Build forked src of flexdll
+  - bash -lc "INCLUDE_FLAGS='-ccopt -L/c/msys64/MINGW32/i686-w64-mingw32/lib -ccopt -L/c/msys64/MINGW32/lib -ccopt -L/c/msys64/MINGW32/lib/gcc/i686-w64-mingw32/7.3.0' PATH=/c/projects/bucklescript/vendor/ocaml:/c/projects/bucklescript/vendor/ocaml/bin:/c/projects/bucklescript/vendor/flexdll:$PATH ocamlopt.opt -v"
   - bash -lc "INCLUDE_FLAGS='-ccopt -L/c/msys64/MINGW32/i686-w64-mingw32/lib -ccopt -L/c/msys64/MINGW32/lib -ccopt -L/c/msys64/MINGW32/lib/gcc/i686-w64-mingw32/7.3.0' PATH=/c/projects/bucklescript/vendor/ocaml:/c/projects/bucklescript/vendor/ocaml/bin:/c/projects/bucklescript/vendor/flexdll:$PATH make -C /c/projects/bucklescript/vendor/flexdll-build"
   # Move newly-built flexdll into position
   - bash -lc "rm -rf /c/projects/bucklescript/vendor/flexdll; mv /c/projects/bucklescript/vendor/flexdll-build /c/projects/bucklescript/vendor/flexdll"
