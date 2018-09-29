@@ -83,9 +83,11 @@ artifacts:
   - path: bsb-native-win-4.0.6.zip
 
 test_script:
-  - bash -xlc "pacman --noconfirm -S --quiet --needed mingw-w64-i686-nodejs"
+  - bash -xlc "pacman --noconfirm -S --quiet --needed mingw-w64-x86_64-nodejs"
   - git clone https://github.com/bsansouci/reprocessing-example C:\projects\bucklescript\reprocessing-example
   - bash -lc "cd /c/projects/bucklescript/reprocessing-example; npm install"
   - bash -lc "find /c/projects/bucklescript/reprocessing-example/node_modules/bs-platform -type f -not -name 'package.json' -not -name 'bsconfig.json' -not -name 'bsb' -not -name 'bsc' -not -name 'bsrefmt' -delete"
-  - bash -lc "unzip -q /c/projects/bucklescript/bsb-native-win-4.0.6.zip -d /c/projects/bucklescript/reprocessing-example/node_modules/bs-platform"
-  - bash -lc "cd /c/projects/bucklescript/reprocessing-example; ./node_modules/bs-platform/lib/bsb.exe -make-world || cat lib/bs/bytecode/build.ninja"
+  - bash -lc "cp /c/projects/bucklescript/package.json /c/projects/bucklescript/reprocessing-example/node_modules/bs-platform/"
+  - bash -lc "mv /c/projects/bucklescript/reprocessing-example/node_modules/bs-platform /c/projects/bucklescript/reprocessing-example/node_modules/bsb-native"
+  - bash -lc "unzip -q /c/projects/bucklescript/bsb-native-win-4.0.6.zip -d /c/projects/bucklescript/reprocessing-example/node_modules/bsb-native"
+  - bash -lc "cd /c/projects/bucklescript/reprocessing-example; ./node_modules/bsb-native/lib/bsb.exe -make-world || cat lib/bs/bytecode/build.ninja"
