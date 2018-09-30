@@ -249,7 +249,11 @@ let merlin_file_gen ~cwd
     end;
 #end
     Buffer.add_string buffer "\n";
+#if BS_NATIVE then
     revise_merlin nested (cwd // merlin) buffer 
+#else
+    revise_merlin (cwd // merlin) buffer 
+#end
   end
 
 
