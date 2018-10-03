@@ -1,4 +1,5 @@
-cd vendor/ocaml && make CXXFLAGS="-mmacosx-version-min=10.10" -j9 world.opt && make install  && cd ../..
+export MACOSX_DEPLOYMENT_TARGET="10.10"
+cd vendor/ocaml && make -j9 world.opt && make install  && cd ../..
 rm -rf lib/ocaml/pervasives.cmi
 node scripts/install.js native
 VERSION=$(cat package.json | sed -n -E 's/.*"version": "(.*)",/\1/p')
