@@ -168,7 +168,7 @@ function non_windows_npm_release() {
         }
         child_process.execSync(make + 
             (isNative 
-                ? " CXXFLAGS=\"-mmacosx-version-min=10.10\" world-native && " 
+                ? " world-native && " 
                 : " world && ") + make + " install", root_dir_config)
     }
 }
