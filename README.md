@@ -6,9 +6,8 @@ Bsb-native is a fork of [bsb](https://bucklescript.github.io/docs/en/build-overv
 
 ## Install
 
-1) Add `"bsb-native": "4.0.6"` as a devDependency to your `package.json`
+1) Run `npm install --save-dev bsb-native` / `yarn add --dev bsb-native`.
 2) Add a `bsconfig.json` like you would for bsb. Bsb-native uses the same schema, located [here](http://bucklescript.github.io/bucklescript/docson/#build-schema.json) with small additions like `entries` (see below for complete config schema).
-3) run `npm install` / `yarn`.
 
 An [example bsconfig.json](https://github.com/bsansouci/bsb-native-example/blob/master/bsconfig.json):
 ```js
