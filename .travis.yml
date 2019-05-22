@@ -1,22 +1,11 @@
-language: node_js
+dist: trusty
+sudo: required
 
-git:
-  submodules: false
-# subtree now
+services:
+  - docker
+  
+before_install:
+- docker pull phusion/holy-build-box-64:latest
 
-env:
-  - BS_TRAVIS_CI=1
-node_js:
-  - 6
-
-# script: npm run coveralls
-# if we turn on this script, we should make
-# sure `npm test` is executed
-#
-# - 6
-# This delays notification
-
-# Not a very reliable service..
-
-# FIXME: instrumentation takes too much time
-
+script:
+- docker run -t -i --rm -v ${TRAVIS_BUILD_DIR}:/io phusion/holy-build-box-64:latest bash /io/scripts/linux-build-helper.sh
